@@ -157,6 +157,7 @@ doc_events = {
 		"Student Admission",
 		"Assessment Plan",
 		"Fee Schedule",
+		"Regulation",
 	]
 }
 for _dt in [
@@ -174,6 +175,12 @@ for _dt in [
 ]:
 	doc_events.setdefault(_dt, {})["before_validate"] = f"{_company_scope}.before_validate"
 
+_regulation_rules = "campus.campus_platform.regulation_rules"
+doc_events["Student"]["validate"] = f"{_regulation_rules}.validate_regulation_change"
+doc_events["Program Enrollment"]["validate"] = [
+	doc_events["Program Enrollment"]["validate"],
+	f"{_regulation_rules}.assign_regulation_on_enrollment",
+]
 
 # Scheduled Tasks
 # ---------------

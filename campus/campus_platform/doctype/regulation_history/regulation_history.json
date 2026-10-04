@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_regulation",
+  "to_regulation",
+  "change_date",
+  "reason",
+  "bridge_courses_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "from_regulation",
+   "fieldtype": "Link",
+   "label": "From Regulation",
+   "options": "Regulation",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_regulation",
+   "fieldtype": "Link",
+   "label": "To Regulation",
+   "options": "Regulation",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "change_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bridge_courses_note",
+   "fieldtype": "Small Text",
+   "label": "Bridge Courses Note",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Regulation History",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1
+}
