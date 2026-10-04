@@ -4,7 +4,11 @@ import frappe
 from frappe.utils import today
 
 from campus.campus_platform.api import get_regulation, get_rule
-from campus.campus_platform.doctype.regulation.regulation import amend_as_new_version, next_version_code
+from campus.campus_platform.doctype.regulation.regulation import (
+	amend_as_new_version,
+	next_version_code,
+	regulation_name,
+)
 from campus.campus_platform.regulation_rules import change_regulation, resolve_regulation
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
@@ -41,9 +45,10 @@ def make_program(name, company):
 
 
 def make_regulation(code, company, programs, year, status="Effective", **extra):
-	if frappe.db.exists("Regulation", code):
-		frappe.db.delete("Regulation Program", {"parent": code})
-		frappe.db.delete("Regulation", {"name": code})
+	name = regulation_name(code, company)
+	if frappe.db.exists("Regulation", name):
+		frappe.db.delete("Regulation Program", {"parent": name})
+		frappe.db.delete("Regulation", {"name": name})
 	return frappe.get_doc(
 		{
 			"doctype": "Regulation",
@@ -144,6 +149,22 @@ class TestRegulation(CampusTestCase):
 		for batch, expected in cases.items():
 			with self.subTest(batch=batch):
 				self.assertEqual(resolve_regulation(COLLEGE, self.program, year_name(batch)), expected)
+
+	def test_same_code_allowed_in_two_companies_but_not_twice_in_one(self):
+		other_program = make_program("Regulation Test Other BSc", OTHER_COLLEGE)
+		other = make_regulation("R2022", OTHER_COLLEGE, [other_program], "2022")
+		self.assertEqual((other.name, self.r2022), ("R2022-RTO", "R2022-RTC"))
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc(
+				{
+					"doctype": "Regulation",
+					"code": "R2022",
+					"company": COLLEGE,
+					"effective_from_year": year_name("2023"),
+					"status": "Draft",
+					"programs": [{"program": self.program}],
+				}
+			).insert()
 
 	def test_resolution_before_first_regulation_is_none(self):
 		self.assertIsNone(resolve_regulation(COLLEGE, self.program, year_name("2020")))
@@ -271,7 +292,7 @@ class TestRegulation(CampusTestCase):
 		regulation = make_regulation("R-RETIRE", COLLEGE, [self.scratch_program], "2023")
 		regulation.status = "Retired"
 		regulation.save()
-		self.assertEqual(frappe.db.get_value("Regulation", "R-RETIRE", "status"), "Retired")
+		self.assertEqual(frappe.db.get_value("Regulation", regulation.name, "status"), "Retired")
 
 	def test_draft_regulation_is_editable(self):
 		regulation = make_regulation("R-DRAFT-EDIT", COLLEGE, [self.scratch_program], "2023", status="Draft")
@@ -281,11 +302,11 @@ class TestRegulation(CampusTestCase):
 	def test_amend_creates_draft_version_and_retires_previous_when_effective(self):
 		original = make_regulation("R-AMEND", COLLEGE, [self.scratch_program], "2023", notes="v1")
 		new_name = amend_as_new_version(original.name)
-		self.assertEqual(new_name, "R-AMEND-V2")
+		self.assertEqual(new_name, "R-AMEND-V2-RTC")
 		new = frappe.get_doc("Regulation", new_name)
 		self.assertEqual((new.status, new.previous_version, new.notes), ("Draft", original.name, "v1"))
 		self.assertEqual([r.program for r in new.programs], [self.scratch_program])
-		self.assertEqual(next_version_code(new_name), "R-AMEND-V3")
+		self.assertEqual(next_version_code("R-AMEND-V2", COLLEGE), "R-AMEND-V3")
 		new.notes = "v2"
 		new.status = "Effective"
 		new.save()

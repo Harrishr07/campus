@@ -12,6 +12,7 @@ roles "Exam Confidential" (skipped when the Role is absent) and regulation rule 
 
 import frappe
 
+from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.regulation_rules import latest_enrollment, resolve_regulation
 from campus.tests.factories import make_company
 
@@ -181,11 +182,8 @@ def make_programs():
 
 def make_regulations():
 	for code, company, start, programs in REGULATIONS:
-		owner = frappe.db.get_value("Regulation", code, "company")
-		if owner == company:
+		if frappe.db.exists("Regulation", {"code": code, "company": company}):
 			continue
-		if owner:
-			frappe.throw(f"Regulation {code} exists for {owner}, not {company}; remove that record first.")
 		frappe.get_doc(
 			{
 				"doctype": "Regulation",
@@ -428,7 +426,9 @@ def counts():
 	return {
 		"Company": frappe.db.count("Company", {"name": ["in", ALL_COMPANIES]}),
 		"Program": frappe.db.count("Program", {"name": ["in", list(PROGRAMS)]}),
-		"Regulation": frappe.db.count("Regulation", {"name": ["in", [r[0] for r in REGULATIONS]]}),
+		"Regulation": frappe.db.count(
+			"Regulation", {"name": ["in", [regulation_name(code, company) for code, company, *_ in REGULATIONS]]}
+		),
 		"Student": frappe.db.count("Student", {"student_email_id": ["like", f"%@{DOMAIN}"]}),
 		"User": frappe.db.count("User", {"name": ["like", f"%@{DOMAIN}"]}),
 	}

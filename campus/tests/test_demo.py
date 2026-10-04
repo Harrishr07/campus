@@ -3,6 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import get_regulation, resolve_position
+from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.tests import demo
 from campus.tests.utils import CampusTestCase
 
@@ -50,20 +51,20 @@ class TestDemoData(CampusTestCase):
 		categories = frappe.get_all(
 			"Program Enrollment", filters={"student": ["in", [s.name for s in students]]}, pluck="student_category"
 		)
-		self.assertEqual({s.oc_regulation for s in students}, {"R2026"})
+		self.assertEqual({s.oc_regulation for s in students}, {regulation_name("R2026", demo.ENGINEERING)})
 		self.assertEqual({s.oc_batch for s in students}, {"2026-27"})
 		self.assertEqual({s.oc_company for s in students}, {demo.ENGINEERING})
 		self.assertEqual(set(categories), set(demo.CATEGORIES))
-		self.assertEqual(get_regulation(students[0].name), "R2026")
+		self.assertEqual(get_regulation(students[0].name), regulation_name("R2026", demo.ENGINEERING))
 
 	def test_regulations_cover_programs_per_batch(self):
 		from campus.campus_platform.regulation_rules import resolve_regulation
 
 		resolve = lambda batch: resolve_regulation(demo.ENGINEERING, "B.E. ECE", batch)  # noqa: E731
-		self.assertEqual(resolve("2021-22"), "AU-R2021")
-		self.assertEqual([resolve(f"{y}-{str(y + 1)[-2:]}") for y in (2022, 2023, 2024, 2025)], ["R2022"] * 4)
-		self.assertEqual(resolve("2026-27"), "R2026")
-		self.assertEqual(frappe.db.get_value("Regulation", "AS-R2022", "company"), demo.ARTS)
+		self.assertEqual(resolve("2021-22"), regulation_name("AU-R2021", demo.ENGINEERING))
+		self.assertEqual([resolve(f"{y}-{str(y + 1)[-2:]}") for y in (2022, 2023, 2024, 2025)], [regulation_name("R2022", demo.ENGINEERING)] * 4)
+		self.assertEqual(resolve("2026-27"), regulation_name("R2026", demo.ENGINEERING))
+		self.assertEqual(frappe.db.get_value("Regulation", regulation_name("AS-R2022", demo.ARTS), "company"), demo.ARTS)
 
 	def test_users_have_company_permission_and_roles(self):
 		principal, warden = demo.email("principal"), demo.email("warden")
