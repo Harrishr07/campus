@@ -35,6 +35,13 @@ class TestDemoData(CampusTestCase):
 		self.assertEqual(counts["Student"], 30)  # 10 per engineering program, 2026-27 batch
 		self.assertEqual(frappe.db.count("Institution Profile", {"name": ["in", demo.ALL_COMPANIES]}), 3)
 
+	def test_cse_r2022_curriculum_is_a_draft_with_derived_credits(self):
+		self.assertEqual(demo.counts()["Curriculum"], 1)
+		curriculum = frappe.get_doc("Curriculum", {"program": "B.E. CSE"})
+		self.assertEqual(curriculum.status, "Draft")
+		self.assertEqual(curriculum.total_credits, 24)  # six 4-credit courses
+		self.assertEqual(curriculum.courses[1].credits, 4)  # 3-0-2 under R2022
+
 	def test_company_hierarchy_and_profiles(self):
 		self.assertTrue(frappe.db.get_value("Company", demo.TRUST, "is_group"))
 		for college in (demo.ENGINEERING, demo.ARTS):

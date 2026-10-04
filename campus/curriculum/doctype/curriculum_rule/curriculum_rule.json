@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regulation",
+  "credit_section",
+  "lecture_credit_per_period",
+  "tutorial_credit_per_period",
+  "practical_credit_per_period",
+  "limits_column",
+  "min_total_credits",
+  "max_total_credits",
+  "max_courses_per_semester"
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "credit_section",
+   "fieldtype": "Section Break",
+   "label": "Credit per Period"
+  },
+  {
+   "fieldname": "lecture_credit_per_period",
+   "fieldtype": "Float",
+   "label": "Credit per Lecture Period",
+   "reqd": 1,
+   "default": "1"
+  },
+  {
+   "fieldname": "tutorial_credit_per_period",
+   "fieldtype": "Float",
+   "label": "Credit per Tutorial Period",
+   "reqd": 1,
+   "default": "1"
+  },
+  {
+   "fieldname": "practical_credit_per_period",
+   "fieldtype": "Float",
+   "label": "Credit per Practical Period",
+   "reqd": 1,
+   "default": "0.5"
+  },
+  {
+   "fieldname": "limits_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "min_total_credits",
+   "fieldtype": "Float",
+   "label": "Minimum Total Credits",
+   "description": "0 means no minimum."
+  },
+  {
+   "fieldname": "max_total_credits",
+   "fieldtype": "Float",
+   "label": "Maximum Total Credits",
+   "description": "0 means no maximum."
+  },
+  {
+   "fieldname": "max_courses_per_semester",
+   "fieldtype": "Int",
+   "label": "Maximum Courses per Semester",
+   "description": "Optional; 0 means no limit."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Curriculum Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:regulation",
+ "title_field": "regulation",
+ "naming_rule": "By fieldname"
+}

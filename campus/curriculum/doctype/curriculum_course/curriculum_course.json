@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "semester",
+  "course",
+  "category",
+  "lecture_periods",
+  "tutorial_periods",
+  "practical_periods",
+  "credits",
+  "credits_override",
+  "is_elective",
+  "elective_group",
+  "exam_type",
+  "cia_max",
+  "ese_max",
+  "repeatable",
+  "prerequisites"
+ ],
+ "fields": [
+  {
+   "fieldname": "semester",
+   "fieldtype": "Int",
+   "label": "Sem",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Course Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "lecture_periods",
+   "fieldtype": "Float",
+   "label": "L",
+   "in_list_view": 1,
+   "fetch_from": "course.oc_lecture_hours",
+   "fetch_if_empty": 1
+  },
+  {
+   "fieldname": "tutorial_periods",
+   "fieldtype": "Float",
+   "label": "T",
+   "in_list_view": 1,
+   "fetch_from": "course.oc_tutorial_hours",
+   "fetch_if_empty": 1
+  },
+  {
+   "fieldname": "practical_periods",
+   "fieldtype": "Float",
+   "label": "P",
+   "in_list_view": 1,
+   "fetch_from": "course.oc_practical_hours",
+   "fetch_if_empty": 1
+  },
+  {
+   "fieldname": "credits",
+   "fieldtype": "Float",
+   "label": "Credits",
+   "in_list_view": 1,
+   "description": "Derived from L-T-P unless overridden."
+  },
+  {
+   "fieldname": "credits_override",
+   "fieldtype": "Check",
+   "label": "Override Credits"
+  },
+  {
+   "fieldname": "is_elective",
+   "fieldtype": "Check",
+   "label": "Elective"
+  },
+  {
+   "fieldname": "elective_group",
+   "fieldtype": "Link",
+   "label": "Elective Group",
+   "options": "Elective Group",
+   "depends_on": "is_elective"
+  },
+  {
+   "fieldname": "exam_type",
+   "fieldtype": "Select",
+   "label": "Exam Type",
+   "options": "Theory\nPractical\nProject\nInternal Only",
+   "default": "Theory"
+  },
+  {
+   "fieldname": "cia_max",
+   "fieldtype": "Float",
+   "label": "CIA Max"
+  },
+  {
+   "fieldname": "ese_max",
+   "fieldtype": "Float",
+   "label": "ESE Max"
+  },
+  {
+   "fieldname": "repeatable",
+   "fieldtype": "Check",
+   "label": "Repeatable",
+   "description": "Allow this course more than once in the curriculum."
+  },
+  {
+   "fieldname": "prerequisites",
+   "fieldtype": "Small Text",
+   "label": "Prerequisites",
+   "description": "Comma-separated Course names."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Curriculum Course",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

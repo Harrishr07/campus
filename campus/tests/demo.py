@@ -107,6 +107,7 @@ def build_demo(scale):
 	make_academic_years()
 	make_programs()
 	make_regulations()
+	make_curriculum()
 	make_users()
 	make_employees()
 	make_institution_profiles()
@@ -194,6 +195,43 @@ def make_regulations():
 				"programs": [{"program": program} for program in programs],
 			}
 		).insert(ignore_permissions=True)
+
+
+# semester, course name, category, L, T, P
+CSE_R2022_COURSES = [
+	(1, "Matrices and Calculus", "BSC", 3, 1, 0),
+	(1, "Engineering Physics", "BSC", 3, 0, 2),
+	(1, "Problem Solving and Python Programming", "ESC", 3, 0, 2),
+	(2, "Discrete Mathematics", "BSC", 3, 1, 0),
+	(2, "Data Structures", "PCC", 3, 0, 2),
+	(3, "Database Management Systems", "PCC", 3, 0, 2),
+]
+
+
+def make_curriculum():
+	"""R2022 credit rule (L 1, T 1, P 0.5; 165-170 credits) and a Draft B.E. CSE curriculum of 3 semesters."""
+	regulation = regulation_name("R2022", ENGINEERING)
+	get_or_insert(
+		"Curriculum Rule",
+		{"regulation": regulation},
+		{
+			"lecture_credit_per_period": 1,
+			"tutorial_credit_per_period": 1,
+			"practical_credit_per_period": 0.5,
+			"min_total_credits": 165,
+			"max_total_credits": 170,
+		},
+	)
+	rows = []
+	for semester, title, category, lecture, tutorial, practical in CSE_R2022_COURSES:
+		course = get_or_insert("Course", {"course_name": title}, {"oc_company": ENGINEERING})
+		rows.append(
+			{
+				"semester": semester, "course": course, "category": category,
+				"lecture_periods": lecture, "tutorial_periods": tutorial, "practical_periods": practical,
+			}
+		)  # fmt: skip
+	get_or_insert("Curriculum", {"program": "B.E. CSE", "regulation": regulation, "version": 1}, {"courses": rows})
 
 
 def make_users():
@@ -447,6 +485,7 @@ def counts():
 		"Regulation": frappe.db.count(
 			"Regulation", {"name": ["in", [regulation_name(code, company) for code, company, *_ in REGULATIONS]]}
 		),
+		"Curriculum": frappe.db.count("Curriculum", {"program": "B.E. CSE"}),
 		"Student": frappe.db.count("Student", {"student_email_id": ["like", f"%@{DOMAIN}"]}),
 		"User": frappe.db.count("User", {"name": ["like", f"%@{DOMAIN}"]}),
 	}

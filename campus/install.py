@@ -6,6 +6,7 @@ from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
 from campus.campus_platform.verification import ensure_verification_role
+from campus.curriculum.setup import setup_curriculum
 
 
 def before_install():
@@ -18,6 +19,7 @@ def after_install():
 	ensure_verification_role()
 	setup_company_fields()
 	setup_regulation_fields()
+	setup_curriculum()
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()
@@ -28,6 +30,7 @@ def after_migrate():
 	ensure_verification_role()
 	setup_company_fields()
 	setup_regulation_fields()
+	setup_curriculum()
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()

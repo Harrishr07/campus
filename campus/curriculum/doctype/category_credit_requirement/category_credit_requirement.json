@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "min_credits",
+  "actual_credits"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Course Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_credits",
+   "fieldtype": "Float",
+   "label": "Minimum Credits",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "actual_credits",
+   "fieldtype": "Float",
+   "label": "Actual Credits",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Category Credit Requirement",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

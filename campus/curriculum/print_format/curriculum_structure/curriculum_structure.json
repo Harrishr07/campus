@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Curriculum Structure",
+ "doc_type": "Curriculum",
+ "module": "Curriculum",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "{%- set s = curriculum_structure(doc) -%}\n<h3 style=\"text-align:center\">{{ _(\"Curriculum Structure\") }}</h3>\n<p style=\"text-align:center\">\n  {{ doc.program }} &middot; {{ _(\"Regulation\") }} {{ doc.regulation }} &middot; {{ _(\"Version\") }} {{ doc.version }} &middot; {{ _(doc.status) }}\n</p>\n{% for sem in s.semesters %}\n<h5>{{ _(\"Semester\") }} {{ sem.semester }}</h5>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr>\n    <th>{{ _(\"Code\") }}</th><th>{{ _(\"Course\") }}</th><th>{{ _(\"Category\") }}</th>\n    <th class=\"text-right\">L</th><th class=\"text-right\">T</th><th class=\"text-right\">P</th><th class=\"text-right\">C</th>\n  </tr></thead>\n  <tbody>\n  {% for row in sem.rows %}\n    <tr>\n      <td>{{ row.course }}</td><td>{{ row.course_title }}{% if row.is_elective %} ({{ _(\"Elective\") }}){% endif %}</td><td>{{ row.category }}</td>\n      <td class=\"text-right\">{{ row.lecture_periods or 0 }}</td><td class=\"text-right\">{{ row.tutorial_periods or 0 }}</td>\n      <td class=\"text-right\">{{ row.practical_periods or 0 }}</td><td class=\"text-right\">{{ row.credits or 0 }}</td>\n    </tr>\n  {% endfor %}\n    <tr><th colspan=\"3\">{{ _(\"Semester total\") }}</th>\n      <th class=\"text-right\">{{ sem.lecture }}</th><th class=\"text-right\">{{ sem.tutorial }}</th>\n      <th class=\"text-right\">{{ sem.practical }}</th><th class=\"text-right\">{{ sem.credits }}</th></tr>\n  </tbody>\n</table>\n{% endfor %}\n<h5>{{ _(\"Category-wise credits\") }}</h5>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Category\") }}</th><th class=\"text-right\">{{ _(\"Credits\") }}</th><th class=\"text-right\">{{ _(\"Minimum\") }}</th></tr></thead>\n  <tbody>\n  {% for c in s.categories %}\n    <tr><td>{{ c.category }}</td><td class=\"text-right\">{{ c.credits }}</td><td class=\"text-right\">{{ c.minimum if c.minimum is not none else \"\" }}</td></tr>\n  {% endfor %}\n    <tr><th>{{ _(\"Total credits (counted)\") }}</th><th class=\"text-right\">{{ s.total_credits }}</th><th></th></tr>\n  </tbody>\n</table>\n",
+ "creation": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-04 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

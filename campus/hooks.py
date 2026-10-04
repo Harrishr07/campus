@@ -326,7 +326,12 @@ has_permission = {
 # Any app may add its own; nothing else can be called.
 approval_final_actions = []
 
-jinja = {"methods": ["campus.campus_platform.verification.oc_qr_block"]}
+jinja = {
+	"methods": [
+		"campus.campus_platform.verification.oc_qr_block",
+		"campus.curriculum.structure.curriculum_structure",
+	]
+}
 
 website_route_rules = [{"from_route": "/verify/<code>", "to_route": "verify"}]
 
