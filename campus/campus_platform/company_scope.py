@@ -83,7 +83,12 @@ def setup_company_fields():
 
 def before_validate(doc, method=None):
 	"""Set the company from the parent link, falling back to the user's default company."""
-	company = get_parent_company(doc) or doc.oc_company or frappe.defaults.get_user_default("Company")
+	company = (
+		get_parent_company(doc)
+		or doc.oc_company
+		or frappe.defaults.get_user_default("Company")
+		or frappe.db.get_single_value("Global Defaults", "default_company")
+	)
 	if company:
 		doc.oc_company = company
 
@@ -104,12 +109,23 @@ def validate_linked_companies(doc, method=None):
 		return
 	for table, link_field, linked_doctype in LINKED_RECORDS.get(doc.doctype, []):
 		rows = doc.get(table) if table else [doc]
-		for name in {row.get(link_field) for row in rows if row.get(link_field)}:
-			linked_company = frappe.db.get_value(linked_doctype, name, COMPANY_FIELD[linked_doctype])
+		names = list({row.get(link_field) for row in rows if row.get(link_field)})
+		if not names:
+			continue
+		company_field = COMPANY_FIELD[linked_doctype]
+		linked = frappe.get_all(
+			linked_doctype, filters={"name": ["in", names]}, fields=["name", company_field]
+		)
+		for record in linked:
+			linked_company = record.get(company_field)
 			if linked_company and linked_company != company:
 				frappe.throw(
 					_("{0} {1} belongs to {2}, but this {3} belongs to {4}.").format(
-						_(linked_doctype), frappe.bold(name), frappe.bold(linked_company), _(doc.doctype), frappe.bold(company)
+						_(linked_doctype),
+						frappe.bold(record.name),
+						frappe.bold(linked_company),
+						_(doc.doctype),
+						frappe.bold(company),
 					),
 					title=_("Company Mismatch"),
 				)

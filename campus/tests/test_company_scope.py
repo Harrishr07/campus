@@ -3,7 +3,11 @@
 import frappe
 from frappe.utils import today
 
-from campus.campus_platform.company_scope import COMPANY_SCOPED_DOCTYPES
+from campus.campus_platform.company_scope import (
+	COMPANY_SCOPED_DOCTYPES,
+	before_validate,
+	validate_linked_companies,
+)
 from campus.patches.backfill_oc_company import execute as backfill_oc_company
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
@@ -87,7 +91,8 @@ class TestCompanyScope(CampusTestCase):
 	def test_fields_installed_on_all_scoped_doctypes(self):
 		for doctype in COMPANY_SCOPED_DOCTYPES:
 			df = frappe.get_meta(doctype).get_field("oc_company")
-			self.assertEqual((df.fieldtype, df.options, df.reqd, df.in_standard_filter), ("Link", "Company", 1, 1), doctype)
+			actual = (df.fieldtype, df.options, df.reqd, df.in_standard_filter)
+			self.assertEqual(actual, ("Link", "Company", 1, 1), doctype)
 		self.assertIsNone(frappe.get_meta("Fee Schedule").get_field("oc_company"))
 
 	def test_college_user_sees_only_own_college(self):
@@ -129,6 +134,39 @@ class TestCompanyScope(CampusTestCase):
 		self.addCleanup(frappe.defaults.clear_user_default, "company", "Administrator")
 		program = frappe.get_doc({"doctype": "Program", "program_name": "Campus Test Default Co"}).insert()
 		self.assertEqual(program.oc_company, COLLEGE_A)
+
+	def test_company_falls_back_to_global_default(self):
+		default_before = frappe.db.get_single_value("Global Defaults", "default_company")
+		frappe.db.set_single_value("Global Defaults", "default_company", COLLEGE_B)
+		self.addCleanup(frappe.db.set_single_value, "Global Defaults", "default_company", default_before)
+		program = frappe.get_doc({"doctype": "Program", "program_name": "Campus Test Global Co"}).insert()
+		self.assertEqual(program.oc_company, COLLEGE_B)
+
+	def test_course_schedule_company_derived_from_student_group(self):
+		schedule = frappe.new_doc("Course Schedule")
+		schedule.student_group = self.group_b
+		schedule.oc_company = COLLEGE_A
+		before_validate(schedule)
+		self.assertEqual(schedule.oc_company, COLLEGE_B)
+
+	def test_fee_schedule_rejects_program_of_other_college(self):
+		fee_schedule = frappe.new_doc("Fee Schedule")
+		fee_schedule.company = COLLEGE_A
+		fee_schedule.program = self.program_b
+		with self.assertRaises(frappe.ValidationError):
+			validate_linked_companies(fee_schedule)
+		fee_schedule.program = self.program_a
+		validate_linked_companies(fee_schedule)
+
+	def test_course_visibility_is_scoped(self):
+		courses = [
+			frappe.get_doc(
+				{"doctype": "Course", "course_name": f"Campus Test Course {c}", "oc_company": c}
+			).insert().name
+			for c in (COLLEGE_A, COLLEGE_B)
+		]
+		self.assertEqual(self.names_visible_to(USER_A, "Course", courses), {courses[0]})
+		self.assertEqual(self.names_visible_to(USER_TRUST, "Course", courses), set(courses))
 
 	def make_enrollment(self, student, program):
 		return frappe.get_doc(

@@ -174,7 +174,6 @@ for _dt in [
 ]:
 	doc_events.setdefault(_dt, {})["before_validate"] = f"{_company_scope}.before_validate"
 
-fixtures = [{"dt": "Custom Field", "filters": [["fieldname", "like", "oc_%"]]}]
 
 # Scheduled Tasks
 # ---------------
