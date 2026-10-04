@@ -85,7 +85,7 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance"]
 # Installation
 # ------------
 
-# before_install = "campus.install.before_install"
+before_install = "campus.install.before_install"
 after_install = "campus.install.after_install"
 after_migrate = "campus.install.after_migrate"
 

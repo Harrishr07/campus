@@ -27,7 +27,11 @@ COMPANY_SCOPED_DOCTYPES = [
 ]
 
 # Company fieldname per scoped doctype; Fee Schedule keeps its own standard field.
-COMPANY_FIELD = {**dict.fromkeys(COMPANY_SCOPED_DOCTYPES, "oc_company"), "Fee Schedule": "company", "Regulation": "company"}
+COMPANY_FIELD = {
+	**dict.fromkeys(COMPANY_SCOPED_DOCTYPES, "oc_company"),
+	"Fee Schedule": "company",
+	"Regulation": "company",
+}
 
 # doctype -> (link field on the doc, doctype it points to) whose company is inherited.
 PARENT_LINKS = {

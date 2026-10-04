@@ -23,6 +23,10 @@ class Regulation(Document):
 		if self.status == "Effective":
 			self.retire_previous_version()
 
+	def on_trash(self):
+		if self.status in ("Effective", "Retired"):
+			frappe.throw(_("An {0} regulation cannot be deleted.").format(_(self.status)))
+
 	def validate_unique_programs(self):
 		programs = [row.program for row in self.programs]
 		if len(programs) != len(set(programs)):
@@ -30,6 +34,8 @@ class Regulation(Document):
 
 	def validate_effective_lock(self):
 		before = self.get_doc_before_save()
+		if before and before.status == "Retired" and self.status != "Retired":
+			frappe.throw(_("A Retired regulation cannot be reinstated. Amend it as a new version."))
 		if not before or before.status != "Effective":
 			return
 		if self.status not in ("Effective", "Retired"):
@@ -53,7 +59,10 @@ class Regulation(Document):
 		return values
 
 	def retire_previous_version(self):
-		if self.previous_version and frappe.db.get_value("Regulation", self.previous_version, "status") == "Effective":
+		if (
+			self.previous_version
+			and frappe.db.get_value("Regulation", self.previous_version, "status") == "Effective"
+		):
 			frappe.db.set_value("Regulation", self.previous_version, "status", "Retired")
 
 

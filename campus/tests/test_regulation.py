@@ -13,7 +13,7 @@ COLLEGE = "Regulation Test College"
 OTHER_COLLEGE = "Regulation Test Other College"
 DEAN = "campus-dean@example.com"
 PLAIN_USER = "campus-regulation-plain@example.com"
-YEARS = {"2020": "2020-06-01", "2021": "2021-06-01", "2022": "2022-06-01", "2023": "2023-06-01", "2026": "2026-06-01"}
+YEARS = {year: f"{year}-06-01" for year in ("2020", "2021", "2022", "2023", "2026")}
 RULE_DOCTYPE = "Campus Test Rule"
 
 
@@ -42,7 +42,8 @@ def make_program(name, company):
 
 def make_regulation(code, company, programs, year, status="Effective", **extra):
 	if frappe.db.exists("Regulation", code):
-		frappe.delete_doc("Regulation", code, force=True)
+		frappe.db.delete("Regulation Program", {"parent": code})
+		frappe.db.delete("Regulation", {"name": code})
 	return frappe.get_doc(
 		{
 			"doctype": "Regulation",
@@ -232,6 +233,39 @@ class TestRegulation(CampusTestCase):
 		regulation.append("programs", {"program": self.other_program})
 		with self.assertRaises(frappe.ValidationError):
 			regulation.save()
+
+	def test_change_regulation_respects_company_user_permission(self):
+		student = make_student("RegOtherCollege", OTHER_COLLEGE, batch="2023")
+		frappe.set_user(DEAN)
+		with self.assertRaises(frappe.PermissionError):
+			change_regulation(student.name, self.r2026, "rejoined")
+
+	def test_change_regulation_requires_program_coverage(self):
+		student = make_student("RegWrongProgram", COLLEGE, batch="2023")
+		enroll(student, self.other_program, "2023")
+		with self.assertRaises(frappe.ValidationError):
+			change_regulation(student.name, self.r2026, "rejoined")
+
+	def test_retired_cannot_be_reinstated(self):
+		regulation = make_regulation("R-TERMINAL", COLLEGE, [self.scratch_program], "2023")
+		regulation.status = "Retired"
+		regulation.save()
+		regulation.status = "Effective"
+		with self.assertRaises(frappe.ValidationError):
+			regulation.save()
+
+	def test_effective_and_retired_cannot_be_deleted(self):
+		regulation = make_regulation("R-NODELETE", COLLEGE, [self.scratch_program], "2023")
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc("Regulation", regulation.name)
+		regulation.status = "Retired"
+		regulation.save()
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc("Regulation", regulation.name)
+
+	def test_get_regulation_of_missing_student(self):
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_regulation("EDU-STU-MISSING")
 
 	def test_effective_regulation_can_be_retired(self):
 		regulation = make_regulation("R-RETIRE", COLLEGE, [self.scratch_program], "2023")

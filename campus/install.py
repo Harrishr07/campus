@@ -6,6 +6,10 @@ from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.module_packs import seed_module_packs
 
 
+def before_install():
+	ensure_dean_role()  # regulation.json permissions reference it during DocType sync
+
+
 def after_install():
 	ensure_dean_role()
 	setup_company_fields()
