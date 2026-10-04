@@ -36,7 +36,10 @@ class PositionHolder(Document):
 		self.role_granted = 0 if self.is_new() else frappe.db.get_value(self.doctype, self.name, "role_granted")
 
 	def set_scope_doctype(self):
-		self.scope_doctype = SCOPE_DOCTYPES[frappe.db.get_value("Position", self.position, "scope_type")]
+		scope_type = frappe.db.get_value("Position", self.position, "scope_type")
+		if not scope_type:
+			frappe.throw(_("Position {0} does not exist").format(self.position))
+		self.scope_doctype = SCOPE_DOCTYPES[scope_type]
 
 	def validate_scope_value(self):
 		if self.scope_doctype and not self.scope_value:

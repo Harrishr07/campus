@@ -4,7 +4,12 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform.api import resolve_position
-from campus.campus_platform.positions import SEED_POSITIONS, date_ranges_overlap, ensure_seed_positions, sync_all_roles
+from campus.campus_platform.positions import (
+	SEED_POSITIONS,
+	date_ranges_overlap,
+	ensure_seed_positions,
+	sync_all_roles,
+)
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
 
@@ -210,6 +215,37 @@ class TestPositions(CampusTestCase):
 		self.assertNotIn("HOD", roles_of(ALICE))
 		self.assertIn("HOD", roles_of(BOB))
 
+	def test_position_cannot_be_changed_after_creation(self):
+		doc = holding("HOD", ALICE, add_days(today(), -5), scope=self.dept).insert()
+		doc.position = "COE"
+		with self.assertRaises(frappe.ValidationError):
+			doc.save()
+		self.assertIn("HOD", roles_of(ALICE))
+
+	def test_unknown_position_gives_validation_error(self):
+		with self.assertRaises(frappe.ValidationError):
+			holding("NO-SUCH", ALICE, "2026-01-01").insert()
+
+	def test_one_failing_user_does_not_stop_the_sync(self):
+		from unittest.mock import patch
+
+		from campus.campus_platform import positions
+
+		doc = holding("HOD", ALICE, add_days(today(), -5), scope=self.dept).insert()
+		frappe.db.set_value("Position Holder", doc.name, "to_date", add_days(today(), -1))
+		holding("HOD", BOB, add_days(today(), -5), scope=make_department("Position Test CE", COLLEGE)).insert()
+		real = positions.sync_user_roles
+
+		def flaky(user, *args, **kwargs):
+			if user == BOB:
+				raise RuntimeError("boom")
+			return real(user, *args, **kwargs)
+
+		with patch.object(positions, "sync_user_roles", flaky), patch.object(frappe, "log_error") as log:
+			sync_all_roles()
+		self.assertTrue(log.called)
+		self.assertNotIn("HOD", roles_of(ALICE))
+
 	def make_student_group(self):
 		name = "Position Test Group"
 		if not frappe.db.exists("Academic Year", "PT-2026"):
@@ -223,7 +259,13 @@ class TestPositions(CampusTestCase):
 			).insert()
 		if not frappe.db.exists("Student Group", name):
 			frappe.get_doc(
-				{"doctype": "Student Group", "student_group_name": name, "group_based_on": "Activity", "academic_year": "PT-2026", "oc_company": COLLEGE}
+				{
+					"doctype": "Student Group",
+					"student_group_name": name,
+					"group_based_on": "Activity",
+					"academic_year": "PT-2026",
+					"oc_company": COLLEGE,
+				}
 			).insert()
 		return frappe.db.get_value("Student Group", {"student_group_name": name})
 

@@ -110,7 +110,9 @@ def release_reassigned_holding(old_user, holding):
 
 
 def _marked_holdings(user):
-	holdings = frappe.get_all("Position Holder", filters={"user": user, "role_granted": 1}, fields=["name", "position"])
+	holdings = frappe.get_all(
+		"Position Holder", filters={"user": user, "role_granted": 1}, fields=["name", "position"]
+	)
 	for holding in holdings:
 		holding.role = frappe.db.get_value("Position", holding.position, "role")
 	return holdings
@@ -147,7 +149,12 @@ def sync_all_roles():
 	"""Daily job: grant roles for holdings that started and revoke those whose holding ended."""
 	users = frappe.get_all("Position Holder", filters={"user": ["is", "set"]}, pluck="user", distinct=True)
 	for user in users:
-		sync_user_roles(user)
+		try:
+			sync_user_roles(user)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(title=f"Position role sync failed for {user}")
 
 
 def ensure_seed_positions():
