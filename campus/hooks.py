@@ -295,4 +295,16 @@ doc_events["Program Enrollment"]["validate"] = [
 
 boot_session = "campus.campus_platform.pack_visibility.boot_session"
 
-scheduler_events = {"daily": ["campus.campus_platform.positions.sync_all_roles"]}
+scheduler_events = {
+	"daily": ["campus.campus_platform.positions.sync_all_roles"],
+	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
+}
+
+app_include_js = "/assets/campus/js/approvals.js"
+
+permission_query_conditions = {
+	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
+}
+has_permission = {
+	"Approval Request": "campus.campus_platform.approval_access.has_permission",
+}

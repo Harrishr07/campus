@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "approver_type",
+  "approver",
+  "scope_field",
+  "limit_to_company",
+  "min_approvals",
+  "column_break_1",
+  "sla_hours",
+  "escalate_to_type",
+  "escalate_to",
+  "escalate_scope_field",
+  "can_edit_fields"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Level Name",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "approver_type",
+   "fieldtype": "Select",
+   "label": "Approver Type",
+   "options": "Role\nPosition\nUser\nField\nReporting Manager",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Data",
+   "label": "Approver",
+   "in_list_view": 1,
+   "description": "Role name, Position code or User id; for Field, the document field holding the approver's user id; for Reporting Manager, optionally the field holding the Employee or User (blank = document owner)."
+  },
+  {
+   "fieldname": "scope_field",
+   "fieldtype": "Data",
+   "label": "Scope Field",
+   "depends_on": "eval:doc.approver_type=='Position'",
+   "description": "Document field whose value is the position scope, e.g. department or company. Blank = any scope."
+  },
+  {
+   "fieldname": "limit_to_company",
+   "fieldtype": "Check",
+   "label": "Only Users Permitted for the Company",
+   "default": "1",
+   "depends_on": "eval:doc.approver_type=='Role'",
+   "description": "Keep only role holders with a User Permission on the document's company."
+  },
+  {
+   "fieldname": "min_approvals",
+   "fieldtype": "Int",
+   "label": "Minimum Approvals",
+   "default": "1",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sla_hours",
+   "fieldtype": "Float",
+   "label": "SLA (Hours)",
+   "in_list_view": 1,
+   "non_negative": 1,
+   "description": "Calendar hours. Blank = no SLA."
+  },
+  {
+   "fieldname": "escalate_to_type",
+   "fieldtype": "Select",
+   "label": "Escalate To Type",
+   "options": "\nRole\nPosition\nUser"
+  },
+  {
+   "fieldname": "escalate_to",
+   "fieldtype": "Data",
+   "label": "Escalate To",
+   "depends_on": "escalate_to_type",
+   "mandatory_depends_on": "escalate_to_type",
+   "description": "Role name, Position code or User id."
+  },
+  {
+   "fieldname": "escalate_scope_field",
+   "fieldtype": "Data",
+   "label": "Escalation Scope Field",
+   "depends_on": "eval:doc.escalate_to_type=='Position'"
+  },
+  {
+   "fieldname": "can_edit_fields",
+   "fieldtype": "Small Text",
+   "label": "Fields Approvers Can Edit",
+   "description": "Fields the approvers of this level may change while the level is pending, comma or newline separated."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Approval Level",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 0
+}
