@@ -1,5 +1,7 @@
 """M17-02 tests: position resolution by date, overlap rule, role grant/revoke and seed data."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import add_days, today
 
@@ -21,9 +23,10 @@ DEPT = "Position Test CSE"
 
 
 def make_department(name, company):
-	if not frappe.db.exists("Department", name):
-		frappe.get_doc({"doctype": "Department", "department_name": name, "company": company}).insert()
-	return frappe.db.get_value("Department", {"department_name": name, "company": company})
+	existing = frappe.db.get_value("Department", {"department_name": name, "company": company})
+	if existing:
+		return existing
+	return frappe.get_doc({"doctype": "Department", "department_name": name, "company": company}).insert().name
 
 
 def holding(position, user, from_date, to_date=None, scope=None, **extra):
@@ -69,6 +72,9 @@ class TestPositions(CampusTestCase):
 		cls.dept = make_department(DEPT, COLLEGE)
 
 	def setUp(self):
+		commit = patch.object(frappe.db, "commit")  # sync_all_roles commits per user; keep tests rolled back
+		commit.start()
+		self.addCleanup(commit.stop)
 		frappe.db.delete("Position Holder")
 		for user in (ALICE, BOB, CAROL):
 			frappe.get_doc("User", user).remove_roles("HOD", "Mentor", "Dean Academics")
@@ -227,8 +233,6 @@ class TestPositions(CampusTestCase):
 			holding("NO-SUCH", ALICE, "2026-01-01").insert()
 
 	def test_one_failing_user_does_not_stop_the_sync(self):
-		from unittest.mock import patch
-
 		from campus.campus_platform import positions
 
 		doc = holding("HOD", ALICE, add_days(today(), -5), scope=self.dept).insert()
