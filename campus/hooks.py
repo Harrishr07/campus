@@ -86,7 +86,8 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance"]
 # ------------
 
 # before_install = "campus.install.before_install"
-# after_install = "campus.install.after_install"
+after_install = "campus.install.after_install"
+after_migrate = "campus.install.after_migrate"
 
 # Uninstallation
 # ------------
@@ -144,13 +145,36 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance"]
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+_company_scope = "campus.campus_platform.company_scope"
+doc_events = {
+	dt: {"validate": f"{_company_scope}.validate_linked_companies"}
+	for dt in [
+		"Student Applicant",
+		"Program",
+		"Student Group",
+		"Program Enrollment",
+		"Course Schedule",
+		"Student Admission",
+		"Assessment Plan",
+		"Fee Schedule",
+	]
+}
+for _dt in [
+	"Student",
+	"Student Applicant",
+	"Program",
+	"Course",
+	"Student Group",
+	"Program Enrollment",
+	"Course Schedule",
+	"Instructor",
+	"Room",
+	"Student Admission",
+	"Assessment Plan",
+]:
+	doc_events.setdefault(_dt, {})["before_validate"] = f"{_company_scope}.before_validate"
+
+fixtures = [{"dt": "Custom Field", "filters": [["fieldname", "like", "oc_%"]]}]
 
 # Scheduled Tasks
 # ---------------
