@@ -4,6 +4,7 @@ import frappe
 from frappe.utils import today
 
 from campus.campus_platform.regulation_rules import get_regulation, get_rule  # noqa: F401  (public API)
+from campus.campus_platform.positions import resolve_position  # noqa: F401  (public API)
 from campus.campus_platform.pack_rules import effective_status, status_allows_pack
 
 PACK_CACHE = "campus_pack_enabled"
