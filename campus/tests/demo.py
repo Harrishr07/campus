@@ -209,7 +209,7 @@ CSE_R2022_COURSES = [
 
 
 def make_curriculum():
-	"""R2022 credit rule (L 1, T 1, P 0.5; 165-170 credits) and a Draft B.E. CSE curriculum of 3 semesters."""
+	"""R2022 credit and registration rules (L 1, T 1, P 0.5; 165-170 credits; 36 per semester) and a Draft B.E. CSE curriculum of 3 semesters."""
 	regulation = regulation_name("R2022", ENGINEERING)
 	get_or_insert(
 		"Curriculum Rule",
@@ -222,6 +222,15 @@ def make_curriculum():
 			"max_total_credits": 170,
 		},
 	)
+	get_or_insert(
+		"Registration Rule",
+		{"regulation": regulation},
+		{
+			"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6,
+			"drop_window_days": 30, "add_from_semester": 5, "max_add_credits": 6, "max_add_courses": 2,
+			"elective_min_enrolment": 10,
+		},
+	)  # fmt: skip
 	rows = []
 	for semester, title, category, lecture, tutorial, practical in CSE_R2022_COURSES:
 		course = get_or_insert("Course", {"course_name": title}, {"oc_company": ENGINEERING})

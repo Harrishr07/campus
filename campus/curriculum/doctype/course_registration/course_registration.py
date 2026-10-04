@@ -1,0 +1,229 @@
+"""M03-04 Course Registration: a student's semester course selection, approved advisor -> HOD.
+
+Credits come from the student's Effective curriculum. The limits come from the regulation's
+Registration Rule (credit cap, drop, add, elective seat cap); the Registration Window gives the dates
+and may override the cap. Seats are counted from offering Student Group membership under a row lock
+on the Elective Group, and final approval enrolls the student exactly once.
+"""
+
+from functools import cached_property
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+from frappe.utils import cint, getdate
+
+from campus.campus_platform.api import ApprovableDocument, get_regulation, get_rule, latest_enrollment
+from campus.curriculum import registration_rules as rules
+from campus.curriculum.api import prerequisites_met
+from campus.curriculum.enrollment import (
+	count_members,
+	current_offering,
+	enroll,
+	find_offering,
+	unenroll,
+)
+
+RULE = "Registration Rule"
+
+
+class CourseRegistration(ApprovableDocument, Document):
+	def validate(self):
+		super().validate()
+		self.set_context()
+		self.fill_items()
+		self.check_items()
+		window = self.get_window()
+		self.check_window(window)
+		problems = self.rule_problems(window) + self.seat_problems(lock=False)
+		if problems:
+			frappe.throw("<br>".join(problems), title=_("Registration Rules Not Met"))
+
+	def before_submit(self):
+		super().before_submit()
+		self.assign_offerings()
+		problems = self.seat_problems(lock=True)
+		if problems:
+			frappe.throw("<br>".join(problems), title=_("Registration Rules Not Met"))
+
+	def on_submit(self):
+		self.apply_rows(enrolling=True)
+
+	def on_cancel(self):
+		self.apply_rows(enrolling=False)
+
+	@cached_property
+	def rule(self):
+		return get_rule(self.student, RULE)
+
+	@cached_property
+	def regulation_code(self):
+		return frappe.db.get_value("Regulation", self.regulation, "code")
+
+	def set_context(self):
+		student = frappe.db.get_value("Student", self.student, ["oc_company"], as_dict=True)
+		enrollment = latest_enrollment(self.student)
+		if not enrollment:
+			frappe.throw(_("Student {0} has no Program Enrollment.").format(frappe.bold(self.student)))
+		self.company = student.oc_company
+		self.department = frappe.db.get_value("Program", enrollment.program, "department")
+		self.regulation = get_regulation(self.student)
+		self.curriculum = frappe.db.get_value(
+			"Curriculum", {"program": enrollment.program, "regulation": self.regulation, "status": "Effective"}
+		)
+		if not self.curriculum:
+			frappe.throw(
+				_("No Effective curriculum of regulation {0} for programme {1}.").format(
+					frappe.bold(self.regulation), frappe.bold(enrollment.program)
+				)
+			)
+		if not self.class_group:
+			self.class_group = find_class_group(self.student, enrollment.program)
+
+	def fill_items(self):
+		by_course = {}
+		for row in frappe.get_doc("Curriculum", self.curriculum).courses:
+			by_course.setdefault(row.course, []).append(row)
+		self.curriculum_rows = {}
+		for item in self.items:
+			candidates = by_course.get(item.course)
+			if not candidates:
+				frappe.throw(_("Row {0}: {1} is not in curriculum {2}.").format(item.idx, frappe.bold(item.course), self.curriculum))
+			row = next((r for r in candidates if r.semester == cint(self.semester)), candidates[0])
+			item.update(
+				{
+					"credits": row.credits, "semester": row.semester, "category": row.category,
+					"is_elective": row.is_elective, "elective_group": row.elective_group,
+				}
+			)  # fmt: skip
+			self.curriculum_rows[item.course] = row
+		self.total_credits = 0
+
+	def check_items(self):
+		seen = set()
+		for item in self.items:
+			if item.course in seen:
+				frappe.throw(_("Row {0}: {1} is listed twice.").format(item.idx, frappe.bold(item.course)))
+			seen.add(item.course)
+			registered = current_offering(self.student, item.course, self.academic_term)
+			if item.registration_type == "Dropped" and not registered:
+				frappe.throw(_("Row {0}: {1} is not registered this term, so it cannot be dropped.").format(item.idx, frappe.bold(item.course)))
+			if item.registration_type != "Dropped" and registered:
+				frappe.throw(_("Row {0}: {1} is already registered this term.").format(item.idx, frappe.bold(item.course)))
+			self.check_prerequisites(item)
+
+	def check_prerequisites(self, item):
+		if item.registration_type == "Dropped" or not self.curriculum_rows[item.course].prerequisites:
+			return
+		if not prerequisites_met(self.student, item.course):
+			frappe.throw(_("Row {0}: prerequisites of {1} are not met.").format(item.idx, frappe.bold(item.course)))
+
+	def get_window(self):
+		program = frappe.db.get_value("Curriculum", self.curriculum, "program")
+		windows = frappe.get_all(
+			"Registration Window",
+			filters={"academic_term": self.academic_term, "company": self.company},
+			or_filters=[["program", "=", program], ["program", "is", "not set"]],
+			fields=["name", "opens_on", "closes_on", "drop_until", "max_credits", "program"],
+			order_by="program desc",
+			limit=1,
+		)
+		return windows[0] if windows else None
+
+	def check_window(self, window):
+		"""New registrations of courses need an open window; drops are governed by the drop deadline."""
+		if not self.is_new() or all(i.registration_type == "Dropped" for i in self.items):
+			return
+		date = getdate(self.registration_date)
+		if not window or not getdate(window.opens_on) <= date <= getdate(window.closes_on):
+			frappe.throw(_("Registration for {0} is not open on {1}.").format(frappe.bold(self.academic_term), date))
+
+	def rule_problems(self, window):
+		rule = self.rule
+		rows = [(i.registration_type, i.credits) for i in self.items]
+		prefix = lambda field: rules.clause(self.regulation_code, rule.get(field))  # noqa: E731
+		excluded = rules.excluded_types(rule.excluded_types)
+		limit = (window and window.max_credits) or rule.max_credits_per_semester
+		self.total_credits = rules.counted_credits(rows, excluded)
+		term_start = frappe.db.get_value("Academic Term", self.academic_term, "term_start_date")
+		deadline = rules.drop_deadline(term_start, rule.drop_window_days, window and window.drop_until)
+		return (
+			rules.credit_limit_problems(rows, limit, excluded, prefix("max_credits_clause"))
+			+ rules.drop_problems(rows, self.registration_date, deadline, rule.max_drop_credits, prefix("drop_clause"))
+			+ rules.add_problems(rows, self.semester, rule, prefix("add_clause"))
+			+ self.choose_problems(prefix("elective_clause"))
+		)
+
+	def choose_problems(self, prefix):
+		"""No more electives of one group than the group allows."""
+		picked = {}
+		for item in self.items:
+			if item.elective_group and item.registration_type != "Dropped":
+				picked.setdefault(item.elective_group, []).append(item.course)
+		problems = []
+		for group, courses in picked.items():
+			choose = frappe.db.get_value("Elective Group", group, "choose_n")
+			if len(courses) > choose:
+				problems.append(prefix + _("elective group {0} allows {1} course(s); {2} chosen.").format(group, choose, len(courses)))
+		return problems
+
+	def seat_problems(self, lock):
+		"""Seat-cap messages for the electives being added. With `lock` the Elective Group row is locked
+		FOR UPDATE first, so concurrent registrations for the last seat serialise: the loser counts
+		the winner's membership and fails."""
+		prefix = rules.clause(self.regulation_code, self.rule.elective_clause)
+		problems = []
+		for item in sorted(self.elective_items(), key=lambda i: (i.elective_group, i.course)):
+			cap = frappe.db.get_value(
+				"Elective Group", item.elective_group, "seat_cap_per_course", for_update=bool(lock)
+			)
+			enrolled = count_members(self.curriculum, item.course, self.academic_term)
+			problem = rules.seat_problem(item.course, enrolled, cap, prefix)
+			problems += [problem] if problem else []
+		return problems
+
+	def elective_items(self):
+		return [i for i in self.items if i.elective_group and i.registration_type != "Dropped"]
+
+	def assign_offerings(self):
+		section = frappe.db.get_value("Student Group", self.class_group, "oc_section") if self.class_group else None
+		for item in self.items:
+			if item.registration_type == "Dropped":
+				item.offering = current_offering(self.student, item.course, self.academic_term)
+				continue
+			item.offering = find_offering(self.curriculum, item.course, self.academic_term, section)
+			if not item.offering:
+				frappe.throw(_("Row {0}: no offering of {1} exists for {2}.").format(item.idx, frappe.bold(item.course), self.academic_term))
+
+	def apply_rows(self, enrolling):
+		"""Enroll (or on cancel, reverse) every row; a drop does the opposite of a registration."""
+		program_enrollment = latest_enrollment_name(self.student)
+		for item in self.items:
+			if (item.registration_type == "Dropped") == enrolling:
+				unenroll(self.student, item, program_enrollment)
+			else:
+				enroll(self.student, item, program_enrollment, self.registration_date)
+
+
+def find_class_group(student, program):
+	"""The student's active Batch group of `program`, if any (scopes the Class Advisor approval)."""
+	group = frappe.qb.DocType("Student Group")
+	member = frappe.qb.DocType("Student Group Student")
+	rows = (
+		frappe.qb.from_(group)
+		.join(member)
+		.on(member.parent == group.name)
+		.select(group.name)
+		.where((member.student == student) & (group.group_based_on == "Batch"))
+		.where((group.program == program) & (group.disabled == 0))
+		.orderby(group.creation)
+		.limit(1)
+		.run()
+	)
+	return rows[0][0] if rows else None
+
+
+def latest_enrollment_name(student):
+	return frappe.db.get_value(
+		"Program Enrollment", {"student": student, "docstatus": ["<", 2]}, "name", order_by="enrollment_date desc, creation desc"
+	)

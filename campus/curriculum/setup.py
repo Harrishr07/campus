@@ -55,7 +55,15 @@ def setup_curriculum_fields():
 		field("oc_practical_hours", "Float", "Default Practical Periods", "oc_tutorial_hours"),
 		field("oc_credits", "Float", "Default Credits", "oc_practical_hours"),
 	]  # fmt: skip
-	create_custom_fields({"Program": program, "Course": course}, update=True)
+	student_group = [
+		field("oc_offering_section", "Section Break", "Offering", "course"),
+		field("oc_curriculum", "Link", "Curriculum", "oc_offering_section", options="Curriculum", read_only=1),
+		field("oc_semester", "Int", "Semester", "oc_curriculum", read_only=1),
+		field("oc_offering_column", "Column Break", None, "oc_semester"),
+		field("oc_section", "Data", "Section", "oc_offering_column", in_standard_filter=1),
+		field("oc_course_category", "Link", "Course Category", "oc_section", options="Course Category", read_only=1),
+	]  # fmt: skip
+	create_custom_fields({"Program": program, "Course": course, "Student Group": student_group}, update=True)
 
 
 def field(fieldname, fieldtype, label, insert_after, **kwargs):
