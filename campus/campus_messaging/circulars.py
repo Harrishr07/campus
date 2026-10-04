@@ -122,7 +122,7 @@ def acknowledge(circular):
 	if frappe.db.exists("Circular Acknowledgement", name):
 		return name
 	party_type, _sep, party = match["matched"].partition(":")
-	frappe.get_doc(
+	acknowledgement = frappe.get_doc(
 		{
 			"doctype": "Circular Acknowledgement",
 			"circular": circular,
@@ -132,5 +132,9 @@ def acknowledge(circular):
 			"company": match["company"],
 			"acknowledged_on": now_datetime(),
 		}
-	).insert(ignore_permissions=True)
+	)
+	try:
+		acknowledgement.insert(ignore_permissions=True)
+	except frappe.DuplicateEntryError:  # a concurrent request acknowledged first
+		pass
 	return name

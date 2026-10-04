@@ -301,3 +301,44 @@ class TestReports(CircularTestCase):
 		self.assertIn(("Guardian", self.world["g_asha"], "Opted Out"), [(r["party_type"], r["party"], r["status"]) for r in rows])
 		self.assertEqual(self.rows(consent_register, {"company": fx.OTHER_COLLEGE}), [])
 		self.assertEqual(self.rows(consent_register, user=fx.OTHER_COLLEGE_USER), [])
+
+
+class TestMessagingJavascript(CircularTestCase):
+	def test_every_method_the_forms_call_resolves(self):
+		import re
+
+		for doctype in ("audience_rule", "broadcast", "circular"):
+			path = frappe.get_app_path("campus", "campus_messaging", "doctype", doctype, f"{doctype}.js")
+			source = open(path).read()
+			constants = dict(re.findall(r'const (\w+) = "([\w.]+)"', source))
+			calls = re.findall(r'xcall\(\s*(?:(\w+) \+ )?(?:"(\w+)"|(\w+))', source)
+			methods = set(re.findall(r'xcall\(\s*"([\w.]+)"', source))
+			for prefix, name, constant in calls:
+				if constant:
+					methods.add(constants[constant])
+				elif prefix:
+					methods.add(constants[prefix] + name)
+			self.assertTrue(methods, doctype)
+			for method in methods:
+				self.assertTrue(callable(frappe.get_attr(method)), method)
+				self.assertIn(frappe.get_attr(method), frappe.whitelisted, method)
+
+	def test_acknowledge_returns_existing_row_when_insert_races(self):
+		circular = self.circular()
+		circular.submit()
+		name = self.acknowledge_as(fx.GUARDIAN_USER, circular.name)
+		with patch("frappe.db.exists", return_value=None):  # the pre-check misses the row another request just wrote
+			self.assertEqual(self.acknowledge_as(fx.GUARDIAN_USER, circular.name), name)
+		self.assertEqual(frappe.db.count("Circular Acknowledgement", {"circular": circular.name}), 1)
+
+	def test_refresh_status_needs_write_permission(self):
+		broadcast = frappe.get_doc(
+			{"doctype": "Broadcast", "title": "x", "company": fx.COLLEGE, "audience_rule": self.rule, "message_template": "t11.notice"}
+		).insert()
+		broadcast.submit()
+		frappe.set_user(fx.STUDENT_USER)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_attr("campus.campus_messaging.doctype.broadcast.broadcast.refresh_status")(broadcast.name)
+		finally:
+			frappe.set_user("Administrator")

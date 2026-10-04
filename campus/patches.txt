@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 campus.patches.backfill_oc_company
 campus.patches.rename_regulations_per_company
+campus.patches.backfill_messaging_company

@@ -118,8 +118,34 @@ class TestMessageCompany(BroadcastTestCase):
 		self.assertEqual(scope.company_of("Employee", self.world["emp_1"]), fx.COLLEGE)
 		self.assertEqual(scope.company_of("Guardian", self.world["g_asha"]), fx.COLLEGE)
 		self.assertIsNone(scope.company_of("User", fx.STAFF_USER))
+		# deterministic: the earliest-linked student decides for a guardian spanning colleges
+		self.assertEqual(scope.company_of("Guardian", self.world["g_asha"]), scope.company_of("Student", self.world["asha"]))
+		self.assertIsNone(scope.company_of("Guardian", "no-such-guardian"))  # None, not an empty list
 		self.assertIsNone(scope.company_of("phone", "+919800000000"))
 		self.assertIsNone(scope.company_of("Student", "no-such-student"))
+
+
+class TestMessagingCompanyBackfill(BroadcastTestCase):
+	def test_patch_fills_missing_company_and_is_rerunnable(self):
+		from campus.patches import backfill_messaging_company
+
+		consent = frappe.get_doc(
+			{"doctype": "Communication Consent", "party_type": "Guardian", "party": self.world["g_asha"],
+			 "channel": "push", "purpose": "promotional", "status": "Opted In"}
+		).insert()  # fmt: skip
+		self.addCleanup(frappe.delete_doc, "Communication Consent", consent.name)
+		log = frappe.get_doc(
+			{"doctype": "Message Log", "event_key": "t11.notice", "reference_doctype": "Student",
+			 "reference_name": self.world["asha"], "recipient": f"Guardian:{self.world['g_asha']}", "channel": "email",
+			 "status": "Skipped", "language": "en"}
+		).insert()  # fmt: skip
+		self.addCleanup(frappe.delete_doc, "Message Log", log.name, force=True)
+		frappe.db.set_value("Communication Consent", consent.name, "company", None)
+		frappe.db.set_value("Message Log", log.name, "company", None)
+		for _ in range(2):
+			backfill_messaging_company.execute()
+			self.assertEqual(frappe.db.get_value("Communication Consent", consent.name, "company"), fx.COLLEGE)
+			self.assertEqual(frappe.db.get_value("Message Log", log.name, "company"), fx.COLLEGE)
 
 
 class TestBroadcasts(BroadcastTestCase):

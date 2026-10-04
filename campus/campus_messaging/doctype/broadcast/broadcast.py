@@ -112,7 +112,7 @@ def release_due():
 def refresh_status(name):
 	"""Recount the broadcast from its Message Logs and follow its Bulk Run: Sending becomes Sent, or Failed if the run failed."""
 	broadcast = frappe.get_doc("Broadcast", name)
-	broadcast.check_permission("read")
+	broadcast.check_permission("write")
 	if broadcast.docstatus != 1 or broadcast.status not in (SENDING, SENT, FAILED):
 		return broadcast.status
 	run = frappe.db.get_value("Bulk Run", broadcast.bulk_run, ["status", "failed"], as_dict=True) if broadcast.bulk_run else None

@@ -1,7 +1,7 @@
 """M16 Company of a message: derived from the record it is about, else from the recipient.
 
 Message Logs and consents carry `company` so reports can be filtered by it and by User Permissions.
-Students and employees carry their own company; a guardian takes the company of their first student.
+Students and employees carry their own company; a guardian takes the company of their earliest-linked student.
 """
 
 import frappe
@@ -14,8 +14,15 @@ def company_of(doctype, name):
 	if not doctype or not name:
 		return None
 	if doctype == "Guardian":
-		student = frappe.db.get_value("Student Guardian", {"guardian": name, "parenttype": "Student"}, "parent")
-		return student and company_of("Student", student)
+		# A guardian of students in several colleges takes the company of the earliest-linked student.
+		students = frappe.get_all(
+			"Student Guardian",
+			filters={"guardian": name, "parenttype": "Student"},
+			pluck="parent",
+			order_by="creation asc, parent asc",
+			limit=1,
+		)
+		return company_of("Student", students[0]) if students else None
 	try:
 		meta = frappe.get_meta(doctype)
 	except frappe.DoesNotExistError:

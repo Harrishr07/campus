@@ -7,7 +7,7 @@ frappe.ui.form.on("Broadcast", {
 		if (frm.doc.docstatus === 0 && frm.doc.audience_rule) {
 			frm.add_custom_button(__("Preview Recipients"), () =>
 				frappe
-					.xcall(BROADCAST + "preview_recipients", { audience_rule: frm.doc.audience_rule })
+					.xcall(PREVIEW, { audience_rule: frm.doc.audience_rule })
 					.then((count) => frappe.msgprint(__("This broadcast will reach {0} recipients.", [count])))
 			);
 		}
