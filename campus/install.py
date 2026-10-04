@@ -1,5 +1,6 @@
 """Install and migrate hooks for OneBook Campus."""
 
+from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
 from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.positions import ensure_seed_positions
@@ -19,6 +20,7 @@ def after_install():
 	setup_regulation_fields()
 	seed_module_packs()
 	ensure_seed_positions()
+	setup_messaging()
 
 
 def after_migrate():
@@ -28,3 +30,4 @@ def after_migrate():
 	setup_regulation_fields()
 	seed_module_packs()
 	ensure_seed_positions()
+	setup_messaging()

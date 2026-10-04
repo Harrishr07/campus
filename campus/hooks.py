@@ -298,7 +298,11 @@ boot_session = "campus.campus_platform.pack_visibility.boot_session"
 scheduler_events = {
 	"daily": ["campus.campus_platform.positions.sync_all_roles"],
 	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
+	"cron": {"*/15 * * * *": ["campus.campus_messaging.delivery.dispatch_due"]},
 }
+
+# Delivery status webhooks (frappe_whatsapp updates WhatsApp Message) update the Message Log.
+doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
 app_include_js = "/assets/campus/js/approvals.js"
 
@@ -316,3 +320,6 @@ approval_final_actions = []
 jinja = {"methods": ["campus.campus_platform.verification.oc_qr_block"]}
 
 website_route_rules = [{"from_route": "/verify/<code>", "to_route": "verify"}]
+
+# Message Logs are an audit trail: they must not block deleting the documents they refer to.
+ignore_links_on_delete = ["Message Log"]

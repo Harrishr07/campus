@@ -1,11 +1,16 @@
 """M17-03 Single notification entry point for campus platform events.
 
-Sends a desk notification (Notification Log), which also emails the user when their notification
-settings allow. P1-T10 replaces the body with a call to the messaging bus; callers stay unchanged.
+Always sends a desk notification (Notification Log), which also emails the user when their notification
+settings allow. When the "approval.notification" Message Template exists, the message is also sent through
+the messaging bus (WhatsApp/SMS per template and consent) to each user.
 """
+
+import hashlib
 
 import frappe
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+
+EVENT_KEY = "approval.notification"
 
 
 def notify(users, subject, message, doc):
@@ -23,3 +28,8 @@ def notify(users, subject, message, doc):
 			"from_user": frappe.session.user,
 		},
 	)
+	if frappe.db.exists("Message Template", {"event_key": EVENT_KEY, "enabled": 1}):
+		from campus.campus_messaging.api import send
+
+		token = hashlib.sha1(f"{subject}\n{message}".encode()).hexdigest()
+		send(EVENT_KEY, doc, [f"User:{u}" for u in users], {"subject": subject, "message": message, "dedupe_token": token})
