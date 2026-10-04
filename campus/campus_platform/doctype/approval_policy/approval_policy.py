@@ -4,7 +4,9 @@ import frappe
 from frappe import _
 from frappe.model.base_document import get_controller
 from frappe.model.document import Document
+from frappe.utils.safe_exec import _compile_code, _validate_safe_eval_syntax
 
+from campus.campus_platform.approval_engine import registered_final_action
 from campus.campus_platform.approval_rules import PENDING, parse_fieldnames
 from campus.campus_platform.approvals import ApprovableDocument
 
@@ -34,9 +36,10 @@ class ApprovalPolicy(Document):
 		if not (self.condition or "").strip():
 			return
 		try:
-			compile(self.condition, "<condition>", "eval")
+			_validate_safe_eval_syntax(self.condition)
+			_compile_code(self.condition, filename="<condition>", mode="eval")  # rejects unsafe names
 		except SyntaxError as e:
-			frappe.throw(_("Condition is not a valid expression: {0}").format(e.msg))
+			frappe.throw(_("Condition is not a valid expression: {0}").format(e.msg or e))
 
 	def validate_level(self, level):
 		label = _("Level {0}").format(level.idx)
@@ -73,10 +76,7 @@ class ApprovalPolicy(Document):
 		if self.on_final_action == "Set Field":
 			self.validate_fields(_("On Final Approval"), [self.final_field])
 		elif self.on_final_action == "Call Service":
-			try:
-				frappe.get_attr(self.final_method)
-			except Exception:
-				frappe.throw(_("Method {0} cannot be found.").format(frappe.bold(self.final_method)))
+			registered_final_action(self.final_method)
 
 	def validate_levels_frozen(self):
 		"""Running requests index into the levels; changing them mid-flight would misroute approvals."""

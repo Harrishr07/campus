@@ -38,22 +38,19 @@ class TestApproverTypes(ApprovalTestCase):
 		return fx.make_document(10, extra.pop("department", self.department), **extra)
 
 	def test_role_limited_to_users_permitted_for_the_company(self):
-		frappe.get_doc("User", fx.CLERK).add_roles("Auditor")
-		frappe.get_doc("User", fx.OUTSIDER).add_roles("Auditor")
-		frappe.db.delete("User Permission", {"user": fx.OUTSIDER})
-		frappe.get_doc(
-			{
-				"doctype": "User Permission",
-				"user": fx.OUTSIDER,
-				"allow": "Company",
-				"for_value": fx.OTHER_COLLEGE,
-			}
-		).insert()
-		doc = self.doc()
-		limited = resolve_approvers("Role", "Auditor", doc, limit_to_company=True)
-		self.assertIn(fx.CLERK, limited)
-		self.assertNotIn(fx.OUTSIDER, limited)
-		self.assertIn(fx.OUTSIDER, resolve_approvers("Role", "Auditor", doc))
+		for user in (fx.CLERK, fx.TRUST_USER, fx.OTHER_DELEGATE):
+			frappe.get_doc("User", user).add_roles("Auditor")
+		limited = resolve_approvers("Role", "Auditor", self.doc(), limit_to_company=True)
+		self.assertIn(fx.CLERK, limited)  # permitted for the college
+		self.assertIn(fx.TRUST_USER, limited)  # no Company restriction at all
+		self.assertNotIn(fx.OTHER_DELEGATE, limited)  # restricted to another college
+		self.assertNotIn("Administrator", limited)
+		self.assertIn(fx.OTHER_DELEGATE, resolve_approvers("Role", "Auditor", self.doc()))
+
+	def test_role_limit_is_skipped_for_a_document_without_company(self):
+		frappe.get_doc("User", fx.OTHER_DELEGATE).add_roles("Auditor")
+		doc = self.doc(company=None)
+		self.assertIn(fx.OTHER_DELEGATE, resolve_approvers("Role", "Auditor", doc, limit_to_company=True))
 
 	def test_position_scoped_by_a_document_field(self):
 		self.assertEqual(resolve_approvers("Position", "HOD", self.doc(), scope_field="department"), [fx.HOD])
@@ -104,6 +101,20 @@ class TestPolicyValidation(ApprovalTestCase):
 	def test_invalid_condition_is_refused(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Condition"):
 			fx.make_policy("APR Test Bad", [fx.level("User", fx.HOD)], condition="doc.amount >")
+
+	def test_unsafe_condition_is_refused(self):
+		for condition in ("doc.__class__", "(x := 1)", "(lambda: 1)()"):
+			with self.assertRaisesRegex(frappe.ValidationError, "Condition"):
+				fx.make_policy("APR Test Bad", [fx.level("User", fx.HOD)], condition=condition)
+
+	def test_unregistered_final_method_is_refused(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "approval_final_actions"):
+			fx.make_policy(
+				"APR Test Bad",
+				[fx.level("User", fx.HOD)],
+				on_final_action="Call Service",
+				final_method="frappe.delete_doc",
+			)
 
 	def test_unknown_names_and_fields_are_refused(self):
 		for bad in (

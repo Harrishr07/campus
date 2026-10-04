@@ -115,7 +115,7 @@
    "label": "Method",
    "depends_on": "eval:doc.on_final_action=='Call Service'",
    "mandatory_depends_on": "eval:doc.on_final_action=='Call Service'",
-   "description": "Dotted path of a function called as method(doc, request)."
+   "description": "Dotted path of a function called as method(doc, request). It must be listed in an app's approval_final_actions hook. A method that saves the document must set doc.flags.ignore_approval_lock = True (the approved draft is otherwise locked)."
   }
  ],
  "index_web_pages_for_search": 0,

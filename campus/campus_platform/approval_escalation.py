@@ -2,12 +2,14 @@
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import now_datetime, strip_html
 
 from campus.campus_platform import approval_rules as rules
-from campus.campus_platform.approval_engine import add_action, current_approvers
+from campus.campus_platform.approval_engine import add_action, current_approvers, requesters
 from campus.campus_platform.approver_resolution import resolve_approvers
 from campus.campus_platform.notify import notify
+
+SAVEPOINT = "approval_escalation"
 
 
 def escalate_overdue():
@@ -18,12 +20,40 @@ def escalate_overdue():
 		pluck="name",
 	)
 	for name in overdue:
+		frappe.db.savepoint(SAVEPOINT)
 		try:
 			escalate(name)
-			frappe.db.commit()
-		except Exception:
-			frappe.db.rollback()
-			frappe.log_error(title=f"Approval escalation failed for {name}")
+		except Exception as error:
+			frappe.db.rollback(save_point=SAVEPOINT)
+			frappe.log_error(
+				title=f"Approval escalation failed for {name}",
+				reference_doctype="Approval Request",
+				reference_name=name,
+			)
+			_record_failure_safely(name, error)
+		frappe.db.commit()
+
+
+def _record_failure_safely(request_name, error):
+	frappe.db.savepoint(SAVEPOINT)
+	try:
+		record_failed_escalation(request_name, error)
+	except Exception:
+		frappe.db.rollback(save_point=SAVEPOINT)
+
+
+def record_failed_escalation(request_name, error):
+	"""Mark the level escalated with the error noted, so a broken setup is logged once, not hourly."""
+	request = frappe.get_doc("Approval Request", request_name, for_update=True)
+	request.escalated = 1
+	add_action(
+		request,
+		rules.ESCALATE,
+		request.current_level,
+		comment=_("Escalation failed: {0}").format(strip_html(str(error))),
+		by="Administrator",
+	)
+	request.save(ignore_permissions=True)
 
 
 def escalate(request_name):
@@ -34,7 +64,7 @@ def escalate(request_name):
 	doc = frappe.get_doc(request.reference_doctype, request.reference_name)
 	level = frappe.get_doc("Approval Policy", request.policy).levels[request.current_level - 1]
 	current = current_approvers(request)
-	added = _escalation_users(level, doc, current)
+	added = _escalation_users(level, doc, current + list(requesters(request, doc)))
 	for user in added:
 		request.append(
 			"approvers",
@@ -55,10 +85,10 @@ def escalate(request_name):
 	return added
 
 
-def _escalation_users(level, doc, current):
+def _escalation_users(level, doc, excluded):
 	if not level.escalate_to_type:
 		return []
 	users = resolve_approvers(
 		level.escalate_to_type, level.escalate_to, doc, level.escalate_scope_field, limit_to_company=True
 	)
-	return [u for u in users if u not in current]
+	return [u for u in users if u not in excluded]

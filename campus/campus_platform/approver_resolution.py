@@ -20,19 +20,35 @@ def resolve_approvers(approver_type, approver, doc, scope_field=None, limit_to_c
 
 
 def _by_role(role, doc, limit_to_company=False, **kwargs):
-	users = frappe.get_all(
+	"""Desk users holding `role` (Administrator excluded). With `limit_to_company`, users restricted
+	to other companies by User Permission are dropped; users with no Company restriction stay."""
+	holders = frappe.get_all(
 		"Has Role", filters={"role": role, "parenttype": "User"}, pluck="parent", order_by="parent asc"
 	)
-	if limit_to_company and users:
-		permitted = set(
-			frappe.get_all(
-				"User Permission",
-				filters={"allow": "Company", "for_value": document_company(doc), "user": ["in", users]},
-				pluck="user",
-			)
+	desk_users = set(
+		frappe.get_all(
+			"User", filters={"name": ["in", holders or [""]], "user_type": "System User"}, pluck="name"
 		)
-		users = [u for u in users if u in permitted]
+	)
+	users = [u for u in holders if u in desk_users and u != "Administrator"]
+	company = document_company(doc)
+	if limit_to_company and company and users:
+		restrictions = _company_restrictions(users)
+		users = [u for u in users if _may_access_company(u, company, restrictions)]
 	return users
+
+
+def _company_restrictions(users):
+	restrictions = {}
+	for row in frappe.get_all(
+		"User Permission", filters={"allow": "Company", "user": ["in", users]}, fields=["user", "for_value"]
+	):
+		restrictions.setdefault(row.user, set()).add(row.for_value)
+	return restrictions
+
+
+def _may_access_company(user, company, restrictions):
+	return user not in restrictions or company in restrictions[user]
 
 
 def _by_position(code, doc, scope_field=None, **kwargs):

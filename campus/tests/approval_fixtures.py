@@ -17,6 +17,8 @@ OUTSIDER = "apr-outsider@example.com"
 ESCALATOR = "apr-escalator@example.com"
 CLERK = "apr-clerk@example.com"
 USERS = (HOD, DEAN, PRINCIPAL, DELEGATE, OUTSIDER, ESCALATOR, CLERK)
+TRUST_USER = "apr-trust@example.com"  # no Company User Permission: may access every company
+OTHER_DELEGATE = "apr-other-delegate@example.com"  # permitted for OTHER_COLLEGE only
 BIG = "APR Test Three Level"
 SMALL = "APR Test Single Level"
 
@@ -28,6 +30,8 @@ def setup_world():
 	make_company(OTHER_COLLEGE, "APOC")
 	for user in USERS:
 		make_user(user, [COLLEGE])
+	make_user(TRUST_USER, [])
+	make_user(OTHER_DELEGATE, [OTHER_COLLEGE])
 	department = make_department("Approval Test CSE", COLLEGE)
 	for code, user, scope in (
 		("HOD", HOD, department),
@@ -67,6 +71,7 @@ def clear_approval_data():
 	frappe.db.delete("Approval Delegation Document Type", {"parent": ["in", _delegations()]})
 	frappe.db.delete("Approval Delegation", {"name": ["in", _delegations()]})
 	frappe.db.delete("Notification Log", {"document_type": DOCTYPE})
+	frappe.db.delete("Error Log", {"method": ["like", "Approval escalation failed for %"]})
 
 
 def _requests():
@@ -74,7 +79,8 @@ def _requests():
 
 
 def _delegations():
-	return frappe.get_all("Approval Delegation", filters={"user": ["in", USERS]}, pluck="name") or [""]
+	users = [*USERS, TRUST_USER, OTHER_DELEGATE, "Administrator"]
+	return frappe.get_all("Approval Delegation", filters={"user": ["in", users]}, pluck="name") or [""]
 
 
 def level(approver_type, approver=None, **extra):
@@ -131,6 +137,11 @@ def make_document(amount, department, company=COLLEGE, **extra):
 			**extra,
 		}
 	).insert()
+
+
+def mark_serviced(doc, request):
+	"""A Call Service final action used by the tests."""
+	doc.db_set("notes", f"serviced by {request.name}")
 
 
 def actions_of(request):

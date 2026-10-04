@@ -3,6 +3,13 @@
 A Returned request is reused: requesting approval again starts a new cycle on the same request (the
 policy is re-selected, so changed values pick the right policy). A Rejected request is closed; a new
 request is created if the owner asks again.
+
+Separation of duties: the requester and the document owner are never approvers, and may not act on
+their own request, even as a delegate.
+
+Approvers of a level are resolved when the level becomes current. If a later level resolves too few
+approvers, the approval that would move the request there fails with that error and the request stays
+on the earlier level until the policy, position holders or roles are fixed (no level is skipped).
 """
 
 import frappe
@@ -17,6 +24,7 @@ from campus.campus_platform.notify import notify
 def start_request(doc):
 	if doc.docstatus != 0:
 		frappe.throw(_("Only a draft can be sent for approval."))
+	frappe.db.get_value(doc.doctype, doc.name, "name", for_update=True)  # one request at a time per doc
 	latest = latest_request(doc)
 	if latest and latest.status in (rules.PENDING, rules.APPROVED):
 		frappe.throw(_("{0} is already {1} in {2}.").format(doc.name, _(latest.status).lower(), latest.name))
@@ -50,6 +58,8 @@ def act(request_name, action, comment=None):
 		frappe.throw(_("{0} is {1}; it cannot be acted on.").format(request.name, _(request.status)))
 	if rules.requires_comment(action) and not (comment or "").strip():
 		frappe.throw(_("A comment is required to {0}.").format(_(action).lower()))
+	doc = frappe.get_doc(request.reference_doctype, request.reference_name)
+	frappe.has_permission(doc.doctype, "read", doc=doc, user=frappe.session.user, throw=True)
 	on_behalf_of = acting_for(request, frappe.session.user)
 	add_action(request, action, request.current_level, on_behalf_of=on_behalf_of, comment=comment)
 
@@ -60,7 +70,6 @@ def act(request_name, action, comment=None):
 		action, request.current_level, len(policy.levels), len(principals), level.min_approvals
 	)
 	request.status = status
-	doc = frappe.get_doc(request.reference_doctype, request.reference_name)
 	if status == rules.PENDING and next_level != request.current_level:
 		start_level(request, policy, doc, next_level)
 	request.save(ignore_permissions=True)
@@ -79,15 +88,18 @@ def act(request_name, action, comment=None):
 def start_level(request, policy, doc, level_no):
 	"""Make `level_no` current: resolve and store its approvers, set its deadline, notify them."""
 	level = policy.levels[level_no - 1]
+	excluded = requesters(request, doc)
 	users = resolve_approvers(
 		level.approver_type, level.approver, doc, level.scope_field, level.limit_to_company
 	)
+	users = [u for u in users if u not in excluded]
 	needed = max(level.min_approvals or 1, 1)
 	if len(users) < needed:
 		frappe.throw(
-			_("Level {0} of approval policy {1} needs {2} approver(s) but {3} were found.").format(
-				level_no, policy.name, needed, len(users)
-			)
+			_(
+				"Level {0} of approval policy {1} needs {2} approver(s) but {3} were found"
+				" (the requester and document owner cannot approve)."
+			).format(level_no, policy.name, needed, len(users))
 		)
 	request.current_level = level_no
 	request.level_started_at = now_datetime()
@@ -105,10 +117,29 @@ def run_final_action(policy, doc, request):
 	if policy.on_final_action == "Set Field":
 		doc.db_set(policy.final_field, policy.final_value)
 	elif policy.on_final_action == "Call Service":
-		frappe.get_attr(policy.final_method)(doc, request)
+		frappe.get_attr(registered_final_action(policy.final_method))(doc, request)
 	else:
 		doc.flags.ignore_permissions = True
 		doc.submit()
+
+
+def registered_final_action(method):
+	"""`method` if an app lists it in the `approval_final_actions` hook; throws otherwise."""
+	if method not in frappe.get_hooks("approval_final_actions"):
+		frappe.throw(
+			_("{0} is not a registered approval final action (hook approval_final_actions).").format(
+				frappe.bold(method)
+			)
+		)
+	return method
+
+
+def requesters(request, doc=None):
+	"""Users who may not approve their own request: the requester and the document owner."""
+	owner = (
+		doc.owner if doc else frappe.db.get_value(request.reference_doctype, request.reference_name, "owner")
+	)
+	return {u for u in (request.requested_by, owner) if u}
 
 
 def add_action(request, action, level, on_behalf_of=None, comment=None, by=None):
@@ -130,6 +161,8 @@ def acting_for(request, user):
 	"""None when `user` acts as a current approver; the approver they stand in for as a delegate.
 
 	Throws PermissionError for anyone else."""
+	if user in requesters(request):
+		frappe.throw(_("You cannot act on your own approval request."), frappe.PermissionError)
 	allowed, principal = acting_capacity(request, user)
 	if allowed:
 		return principal
@@ -142,7 +175,10 @@ def acting_for(request, user):
 
 def acting_capacity(request, user):
 	"""(may act, on behalf of) for `user` on the current level; never throws."""
-	current = current_approvers(request)
+	excluded = requesters(request)
+	if user in excluded:
+		return False, None
+	current = [u for u in current_approvers(request) if u not in excluded]
 	done = rules.approving_principals(_actions(request), request.cycle, request.current_level)
 	if user in current and user not in done:
 		return True, None

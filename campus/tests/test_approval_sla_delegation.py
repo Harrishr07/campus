@@ -74,6 +74,26 @@ class TestSlaEscalation(ApprovalTestCase):
 		self.act_as(fx.ESCALATOR, approve, name)
 		self.assertEqual(self.request(name).current_level, 2)
 
+	def test_failed_escalation_is_recorded_once_and_not_retried(self):
+		fx.make_policy(
+			"APR Test Broken Escalation",
+			[fx.level("User", fx.HOD, sla_hours=1, escalate_to_type="Position", escalate_to="DEAN-ACADEMICS",
+				escalate_scope_field="approver_user")],
+			priority=99,
+		)  # fmt: skip
+		_doc, name = self.new_request()  # approver_user is empty, so the escalation scope can't resolve
+		self.make_overdue(name)
+		title = f"Approval escalation failed for {name}"
+		escalate_overdue()
+		escalate_overdue()
+		request = self.request(name)
+		self.assertTrue(request.escalated)
+		escalations = [a for a in request.actions if a.action == "Escalate"]
+		self.assertEqual(len(escalations), 1)
+		self.assertIn("Escalation failed", escalations[0].comment)
+		self.assertEqual(frappe.db.count("Error Log", {"method": title}), 1)
+		self.assertEqual(self.act_as(fx.HOD, approve, name), "Approved")
+
 	def test_level_not_yet_due_is_left_alone(self):
 		_doc, name = self.new_request()
 		escalate_overdue()
@@ -111,6 +131,13 @@ class TestDelegation(ApprovalTestCase):
 		_doc, name = self.new_request()
 		with self.assertRaises(frappe.PermissionError):
 			self.act_as(fx.DELEGATE, approve, name)
+
+	def test_delegate_not_permitted_for_the_company_is_refused(self):
+		make_delegation(fx.HOD, fx.OTHER_DELEGATE, today(), today())
+		_doc, name = self.new_request()
+		with self.assertRaises(frappe.PermissionError):
+			self.act_as(fx.OTHER_DELEGATE, approve, name)
+		self.assertEqual(len(self.request(name).actions), 1)
 
 	def test_delegation_limited_to_other_document_types_does_not_apply(self):
 		make_delegation(fx.HOD, fx.DELEGATE, today(), today(), document_types=["ToDo"])
@@ -184,5 +211,7 @@ class TestMyPendingApprovals(ApprovalTestCase):
 
 	def test_requests_of_companies_the_user_is_not_permitted_for_are_hidden(self):
 		fx.make_policy("APR Test Other Co", [fx.level("User", fx.HOD)], priority=99, company=fx.OTHER_COLLEGE)
-		self.new_request(company=fx.OTHER_COLLEGE)
+		_doc, name = self.new_request(company=fx.OTHER_COLLEGE)
 		self.assertFalse(self.rows_for(fx.HOD))
+		with self.assertRaises(frappe.PermissionError):
+			self.act_as(fx.HOD, approve, name)

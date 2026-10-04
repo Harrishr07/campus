@@ -309,6 +309,10 @@ has_permission = {
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 }
 
+# Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
+# Any app may add its own; nothing else can be called.
+approval_final_actions = []
+
 jinja = {"methods": ["campus.campus_platform.verification.oc_qr_block"]}
 
 website_route_rules = [{"from_route": "/verify/<code>", "to_route": "verify"}]

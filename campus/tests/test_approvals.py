@@ -1,6 +1,8 @@
 """M17-03 integration tests: level-by-level flow, policy conditions, reject/return, immutable trail,
 permission checks and the edit lock, on the test-only Approval Test Document."""
 
+from unittest.mock import patch
+
 import frappe
 
 from campus.campus_platform.approvals import (
@@ -265,3 +267,74 @@ class TestEditLock(ApprovalTestCase):
 		)
 		frappe.set_user(fx.HOD)
 		self.assertTrue(approval_summary(doc)["can_act"])
+
+
+class TestSeparationOfDuties(ApprovalTestCase):
+	def test_requester_is_never_resolved_as_approver(self):
+		fx.make_policy("APR Test Self", [fx.level("User", "Administrator")], priority=99)
+		doc = fx.make_document(60000, self.department)
+		with self.assertRaisesRegex(frappe.ValidationError, "requester"):
+			request_approval(fx.DOCTYPE, doc.name)
+
+	def test_document_owner_is_never_resolved_as_approver(self):
+		fx.make_policy("APR Test Owner", [fx.level("Field", "approver_user")], priority=99)
+		frappe.set_user(fx.CLERK)
+		doc = frappe.get_doc(
+			{
+				"doctype": fx.DOCTYPE,
+				"title": "own",
+				"amount": 10,
+				"company": fx.COLLEGE,
+				"approver_user": fx.CLERK,
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user("Administrator")
+		with self.assertRaisesRegex(frappe.ValidationError, "requester"):
+			request_approval(fx.DOCTYPE, doc.name)
+
+	def test_requester_cannot_approve_as_a_delegate(self):
+		frappe.get_doc(
+			{"doctype": "Approval Delegation", "user": fx.HOD, "delegate": "Administrator",
+			 "from_date": frappe.utils.today(), "to_date": frappe.utils.today()}
+		).insert()  # fmt: skip
+		_doc, name = self.new_request()
+		with self.assertRaisesRegex(frappe.PermissionError, "own"):
+			approve(name)
+		self.assertEqual(self.request(name).current_level, 1)
+
+
+def registered_hooks(*methods):
+	"""Patch frappe.get_hooks so `approval_final_actions` lists `methods`."""
+	original = frappe.get_hooks
+
+	def get_hooks(hook=None, *args, **kwargs):
+		if hook == "approval_final_actions":
+			return list(methods)
+		return original(hook, *args, **kwargs)
+
+	return patch("frappe.get_hooks", side_effect=get_hooks)
+
+
+class TestCallServiceFinalAction(ApprovalTestCase):
+	SERVICE = "campus.tests.approval_fixtures.mark_serviced"
+
+	def make_service_policy(self):
+		fx.make_policy(
+			"APR Test Service", [fx.level("User", fx.CLERK)], priority=99,
+			on_final_action="Call Service", final_method=self.SERVICE,
+		)  # fmt: skip
+
+	def test_registered_method_runs_on_final_approval(self):
+		with registered_hooks(self.SERVICE):
+			self.make_service_policy()
+			doc, name = self.new_request()
+			self.act_as(fx.CLERK, approve, name)
+		doc.reload()
+		self.assertEqual((doc.docstatus, doc.notes), (0, f"serviced by {name}"))
+
+	def test_method_is_rechecked_when_it_runs(self):
+		with registered_hooks(self.SERVICE):
+			self.make_service_policy()
+		_doc, name = self.new_request()
+		with self.assertRaisesRegex(frappe.ValidationError, "approval_final_actions"):
+			self.act_as(fx.CLERK, approve, name)
