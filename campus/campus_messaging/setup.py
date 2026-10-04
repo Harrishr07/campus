@@ -37,6 +37,16 @@ SEED_TEMPLATES = [
 		},
 	},
 	{
+		"event_key": "circular.published",
+		"purpose": "transactional",
+		"urgent": 0,
+		"channels": ["whatsapp", "sms", "email"],
+		"bodies": {
+			"en": ("New circular: {{ doc.title }}", "A new circular has been published: {{ doc.title }}. Please log in to the portal to read it."),
+			"ta": ("புதிய சுற்றறிக்கை: {{ doc.title }}", "புதிய சுற்றறிக்கை வெளியிடப்பட்டுள்ளது: {{ doc.title }}. படிக்க இணையதளத்தில் உள்நுழையவும்."),
+		},
+	},
+	{
 		"event_key": "attendance.shortage",
 		"purpose": "transactional",
 		"urgent": 0,

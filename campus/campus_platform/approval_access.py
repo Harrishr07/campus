@@ -1,11 +1,11 @@
 """M17-03 Who may read Approval Requests, and the requests waiting on a user."""
 
 import frappe
-from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 from frappe.utils import get_datetime, now_datetime, today
 
 from campus.campus_platform import approval_rules as rules
 from campus.campus_platform.approval_engine import acting_capacity
+from campus.campus_platform.company_scope import permitted_companies
 
 
 def pending_approvals(user, company=None):
@@ -37,7 +37,7 @@ def _candidate_requests(user, company):
 		.where(request.status == rules.PENDING)
 		.where(approver.user.isin(people))
 	)
-	companies = _permitted_companies(user)
+	companies = permitted_companies(user)
 	if company:
 		query = query.where(request.company == company)
 	if companies is not None:
@@ -52,12 +52,6 @@ def _delegating_users(user):
 		pluck="user",
 		distinct=True,
 	)
-
-
-def _permitted_companies(user):
-	"""Companies the user is restricted to by User Permission, or None when unrestricted."""
-	restricted = get_user_permissions(user).get("Company")
-	return [p["doc"] for p in restricted] if restricted else None
 
 
 def _row(request, on_behalf_of):

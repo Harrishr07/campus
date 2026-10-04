@@ -20,7 +20,8 @@
   "idempotency_key",
   "subject",
   "message",
-  "variables"
+  "variables",
+  "company"
  ],
  "fields": [
   {
@@ -144,11 +145,20 @@
    "label": "Variables",
    "read_only": 1,
    "hidden": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-04 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Messaging",
  "name": "Message Log",

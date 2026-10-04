@@ -5,6 +5,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from campus.campus_messaging.scope import company_of
+
 
 class CommunicationConsent(Document):
 	def autoname(self):
@@ -24,5 +26,6 @@ class CommunicationConsent(Document):
 		)
 		if duplicate:
 			frappe.throw(_("A consent record already exists for this party, channel and purpose: {0}").format(duplicate))
+		self.company = company_of(self.party_type, self.party)
 		if self.is_new() or self.has_value_changed("status"):
 			self.timestamp = now_datetime()

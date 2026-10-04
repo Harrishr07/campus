@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "company",
+  "rule_type",
+  "guardians_of",
+  "filters_section",
+  "role",
+  "student_group",
+  "program",
+  "semester",
+  "department",
+  "hostel",
+  "route"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "label": "Rule Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "rule_type",
+   "fieldtype": "Select",
+   "label": "Rule Type",
+   "options": "Role\nStudent Group\nProgram and Semester\nDepartment\nGuardians of\nHostel\nRoute",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Hostel and Route rules are not available until Phase 4."
+  },
+  {
+   "fieldname": "guardians_of",
+   "fieldtype": "Select",
+   "label": "Guardians Of",
+   "options": "\nStudent Group\nProgram and Semester\nHostel\nRoute",
+   "depends_on": "eval:doc.rule_type=='Guardians of'",
+   "mandatory_depends_on": "eval:doc.rule_type=='Guardians of'",
+   "description": "Which students' guardians receive the message."
+  },
+  {
+   "fieldname": "filters_section",
+   "fieldtype": "Section Break",
+   "label": "Filters"
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Link",
+   "label": "Role",
+   "options": "Role",
+   "depends_on": "eval:doc.rule_type=='Role'",
+   "mandatory_depends_on": "eval:doc.rule_type=='Role'"
+  },
+  {
+   "fieldname": "student_group",
+   "fieldtype": "Link",
+   "label": "Student Group",
+   "options": "Student Group",
+   "depends_on": "eval:doc.rule_type=='Student Group' || (doc.rule_type=='Guardians of' && doc.guardians_of=='Student Group')",
+   "mandatory_depends_on": "eval:doc.rule_type=='Student Group' || (doc.rule_type=='Guardians of' && doc.guardians_of=='Student Group')"
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "depends_on": "eval:doc.rule_type=='Program and Semester' || (doc.rule_type=='Guardians of' && doc.guardians_of=='Program and Semester')",
+   "mandatory_depends_on": "eval:doc.rule_type=='Program and Semester' || (doc.rule_type=='Guardians of' && doc.guardians_of=='Program and Semester')"
+  },
+  {
+   "fieldname": "semester",
+   "fieldtype": "Data",
+   "label": "Semester",
+   "depends_on": "eval:doc.rule_type=='Program and Semester' || (doc.rule_type=='Guardians of' && doc.guardians_of=='Program and Semester')",
+   "description": "Matched against the student's current semester when that field exists; ignored until then."
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "depends_on": "eval:doc.rule_type=='Department'",
+   "mandatory_depends_on": "eval:doc.rule_type=='Department'"
+  },
+  {
+   "fieldname": "hostel",
+   "fieldtype": "Data",
+   "label": "Hostel",
+   "description": "Not available until Phase 4.",
+   "depends_on": "eval:doc.rule_type=='Hostel' || doc.guardians_of=='Hostel'"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Data",
+   "label": "Route",
+   "description": "Not available until Phase 4.",
+   "depends_on": "eval:doc.rule_type=='Route' || doc.guardians_of=='Route'"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Audience Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:rule_name",
+ "title_field": "rule_name",
+ "description": "Who a broadcast or circular is addressed to."
+}

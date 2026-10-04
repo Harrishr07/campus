@@ -298,18 +298,27 @@ boot_session = "campus.campus_platform.pack_visibility.boot_session"
 scheduler_events = {
 	"daily": ["campus.campus_platform.positions.sync_all_roles"],
 	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
-	"cron": {"*/15 * * * *": ["campus.campus_messaging.delivery.dispatch_due"]},
+	"cron": {
+		"*/15 * * * *": [
+			"campus.campus_messaging.delivery.dispatch_due",
+			"campus.campus_messaging.doctype.broadcast.broadcast.release_due",
+			"campus.campus_messaging.doctype.circular.circular.publish_due",
+		]
+	},
 }
 
 # Delivery status webhooks (frappe_whatsapp updates WhatsApp Message) update the Message Log.
+doc_events["Approval Request"] = {"on_update": "campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status"}
 doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
 app_include_js = "/assets/campus/js/approvals.js"
 
 permission_query_conditions = {
+	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
 }
 has_permission = {
+	"Circular": "campus.campus_messaging.circulars.has_permission",
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 }
 
