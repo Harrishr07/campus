@@ -1,0 +1,193 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "segment",
+  "institution_status",
+  "status_effective_from",
+  "autonomy_conferred_on",
+  "affiliating_university",
+  "column_break_ids",
+  "aishe_code",
+  "aicte_permanent_id",
+  "naac_track_id",
+  "nirf_id",
+  "certificates_section",
+  "degree_awarding_body",
+  "provisional_certificate_issuer",
+  "people_section",
+  "principal",
+  "iqac_coordinator",
+  "coe",
+  "public_disclosure_base_url",
+  "packs_section",
+  "packs"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "segment",
+   "fieldtype": "Select",
+   "label": "Segment",
+   "options": "\nArts & Science\nNursing\nEngineering",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "institution_status",
+   "fieldtype": "Select",
+   "label": "Institution Status",
+   "options": "Affiliated\nAutonomous\nDeemed",
+   "default": "Affiliated",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status_effective_from",
+   "fieldtype": "Date",
+   "label": "Status Effective From",
+   "description": "Packs follow the status only from this date. Before it, the college is treated as Affiliated."
+  },
+  {
+   "fieldname": "autonomy_conferred_on",
+   "fieldtype": "Date",
+   "label": "Autonomy Conferred On"
+  },
+  {
+   "fieldname": "affiliating_university",
+   "fieldtype": "Data",
+   "label": "Affiliating University"
+  },
+  {
+   "fieldname": "column_break_ids",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "aishe_code",
+   "fieldtype": "Data",
+   "label": "AISHE Code"
+  },
+  {
+   "fieldname": "aicte_permanent_id",
+   "fieldtype": "Data",
+   "label": "AICTE Permanent ID"
+  },
+  {
+   "fieldname": "naac_track_id",
+   "fieldtype": "Data",
+   "label": "NAAC Track ID"
+  },
+  {
+   "fieldname": "nirf_id",
+   "fieldtype": "Data",
+   "label": "NIRF ID"
+  },
+  {
+   "fieldname": "certificates_section",
+   "fieldtype": "Section Break",
+   "label": "Degree and Certificates"
+  },
+  {
+   "fieldname": "degree_awarding_body",
+   "fieldtype": "Select",
+   "label": "Degree Awarding Body",
+   "options": "University\nCollege",
+   "default": "University"
+  },
+  {
+   "fieldname": "provisional_certificate_issuer",
+   "fieldtype": "Select",
+   "label": "Provisional Certificate Issuer",
+   "options": "University\nCollege",
+   "default": "College"
+  },
+  {
+   "fieldname": "people_section",
+   "fieldtype": "Section Break",
+   "label": "Officers"
+  },
+  {
+   "fieldname": "principal",
+   "fieldtype": "Link",
+   "label": "Principal",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "iqac_coordinator",
+   "fieldtype": "Link",
+   "label": "IQAC Coordinator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "coe",
+   "fieldtype": "Link",
+   "label": "COE",
+   "options": "Employee",
+   "description": "Controller of Examinations"
+  },
+  {
+   "fieldname": "public_disclosure_base_url",
+   "fieldtype": "Data",
+   "label": "Public Disclosure Base URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "packs_section",
+   "fieldtype": "Section Break",
+   "label": "Module Packs"
+  },
+  {
+   "fieldname": "packs",
+   "fieldtype": "Table",
+   "label": "Packs",
+   "options": "Institution Pack",
+   "description": "A pack with no row is enabled whenever the institution status allows it. Add a row and untick Enabled to switch a pack off for this college."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Institution Profile",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:company",
+ "track_changes": 1
+}

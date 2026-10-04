@@ -286,3 +286,5 @@ fixtures = [{"dt": "Custom Field", "filters": [["fieldname", "like", "oc_%"]]}]
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+boot_session = "campus.campus_platform.pack_visibility.boot_session"

@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "default_attendance_threshold",
+  "approval_sla_check_interval",
+  "verification_base_url",
+  "data_retention_days",
+  "languages_enabled",
+  "default_company"
+ ],
+ "fields": [
+  {
+   "fieldname": "default_attendance_threshold",
+   "fieldtype": "Percent",
+   "label": "Default Attendance Threshold",
+   "default": "75",
+   "description": "Minimum attendance percentage; editable."
+  },
+  {
+   "fieldname": "approval_sla_check_interval",
+   "fieldtype": "Int",
+   "label": "Approval SLA Check Interval (minutes)",
+   "default": "60"
+  },
+  {
+   "fieldname": "verification_base_url",
+   "fieldtype": "Data",
+   "label": "Verification Base Url",
+   "options": "URL"
+  },
+  {
+   "fieldname": "data_retention_days",
+   "fieldtype": "Int",
+   "label": "Data Retention Days"
+  },
+  {
+   "fieldname": "languages_enabled",
+   "fieldtype": "Data",
+   "label": "Languages Enabled",
+   "default": "en,ta",
+   "description": "Comma-separated language codes."
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company",
+   "description": "Default company for trust users."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Campus Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "email": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

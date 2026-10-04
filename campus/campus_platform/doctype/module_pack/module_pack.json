@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "title",
+  "enabled",
+  "rules_section",
+  "allowed_statuses",
+  "visibility_section",
+  "workspaces",
+  "roles"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "description": "Switch a pack off for every college."
+  },
+  {
+   "fieldname": "rules_section",
+   "fieldtype": "Section Break",
+   "label": "Allowed Statuses"
+  },
+  {
+   "fieldname": "allowed_statuses",
+   "fieldtype": "Table",
+   "label": "Allowed Statuses",
+   "options": "Module Pack Status",
+   "description": "Institution statuses for which this pack is available. Empty means all statuses."
+  },
+  {
+   "fieldname": "visibility_section",
+   "fieldtype": "Section Break",
+   "label": "Navigation Visibility"
+  },
+  {
+   "fieldname": "workspaces",
+   "fieldtype": "Table",
+   "label": "Workspaces",
+   "options": "Module Pack Workspace",
+   "description": "Workspaces hidden from users when the pack is disabled for all their colleges."
+  },
+  {
+   "fieldname": "roles",
+   "fieldtype": "Table",
+   "label": "Roles",
+   "options": "Module Pack Role",
+   "description": "If set, only users with one of these roles see the pack's workspaces."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Module Pack",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:code",
+ "title_field": "title",
+ "track_changes": 1
+}
