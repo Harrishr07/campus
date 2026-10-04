@@ -1,1 +1,17 @@
-OneBook Campus
+Campus Platform
+Campus Messaging
+Curriculum
+Admissions
+Student Services
+Campus Finance
+Examinations
+Academic Governance
+Faculty
+IQAC
+Research
+Hostel
+Transport
+Labs
+Placement
+Alumni
+Library Integration
