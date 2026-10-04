@@ -40,6 +40,20 @@ def record_dict(item, run):
 	record(item["id"], run)
 
 
+def commit_in_handler(item, run):
+	record(item, run)
+	frappe.db.commit()
+
+
+def commit_then_fail(item, run):
+	frappe.db.commit()
+	frappe.throw("after commit")
+
+
+def record_session_user(item, run):
+	record(f"{item}@{frappe.session.user}", run)
+
+
 def todo_count(prefix=""):
 	return frappe.db.count("ToDo", {"description": ["like", f"{MARK}{prefix}%"]})
 

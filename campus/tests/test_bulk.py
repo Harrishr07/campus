@@ -1,7 +1,7 @@
 """P1-T09 bulk job runner: resume after crash, idempotency, error capture, progress, 5,000 items."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 
@@ -78,6 +78,87 @@ class TestBulkRun(CampusTestCase):
 		frappe.db.set_value("Bulk Run", name, "status", "Failed")
 		bulk.resume_bulk(name)
 		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Queued")
+
+	def test_resume_leaves_a_live_running_run_alone(self):
+		name = self.start([1, 2, 3])
+		frappe.db.set_value("Bulk Run", name, "status", "Running")
+		self.enqueue.reset_mock()
+		with patch.object(bulk, "_job_alive", return_value=True):
+			bulk.resume_bulk(name)
+		self.enqueue.assert_not_called()
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Running")
+
+	def test_resume_of_crashed_running_run_keeps_status_and_clears_dead_job(self):
+		name = self.start([1, 2, 3])
+		frappe.db.set_value("Bulk Run", name, "status", "Running")
+		job = MagicMock()
+		with (
+			patch.object(bulk, "get_job", return_value=job),
+			patch.object(bulk, "_job_alive", return_value=False),
+		):
+			bulk.resume_bulk(name)
+		job.delete.assert_called_once()
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Running")
+		self.assertEqual(self.enqueue.call_count, 2)
+
+	def test_second_worker_with_stale_chunk_cannot_double_process(self):
+		name = self.start(list(range(10)), chunk=10)
+		run = frappe.get_doc("Bulk Run", name)
+		chunk = list(range(10))
+		bulk._process_chunk(run, h.record, str, chunk)  # worker A commits the chunk
+		stale = frappe.get_doc("Bulk Run", name)
+		stale.done = stale.failed = 0  # worker B read the run before A committed
+		bulk._process_chunk(stale, h.record, str, chunk)
+		self.assertEqual(h.todo_count(), 10)
+		run.reload()
+		self.assertEqual((run.done, run.failed, len(run.processed_keys)), (10, 0, 10))
+
+	def test_process_twice_does_not_duplicate(self):
+		name = self.start(list(range(30)), chunk=10)
+		bulk.process_bulk_run(name)
+		frappe.db.set_value("Bulk Run", name, {"status": "Running", "finished_at": None})
+		bulk.process_bulk_run(name)
+		self.assertEqual(h.todo_count(), 30)
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "done"), 30)
+
+	def test_handler_that_commits_fails_the_run_clearly(self):
+		name = self.start([1, 2], handler="commit_in_handler")
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			bulk.process_bulk_run(name)
+		self.assertIn("must not commit", str(ctx.exception))
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Failed")
+
+	def test_handler_that_commits_then_raises_fails_the_run_not_the_savepoint(self):
+		name = self.start([1], handler="commit_then_fail")
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			bulk.process_bulk_run(name)
+		self.assertIn("must not commit", str(ctx.exception))
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Failed")
+
+	def test_non_item_failure_marks_run_failed_and_reraises(self):
+		name = self.start([1, 2, 3])
+		with patch.object(bulk, "_insert_children", side_effect=RuntimeError("db down")):
+			with self.assertRaises(RuntimeError):
+				bulk.process_bulk_run(name)
+		run = frappe.get_doc("Bulk Run", name)
+		self.assertEqual(run.status, "Failed")
+		self.assertTrue(run.finished_at)
+		self.assertEqual(run.done, 0)
+		bulk.resume_bulk(name)  # Failed runs are resumable
+		bulk.process_bulk_run(name)
+		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Completed")
+		self.assertEqual(h.todo_count(), 3)
+
+	def test_handler_runs_as_run_owner_not_resumer(self):
+		frappe.set_user("test@example.com")
+		try:
+			name = self.start([1], handler="record_session_user")
+		finally:
+			frappe.set_user("Administrator")
+		bulk.resume_bulk(name)
+		bulk.process_bulk_run(name)
+		self.assertEqual(h.todo_count("1@test@example.com"), 1)
+		self.assertEqual(frappe.session.user, "Administrator")
 
 	def test_reprocessing_a_finished_run_does_nothing(self):
 		name = self.start(list(range(10)))
