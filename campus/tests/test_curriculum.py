@@ -149,7 +149,8 @@ class TestCurriculum(CampusTestCase):
 		doc = self.make([row(COURSES[0], l=3, p=2, credits=9)])
 		self.assertEqual(doc.courses[0].credits, 9)
 		self.assertEqual(doc.total_credits, 9)
-		self.advance(doc, "Approved")  # no rule, so no range to violate
+		doc.status = "Approved"
+		self.assert_save_fails(doc, "no Curriculum Rule")  # only a Draft may lack a rule
 
 	# range and minimums
 	def test_range_165_to_170_enforced_once_approved(self):
@@ -308,8 +309,38 @@ class TestCurriculum(CampusTestCase):
 
 	def test_only_one_effective_per_program_and_regulation(self):
 		v1 = self.make_effective()
-		create_new_version(v1.name)
-		self.assertEqual(frappe.db.count("Curriculum", {"program": PROGRAM, "status": "Effective"}), 1)
+		v2 = frappe.get_doc("Curriculum", create_new_version(v1.name))
+		self.advance(v2, "Approved")
+		self.advance(v2, "Effective")
+		v3 = frappe.get_doc("Curriculum", create_new_version(v2.name))
+		self.advance(v3, "Approved")
+		self.advance(v3, "Effective")
+		effective = frappe.get_all("Curriculum", {"program": PROGRAM, "status": "Effective"}, pluck="name")
+		self.assertEqual(effective, [v3.name])
+		self.assertEqual(frappe.db.get_value("Curriculum", v1.name, "status"), "Superseded")
+		self.assertEqual(frappe.db.get_value("Curriculum", v2.name, "status"), "Superseded")
+
+	def test_older_version_cannot_become_effective_over_a_newer_one(self):
+		v1 = self.make()
+		self.advance(v1, "Approved")
+		v2 = frappe.get_doc("Curriculum", create_new_version(v1.name))
+		self.advance(v2, "Approved")
+		self.advance(v2, "Effective")
+		v1.reload()
+		v1.status = "Effective"
+		self.assert_save_fails(v1, "newer version")
+		self.assertEqual(frappe.db.get_value("Curriculum", v2.name, "status"), "Effective")
+
+	def test_cannot_insert_directly_as_effective(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot move"):
+			self.make(status="Effective")
+
+	def test_approving_without_a_rule_is_rejected_but_draft_is_fine(self):
+		frappe.db.delete("Curriculum Rule", {"regulation": self.regulation})
+		doc = self.make(in_range_rows(167))
+		self.advance(doc, "Draft")
+		doc.status = "Approved"
+		self.assert_save_fails(doc, "no Curriculum Rule")
 
 	# print
 	def test_structure_print_renders_semesters_and_category_totals(self):

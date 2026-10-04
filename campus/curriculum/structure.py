@@ -11,16 +11,24 @@ def curriculum_structure(curriculum):
 	semesters = {}
 	for row in sorted(curriculum.courses, key=lambda r: (r.semester, r.idx)):
 		semester = semesters.setdefault(
-			row.semester, {"semester": row.semester, "rows": [], "lecture": 0, "tutorial": 0, "practical": 0, "credits": 0}
+			row.semester,
+			{"semester": row.semester, "rows": [], "lecture": 0, "tutorial": 0, "practical": 0, "credits": 0},
 		)
 		semester["rows"].append(row)
-		for key, value in (("lecture", row.lecture_periods), ("tutorial", row.tutorial_periods), ("practical", row.practical_periods), ("credits", row.credits)):
+		periods = (
+			("lecture", row.lecture_periods),
+			("tutorial", row.tutorial_periods),
+			("practical", row.practical_periods),
+			("credits", row.credits),
+		)
+		for key, value in periods:
 			semester[key] = flt(semester[key] + flt(value), 2)
 	titles = course_titles(curriculum)
 	for semester in semesters.values():
 		for row in semester["rows"]:
 			row.course_title = titles.get(row.course, row.course)
-	totals, counted = category_totals([(r.category, r.credits) for r in curriculum.courses], counts_toward(curriculum))
+	credit_rows = [(r.category, r.credits) for r in curriculum.courses]
+	totals, counted = category_totals(credit_rows, counts_toward(curriculum))
 	minimums = {r.category: r.min_credits for r in curriculum.category_requirements}
 	categories = [
 		{"category": category, "credits": totals.get(category, 0), "minimum": minimums.get(category)}
@@ -31,13 +39,20 @@ def curriculum_structure(curriculum):
 
 def course_titles(curriculum):
 	names = {row.course for row in curriculum.courses}
-	return dict(frappe.get_all("Course", filters={"name": ["in", list(names)]}, fields=["name", "course_name"], as_list=True))
+	return dict(
+		frappe.get_all(
+			"Course", filters={"name": ["in", list(names)]}, fields=["name", "course_name"], as_list=True
+		)
+	)
 
 
 def counts_toward(curriculum):
 	categories = {row.category for row in curriculum.courses}
 	return dict(
 		frappe.get_all(
-			"Course Category", filters={"name": ["in", list(categories)]}, fields=["name", "counts_toward_credits"], as_list=True
+			"Course Category",
+			filters={"name": ["in", list(categories)]},
+			fields=["name", "counts_toward_credits"],
+			as_list=True,
 		)
 	)

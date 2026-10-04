@@ -94,7 +94,11 @@ class Curriculum(Document):
 		}
 		for table in ("courses", "category_requirements"):
 			values[table] = [
-				{k: cstr(v) for k, v in row.as_dict().items() if k not in CHILD_SKIP and not k.startswith("parent")}
+				{
+					k: cstr(v)
+					for k, v in row.as_dict().items()
+					if k not in CHILD_SKIP and not k.startswith("parent")
+				}
 				for row in self.get(table)
 			]
 		return values
@@ -126,7 +130,10 @@ class Curriculum(Document):
 		for course, rows in rows_of.items():
 			if len(rows) > 1 and not all(row.repeatable for row in rows):
 				frappe.throw(
-					_("Course {0} appears more than once (rows {1}). Mark every occurrence Repeatable to allow this.").format(
+					_(
+						"Course {0} appears more than once (rows {1}). "
+						"Mark every occurrence Repeatable to allow this."
+					).format(
 						frappe.bold(course), ", ".join(str(row.idx) for row in rows)
 					),
 					title=_("Duplicate Course"),
@@ -174,7 +181,11 @@ class Curriculum(Document):
 		categories = [row.category for row in self.courses] + [row.category for row in self.category_requirements]
 		counts = {
 			c.name: c.counts_toward_credits
-			for c in frappe.get_all("Course Category", filters={"name": ["in", categories]}, fields=["name", "counts_toward_credits"])
+			for c in frappe.get_all(
+				"Course Category",
+				filters={"name": ["in", categories]},
+				fields=["name", "counts_toward_credits"],
+			)
 		}
 		totals, self.total_credits = category_totals([(r.category, r.credits) for r in self.courses], counts)
 		minimums = {}
@@ -209,9 +220,19 @@ class Curriculum(Document):
 
 	def report_problems(self, problems, rule):
 		"""Draft shows warnings; Approved and Effective curricula must satisfy the rules."""
+		if not rule and self.status != "Draft":
+			frappe.throw(
+				_("Regulation {0} has no Curriculum Rule. Define one before approving this curriculum.").format(
+					frappe.bold(self.regulation)
+				),
+				title=_("Curriculum Rules Not Met"),
+			)
 		if not rule:
 			frappe.msgprint(
-				_("Regulation {0} has no Curriculum Rule: credits are not derived and the total is not range-checked.").format(
+				_(
+					"Regulation {0} has no Curriculum Rule: credits are not derived "
+					"and the total is not range-checked."
+				).format(
 					frappe.bold(self.regulation)
 				),
 				indicator="orange",
@@ -225,24 +246,34 @@ class Curriculum(Document):
 		else:
 			frappe.throw(message, title=_("Curriculum Rules Not Met"))
 
+	def lock_siblings(self):
+		"""Row-lock every version of this programme and regulation (held until commit) and read them fresh."""
+		return frappe.db.sql(
+			"""select name, version, status from `tabCurriculum`
+			where program = %s and regulation = %s for update""",
+			(self.program, self.regulation),
+			as_dict=True,
+		)
+
 	def validate_single_effective(self):
+		"""Taken under the sibling lock so two concurrent Effective transitions cannot both succeed."""
 		if self.status != "Effective":
 			return
-		newer = frappe.db.exists(
-			"Curriculum",
-			{"program": self.program, "regulation": self.regulation, "status": "Effective", "version": [">", self.version]},
-		)
-		if newer:
-			frappe.throw(_("A newer version of this curriculum ({0}) is already Effective.").format(newer))
+		for sibling in self.lock_siblings():
+			if sibling.status == "Effective" and sibling.version > cint(self.version):
+				frappe.throw(
+					_("A newer version of this curriculum ({0}) is already Effective.").format(sibling.name)
+				)
 
 	def supersede_previous(self):
-		"""Only one Effective curriculum per programme and regulation: an older one is superseded."""
-		for name in frappe.get_all(
-			"Curriculum",
-			filters={"program": self.program, "regulation": self.regulation, "status": "Effective", "name": ["!=", self.name]},
-			pluck="name",
-		):
-			frappe.db.set_value("Curriculum", name, "status", "Superseded")
+		"""Only one Effective curriculum per programme and regulation: an older one is superseded.
+
+		Runs in the transaction that holds the sibling lock from validate. The direct db.set_value
+		intentionally bypasses the Effective snapshot lock: this is the one allowed change to a locked record.
+		"""
+		for sibling in self.lock_siblings():
+			if sibling.status == "Effective" and sibling.name != self.name:
+				frappe.db.set_value("Curriculum", sibling.name, "status", "Superseded")
 
 
 @frappe.whitelist()

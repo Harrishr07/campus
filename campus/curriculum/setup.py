@@ -29,7 +29,10 @@ def setup_curriculum_fields():
 	"""Create/refresh the curriculum fields on Program and Course. Idempotent."""
 	program = [
 		field("oc_curriculum_section", "Section Break", "Curriculum", "oc_company"),
-		field("oc_level", "Select", "Level", "oc_curriculum_section", options="\nUG\nPG\nDiploma\nPhD", in_standard_filter=1),
+		field(
+			"oc_level", "Select", "Level", "oc_curriculum_section",
+			options="\nUG\nPG\nDiploma\nPhD", in_standard_filter=1,
+		),
 		field("oc_degree", "Data", "Degree", "oc_level"),
 		field("oc_discipline", "Data", "Discipline", "oc_degree"),
 		field("oc_duration_years", "Float", "Duration (Years)", "oc_discipline"),
