@@ -54,8 +54,9 @@ REGULATIONS = [
 	("AS-R2022", ARTS, 2022, ["B.Sc. Mathematics"]),
 ]
 
-# 20-student cycle approximating the Tamil Nadu community spread.
-CATEGORY_CYCLE = ["OC"] * 6 + ["BC"] * 5 + ["MBC"] * 4 + ["SC"] * 4 + ["ST"]
+# 20-student cycle approximating the Tamil Nadu community spread (OC 6, BC 5, MBC 4, SC 4, ST 1),
+# interleaved so even the first 10 students of a small batch carry four categories.
+CATEGORY_CYCLE = [*["OC", "BC", "MBC", "SC"] * 4, "OC", "BC", "OC", "ST"]
 CATEGORIES = sorted(set(CATEGORY_CYCLE))
 
 ALL_COMPANIES = [name for name, _abbr, _parent in COMPANIES]
@@ -116,7 +117,6 @@ def build_demo(scale):
 	make_students(batches, STUDENTS_PER_BATCH[scale])
 	make_student_users()
 	assign_missing_regulations()
-	assign_missing_categories()
 
 
 def get_or_insert(doctype, filters, values):
@@ -332,22 +332,43 @@ def student_email(slug, batch, number):
 	return f"{slug}-{batch}-{number:03d}@{DOMAIN}"
 
 
+def category_for(number):
+	"""Student category of the `number`-th (1-based) student of every program batch."""
+	return CATEGORY_CYCLE[(number - 1) % len(CATEGORY_CYCLE)]
+
+
+def expected_regulation_code(batch):
+	"""Code of the engineering regulation that governs admission year `batch` (start year)."""
+	starts = [(start, code) for code, company, start, _programs in REGULATIONS if company == ENGINEERING]
+	return max((start, code) for start, code in starts if start <= batch)[1]
+
+
 def make_students(batches, per_batch):
-	existing = set(
-		frappe.get_all("Student", filters=[["student_email_id", "like", f"%@{DOMAIN}"]], pluck="student_email_id")
-	)
+	students = {
+		row.student_email_id: row.name
+		for row in frappe.get_all(
+			"Student", filters=[["student_email_id", "like", f"%@{DOMAIN}"]], fields=["name", "student_email_id"]
+		)
+	}
+	enrollments = {
+		row.student: row
+		for row in frappe.get_all(
+			"Program Enrollment",
+			filters={"student": ["in", list(students.values())], "docstatus": ["<", 2]},
+			fields=["name", "student", "docstatus", "student_category"],
+		)
+	}
 	for program, (company, _department, slug) in PROGRAMS.items():
 		if not slug:
 			continue
 		for batch in batches:
 			for number in range(1, per_batch + 1):
 				address = student_email(slug, batch, number)
-				if address not in existing:
-					make_student(program, company, slug, batch, number, address)
+				student = students.get(address) or make_student(company, slug, batch, number, address)
+				ensure_enrollment(student, program, batch, number, enrollments.get(student))
 
 
-def make_student(program, company, slug, batch, number, address):
-	year = year_name(batch)
+def make_student(company, slug, batch, number, address):
 	student = frappe.get_doc(
 		{
 			"doctype": "Student",
@@ -359,18 +380,30 @@ def make_student(program, company, slug, batch, number, address):
 		}
 	)
 	student.insert(ignore_permissions=True)
-	enrollment = frappe.get_doc(
+	return student.name
+
+
+def ensure_enrollment(student, program, batch, number, enrollment):
+	"""Make sure `student` has a submitted enrollment with its category (repairs interrupted runs)."""
+	category = category_for(number)
+	if enrollment and enrollment.docstatus == 1:
+		if enrollment.student_category != category:
+			frappe.db.set_value("Program Enrollment", enrollment.name, "student_category", category)
+		return
+	doc = frappe.get_doc("Program Enrollment", enrollment.name) if enrollment else frappe.new_doc(
+		"Program Enrollment"
+	)
+	doc.update(
 		{
-			"doctype": "Program Enrollment",
-			"student": student.name,
+			"student": student,
 			"program": program,
-			"academic_year": year,
+			"academic_year": year_name(batch),
 			"enrollment_date": f"{batch}-07-15",
-			"student_category": CATEGORY_CYCLE[(number - 1) % len(CATEGORY_CYCLE)],  # lives on the enrollment
+			"student_category": category,
 		}
 	)
-	enrollment.insert(ignore_permissions=True)
-	enrollment.submit()
+	doc.save(ignore_permissions=True)
+	doc.submit()
 
 
 def assign_missing_regulations():
@@ -387,21 +420,6 @@ def assign_missing_regulations():
 		)
 		if regulation:
 			frappe.db.set_value("Student", student.name, "oc_regulation", regulation)
-
-
-def assign_missing_categories():
-	"""Fill-the-gaps: demo enrollments without a category get one from the cycle."""
-	students = frappe.get_all("Student", filters={"student_email_id": ["like", f"%@{DOMAIN}"]}, pluck="name")
-	enrollments = frappe.get_all(
-		"Program Enrollment",
-		filters={"student": ["in", students], "student_category": ["is", "not set"]},
-		pluck="name",
-		order_by="name",
-	)
-	for index, name in enumerate(enrollments):
-		frappe.db.set_value(
-			"Program Enrollment", name, "student_category", CATEGORY_CYCLE[index % len(CATEGORY_CYCLE)]
-		)
 
 
 def make_student_users():

@@ -10,9 +10,11 @@ from campus.campus_platform.doctype.regulation.regulation import regulation_name
 def execute():
 	drop_global_code_index()
 	for row in frappe.get_all("Regulation", fields=["name", "code", "company"]):
+		if not (row.code and row.company and frappe.db.get_value("Company", row.company, "abbr")):
+			continue  # cannot be named per company; leave as is
 		new_name = regulation_name(row.code, row.company)
 		if row.name != new_name:
-			frappe.rename_doc("Regulation", row.name, new_name, force=True, show_alert=False, rebuild_search=False)
+			frappe.rename_doc("Regulation", row.name, new_name, force=True, show_alert=False)
 
 
 def drop_global_code_index():

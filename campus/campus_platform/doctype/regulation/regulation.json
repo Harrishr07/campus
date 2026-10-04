@@ -22,7 +22,6 @@
    "fieldtype": "Data",
    "label": "Code",
    "reqd": 1,
-   "unique": 1,
    "in_list_view": 1,
    "set_only_once": 1
   },

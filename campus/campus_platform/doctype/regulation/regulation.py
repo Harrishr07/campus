@@ -16,7 +16,10 @@ NEW_VERSION_FIELDS = ("company", "effective_from_year", "approving_resolution", 
 
 def regulation_name(code, company):
 	"""Document name of the regulation `code` of `company`: codes repeat across colleges."""
-	return f"{code}-{frappe.db.get_value('Company', company, 'abbr')}"
+	abbr = company and frappe.db.get_value("Company", company, "abbr")
+	if not (code and abbr):
+		frappe.throw(_("A regulation needs a code and a company with an abbreviation."))
+	return f"{code}-{abbr}"
 
 
 class Regulation(Document):

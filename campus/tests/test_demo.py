@@ -1,6 +1,7 @@
 """P1-T02 tests: the standard demo data builder is complete, correct and idempotent."""
 
 import frappe
+from frappe.tests import UnitTestCase
 
 from campus.campus_platform.api import get_regulation, resolve_position
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
@@ -39,7 +40,8 @@ class TestDemoData(CampusTestCase):
 		for college in (demo.ENGINEERING, demo.ARTS):
 			self.assertEqual(frappe.db.get_value("Company", college, "parent_company"), demo.TRUST)
 		profile = frappe.get_doc("Institution Profile", demo.ENGINEERING)
-		self.assertEqual((profile.institution_status, str(profile.status_effective_from)), ("Autonomous", "2022-05-26"))
+		status = (profile.institution_status, str(profile.status_effective_from))
+		self.assertEqual(status, ("Autonomous", "2022-05-26"))
 		self.assertEqual(frappe.db.get_value("Institution Profile", demo.ARTS, "institution_status"), "Affiliated")
 
 	def test_students_resolve_to_effective_regulation_with_category_spread(self):
@@ -54,17 +56,50 @@ class TestDemoData(CampusTestCase):
 		self.assertEqual({s.oc_regulation for s in students}, {regulation_name("R2026", demo.ENGINEERING)})
 		self.assertEqual({s.oc_batch for s in students}, {"2026-27"})
 		self.assertEqual({s.oc_company for s in students}, {demo.ENGINEERING})
-		self.assertEqual(set(categories), set(demo.CATEGORIES))
+		self.assertEqual(set(categories), {"OC", "BC", "MBC", "SC"})  # first 10 of each batch
+		self.assert_each_program_batch_has_mixed_categories()
 		self.assertEqual(get_regulation(students[0].name), regulation_name("R2026", demo.ENGINEERING))
+
+	def assert_each_program_batch_has_mixed_categories(self):
+		rows = frappe.db.sql(
+			"""select pe.program, pe.academic_year, count(distinct pe.student_category)
+			from `tabProgram Enrollment` pe join tabStudent s on s.name = pe.student
+			where s.student_email_id like %s and pe.docstatus = 1 group by 1, 2""",
+			(f"%@{demo.DOMAIN}",),
+		)
+		self.assertEqual(len(rows), 3)
+		for program, year, distinct in rows:
+			self.assertGreater(distinct, 1, f"{program} {year} has a single category")
+
+	def test_interrupted_run_is_repaired(self):
+		email = demo.student_email("ece", 2026, 3)
+		student = frappe.db.get_value("Student", {"student_email_id": email})
+		enrollment = frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1})
+		frappe.get_doc("Program Enrollment", enrollment).cancel()
+		frappe.delete_doc("Program Enrollment", enrollment, force=True)
+		frappe.db.set_value("Student", student, "oc_regulation", None)
+		demo.make_demo("small")
+		repaired = frappe.get_all(
+			"Program Enrollment", filters={"student": student, "docstatus": 1}, fields=["student_category"]
+		)
+		self.assertEqual([r.student_category for r in repaired], [demo.category_for(3)])
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_regulation"), "R2026-DCE")
+
+	def test_regulation_name_needs_company_and_abbreviation(self):
+		for code, company in (("R1", None), ("R1", "No Such Company"), (None, demo.ENGINEERING)):
+			with self.subTest(code=code, company=company), self.assertRaises(frappe.ValidationError):
+				regulation_name(code, company)
 
 	def test_regulations_cover_programs_per_batch(self):
 		from campus.campus_platform.regulation_rules import resolve_regulation
 
 		resolve = lambda batch: resolve_regulation(demo.ENGINEERING, "B.E. ECE", batch)  # noqa: E731
 		self.assertEqual(resolve("2021-22"), regulation_name("AU-R2021", demo.ENGINEERING))
-		self.assertEqual([resolve(f"{y}-{str(y + 1)[-2:]}") for y in (2022, 2023, 2024, 2025)], [regulation_name("R2022", demo.ENGINEERING)] * 4)
+		middle_years = [resolve(demo.year_name(year)) for year in (2022, 2023, 2024, 2025)]
+		self.assertEqual(middle_years, [regulation_name("R2022", demo.ENGINEERING)] * 4)
 		self.assertEqual(resolve("2026-27"), regulation_name("R2026", demo.ENGINEERING))
-		self.assertEqual(frappe.db.get_value("Regulation", regulation_name("AS-R2022", demo.ARTS), "company"), demo.ARTS)
+		arts_regulation = regulation_name("AS-R2022", demo.ARTS)
+		self.assertEqual(frappe.db.get_value("Regulation", arts_regulation, "company"), demo.ARTS)
 
 	def test_users_have_company_permission_and_roles(self):
 		principal, warden = demo.email("principal"), demo.email("warden")
@@ -92,3 +127,33 @@ class TestDemoData(CampusTestCase):
 		student = frappe.db.get_value("Student", {"user": demo.email("student_1")})
 		self.assertTrue(student)
 		self.assertTrue(frappe.db.exists("Guardian", {"user": demo.email("guardian_1")}))
+
+
+class TestDemoHelpers(UnitTestCase):
+	"""Pure helpers behind the "full" scale, covered without the 90 s run."""
+
+	def test_student_email_is_unique_across_the_full_set(self):
+		emails = {
+			demo.student_email(slug, batch, number)
+			for _program, (_company, _dept, slug) in demo.PROGRAMS.items()
+			if slug
+			for batch in demo.FULL_BATCHES
+			for number in range(1, demo.STUDENTS_PER_BATCH["full"] + 1)
+		}
+		self.assertEqual(len(emails), 3 * 5 * 60)
+		self.assertEqual(demo.student_email("cse", 2026, 1), demo.email("student_1"))
+		self.assertEqual(demo.student_email("ece", 2023, 7), "ece-2023-007@demo.campus.test")
+
+	def test_category_cycle_spreads_every_batch(self):
+		cycle = [demo.category_for(n) for n in range(1, 61)]
+		self.assertEqual(set(cycle), set(demo.CATEGORIES))
+		spread = {c: cycle.count(c) for c in demo.CATEGORIES}
+		self.assertEqual(spread, {"OC": 18, "BC": 15, "MBC": 12, "SC": 12, "ST": 3})
+		self.assertEqual(len({demo.category_for(n) for n in range(1, 11)}), 4)  # even a small batch is mixed
+
+	def test_batch_to_regulation_mapping(self):
+		codes = {batch: demo.expected_regulation_code(batch) for batch in (2021, 2022, 2023, 2024, 2025, 2026)}
+		self.assertEqual(
+			codes,
+			{2021: "AU-R2021", 2022: "R2022", 2023: "R2022", 2024: "R2022", 2025: "R2022", 2026: "R2026"},
+		)
