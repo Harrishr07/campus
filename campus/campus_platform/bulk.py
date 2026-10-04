@@ -26,10 +26,9 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils.background_jobs import get_job, get_redis_conn
 from frappe.utils import now_datetime
+from frappe.utils.background_jobs import get_job, get_redis_conn
 from rq.job import JobStatus
-from rq.worker import Worker
 
 QUEUE = "long"
 TIMEOUT = 4 * 60 * 60
@@ -102,7 +101,7 @@ def _job_alive(name):
 	if status == JobStatus.QUEUED:
 		return True
 	return status == JobStatus.STARTED and bool(
-		job.worker_name and Worker.find_by_key(Worker.key_for(job.worker_name), connection=get_redis_conn())
+		job.worker_name and get_redis_conn().exists(f"rq:worker:{job.worker_name}")
 	)
 
 
@@ -164,7 +163,9 @@ def _process_chunks(run):
 def _process_chunk(run, handler, key_fn, chunk):
 	"""Process one chunk under a lock on the run row; the lock is released by the chunk's commit."""
 	frappe.db.get_value("Bulk Run", run.name, "name", for_update=True)
-	run.done, run.failed = frappe.db.get_value("Bulk Run", run.name, ["done", "failed"])
+	# Locking reads (for_update) see the latest committed rows; plain reads would use the REPEATABLE READ
+	# snapshot, which may predate another worker's commit (e.g. the key read done before the first chunk).
+	run.done, run.failed = frappe.db.get_value("Bulk Run", run.name, ["done", "failed"], for_update=True)
 	chunk = _not_yet_processed(run.name, key_fn, chunk)
 	keys, errors = [], []
 	for item in chunk:
@@ -187,9 +188,15 @@ def _process_chunk(run, handler, key_fn, chunk):
 def _not_yet_processed(name, key_fn, chunk):
 	"""Drop items another worker has committed since this worker read the run's keys."""
 	keys = [_key(key_fn, item) for item in chunk]
-	committed = set(
-		frappe.get_all("Bulk Run Item Key", filters={"parent": name, "item_key": ["in", keys]}, pluck="item_key")
+	table = frappe.qb.DocType("Bulk Run Item Key")
+	rows = (
+		frappe.qb.from_(table)
+		.select(table.item_key)
+		.where((table.parent == name) & table.item_key.isin(keys))
+		.for_update()
+		.run()
 	)
+	committed = {row[0] for row in rows}
 	return [item for item, item_key in zip(chunk, keys) if item_key not in committed]
 
 

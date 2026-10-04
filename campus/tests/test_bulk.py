@@ -4,6 +4,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import frappe
+from rq.job import JobStatus
 
 from campus.campus_platform import bulk
 from campus.tests import bulk_handlers as h
@@ -99,6 +100,56 @@ class TestBulkRun(CampusTestCase):
 			bulk.resume_bulk(name)
 		job.delete.assert_called_once()
 		self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Running")
+		self.assertEqual(self.enqueue.call_count, 2)
+
+	def _started_job(self, worker_name):
+		job = MagicMock()
+		job.get_status.return_value = JobStatus.STARTED
+		job.worker_name = worker_name
+		return job
+
+	def test_job_alive_checks_worker_registration_in_redis(self):
+		redis = MagicMock()
+		redis.exists.return_value = 1
+		with patch.object(bulk, "get_job", return_value=self._started_job("w1")), patch.object(
+			bulk, "get_redis_conn", return_value=redis
+		):
+			self.assertTrue(bulk._job_alive("BULK-1"))
+			redis.exists.assert_called_once_with("rq:worker:w1")
+			redis.exists.return_value = 0
+			self.assertFalse(bulk._job_alive("BULK-1"))
+
+	def test_job_alive_for_queued_missing_and_workerless_jobs(self):
+		queued = MagicMock()
+		queued.get_status.return_value = JobStatus.QUEUED
+		with patch.object(bulk, "get_job", return_value=queued):
+			self.assertTrue(bulk._job_alive("BULK-1"))
+		with patch.object(bulk, "get_job", return_value=None):
+			self.assertFalse(bulk._job_alive("BULK-1"))
+		with patch.object(bulk, "get_job", return_value=self._started_job(None)):
+			self.assertFalse(bulk._job_alive("BULK-1"))
+
+	def test_resume_running_run_with_started_job_of_live_worker_is_noop(self):
+		name = self.start([1])
+		frappe.db.set_value("Bulk Run", name, "status", "Running")
+		self.enqueue.reset_mock()
+		redis = MagicMock()
+		redis.exists.return_value = 1
+		with patch.object(bulk, "get_job", return_value=self._started_job("w1")), patch.object(
+			bulk, "get_redis_conn", return_value=redis
+		):
+			bulk.resume_bulk(name)
+		self.enqueue.assert_not_called()
+
+	def test_resume_running_run_with_started_job_of_dead_worker_replaces_job(self):
+		name = self.start([1])
+		frappe.db.set_value("Bulk Run", name, "status", "Running")
+		job = self._started_job("gone")
+		redis = MagicMock()
+		redis.exists.return_value = 0
+		with patch.object(bulk, "get_job", return_value=job), patch.object(bulk, "get_redis_conn", return_value=redis):
+			bulk.resume_bulk(name)
+		job.delete.assert_called_once()
 		self.assertEqual(self.enqueue.call_count, 2)
 
 	def test_second_worker_with_stale_chunk_cannot_double_process(self):
