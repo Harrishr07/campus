@@ -11,6 +11,7 @@ import frappe
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 
 EVENT_KEY = "approval.notification"
+SAVEPOINT = "notify_messaging"
 
 
 def notify(users, subject, message, doc):
@@ -28,8 +29,24 @@ def notify(users, subject, message, doc):
 			"from_user": frappe.session.user,
 		},
 	)
-	if frappe.db.exists("Message Template", {"event_key": EVENT_KEY, "enabled": 1}):
-		from campus.campus_messaging.api import send
+	_send_via_messaging(users, subject, message, doc)
 
-		token = hashlib.sha1(f"{subject}\n{message}".encode()).hexdigest()
-		send(EVENT_KEY, doc, [f"User:{u}" for u in users], {"subject": subject, "message": message, "dedupe_token": token})
+
+def _send_via_messaging(users, subject, message, doc):
+	"""Best effort: a messaging problem must never break the approval transition that triggered it."""
+	if not frappe.db.exists("Message Template", {"event_key": EVENT_KEY, "enabled": 1}):
+		return
+	from campus.campus_messaging.api import send
+
+	token = hashlib.sha1(f"{subject}\n{message}".encode()).hexdigest()
+	frappe.db.savepoint(SAVEPOINT)
+	try:
+		send(
+			EVENT_KEY,
+			doc,
+			[f"User:{u}" for u in users],
+			{"subject": subject, "message": message, "dedupe_token": token},
+		)
+	except Exception:
+		frappe.db.rollback(save_point=SAVEPOINT)
+		frappe.log_error(title="Approval notification via messaging failed")

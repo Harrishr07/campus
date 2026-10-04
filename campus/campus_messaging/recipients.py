@@ -11,12 +11,12 @@ from frappe import _
 
 DEFAULT_LANGUAGE = "en"
 
-# doctype -> (email fields in preference order, mobile fields, user field, language field)
+# doctype -> (email fields in preference order, mobile fields, user field, language field, display name field)
 SOURCES = {
-	"Student": (["student_email_id"], ["student_mobile_number"], "user", "oc_language"),
-	"Guardian": (["email_address"], ["mobile_number"], "user", "oc_language"),
-	"Employee": (["prefered_email", "company_email", "personal_email"], ["cell_number"], "user_id", "oc_language"),
-	"User": (["email"], ["mobile_no", "phone"], "name", "language"),
+	"Student": (["student_email_id"], ["student_mobile_number"], "user", "oc_language", "student_name"),
+	"Guardian": (["email_address"], ["mobile_number"], "user", "oc_language", "guardian_name"),
+	"Employee": (["prefered_email", "company_email", "personal_email"], ["cell_number"], "user_id", "oc_language", "employee_name"),
+	"User": (["email"], ["mobile_no", "phone"], "name", "language", "full_name"),
 }
 
 
@@ -31,14 +31,14 @@ def parse(recipient):
 
 
 def resolve(recipient):
-	"""Return {key, party_type, party, email, mobile, user, language} for one recipient."""
+	"""Return {key, party_type, party, email, mobile, user, language, display_name} for one recipient."""
 	doctype, name = parse(recipient)
 	if doctype == "phone":
 		return _entry(f"phone:{name}", None, None, None, name, None, DEFAULT_LANGUAGE)
 	if doctype not in SOURCES or not name:
 		frappe.throw(_("Unsupported recipient: {0}").format(recipient))
-	emails, mobiles, user_field, language_field = SOURCES[doctype]
-	row = frappe.db.get_value(doctype, name, [*emails, *mobiles, user_field, language_field], as_dict=True)
+	emails, mobiles, user_field, language_field, name_field = SOURCES[doctype]
+	row = frappe.db.get_value(doctype, name, [*emails, *mobiles, user_field, language_field, name_field], as_dict=True)
 	if not row:
 		frappe.throw(_("{0} {1} not found").format(_(doctype), name))
 	return _entry(
@@ -49,10 +49,11 @@ def resolve(recipient):
 		next((row[f] for f in mobiles if row[f]), None),
 		row[user_field],
 		_language(row[language_field]),
+		row[name_field] or name,
 	)
 
 
-def _entry(key, party_type, party, email, mobile, user, language):
+def _entry(key, party_type, party, email, mobile, user, language, display_name=None):
 	return {
 		"key": key,
 		"party_type": party_type,
@@ -61,6 +62,7 @@ def _entry(key, party_type, party, email, mobile, user, language):
 		"mobile": mobile,
 		"user": user,
 		"language": language,
+		"display_name": display_name,
 	}
 
 

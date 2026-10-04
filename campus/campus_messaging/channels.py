@@ -5,6 +5,7 @@ the failure and moves to the next channel. Tests replace entries of ADAPTERS.
 """
 
 import json
+import re
 
 import frappe
 from frappe import _
@@ -12,6 +13,11 @@ from frappe import _
 
 class ChannelError(Exception):
 	pass
+
+
+def safe_error(error):
+	"""Error text fit for storing: URLs (which can carry tokens or query-string secrets) are removed."""
+	return re.sub(r"https?://\S+", "<url>", str(error))[:1000]
 
 
 def send_email(log, template):
@@ -52,7 +58,7 @@ def send_sms(log, template):
 			headers.get("Content-Type") == "application/json",
 		)
 	except Exception as e:
-		raise ChannelError(str(e)) from e
+		raise ChannelError(safe_error(e)) from e
 
 
 def send_whatsapp(log, template):
@@ -77,7 +83,7 @@ def send_whatsapp(log, template):
 	try:
 		doc = frappe.get_doc(message).insert(ignore_permissions=True)
 	except Exception as e:
-		raise ChannelError(str(e)) from e
+		raise ChannelError(safe_error(e)) from e
 	return doc.message_id
 
 

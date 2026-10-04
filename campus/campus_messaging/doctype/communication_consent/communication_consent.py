@@ -7,6 +7,10 @@ from frappe.utils import now_datetime
 
 
 class CommunicationConsent(Document):
+	def autoname(self):
+		"""One row per (party, channel, purpose): the primary key makes duplicates impossible even under races."""
+		self.name = f"{self.party_type}-{self.party}-{self.channel}-{self.purpose}"[:140]
+
 	def validate(self):
 		duplicate = frappe.db.exists(
 			"Communication Consent",

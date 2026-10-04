@@ -10,10 +10,12 @@ import json
 import frappe
 from frappe.utils import now_datetime
 
-from campus.campus_messaging.channels import ChannelError, send_via
+from campus.campus_messaging import consent
+from campus.campus_messaging.channels import ChannelError, safe_error, send_via
 
 NO_KEY_STATUSES = ("Failed", "Skipped")  # these attempts do not hold the idempotency key
 SAVEPOINT = "message_attempt"
+DUE_SAVEPOINT = "message_due"
 # Status rank: a webhook may only move a log forward (Sent -> Delivered -> Read).
 RANK = {"Queued": 0, "Scheduled": 0, "Sent": 1, "Delivered": 2, "Read": 3}
 
@@ -42,6 +44,22 @@ def existing_logs(event_key, doc, recipient, token=""):
 
 def create_log(template, doc, entry, channel, address, subject, message, variables, status="Queued", token="", **extra):
 	"""Insert a Message Log; returns None when another live attempt already holds its idempotency key."""
+	if status == "Skipped":  # a repeated send must not add the same skip row again
+		same = frappe.db.get_value(
+			"Message Log",
+			{
+				"event_key": template.event_key,
+				"reference_doctype": doc.doctype,
+				"reference_name": doc.name,
+				"recipient": entry["key"],
+				"channel": channel,
+				"status": "Skipped",
+				"error": extra.get("error"),
+				"dedupe_token": token or "",
+			},
+		)
+		if same:
+			return frappe.get_doc("Message Log", same)
 	key = None if status in NO_KEY_STATUSES else idempotency_key(template.event_key, doc, entry["key"], channel, token)
 	log = frappe.get_doc(
 		{
@@ -75,14 +93,35 @@ def dispatch_log(name):
 	"""Send a Queued log; on failure log it and try the remaining channels in order."""
 	log = _claim(name)
 	while log:
-		if _attempt(log):
+		if _consent_withdrawn(log):
+			log = _next_attempt(log)
+		elif _attempt(log):
 			return
-		log = _next_attempt(log)
+		else:
+			log = _next_attempt(log)
 
 
 def _claim(name):
 	status = frappe.db.get_value("Message Log", name, "status", for_update=True)
 	return frappe.get_doc("Message Log", name) if status == "Queued" else None
+
+
+def _consent_withdrawn(log):
+	"""Re-check consent at send time (it may have changed while the message was Scheduled); marks the log Skipped."""
+	template = frappe.get_cached_doc("Message Template", log.event_key)
+	party_type, _sep, party = log.recipient.partition(":")
+	if party_type == "phone":
+		party_type = party = None
+	if consent.is_allowed(party_type, party, log.channel, template.purpose):
+		return False
+	log.db_set(
+		{
+			"status": "Skipped",
+			"error": f"Recipient has not consented to {template.purpose} {log.channel} messages",
+			"idempotency_key": None,
+		}
+	)
+	return True
 
 
 def _attempt(log):
@@ -94,7 +133,7 @@ def _attempt(log):
 		frappe.db.rollback(save_point=SAVEPOINT)
 		if not isinstance(e, ChannelError):
 			frappe.log_error(title="Message dispatch failed")
-		log.db_set({"status": "Failed", "error": str(e)[:1000], "idempotency_key": None})
+		log.db_set({"status": "Failed", "error": safe_error(e), "idempotency_key": None})
 		return False
 	log.db_set({"status": "Sent", "provider_id": provider_id})
 	return True
@@ -134,8 +173,13 @@ def dispatch_due():
 		order_by="send_after asc",
 	)
 	for name in due:
-		frappe.db.set_value("Message Log", name, "status", "Queued", update_modified=False)
-		dispatch_log(name)
+		frappe.db.savepoint(DUE_SAVEPOINT)  # one log's unexpected error must not undo the others' status
+		try:
+			frappe.db.set_value("Message Log", name, "status", "Queued", update_modified=False)
+			dispatch_log(name)
+		except Exception:
+			frappe.db.rollback(save_point=DUE_SAVEPOINT)
+			frappe.log_error(title="Scheduled message dispatch failed")
 
 
 def sync_whatsapp_status(doc, method=None):
@@ -154,6 +198,8 @@ def sync_whatsapp_status(doc, method=None):
 	if not log:
 		return
 	if status == "Failed":
+		if log.status in ("Delivered", "Read"):
+			return
 		frappe.db.set_value(
 			"Message Log", log.name, {"status": "Failed", "error": "Failed after hand-off (provider webhook)", "idempotency_key": None}
 		)

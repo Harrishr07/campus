@@ -22,8 +22,8 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms", "email"],
 		"bodies": {
-			"en": ("Fee due", "Dear {{ recipient.party or 'Parent' }}, a fee of {{ context.amount or '' }} is due for {{ doc.name }}."),
-			"ta": ("கட்டணம் நிலுவை", "[TA] {{ doc.name }} க்கான கட்டணம் {{ context.amount or '' }} நிலுவையில் உள்ளது."),
+			"en": ("Fee due", "Dear {{ recipient.display_name or 'Parent' }}, a fee of {{ context.amount or '' }} is due for {{ doc.name }}."),
+			"ta": ("கட்டணம் நிலுவை", "அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} க்கான கட்டணம் {{ context.amount or '' }} நிலுவையில் உள்ளது."),
 		},
 	},
 	{
@@ -33,7 +33,7 @@ SEED_TEMPLATES = [
 		"channels": ["whatsapp", "sms"],
 		"bodies": {
 			"en": ("{{ context.subject }}", "{{ context.subject }}: {{ context.message or '' }}"),
-			"ta": ("{{ context.subject }}", "[TA] {{ context.subject }}: {{ context.message or '' }}"),
+			"ta": ("{{ context.subject }}", "{{ context.subject }}: {{ context.message or '' }} (அங்கீகாரம் தேவை)"),
 		},
 	},
 	{
@@ -42,8 +42,8 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms", "email"],
 		"bodies": {
-			"en": ("Attendance shortage", "Attendance of {{ doc.name }} is {{ context.percentage or '' }}%, below the required level."),
-			"ta": ("வருகைப் பற்றாக்குறை", "[TA] {{ doc.name }} வருகை {{ context.percentage or '' }}% ஆக குறைவாக உள்ளது."),
+			"en": ("Attendance shortage", "Dear {{ recipient.display_name or 'Parent' }}, attendance of {{ doc.name }} is {{ context.percentage or '' }}%, below the required level."),
+			"ta": ("வருகைப் பற்றாக்குறை", "அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} வருகை {{ context.percentage or '' }}% ஆக குறைவாக உள்ளது."),
 		},
 	},
 ]
