@@ -308,3 +308,7 @@ permission_query_conditions = {
 has_permission = {
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 }
+
+jinja = {"methods": ["campus.campus_platform.verification.oc_qr_block"]}
+
+website_route_rules = [{"from_route": "/verify/<code>", "to_route": "verify"}]
