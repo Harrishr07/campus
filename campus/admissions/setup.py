@@ -104,3 +104,17 @@ def setup_admission_fields():
 		{"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment, "Sales Invoice": invoice},
 		update=True,
 	)
+	grant_officer_read_access()
+
+
+# Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item
+# details, party account and the like); company User Permissions still scope the company-linked ones.
+OFFICER_READ = ("Account", "Item", "Customer", "Cost Center", "Price List", "Sales Invoice", "Payment Entry")
+
+
+def grant_officer_read_access():
+	from frappe.permissions import add_permission
+
+	for doctype in OFFICER_READ:
+		if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": OFFICER_ROLE, "permlevel": 0}):
+			add_permission(doctype, OFFICER_ROLE, 0)

@@ -15,7 +15,6 @@ from frappe.utils import add_days, today
 from campus.admissions import documents, numbers
 from campus.admissions import seat_matrix as seats
 from campus.admissions.aadhaar import copy_aadhaar
-from campus.admissions.elevated import system_user
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
 from campus.campus_platform.company_scope import permitted_companies
@@ -127,6 +126,6 @@ def create_fee_invoice(student, enrollment, state, year):
 			],
 		}
 	)  # fmt: skip
-	with system_user():
-		invoice.insert(ignore_permissions=True)
-		return invoice.submit()
+	invoice.flags.ignore_permissions = True  # the officer's role was checked in admit(); every input is server-side
+	invoice.insert()
+	return invoice.submit()

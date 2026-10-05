@@ -59,8 +59,8 @@ def data(filters):
 	if not filters.company or (permitted is not None and filters.company not in permitted):
 		return []
 	students = admitted_students(filters)
-	rows = [{"grouping": _("Total"), "value": "", "admitted": len(students), "sanctioned": sum(sanctioned_by_category(filters).values())}]
 	sanctioned = sanctioned_by_category(filters)
+	rows = [{"grouping": _("Total"), "value": "", "admitted": len(students), "sanctioned": sum(sanctioned.values())}]
 	for label, field in GROUPS:
 		counts = {}
 		for student in students:

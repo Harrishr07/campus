@@ -12,7 +12,7 @@ from campus.admissions import numbers, refund
 from campus.admissions.api import admit, check_seat_available
 from campus.admissions.report.admissions_by_quota_and_category import admissions_by_quota_and_category as quota_report
 from campus.admissions.report.refund_register import refund_register
-from campus.tests.factories import make_user
+from campus.tests.factories import make_company, make_user
 from campus.tests.finance_factories import make_finance_company, make_fee_structure
 from campus.tests.test_admissions import VALID, delete_log_rows, log_rows, own_connection
 from campus.tests.utils import CampusTestCase
@@ -23,6 +23,7 @@ YEAR = "Admit Flow 2026"
 QUOTA, FREE_QUOTA = "AFGQ", "AFMQ"
 OC, BC = "AF OC", "AF BC"
 OFFICER, PLAIN = "admit-officer@example.com", "admit-plain@example.com"
+OTHER_COLLEGE, OTHER_OFFICER = "Admit Flow Other College", "admit-other@example.com"
 TUITION_FEE, EXAM_FEE, BC_TUITION = 50000, 2000, 30000
 SERIAL = [0]
 
@@ -90,9 +91,12 @@ class AdmitTestCase(CampusTestCase):
 		cls.bc_structure = make_fee_structure(
 			COLLEGE, PROGRAM, YEAR, {"Tuition": BC_TUITION, "Exam": EXAM_FEE}, cls.accounts, student_category=BC
 		)
+		make_company(OTHER_COLLEGE, "AFO")
 		make_user(OFFICER, [COLLEGE])
 		make_user(PLAIN, [COLLEGE])
+		make_user(OTHER_OFFICER, [OTHER_COLLEGE])
 		frappe.get_doc("User", OFFICER).add_roles("Admission Officer")
+		frappe.get_doc("User", OTHER_OFFICER).add_roles("Admission Officer")
 
 	@classmethod
 	def tearDownClass(cls):
@@ -307,14 +311,19 @@ class TestCancellation(AdmitTestCase):
 		result = self.admit_as_officer(self.applicant(**kwargs))
 		return SimpleNamespace(applicant=frappe.db.get_value("Student", result["student"], "student_applicant"), **result)
 
-	def cancel(self, admission, days, submit=True):
+	def cancel(self, admission, days, submit=True, user=OFFICER):
+		"""Cancel today, `days` days after the admission year started (the refund slab counts from that start)."""
+		frappe.db.set_value("Academic Year", YEAR, "year_start_date", add_days(today(), -days))
+		return self.cancel_on(admission, today(), submit, user)
+
+	def cancel_on(self, admission, date, submit=True, user=OFFICER):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Admission Cancellation", "student": admission.student, "program_enrollment": admission.program_enrollment,
-				"cancellation_date": add_days(today(), days), "reason": "Joined another college",
+				"cancellation_date": date, "reason": "Joined another college",
 			}
 		)
-		frappe.set_user(OFFICER)
+		frappe.set_user(user)
 		try:
 			doc.insert()
 			return doc.submit() if submit else doc
@@ -388,6 +397,64 @@ class TestCancellation(AdmitTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.cancel(admission, 2)
 
+	def test_an_officer_of_another_company_cannot_cancel_and_sees_no_amounts(self):
+		admission = self.admitted()
+		for submit in (False, True):
+			with self.assertRaises(frappe.PermissionError) as raised:
+				self.cancel_on(admission, today(), submit, user=OTHER_OFFICER)
+			self.assertNotIn("51000", str(raised.exception))
+			self.assertNotIn("52000", str(raised.exception))
+		self.assertEqual(frappe.db.count("Admission Cancellation"), 0)
+
+	def test_cancellation_date_is_not_future_and_not_before_admission(self):
+		admission = self.admitted()
+		with self.assertRaises(frappe.ValidationError):
+			self.cancel_on(admission, add_days(today(), 1), submit=False)
+		frappe.db.set_value("Program Enrollment", admission.program_enrollment, "enrollment_date", add_days(today(), -2))
+		with self.assertRaises(frappe.ValidationError):
+			self.cancel_on(admission, add_days(today(), -3), submit=False)
+		self.assertTrue(self.cancel_on(admission, add_days(today(), -2), submit=False))
+
+	def test_documents_are_dated_today_and_the_frozen_date_applies(self):
+		admission = self.admitted()
+		self.pay_in_full(admission.invoice)
+		earlier = add_days(today(), -2)
+		frappe.db.set_value("Program Enrollment", admission.program_enrollment, "enrollment_date", add_days(today(), -5))
+		doc = self.cancel_on(admission, earlier)
+		self.assertEqual(str(frappe.db.get_value("Sales Invoice", doc.credit_note, "posting_date")), today())
+		self.assertEqual(str(frappe.db.get_value("Payment Entry", doc.payment_entry, "posting_date")), today())
+		second = self.admitted()
+		frappe.db.set_value("Company", COLLEGE, "accounts_frozen_till_date", today())  # rolled back with the test savepoint
+		with self.assertRaises(frappe.ValidationError):
+			self.cancel(second, 5)  # an officer has no frozen-accounts modifier role: no bypass
+
+	def test_the_officer_session_survives_admit_and_cancellation(self):
+		"""No user switching: sid, session data, csrf token, user and form_dict are exactly as the request had them."""
+		frappe.set_user(OFFICER)
+		session_data = frappe._dict(user=OFFICER, csrf_token="csrf-token", data=frappe._dict(user=OFFICER, session_expiry="06:00:00"))
+		frappe.local.session = frappe._dict(user=OFFICER, sid="sid-123", data=session_data.data, csrf_token="csrf-token", session_obj=None)
+		frappe.local.form_dict = frappe._dict(applicant="x", cmd="campus.admissions.api.admit")
+		snapshot = lambda: (  # noqa: E731
+			frappe.session.user, frappe.session.sid, frappe.session.csrf_token, dict(frappe.session.data), dict(frappe.local.form_dict)
+		)
+		before = snapshot()
+		try:
+			result = admit(self.applicant())
+			self.assertEqual(snapshot(), before)
+			self.cancel_with_current_user(result)
+			self.assertEqual(snapshot(), before)
+		finally:
+			frappe.set_user("Administrator")
+
+	def cancel_with_current_user(self, result):
+		student = frappe.db.get_value("Student", result["student"], "name")
+		doc = frappe.get_doc(
+			{"doctype": "Admission Cancellation", "student": student, "program_enrollment": result["program_enrollment"],
+			 "cancellation_date": today(), "reason": "Session check"}
+		)  # fmt: skip
+		doc.insert()
+		doc.submit()
+
 	def test_refund_register_and_admission_report(self):
 		admission = self.admitted()
 		self.pay_in_full(admission.invoice)
@@ -396,9 +463,10 @@ class TestCancellation(AdmitTestCase):
 		self.assertEqual([(r.name, flt(r.refundable_amount), r.payment_status) for r in rows], [(doc.name, 41600, "Draft")])
 		_columns, rows = refund_register.execute({"company": COLLEGE, "from_date": add_days(today(), 25)})
 		self.assertEqual(rows, [])
-		frappe.set_user(PLAIN)
 		make_user(PLAIN, [COLLEGE])
-		self.assertEqual(refund_register.execute({"company": "Somewhere Else"})[1], [])
+		frappe.set_user(PLAIN)
+		self.assertEqual(refund_register.execute({"company": OTHER_COLLEGE})[1], [])
+		self.assertEqual(quota_report.execute({"company": OTHER_COLLEGE})[1], [])
 
 
 class TestConcurrentNumbers(CampusTestCase):

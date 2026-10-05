@@ -11,16 +11,31 @@ A cancellation is final: cancel the Credit Note and Payment Entry in Accounts if
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate
+from frappe.utils import flt, getdate, today
 
 from campus.admissions import refund
-from campus.admissions.elevated import system_user
+from campus.admissions.admit import check_company_access
 
 
 class AdmissionCancellation(Document):
 	def validate(self):
+		self.check_company()
 		self.validate_enrollment()
+		self.validate_date()
 		self.compute_refund()
+
+	def check_company(self):
+		"""Before anything is read back to the user: an officer limited to another company gets no figures."""
+		company = frappe.db.get_value("Program Enrollment", self.program_enrollment, "oc_company")
+		check_company_access(company)
+
+	def validate_date(self):
+		"""Cancelled on or after the admission, not in the future (the refund slab counts from this date)."""
+		admitted = frappe.db.get_value("Program Enrollment", self.program_enrollment, "enrollment_date")
+		if getdate(self.cancellation_date) > getdate(today()):
+			frappe.throw(_("The cancellation date cannot be in the future."))
+		if admitted and getdate(self.cancellation_date) < getdate(admitted):
+			frappe.throw(_("The cancellation date cannot be before the admission date {0}.").format(admitted))
 
 	def validate_enrollment(self):
 		enrollment = frappe.db.get_value(
@@ -55,10 +70,9 @@ class AdmissionCancellation(Document):
 		)  # fmt: skip
 
 	def on_submit(self):
-		with system_user():
-			credit_note = make_credit_note(self) if self.refundable_amount else None
-			payment = make_refund_payment(self, credit_note) if credit_note and self.cash_refund else None
-			cancel_enrollment(self.program_enrollment)
+		credit_note = make_credit_note(self) if self.refundable_amount else None
+		payment = make_refund_payment(self, credit_note) if credit_note and self.cash_refund else None
+		cancel_enrollment(self.program_enrollment)
 		close_records(self)
 		self.db_set({"credit_note": credit_note and credit_note.name, "payment_entry": payment and payment.name})
 
@@ -76,33 +90,83 @@ def admission_invoice(program_enrollment):
 
 
 def make_credit_note(cancellation):
-	"""A return against the fee invoice for `refundable_amount`: every line scaled by the same fraction."""
-	from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+	"""A return against the fee invoice for `refundable_amount`, built here rather than with ERPNext's
+	make_return_doc (which needs read rights on the invoice the officer does not hold).
 
-	note = make_sales_return(cancellation.fee_invoice)
-	note.posting_date = cancellation.cancellation_date
-	note.set_posting_time = 1
-	note.update_outstanding_for_self = 0
-	factor = flt(cancellation.refundable_amount) / flt(cancellation.invoice_total)
-	rate_precision = note.items[0].precision("rate")
-	for row in note.items:
-		row.price_list_rate = row.rate = flt(row.rate * factor, rate_precision)
-		row.discount_percentage = 0
-	remainder = flt(cancellation.refundable_amount) - sum(-row.qty * row.rate for row in note.items)
-	note.items[0].price_list_rate = note.items[0].rate = flt(note.items[0].rate + remainder / -note.items[0].qty, rate_precision)
+	Every line is scaled by the same fraction of the net amount; taxes are copied and recomputed by ERPNext, and
+	a last pass moves the first line so the grand total equals the refundable amount to the paisa. The posting
+	date is today, not the cancellation date: it is the GL date, so Accounts' frozen-till date applies as usual.
+	"""
+	invoice = frappe.get_doc("Sales Invoice", cancellation.fee_invoice)
+	note = frappe.new_doc("Sales Invoice")
+	note.update(
+		{
+			"company": invoice.company, "customer": invoice.customer, "student": invoice.student, "is_return": 1,
+			"return_against": invoice.name, "posting_date": today(), "set_posting_time": 1, "debit_to": invoice.debit_to,
+			"selling_price_list": invoice.selling_price_list, "update_outstanding_for_self": 0, "due_date": today(),
+			"oc_program_enrollment": invoice.oc_program_enrollment, "currency": invoice.currency,
+		}
+	)  # fmt: skip
+	factor = flt(cancellation.refundable_amount) / flt(invoice.grand_total)
+	for row in invoice.items:
+		note.append(
+			"items",
+			{
+				"item_code": row.item_code, "qty": -row.qty, "uom": row.uom, "income_account": row.income_account,
+				"cost_center": row.cost_center, "sales_invoice_item": row.name, "rate": flt(row.rate * factor, row.precision("rate")),
+			},
+		)  # fmt: skip
+	for tax in invoice.taxes:
+		note.append(
+			"taxes",
+			{k: tax.get(k) for k in ("charge_type", "account_head", "rate", "description", "cost_center", "row_id", "included_in_print_rate")},
+		)
 	note.flags.ignore_permissions = True
+	note.run_method("set_missing_values")
+	note.calculate_taxes_and_totals()
+	trim_to_refundable(note, flt(cancellation.refundable_amount))
 	note.insert()
 	return note.submit()
 
 
-def make_refund_payment(cancellation, credit_note):
-	"""Draft Payment Entry (Pay) against the credit note, for accounts to review and submit."""
-	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+def trim_to_refundable(note, refundable):
+	"""Move the first line so the grand total is exactly -`refundable` (rounding of the per-line scaling)."""
+	gap = flt(-refundable - note.grand_total, 2)
+	if not gap:
+		return
+	first = note.items[0]
+	share = flt(note.net_total) / flt(note.grand_total) if note.grand_total else 1
+	first.rate = flt(first.rate + gap * share / first.qty, first.precision("rate"))
+	note.calculate_taxes_and_totals()
 
-	payment = get_payment_entry("Sales Invoice", credit_note.name, party_amount=-flt(cancellation.cash_refund))
-	payment.posting_date = getdate(cancellation.cancellation_date)
-	payment.remarks = _("Refund on cancellation of admission {0}: {1}").format(cancellation.name, cancellation.reason)
-	payment.reference_no, payment.reference_date = cancellation.name, cancellation.cancellation_date  # accounts replaces with the bank reference
+
+def make_refund_payment(cancellation, credit_note):
+	"""Draft Payment Entry (Pay) against the credit note, for accounts to review and submit.
+
+	Dated today (GL date); the cancellation date is in the remarks. Built here: ERPNext's get_payment_entry
+	checks the officer's own Payment Entry rights.
+	"""
+	bank = frappe.db.get_value("Company", credit_note.company, "default_bank_account")
+	if not bank:
+		frappe.throw(_("Set a default bank account for {0} to draft the refund payment.").format(credit_note.company))
+	payment = frappe.get_doc(
+		{
+			"doctype": "Payment Entry", "payment_type": "Pay", "company": credit_note.company, "posting_date": today(),
+			"party_type": "Customer", "party": credit_note.customer, "paid_from": bank, "paid_to": credit_note.debit_to,
+			"paid_amount": cancellation.cash_refund, "received_amount": cancellation.cash_refund,
+			"reference_no": cancellation.name, "reference_date": today(),  # accounts replaces with the bank reference
+			"remarks": _("Refund on cancellation of admission {0} dated {1}: {2}").format(
+				cancellation.name, cancellation.cancellation_date, cancellation.reason
+			),
+			"references": [
+				{
+					"reference_doctype": "Sales Invoice", "reference_name": credit_note.name,
+					"total_amount": credit_note.grand_total, "outstanding_amount": credit_note.outstanding_amount,
+					"allocated_amount": -flt(cancellation.cash_refund),
+				}
+			],
+		}
+	)  # fmt: skip
 	payment.flags.ignore_permissions = True
 	return payment.insert()
 
