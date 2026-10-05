@@ -4,6 +4,7 @@ import frappe
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from frappe.database import get_db
 from frappe.tests import UnitTestCase
 
 from campus.admissions import eligibility as elig
@@ -18,6 +19,34 @@ PROGRAM = "Admissions Test BE"
 VIEWER, PLAIN = "aadhaar-viewer@example.com", "aadhaar-plain@example.com"
 OTHER_COLLEGE, OTHER_VIEWER = "Admissions Other College", "aadhaar-other@example.com"
 SUBJECTS = "Mathematics\nPhysics\nChemistry"
+
+
+def own_connection():
+	conf = frappe.local.conf
+	return get_db(
+		socket=conf.db_socket, host=conf.db_host, port=conf.db_port,
+		user=conf.db_user or conf.db_name, password=conf.db_password, cur_db_name=conf.db_name,
+	)  # fmt: skip
+
+
+def log_rows(reference_name=None):
+	"""Committed Aadhaar Access Log rows, read on a fresh connection (the test transaction's snapshot predates them)."""
+	connection = own_connection()
+	try:
+		where, values = ("where reference_name = %s", (reference_name,)) if reference_name else ("", ())
+		return connection.sql(f"select * from `tabAadhaar Access Log` {where} order by creation", values, as_dict=True)
+	finally:
+		connection.close()
+
+
+def delete_log_rows(reference_names):
+	connection = own_connection()
+	try:
+		for name in reference_names:
+			connection.sql("delete from `tabAadhaar Access Log` where reference_name = %s", (name,))
+		connection.commit()
+	finally:
+		connection.close()
 
 
 def with_check_digit(body):
@@ -121,13 +150,19 @@ class TestAdmissionsIntegration(CampusTestCase):
 
 	def setUp(self):
 		frappe.set_user("Administrator")
+		self.touched = []  # documents whose log rows (committed on their own connection) are cleaned up
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
-		frappe.local.flags.commit = False
-		frappe.db.after_rollback.reset()  # the suite's own rollback must not re-insert log rows
+		delete_log_rows(self.touched)
+		self.touched = []
 
 	def applicant(self, aadhaar=None, category="OC", marks=(60, 60, 60)):
+		doc = self.build_applicant(aadhaar, category, marks)
+		self.touched.append(doc.name)
+		return doc
+
+	def build_applicant(self, aadhaar, category, marks):
 		return frappe.get_doc(
 			{
 				"doctype": "Student Applicant", "first_name": "Admit", "program": PROGRAM,
@@ -178,16 +213,16 @@ class TestAdmissionsIntegration(CampusTestCase):
 			{"doctype": "Student", "first_name": "Aadhaar", "student_email_id": f"aadhaar-student-{frappe.generate_hash(length=8)}@example.com",
 			 "oc_company": COLLEGE, "oc_aadhaar": VALID}
 		).insert()  # fmt: skip
+		self.touched.append(student.name)
 		self.assertEqual(student.oc_aadhaar_masked, f"XXXX-XXXX-{VALID[-4:]}")
 		self.assertEqual(student.get_password("oc_aadhaar"), VALID)
 
 	def test_reveal_denied_without_role_and_not_logged(self):
 		doc = self.applicant(VALID)
-		before = frappe.db.count("Aadhaar Access Log")
 		frappe.set_user(PLAIN)
 		with self.assertRaises(frappe.PermissionError):
 			reveal_aadhaar("Student Applicant", doc.name)
-		self.assertEqual(frappe.db.count("Aadhaar Access Log"), before)
+		self.assertEqual(log_rows(doc.name), [])
 
 	def test_get_password_cannot_bypass_the_role(self):
 		doc = self.applicant(VALID)
@@ -201,11 +236,8 @@ class TestAdmissionsIntegration(CampusTestCase):
 		doc = self.applicant(VALID)
 		frappe.set_user(VIEWER)
 		self.assertEqual(reveal_aadhaar("Student Applicant", doc.name), VALID)
-		log = frappe.get_all(
-			"Aadhaar Access Log", filters={"reference_name": doc.name},
-			fields=["user", "reference_doctype", "accessed_on"],
-		)  # fmt: skip
-		self.assertEqual([(r.user, r.reference_doctype) for r in log], [(VIEWER, "Student Applicant")])
+		log = log_rows(doc.name)
+		self.assertEqual([(r.user, r.reference_doctype, r.reason) for r in log], [(VIEWER, "Student Applicant", "reveal")])
 		self.assertTrue(log[0].accessed_on)
 
 	# eligibility
@@ -265,17 +297,16 @@ class TestAdmissionsIntegration(CampusTestCase):
 		with patch.object(frappe.local, "request", SimpleNamespace(method="POST"), create=True):
 			self.assertEqual(method("Student Applicant", doc.name, "oc_aadhaar"), VALID)
 
-	def test_reveal_log_is_marked_for_commit_and_carries_ip(self):
+	def test_reveal_log_carries_ip(self):
 		doc = self.applicant(VALID)
-		frappe.local.flags.commit = False
 		frappe.set_user(VIEWER)
+		previous = getattr(frappe.local, "request_ip", None)
 		frappe.local.request_ip = "10.1.2.3"
 		try:
 			reveal_aadhaar("Student Applicant", doc.name)
 		finally:
-			del frappe.local.request_ip
-		self.assertTrue(frappe.local.flags.commit)
-		self.assertEqual(frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name}).ip_address, "10.1.2.3")
+			frappe.local.request_ip = previous
+		self.assertEqual(log_rows(doc.name)[0].ip_address, "10.1.2.3")
 
 	def test_jinja_get_password_is_gated_and_logged(self):
 		doc = self.applicant(VALID)
@@ -284,10 +315,8 @@ class TestAdmissionsIntegration(CampusTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)})
 		frappe.set_user(VIEWER)
-		before = frappe.db.count("Aadhaar Access Log", {"reference_name": doc.name})
 		self.assertEqual(frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)}), VALID)
-		self.assertEqual(frappe.db.count("Aadhaar Access Log", {"reference_name": doc.name}), before + 1)
-		frappe.local.flags.commit = False
+		self.assertEqual(len(log_rows(doc.name)), 1)
 
 	def test_other_password_fields_still_readable_by_system_manager(self):
 		name = "Admissions Pwd Test"
@@ -307,14 +336,16 @@ class TestAdmissionsIntegration(CampusTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			reveal_aadhaar("Student Applicant", doc.name)
 
-	def test_access_log_cannot_be_deleted(self):
+	def test_access_log_rows_cannot_be_deleted_or_edited(self):
 		doc = self.applicant(VALID)
 		frappe.set_user(VIEWER)
 		reveal_aadhaar("Student Applicant", doc.name)
 		frappe.set_user("Administrator")
-		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name})
+		row = frappe.get_doc({**log_rows(doc.name)[0], "doctype": "Aadhaar Access Log"})  # a saved row
 		with self.assertRaises(frappe.PermissionError):
-			log.delete()
+			row.on_trash()
+		with self.assertRaises(frappe.PermissionError):
+			row.validate()
 
 	def test_rule_with_matching_regulation_wins_and_duplicates_rejected(self):
 		blank = frappe.db.get_value("Eligibility Rule", {"program": PROGRAM, "enabled": 1})
@@ -327,17 +358,24 @@ class TestAdmissionsIntegration(CampusTestCase):
 		self.assertEqual(elig.find_rule(PROGRAM, self.regulation).name, specific.name)
 		self.assertEqual(elig.find_rule(PROGRAM).name, blank)
 
-	def test_log_row_survives_a_full_rollback_by_the_caller(self):
+	def test_every_reveal_row_survives_a_rollback_by_the_caller(self):
 		doc = self.applicant(VALID)
-		frappe.db.commit()  # keep the fixtures; only the reveal below is rolled back
 		frappe.set_user(VIEWER)
+		frappe.db.savepoint("reveals")
 		frappe.get_doc("Student Applicant", doc.name).get_password("oc_aadhaar")  # as a Server Script would
-		frappe.db.rollback()
-		rows = frappe.get_all("Aadhaar Access Log", {"reference_name": doc.name, "user": VIEWER}, pluck="name")
-		self.assertEqual(len(rows), 1)
-		frappe.db.delete("Aadhaar Access Log", {"reference_name": doc.name})
-		frappe.db.delete("Student Applicant", {"name": doc.name})
-		frappe.db.commit()
+		reveal_aadhaar("Student Applicant", doc.name)
+		frappe.db.rollback(save_point="reveals")
+		self.assertEqual(len(log_rows(doc.name)), 2)
+
+	def test_reveal_fails_closed_when_the_log_cannot_be_written(self):
+		doc = self.applicant(VALID)
+		frappe.set_user(VIEWER)
+		with patch("campus.admissions.aadhaar.write_on_own_connection", side_effect=RuntimeError("db down")):
+			with patch("frappe.log_error", side_effect=RuntimeError("log_error down")):  # must not mask the failure
+				with self.assertRaises(frappe.ValidationError) as ctx:
+					reveal_aadhaar("Student Applicant", doc.name)
+		self.assertNotIn(VALID, str(ctx.exception))
+		self.assertEqual(log_rows(doc.name), [])
 
 	def test_copy_aadhaar_carries_number_and_logs_a_system_copy(self):
 		source = self.applicant(VALID)
@@ -348,8 +386,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		copy_aadhaar(frappe.get_doc("Student Applicant", source.name), student)
 		student.insert()
 		self.assertEqual(student.oc_aadhaar_masked, f"XXXX-XXXX-{VALID[-4:]}")
+		self.touched.append(student.name)
 		self.assertEqual(frappe.get_doc("Student", student.name).get_password("oc_aadhaar"), VALID)
-		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": source.name})
+		log = log_rows(source.name)[0]
 		self.assertEqual((log.reason, log.user), ("admission copy", "Administrator"))
 		self.assertFalse(hasattr(copy_aadhaar, "__wrapped__") or copy_aadhaar in frappe.whitelisted)
 
@@ -358,15 +397,15 @@ class TestAdmissionsIntegration(CampusTestCase):
 		copy_aadhaar(source, student)
 		self.assertFalse(student.get("oc_aadhaar"))
 
-	def test_log_rows_cannot_be_edited_and_block_deleting_the_document(self):
-		doc = self.applicant(VALID)
-		reveal_aadhaar("Student Applicant", doc.name)
-		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name})
-		log.user = PLAIN
-		with self.assertRaises(frappe.PermissionError):
-			log.save()
-		with self.assertRaises(frappe.LinkExistsError):
-			frappe.delete_doc("Student Applicant", doc.name)
+	def test_log_references_the_document_by_dynamic_link(self):
+		"""Frappe's delete-time link check follows Dynamic Links, so reveal history blocks deleting the document.
+
+		Not exercised end to end: the log row is committed on its own connection, which the test transaction's
+		snapshot cannot see; in a real request the delete runs in a new transaction.
+		"""
+		meta = frappe.get_meta("Aadhaar Access Log")
+		field = meta.get_field("reference_name")
+		self.assertEqual((field.fieldtype, field.options), ("Dynamic Link", "reference_doctype"))
 
 	def test_enabled_rule_check_takes_a_lock_and_rejects_clash(self):
 		rule = frappe.get_doc({"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": None})

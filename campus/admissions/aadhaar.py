@@ -14,11 +14,15 @@ whitelisted; P1-T16 Admit uses it to carry the number from applicant to student)
 but writes an Access Log row with reason "admission copy". Installed app code can still call
 `frappe.utils.password.get_decrypted_password` directly, which no hook can gate: review apps accordingly.
 
-Log durability: `log_reveal` marks the request for commit (GET requests are rolled back otherwise) and
-registers an `after_rollback` callback that re-inserts and commits the row if the caller rolls back the
-whole transaction (e.g. a Server Script reveals then throws). A rollback to a savepoint does not fire that
-callback and can still discard the row. Log rows are immutable, and a Student or Student Applicant with
-reveal history cannot be deleted (Dynamic Link check): intended audit behaviour.
+Log durability: each Aadhaar Access Log row is written on a separate database connection and committed at
+once (`write_on_own_connection`), so it survives any rollback of the caller's transaction and of GET
+requests. The write fails closed: if it cannot be made, the reveal raises and no number is returned. The row
+is not visible to the caller's own transaction snapshot until that transaction ends. Log rows are immutable
+through the controller, and a Student or Student Applicant with reveal history cannot be deleted (Dynamic
+Link check): intended audit behaviour. A reveal inside a bulk handler item that later fails keeps its row
+even though the item is discarded: acceptable. The threat model trusts System Managers with Server
+Scripts enabled (they could `frappe.db.set_value` a log row); the goal is that every reveal leaves a durable
+row, not that a System Manager cannot tamper.
 
 Residual paths this does not close (operational controls, not code): Error Log tracebacks may capture a
 local variable holding a number being saved; Data Import files and Data Export of the form payload carry
@@ -27,6 +31,7 @@ what the uploader typed; database and `site_config` encryption_key backups toget
 
 import frappe
 from frappe import _
+from frappe.database import get_db
 from frappe.utils import now_datetime
 from frappe.utils.password import get_decrypted_password
 
@@ -112,21 +117,44 @@ def reveal_aadhaar(doctype: str, name: str):
 	return frappe.get_doc(doctype, name).get_password(AADHAAR_FIELD, raise_exception=False)
 
 
+LOG_COLUMNS = (
+	"name", "creation", "modified", "modified_by", "owner", "docstatus", "idx", "user",
+	"reference_doctype", "reference_name", "accessed_on", "reason", "ip_address",
+)  # fmt: skip
+
+
 def log_reveal(doctype, name, reason="reveal"):
-	row = {
-		"doctype": LOG_DOCTYPE, "user": frappe.session.user, "reference_doctype": doctype,
-		"reference_name": name, "accessed_on": now_datetime(), "reason": reason,
-		"ip_address": getattr(frappe.local, "request_ip", None),
-	}  # fmt: skip
-	frappe.get_doc(row).insert(ignore_permissions=True)
-	frappe.local.flags.commit = True  # a reveal over a safe method must not lose its log row
-	frappe.db.after_rollback.add(lambda: persist_after_rollback(row))
+	"""Record a reveal durably, or raise: callers must log before they return the number."""
+	now = now_datetime()
+	values = (
+		frappe.generate_hash(length=10), now, now, frappe.session.user, frappe.session.user, 0, 0,
+		frappe.session.user, doctype, name, now, reason, getattr(frappe.local, "request_ip", None),
+	)  # fmt: skip
+	try:
+		write_on_own_connection(values)
+	except Exception as error:
+		try:
+			frappe.log_error("Aadhaar Access Log write failed")  # never mask the failure below
+		except Exception:
+			pass
+		raise frappe.ValidationError(_("The Aadhaar access could not be recorded; nothing was revealed.")) from error
 
 
-def persist_after_rollback(row):
-	"""The caller rolled the transaction back: write the log row again, in its own transaction."""
-	frappe.get_doc(row).insert(ignore_permissions=True, ignore_links=True)  # the document may be gone too
-	frappe.db.commit()
+def write_on_own_connection(values):
+	"""Insert one log row on its own connection and commit it there."""
+	conf = frappe.local.conf
+	db_name = conf.db_name
+	connection = get_db(
+		socket=conf.db_socket, host=conf.db_host, port=conf.db_port,
+		user=conf.db_user or db_name, password=conf.db_password, cur_db_name=db_name,
+	)  # fmt: skip
+	try:
+		columns = ", ".join(f"`{c}`" for c in LOG_COLUMNS)
+		marks = ", ".join(["%s"] * len(LOG_COLUMNS))
+		connection.sql(f"insert into `tab{LOG_DOCTYPE}` ({columns}) values ({marks})", values)
+		connection.commit()
+	finally:
+		connection.close()
 
 
 def copy_aadhaar(source_doc, target_doc):
