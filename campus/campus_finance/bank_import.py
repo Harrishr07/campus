@@ -4,12 +4,23 @@ CSV columns: challan_no, amount, date, reference (extra columns are ignored). On
 per file row with its outcome: Matched (a Payment Entry was made), Unmatched (unknown challan, wrong company,
 settled invoice or amount above the outstanding), Duplicate (bank reference already collected) or Invalid.
 
-Concurrency (MariaDB REPEATABLE READ): the handler takes the invoice row lock (FOR UPDATE) as its first
-statement, before any plain read, and every fact it then decides on (outstanding amount, existing bank
-reference) is re-read with a locking read, since a plain read could use the chunk's older snapshot. Items are
-sorted by challan number so two imports lock invoices in the same order. After the Payment Entry is posted the
-outstanding amount is re-read under the lock and a negative one rolls the row back (reported Invalid).
-Every outcome of a row, errors included, is recorded as a Bank Collection Row so the import always completes.
+Concurrency (MariaDB REPEATABLE READ)
+- The import runs as a bulk run with chunk=1: every row is its own transaction. Everything the runner does
+  before the handler in a chunk is a locking read (Bulk Run row, processed keys) and the runner ends the
+  snapshot of its initial key read with a commit, so the handler's invoice FOR UPDATE is the first
+  snapshot-establishing statement of the transaction. That matters because ERPNext's own outstanding
+  recomputation when the Payment Entry is submitted (update_voucher_outstanding) uses plain reads: they are
+  only current if the snapshot starts after we hold the invoice lock. (With larger chunks a snapshot taken
+  for an earlier row could be stale.) The post-submit negative-outstanding check below catches an
+  overpayment visible to a locking read; it does NOT detect staleness inside ERPNext's recomputation, which
+  chunk=1 prevents.
+- Facts the handler decides on (outstanding amount, existing bank reference) are re-read with locking reads.
+  Items are sorted by challan number so two imports lock invoices in the same order.
+- Known limit: two imports that carry the same bank reference for different challans can deadlock on the gap
+  lock of the unique reference lookup; MariaDB aborts one transaction, its run fails and can be resumed
+  (resume_bulk), the committed rows being skipped.
+- Every outcome of a row, errors and lock-wait timeouts included, is recorded as a Bank Collection Row so the
+  import always completes.
 
 Re-import safety: a Matched row stores `reference_key` = company + bank reference, a unique column, so a bank
 reference can create at most one Payment Entry however often (or concurrently) a file is imported. The Payment
@@ -48,7 +59,7 @@ def start_import(name):
 	doc.db_set({"total_rows": len(rows), "status": "Processing"})
 	items = [{"import": name, "company": doc.company, "row_no": no, **row} for no, row in enumerate(rows, start=1)]
 	items.sort(key=lambda i: (i["challan_no"], i["row_no"]))  # consistent invoice lock order across imports
-	run = run_bulk("Bank Collection Import", items, HANDLER, key=KEY, parameters={"import": name})
+	run = run_bulk("Bank Collection Import", items, HANDLER, chunk=1, key=KEY, parameters={"import": name})
 	doc.db_set("bulk_run", run)
 	return run
 
@@ -91,15 +102,16 @@ def process_row(item, run):
 	invalid = invalid_reason(item)  # pure checks: no database access before the lock
 	if invalid:
 		return record(item, "Invalid", invalid)
-	invoice = frappe.db.get_value(
-		"Sales Invoice",
-		{"oc_challan_no": item["challan_no"], "docstatus": 1},
-		["name", "company", "customer", "currency", "outstanding_amount"],
-		as_dict=True,
-		for_update=True,  # first statement: lock, and see the latest outstanding amount
-	)
 	frappe.db.savepoint(ROW_SAVEPOINT)
+	invoice = None
 	try:
+		invoice = frappe.db.get_value(
+			"Sales Invoice",
+			{"oc_challan_no": item["challan_no"], "docstatus": 1},
+			["name", "company", "customer", "currency", "outstanding_amount"],
+			as_dict=True,
+			for_update=True,  # first read: lock, and see the latest outstanding amount
+		)
 		match_row(item, invoice)
 	except Exception as e:
 		frappe.db.rollback(save_point=ROW_SAVEPOINT)

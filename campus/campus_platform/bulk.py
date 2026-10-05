@@ -156,6 +156,9 @@ def _process_chunks(run):
 	key_fn = frappe.get_attr(run.key_function) if run.key_function else str
 	seen = set(frappe.get_all("Bulk Run Item Key", filters={"parent": run.name}, pluck="item_key", limit=0))
 	pending = [item for item in json.loads(run.items) if _key(key_fn, item) not in seen]
+	# The key read above is a plain (snapshot) read; end its transaction so the first chunk's first
+	# consistent read is the handler's own, like every later chunk (each starts after a commit).
+	frappe.db.commit()
 	for start in range(0, len(pending), run.chunk_size):
 		_process_chunk(run, handler, key_fn, pending[start : start + run.chunk_size])
 

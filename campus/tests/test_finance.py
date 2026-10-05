@@ -13,6 +13,7 @@ from campus.campus_finance import api, bank_import, fines
 from campus.campus_finance.fee_heads import CAUTION_DEPOSIT, FEE_HEADS, FINE, TUITION, set_item_default
 from campus.campus_platform import bulk
 from campus.tests.finance_factories import (
+	FISCAL_YEARS,
 	make_challan_format,
 	make_enrolled_students,
 	make_fee_schedule,
@@ -604,6 +605,44 @@ class FixRoundTests:
 		bank_import.process_row(self.item(3, reference="UTR-F-USD"), None)
 		self.assertEqual(self.row_status("UTR-F-USD").status, "Unmatched")
 
+	def test_lock_wait_timeout_on_the_invoice_is_recorded_and_the_import_completes(self):
+		doc = self.import_doc()
+		frappe.db.set_value("Bank Collection Import", doc.name, "total_rows", 1)
+		real = frappe.db.get_value
+
+		def get_value(doctype, *args, **kwargs):
+			if doctype == "Sales Invoice" and kwargs.get("for_update"):
+				raise frappe.QueryTimeoutError("Lock wait timeout exceeded")
+			return real(doctype, *args, **kwargs)
+
+		with patch.object(frappe.db, "get_value", side_effect=get_value):
+			bank_import.process_row(self.item(5), None)
+		row = self.row_status("UTR-F-5")
+		self.assertEqual(row.status, "Invalid")
+		self.assertIn("Lock wait", row.message)
+		self.assertEqual(frappe.db.get_value("Bank Collection Import", doc.name, "status"), "Completed with errors")
+
+	def test_start_import_runs_one_row_per_transaction(self):
+		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}).insert()
+		with patch.object(bank_import, "read_file", return_value=bank_csv([["A", 1, today(), "R"]])), patch.object(bank_import, "run_bulk", return_value="X") as run_bulk:
+			bank_import.start_import(doc.name)
+		self.assertEqual(run_bulk.call_args.kwargs["chunk"], 1)
+
+	def test_file_read_checks_file_permission(self):
+		private = frappe.get_doc({"doctype": "File", "file_name": "fee-private.csv", "content": b"a,b\n1,2\n", "is_private": 1}).insert()
+		self.assertEqual(bank_import.read_file(private.file_url).strip(), "a,b\n1,2")  # the owner reads it
+		user = "fee-nofile@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.flags.in_import = True  # skip the user-creation throttle
+			self.addCleanup(setattr, frappe.flags, "in_import", False)
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Nofile", "send_welcome_email": 0, "roles": [{"role": "Accounts User"}]}).insert()
+		frappe.set_user(user)
+		self.addCleanup(frappe.set_user, "Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			bank_import.read_file(private.file_url)
+		with self.assertRaises(frappe.ValidationError):
+			bank_import.read_file("/files/does-not-exist.csv")
+
 	def test_rows_carry_the_company_of_the_import(self):
 		bank_import.process_row(self.item(4), None)
 		self.assertEqual(self.row_status("UTR-F-4").company, COLLEGE)
@@ -667,6 +706,11 @@ class TestBankImportAcrossCommits(CampusTestCase):
 		cls.original = frappe.db.get_value(
 			"Education Settings", None, ["auto_submit_sales_invoice", "sales_invoice_posting_date_fee_schedule", "create_so"], as_dict=True
 		)
+		cls.original_price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list")
+		cls.shared = {  # shared test data this class may be the first to create; removed again if so
+			"Fiscal Year": [str(y) for y in FISCAL_YEARS if not frappe.db.exists("Fiscal Year", str(y))],
+			"Price List": [] if frappe.db.exists("Price List", "Standard Selling") else ["Standard Selling"],
+		}
 		frappe.db.set_single_value("Education Settings", {"auto_submit_sales_invoice": 1, "sales_invoice_posting_date_fee_schedule": 0, "create_so": 0})
 		cls.accounts = make_finance_company(COMMIT_COLLEGE, "FCM")
 		make_year_and_program(COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR)
@@ -683,8 +727,34 @@ class TestBankImportAcrossCommits(CampusTestCase):
 	def tearDownClass(cls):
 		frappe.db.rollback()
 		frappe.db.set_single_value("Education Settings", cls.original)
+		frappe.db.set_single_value("Selling Settings", "selling_price_list", cls.original_price_list)
 		cls.clean_up()
+		for doctype, names in cls.shared.items():
+			for name in names:
+				frappe.delete_doc(doctype, name, force=True)
+		frappe.db.commit()
+		cls.assert_nothing_left()
 		super().tearDownClass()
+
+	@classmethod
+	def assert_nothing_left(cls):
+		"""Nothing this class committed may remain, whatever the test outcome."""
+		left = {}
+		for doctype in ("Company", "Account", "Cost Center", "Warehouse", "Department", "Sales Invoice", "Payment Entry",
+			"GL Entry", "Challan Format", "Item Default", "Fee Category Default", "Fee Structure", "Fee Schedule",
+			"Bank Collection Import", "Bank Collection Row"):  # fmt: skip
+			field = "name" if doctype == "Company" else "company"
+			if frappe.db.exists(doctype, {field: COMMIT_COLLEGE}):
+				left[doctype] = frappe.db.count(doctype, {field: COMMIT_COLLEGE})
+		for doctype, filters in (
+			("Student", {"oc_company": COMMIT_COLLEGE}), ("Program", {"name": COMMIT_PROGRAM}),
+			("Academic Year", {"name": COMMIT_YEAR}), ("User", {"name": ("like", "feecommit%")}),
+			("Series", {"name": ("like", "%-FCM-%")}), ("Bulk Run", {"run_type": "Bank Collection Import"}),
+		):  # fmt: skip
+			if frappe.db.count(doctype, filters):
+				left[doctype] = frappe.db.count(doctype, filters)
+		if left:
+			raise AssertionError(f"test data left behind: {left}")
 
 	@classmethod
 	def clean_up(cls):
@@ -717,7 +787,26 @@ class TestBankImportAcrossCommits(CampusTestCase):
 		frappe.db.delete("Student", {"oc_company": COMMIT_COLLEGE})
 		frappe.db.delete("Customer", {"name": ("in", [s.customer for s in students if s.customer] or [""])})
 		frappe.db.delete("User", {"name": ("in", [s.student_email_id for s in students] or [""])})
+		frappe.db.delete("Challan Format", company)
+		for doctype in ("Item Default", "Fee Category Default"):
+			frappe.db.delete(doctype, company)
+		frappe.db.delete("Program", {"name": COMMIT_PROGRAM})
+		frappe.db.delete("Academic Year", {"name": COMMIT_YEAR})
+		frappe.db.delete("Series", {"name": ("like", "%-FCM-%")})
+		cls.sweep_company_rows()
+		if frappe.db.exists("Company", COMMIT_COLLEGE):
+			frappe.delete_doc("Company", COMMIT_COLLEGE, force=True)
+		cls.sweep_company_rows()  # rows other apps (HRMS) add for a company on its creation or removal
 		frappe.db.commit()
+
+	@classmethod
+	def sweep_company_rows(cls):
+		"""Delete the test company's rows in every table with a `company` column (accounts, cost centres, ...)."""
+		tables = frappe.db.sql_list(
+			"select table_name from information_schema.columns where table_schema = database() and column_name = 'company'"
+		)
+		for table in tables:
+			frappe.db.sql(f"delete from `{table}` where company = %s", COMMIT_COLLEGE)
 
 	def run_import(self, rows):
 		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COMMIT_COLLEGE, "collection_file": "/files/c.csv"}).insert()
