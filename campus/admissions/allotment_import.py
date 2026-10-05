@@ -25,6 +25,7 @@ imports lock in the same order; a lock wait or deadlock loses only that row, rec
 import csv
 import hashlib
 import io
+import os
 import re
 
 import frappe
@@ -92,13 +93,31 @@ def read_file(file_url):
 
 
 def make_private(file_url):
-	"""Allotment files carry personal data: the attached File is made private."""
+	"""Allotment files carry personal data: the attached File is made private; returns its (new) url.
+
+	When a private file of the same name already exists, the content is stored as a new, uniquely named
+	private File and the public one is deleted, so a name clash never blocks the import.
+	"""
 	name = frappe.db.get_value("File", {"file_url": file_url}, "name")
 	file = frappe.get_doc("File", name)
-	if not file.is_private:
+	if file.is_private:
+		return file.file_url
+	if os.path.exists(frappe.get_site_path("private", "files", file.file_url.split("/")[-1])):
+		stem, ext = os.path.splitext(file.file_name)
+		private = frappe.get_doc(
+			{
+				"doctype": "File", "file_name": f"{stem}-{frappe.generate_hash(length=8)}{ext}", "content": file.get_content(),
+				"is_private": 1, "attached_to_doctype": file.attached_to_doctype, "attached_to_name": file.attached_to_name,
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
+		frappe.delete_doc("File", file.name, ignore_permissions=True, force=True)
+		new_url = private.file_url
+	else:
 		file.is_private = 1
 		file.save(ignore_permissions=True)
-		frappe.db.set_value("Allotment Import", {"import_file": file_url}, "import_file", file.file_url, update_modified=False)
+		new_url = file.file_url
+	frappe.db.set_value("Allotment Import", {"import_file": file_url}, "import_file", new_url, update_modified=False)
+	return new_url
 
 
 def discard_file(import_name):
@@ -176,35 +195,22 @@ def set_allotment_key(doc, method=None):
 def process_row(item, run):
 	"""Bulk handler: create, update or leave the applicant of one file row and record the outcome. DB-only, no commit.
 
-	Any failure (including a lock wait or deadlock) is recorded as an Error row so the counters always reach the
-	total and the import completes.
+	A failure of the row is rolled back to the row savepoint and recorded as an Error row. When the savepoint
+	itself is gone (a deadlock rolls the whole transaction back) the error propagates: the bulk runner records
+	the item as failed, and `reconcile` later turns the runner's failed items into Error rows and counts, so the
+	import still completes. The handler never rolls back or commits the whole transaction itself.
 	"""
 	frappe.db.savepoint(SAVEPOINT)
 	try:
 		status, applicant, message = apply_row(item)
 	except Exception as e:  # noqa: BLE001 - every failure of a row is recorded, never stalls the import
-		rollback_row()
+		frappe.db.rollback(save_point=SAVEPOINT)  # raises when the savepoint is dead: propagate to the runner
 		status, applicant, message = "Error", None, cstr(e)
 	try:
 		record(item, status, applicant, message)
 	except Exception:  # noqa: BLE001
-		rollback_row()
-		record_failure(item)
-
-
-def rollback_row():
-	try:
 		frappe.db.rollback(save_point=SAVEPOINT)
-	except Exception:  # noqa: BLE001 - a deadlock already rolled the whole transaction back
-		frappe.db.rollback()
-
-
-def record_failure(item):
-	"""Last resort when even the outcome row cannot be written: still count the row as an error."""
-	try:
 		record(item, "Error", None, _("The row could not be processed."))
-	except Exception:  # noqa: BLE001
-		bump(item["import"], "Error")
 
 
 def mask_numbers(message):
@@ -304,3 +310,27 @@ def refresh_matrices(import_name):
 	company, year = frappe.db.get_value("Allotment Import", import_name, ["company", "academic_year"])
 	for program in frappe.get_all("Allotment Program Mapping", {"parent": import_name}, pluck="program", distinct=True):
 		seat_matrix.refresh_allotted(company, program, year)
+
+
+def reconcile(import_name):
+	"""Make a finished import complete when the runner failed some items (their handler raised, so they have no row).
+
+	Each failed item of the Bulk Run becomes an Error row and is counted; then the import is completed like a
+	normal finish. A no-op unless the import is Processing and its run has finished.
+	"""
+	doc = frappe.db.get_value("Allotment Import", import_name, ["status", "bulk_run"], as_dict=True)
+	if not doc or doc.status != "Processing" or not doc.bulk_run:
+		return
+	if frappe.db.get_value("Bulk Run", doc.bulk_run, "status") not in ("Completed", "Completed with errors"):
+		return
+	recorded = set(frappe.get_all("Allotment Import Row", {"allotment_import": import_name}, pluck="row_no", limit=0))
+	for failed in frappe.get_all("Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], limit=0):
+		row_no = cint(failed.item_key.rpartition("::")[2])
+		if row_no not in recorded:
+			record({"import": import_name, "row_no": row_no, "allotment_no": ""}, "Error", None, failed.error)
+
+
+def reconcile_finished_imports():
+	"""Scheduler (hourly): complete imports whose bulk run has finished with failed items."""
+	for name in frappe.get_all("Allotment Import", {"status": "Processing"}, pluck="name"):
+		reconcile(name)

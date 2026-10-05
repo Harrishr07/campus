@@ -13,18 +13,25 @@ One Seat Matrix per (company, program, academic year). Its rows are (quota, cate
 - `vacant` = sanctioned - filled; a negative value means the row was over-admitted by an override.
 
 Concurrency (MariaDB REPEATABLE READ)
-Lock order everywhere: the Seat Matrix row FIRST (FOR UPDATE), then the enrollment rows. The matrix is locked in
-Program Enrollment before_submit / before_cancel (before Frappe writes the enrollment row), in
-`check_seat_available` and in recount. After the lock the enrollments are counted with a LOCKING read
-(`FOR UPDATE SKIP LOCKED`), so the count is the latest committed state and not the transaction's stale
-snapshot. SKIP LOCKED is the deadlock-safe choice: a plain FOR UPDATE / LOCK IN SHARE MODE would wait for any
-enrollment row X-locked by another open transaction (for instance a draft inserted before its own
-before_submit asks for the matrix), while that transaction waits for the matrix we hold: a deadlock. A row
-that is locked by someone else is uncommitted work of that transaction, which is not part of the committed
-count anyway, and a transaction that is submitting or cancelling takes the matrix lock before it touches its
-enrollment row, so it cannot be mid-flight while we hold the matrix. `check_seat_available` keeps the lock
-until the caller's transaction ends, so check and admit are atomic when the enrollment is created and
-submitted in the same transaction.
+Lock-order invariant: a transaction that submits, cancels or edits a submitted Program Enrollment, checks a seat
+or recounts takes the Seat Matrix row lock (FOR UPDATE on the unique matrix_key; several matrices in
+matrix_key order) BEFORE it takes any lock on a Program Enrollment row. `EnrollmentSeatLockMixin`
+(extend_doctype_class) does this in submit(), cancel() and save() of a submitted enrollment, before calling
+super(): Frappe's own `check_if_latest` runs SELECT ... FOR UPDATE on the enrollment row before any doc-event
+hook, so a hook would be too late. `check_seat_available` and the recount lock the matrix first as well.
+After the lock, `live_counts` counts submitted enrollments with a BLOCKING locking read (LOCK IN SHARE MODE),
+which sees the latest committed rows. It runs on the composite index (oc_company, program, academic_year,
+docstatus) that setup creates, so it locks only that program-year's submitted index range, not the table.
+
+Deadlock analysis: a counter waits only for enrollment rows X-locked by another transaction. Every
+transaction that holds such a lock through this module took the matrix first, and the matrix is held by the
+counter, so it cannot be holding an enrollment row while waiting for the matrix: no cycle. Draft
+enrollments (docstatus 0) are outside the counted index range, so inserting or editing drafts never waits for
+a count (an insert into the gap next to the range may wait for the counter's commit, but a draft insert holds
+nothing the counter needs). Writers that bypass this module (direct SQL, other apps) and then ask for the
+matrix can still form a cycle; MariaDB then aborts one transaction with a deadlock error: the failure mode
+is an aborted (fail closed) admission, never an undercount. SKIP LOCKED was rejected: it silently skips
+committed rows locked by others, which undercounts and oversells.
 """
 
 import frappe
@@ -66,9 +73,32 @@ def vacancy(row, live):
 	return (row.sanctioned or 0) - live
 
 
-def lock_matrix_of(doc, method=None):
-	"""Program Enrollment before_submit / before_cancel: take the matrix lock before the enrollment row is written."""
-	find_matrix(doc.oc_company, doc.program, doc.academic_year, for_update=True)
+def lock_matrices(doc):
+	"""Lock the Seat Matrix of the enrollment (and of its stored values, if they differ) in matrix_key order."""
+	keys = {matrix_key(doc.oc_company, doc.program, doc.academic_year)}
+	if not doc.is_new():
+		stored = frappe.db.get_value("Program Enrollment", doc.name, ["oc_company", "program", "academic_year"])
+		if stored:
+			keys.add(matrix_key(*stored))
+	for key in sorted(keys):
+		frappe.db.get_value("Seat Matrix", {"matrix_key": key}, "name", for_update=True)
+
+
+class EnrollmentSeatLockMixin:
+	"""Program Enrollment (extend_doctype_class): take the Seat Matrix lock before Frappe locks the enrollment row."""
+
+	def submit(self):
+		lock_matrices(self)
+		return super().submit()
+
+	def cancel(self):
+		lock_matrices(self)
+		return super().cancel()
+
+	def save(self, *args, **kwargs):
+		if self.docstatus == 1:
+			lock_matrices(self)
+		return super().save(*args, **kwargs)
 
 
 def refresh_cache_of(doc, method=None):
@@ -86,19 +116,14 @@ def refresh_cache(matrix, company, program, academic_year):
 
 
 def live_counts(company, program, academic_year):
-	"""{(quota, category): n} of submitted Program Enrollments by a locking read. Lock the matrix first."""
-	table = frappe.qb.DocType("Program Enrollment")
-	rows = (
-		frappe.qb.from_(table)
-		.select(table.oc_admission_quota, table.student_category)
-		.where(
-			(table.oc_company == company) & (table.program == program) & (table.academic_year == academic_year)
-			& (table.docstatus == 1) & table.oc_admission_quota.isnotnull() & (table.oc_admission_quota != "")
-			& table.student_category.isnotnull() & (table.student_category != "")
-		)
-		.for_update(skip_locked=True)
-		.run()
-	)  # fmt: skip
+	"""{(quota, category): n} of submitted Program Enrollments by a blocking locking read. Lock the matrix first."""
+	rows = frappe.db.sql(
+		"""select oc_admission_quota, student_category from `tabProgram Enrollment`
+		where oc_company = %s and program = %s and academic_year = %s and docstatus = 1
+			and ifnull(oc_admission_quota, '') != '' and ifnull(student_category, '') != ''
+		lock in share mode""",
+		(company, program, academic_year),
+	)
 	return _tally(rows)
 
 

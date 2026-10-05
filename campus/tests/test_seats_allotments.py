@@ -150,31 +150,67 @@ class TestSeatMatrix(SeatTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			check_seat_available(PROGRAM, year(), GOVT, OC)
 
-	def test_submit_and_cancel_lock_the_matrix_before_writing_the_enrollment(self):
+	def statements_of(self, action):
+		"""Classify the SQL of `action()`: matrix locks, enrollment locks and enrollment writes, in order."""
+		events, real_sql = [], frappe.db.sql
+
+		def sql_spy(query, *args, **kwargs):
+			text = str(query).lower()
+			if "`tabseat matrix`" in text and "for update" in text:
+				events.append("matrix lock")
+			elif "`tabprogram enrollment`" in text and ("for update" in text or "lock in share mode" in text or text.startswith("update")):
+				events.append("enrollment lock")
+			return real_sql(query, *args, **kwargs)
+
+		with patch.object(frappe.db, "sql", side_effect=sql_spy):
+			action()
+		return events
+
+	def test_matrix_is_locked_before_any_lock_on_the_enrollment_row(self):
 		self.matrix([(GOVT, OC, 2)])
 		enrollment = self.enrollment(GOVT, OC, submit=False)
-		order = []
-		real_get, real_set = frappe.db.get_value, frappe.db.set_value
+		for action in (enrollment.submit, enrollment.cancel):
+			events = self.statements_of(action)  # includes check_if_latest's SELECT ... FOR UPDATE
+			self.assertIn("matrix lock", events)
+			self.assertLess(events.index("matrix lock"), events.index("enrollment lock"))
+		submitted = frappe.get_doc("Program Enrollment", self.enrollment(GOVT, OC).name)
+		events = self.statements_of(submitted.save)  # update after submit
+		self.assertLess(events.index("matrix lock"), events.index("enrollment lock"))
 
-		def get_spy(doctype, *args, **kwargs):
+	def test_old_and_new_matrices_are_locked_in_key_order_when_the_program_changes(self):
+		self.matrix([(GOVT, OC, 2)])
+		self.matrix([(GOVT, OC, 2)], program=OTHER_PROGRAM, company=OTHER_COLLEGE)
+		enrollment = frappe.get_doc("Program Enrollment", self.enrollment(GOVT, OC).name)
+		locked = []
+		real_get = frappe.db.get_value
+
+		def spy(doctype, filters=None, *args, **kwargs):
 			if doctype == "Seat Matrix" and kwargs.get("for_update"):
-				order.append("lock")
-			return real_get(doctype, *args, **kwargs)
+				locked.append(filters["matrix_key"])
+			return real_get(doctype, filters, *args, **kwargs)
 
-		def sql_spy(*args, **kwargs):
-			if args and "update `tabprogram enrollment`" in str(args[0]).lower():
-				order.append("write")
-			return real_sql(*args, **kwargs)
+		enrollment.program = OTHER_PROGRAM
+		with patch.object(frappe.db, "get_value", side_effect=spy):
+			seat_matrix.lock_matrices(enrollment)
+		self.assertEqual(len(locked), 2)
+		self.assertEqual(locked, sorted(locked))
 
+	def test_count_is_blocking_and_uses_the_composite_index(self):
+		self.assertTrue(frappe.db.has_index("tabProgram Enrollment", "oc_seat_count_index"))
+		seen = []
 		real_sql = frappe.db.sql
-		with patch.object(frappe.db, "get_value", side_effect=get_spy), patch.object(frappe.db, "sql", side_effect=sql_spy):
-			enrollment.submit()
-		self.assertIn("lock", order)
-		self.assertLess(order.index("lock"), order.index("write"))
-		order.clear()
-		with patch.object(frappe.db, "get_value", side_effect=get_spy), patch.object(frappe.db, "sql", side_effect=sql_spy):
-			enrollment.cancel()
-		self.assertLess(order.index("lock"), order.index("write"))
+		frappe.db.sql = lambda query, *a, **k: (seen.append(str(query).lower()), real_sql(query, *a, **k))[1]
+		try:
+			seat_matrix.live_counts(COLLEGE, PROGRAM, year())
+		finally:
+			frappe.db.sql = real_sql
+		self.assertIn("lock in share mode", seen[0])
+		self.assertNotIn("skip locked", seen[0])
+		plan = frappe.db.sql(
+			"explain select oc_admission_quota from `tabProgram Enrollment` where oc_company=%s and program=%s and academic_year=%s and docstatus=1",
+			(COLLEGE, PROGRAM, year()), as_dict=True,
+		)  # fmt: skip
+		self.assertEqual(plan[0]["key"], "oc_seat_count_index")
 
 	def test_recount_rebuilds_the_cache_from_the_live_count(self):
 		matrix = self.matrix([(GOVT, OC, 4)])
@@ -499,16 +535,55 @@ class TestAllotmentImport(SeatTestCase):
 		self.assertFalse(frappe.db.exists("File", file.name))
 		frappe.db.after_rollback.reset()  # the file is gone for good: File's rollback hook would try to move it back
 
-	def test_every_row_failure_is_recorded_so_the_import_completes(self):
-		boom = patch.object(allotment_import, "apply_row", side_effect=frappe.QueryDeadlockError("deadlock"))
+	def test_a_failing_outcome_row_is_replaced_by_a_generic_error_row(self):
+		doc = frappe.get_doc({"doctype": "Allotment Import", "company": COLLEGE, "counselling_authority": AUTHORITY, "academic_year": year(), "import_file": "/f.csv", "total_rows": 1}).insert()
+		boom = patch.object(allotment_import, "apply_row", side_effect=RuntimeError("deadlock-ish"))
 		with boom, patch.object(allotment_import, "record", side_effect=[RuntimeError("write failed"), None]) as record:
-			doc = frappe.get_doc({"doctype": "Allotment Import", "company": COLLEGE, "counselling_authority": AUTHORITY, "academic_year": year(), "import_file": "/f.csv", "total_rows": 1}).insert()
 			allotment_import.process_row({"import": doc.name, "row_no": 2, "allotment_no": "X"}, None)
-		self.assertEqual(record.call_count, 2)  # the outcome row failed, the generic Error row was written
-		with boom, patch.object(allotment_import, "record", side_effect=RuntimeError("write failed")):
-			allotment_import.process_row({"import": doc.name, "row_no": 3, "allotment_no": "Y"}, None)
-		counts = frappe.db.get_value("Allotment Import", doc.name, ["error_rows", "status"], as_dict=True)
-		self.assertEqual(counts.error_rows, 1)  # last resort: counted without a row
+		self.assertEqual(record.call_count, 2)
+
+	def test_dead_savepoint_propagates_and_reconcile_completes_the_import(self):
+		real_apply, real_rollback = allotment_import.apply_row, frappe.db.rollback
+
+		def apply(item):
+			if item["allotment_no"] == "TN002":
+				raise frappe.QueryDeadlockError("deadlock")
+			return real_apply(item)
+
+		def rollback(*args, **kwargs):
+			if kwargs.get("save_point") == allotment_import.SAVEPOINT and self.kill_savepoint:
+				raise RuntimeError("SAVEPOINT allotment_row does not exist")
+			return real_rollback(*args, **kwargs)
+
+		self.kill_savepoint = True
+		with patch.object(allotment_import, "apply_row", side_effect=apply), patch.object(frappe.db, "rollback", side_effect=rollback):
+			doc = self.run_import([file_row("TN001"), file_row("TN002"), file_row("TN003")])
+		self.kill_savepoint = False
+		self.assertEqual((doc.status, doc.created_rows, doc.error_rows), ("Processing", 2, 0))  # the runner recorded the failed item
+		self.assertEqual(frappe.db.get_value("Bulk Run", doc.bulk_run, "failed"), 1)
+		allotment_import.reconcile(doc.name)
+		done = frappe.get_doc("Allotment Import", doc.name)
+		self.assertEqual((done.status, done.created_rows, done.error_rows), ("Completed with errors", 2, 1))
+		row = frappe.db.get_value("Allotment Import Row", {"allotment_import": doc.name, "status": "Error"}, ["row_no", "message"], as_dict=True)
+		self.assertEqual(row.row_no, 3)  # file row 3 = TN002
+		allotment_import.reconcile(doc.name)  # idempotent
+		self.assertEqual(frappe.db.get_value("Allotment Import", doc.name, "error_rows"), 1)
+
+	def test_a_same_named_private_file_does_not_block_make_private(self):
+		import os
+
+		path = frappe.get_site_path("private", "files", "seat-clash.csv")
+		with open(path, "w") as f:
+			f.write("someone else's file")
+		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
+		file = frappe.get_doc({"doctype": "File", "file_name": "seat-clash.csv", "content": b"a,b\n1,2\n", "is_private": 0}).insert()
+		self.addCleanup(lambda: [os.remove(p) for p in (frappe.get_site_path("public", "files", file.file_name),) if os.path.exists(p)])
+		url = allotment_import.make_private(file.file_url)
+		self.addCleanup(lambda: os.path.exists(frappe.get_site_path(url.lstrip("/"))) and os.remove(frappe.get_site_path(url.lstrip("/"))))
+		self.assertTrue(url.startswith("/private/files/seat-clash-"))
+		self.assertEqual(frappe.db.get_value("File", {"file_url": url}, "is_private"), 1)
+		self.assertEqual(open(path).read(), "someone else's file")  # the other file is untouched
+		frappe.db.after_rollback.reset()
 
 	def test_long_digit_runs_are_masked_in_stored_messages(self):
 		self.assertEqual(allotment_import.mask_numbers("bad 234123412346 and 98765"), "bad XXXXXXXXXXXX and 98765")
@@ -628,6 +703,21 @@ class TestDocumentVerification(SeatTestCase):
 				set_document_status(applicant, "Transfer Certificate", status)
 		frappe.set_user(VERIFIER)
 		set_document_status(applicant, "Transfer Certificate", "Submitted")
+
+	def test_a_verified_row_cannot_be_deleted_by_a_non_verifier(self):
+		self.rule("Transfer Certificate", mandatory=0)
+		applicant = make_applicant().name
+		frappe.set_user(VERIFIER)
+		set_document_status(applicant, "Transfer Certificate", "Verified")
+		frappe.set_user(PLAIN)
+		doc = frappe.get_doc("Student Applicant", applicant)
+		doc.oc_documents = []
+		with self.assertRaises(frappe.ValidationError):
+			doc.save()
+		frappe.set_user(VERIFIER)
+		doc = frappe.get_doc("Student Applicant", applicant)
+		doc.oc_documents = []
+		doc.save()  # a verifier may (the rule then re-adds the row, but the removal is allowed)
 
 	def test_unknown_document_is_refused(self):
 		applicant = make_applicant().name

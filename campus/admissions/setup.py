@@ -8,6 +8,7 @@ from campus.admissions.aadhaar import VIEWER_ROLE
 MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 OVERRIDE_ROLE = "Admission Override"  # may admit into a full quota/category row (logged)
+SEAT_COUNT_INDEX = "oc_seat_count_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
 OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
 
@@ -105,6 +106,8 @@ def setup_admission_fields():
 		update=True,
 	)
 	grant_officer_read_access()
+	# the seat count locks exactly this index range (submitted enrollments of one program and year)
+	frappe.db.add_index("Program Enrollment", ["oc_company", "program", "academic_year", "docstatus"], SEAT_COUNT_INDEX)
 
 
 # Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item

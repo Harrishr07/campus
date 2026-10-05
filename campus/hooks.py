@@ -189,8 +189,6 @@ doc_events["Student Applicant"]["validate"] += [
 	"campus.admissions.allotment_import.set_allotment_key",
 	"campus.admissions.documents.validate_applicant",
 ]
-doc_events["Program Enrollment"]["before_submit"] = "campus.admissions.seat_matrix.lock_matrix_of"
-doc_events["Program Enrollment"]["before_cancel"] = "campus.admissions.seat_matrix.lock_matrix_of"
 doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
@@ -245,6 +243,7 @@ doc_events["Payment Entry"] = {
 extend_doctype_class = {
 	"Student": ["campus.admissions.aadhaar.AadhaarMixin"],
 	"Student Applicant": ["campus.admissions.aadhaar.AadhaarMixin"],
+	"Program Enrollment": ["campus.admissions.seat_matrix.EnrollmentSeatLockMixin"],
 }
 override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions.aadhaar.get_password"}
 # override_whitelisted_methods = {
@@ -329,7 +328,10 @@ scheduler_events = {
 		"campus.campus_finance.fines.daily_fine_run",
 		"campus.admissions.documents.send_daily_reminders",
 	],
-	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
+	"hourly": [
+		"campus.campus_platform.approval_escalation.escalate_overdue",
+		"campus.admissions.allotment_import.reconcile_finished_imports",
+	],
 	"cron": {
 		"*/15 * * * *": [
 			"campus.campus_messaging.delivery.dispatch_due",

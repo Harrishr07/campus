@@ -92,6 +92,11 @@ def validate_applicant(doc, method=None):
 	build_checklist(doc)
 	before = doc.get_doc_before_save()
 	previous = {r.name: r.status for r in before.oc_documents} if before else {}
+	kept = {r.name for r in doc.oc_documents}
+	if before and VERIFIER_ROLE not in frappe.get_roles():
+		for row in before.oc_documents:
+			if row.status == "Verified" and row.name not in kept:
+				frappe.throw(_("Only an {0} can remove the verified document {1}.").format(VERIFIER_ROLE, row.document_type))
 	for row in doc.oc_documents:
 		stamp_verifier(row, previous.get(row.name))
 	if doc.application_status == "Admitted" and (not before or before.application_status != "Admitted"):
