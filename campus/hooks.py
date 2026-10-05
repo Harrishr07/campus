@@ -189,8 +189,10 @@ doc_events["Student Applicant"]["validate"] += [
 	"campus.admissions.allotment_import.set_allotment_key",
 	"campus.admissions.documents.validate_applicant",
 ]
-doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.on_enrollment_submit"
-doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.on_enrollment_cancel"
+doc_events["Program Enrollment"]["before_submit"] = "campus.admissions.seat_matrix.lock_matrix_of"
+doc_events["Program Enrollment"]["before_cancel"] = "campus.admissions.seat_matrix.lock_matrix_of"
+doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
+doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}

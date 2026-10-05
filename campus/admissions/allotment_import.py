@@ -23,7 +23,9 @@ imports lock in the same order; a lock wait or deadlock loses only that row, rec
 """
 
 import csv
+import hashlib
 import io
+import re
 
 import frappe
 from frappe import _
@@ -59,9 +61,12 @@ def start_import(name):
 	doc = frappe.get_doc("Allotment Import", name)
 	frappe.has_permission("Student Applicant", "create", throw=True)
 	mapping = column_mapping(doc.counselling_authority)
-	rows = parse_file(doc.import_file)
+	content = read_file(doc.import_file)
+	content = content.encode() if isinstance(content, str) else content
+	make_private(doc.import_file)
+	rows = parse_file(doc.import_file, content)
 	items = build_items(doc, mapping, rows)
-	doc.db_set({"total_rows": len(items), "status": "Processing"})
+	doc.db_set({"total_rows": len(items), "status": "Processing", "file_sha256": hashlib.sha256(content).hexdigest()})
 	run = run_bulk(RUN_TYPE, items, HANDLER, chunk=1, key=KEY, parameters={"import": name})
 	doc.db_set("bulk_run", run)
 	return run
@@ -86,9 +91,29 @@ def read_file(file_url):
 	return get_file(file_url)[1]
 
 
-def parse_file(file_url):
+def make_private(file_url):
+	"""Allotment files carry personal data: the attached File is made private."""
+	name = frappe.db.get_value("File", {"file_url": file_url}, "name")
+	file = frappe.get_doc("File", name)
+	if not file.is_private:
+		file.is_private = 1
+		file.save(ignore_permissions=True)
+		frappe.db.set_value("Allotment Import", {"import_file": file_url}, "import_file", file.file_url, update_modified=False)
+
+
+def discard_file(import_name):
+	"""Delete the uploaded file once the import is complete; its sha256 stays on the import as the audit trail."""
+	file_url = frappe.db.get_value("Allotment Import", import_name, "import_file")
+	if not file_url:
+		return
+	for name in frappe.get_all("File", {"file_url": file_url, "attached_to_doctype": "Allotment Import", "attached_to_name": import_name}, pluck="name"):
+		frappe.delete_doc("File", name, ignore_permissions=True, force=True)
+	frappe.db.set_value("Allotment Import", import_name, "import_file", None, update_modified=False)
+
+
+def parse_file(file_url, content=None):
 	"""Rows of the CSV or XLSX attachment as lists of text, header first."""
-	content = read_file(file_url)
+	content = content if content is not None else read_file(file_url)
 	if cstr(file_url).lower().endswith(".xlsx"):
 		from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file
 
@@ -149,14 +174,42 @@ def set_allotment_key(doc, method=None):
 
 # Row handler
 def process_row(item, run):
-	"""Bulk handler: create, update or leave the applicant of one file row and record the outcome. DB-only, no commit."""
+	"""Bulk handler: create, update or leave the applicant of one file row and record the outcome. DB-only, no commit.
+
+	Any failure (including a lock wait or deadlock) is recorded as an Error row so the counters always reach the
+	total and the import completes.
+	"""
 	frappe.db.savepoint(SAVEPOINT)
 	try:
 		status, applicant, message = apply_row(item)
 	except Exception as e:  # noqa: BLE001 - every failure of a row is recorded, never stalls the import
+		rollback_row()
+		status, applicant, message = "Error", None, cstr(e)
+	try:
+		record(item, status, applicant, message)
+	except Exception:  # noqa: BLE001
+		rollback_row()
+		record_failure(item)
+
+
+def rollback_row():
+	try:
 		frappe.db.rollback(save_point=SAVEPOINT)
-		status, applicant, message = "Error", None, strip_html_tags(cstr(e))[:300]
-	record(item, status, applicant, message)
+	except Exception:  # noqa: BLE001 - a deadlock already rolled the whole transaction back
+		frappe.db.rollback()
+
+
+def record_failure(item):
+	"""Last resort when even the outcome row cannot be written: still count the row as an error."""
+	try:
+		record(item, "Error", None, _("The row could not be processed."))
+	except Exception:  # noqa: BLE001
+		bump(item["import"], "Error")
+
+
+def mask_numbers(message):
+	"""Long digit runs (ids, phone and Aadhaar-like numbers) never reach a stored message."""
+	return re.sub(r"\d{10,}", lambda m: "X" * len(m.group()), strip_html_tags(cstr(message)))
 
 
 def apply_row(item):
@@ -173,7 +226,7 @@ def apply_row(item):
 	if not existing:
 		return create_applicant(item, key, wanted)
 	if existing.oc_company != item["company"]:
-		return "Error", existing.name, _("The allotment belongs to another company.")
+		return "Error", None, _("This allotment number is already used by another college.")
 	changed = {f: v for f, v in wanted.items() if coerce(f, existing[f]) != v}
 	if not changed:
 		return "Unchanged", existing.name, ""
@@ -229,7 +282,7 @@ def record(item, status, applicant, message):
 	frappe.get_doc(
 		{
 			"doctype": "Allotment Import Row", "allotment_import": item["import"], "row_no": item["row_no"],
-			"allotment_no": item["allotment_no"][:140], "status": status, "applicant": applicant, "message": message,
+			"allotment_no": item["allotment_no"][:140], "status": status, "applicant": applicant, "message": mask_numbers(message)[:300],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
 	bump(item["import"], status)
@@ -244,6 +297,7 @@ def bump(import_name, status):
 		return
 	frappe.db.set_value("Allotment Import", import_name, "status", "Completed with errors" if counts.error_rows else "Completed")
 	refresh_matrices(import_name)
+	discard_file(import_name)
 
 
 def refresh_matrices(import_name):

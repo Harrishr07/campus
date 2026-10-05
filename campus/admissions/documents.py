@@ -5,7 +5,7 @@
   a document type already on the list is never duplicated, only its rule flags are refreshed, and a rule row
   that no longer applies is dropped when still Pending. Rows added by hand are left alone.
 - A mandatory document is complete when it is Verified (or Submitted when the rule needs no verification).
-- Only an Admission Verifier may mark a row Verified or Rejected; the verifier and time are stamped.
+- Only an Admission Verifier may mark a row Verified or Rejected, or move a Verified row to another status; the verifier and time are stamped.
 - An applicant cannot be set Admitted while a mandatory document is incomplete.
 - The daily job reminds applicants with incomplete mandatory documents, once a day, until cleared.
 """
@@ -104,6 +104,8 @@ def stamp_verifier(row, previous_status):
 	"""Verified/Rejected need the verifier role; a changed status records who and when."""
 	if row.status == previous_status:
 		return
+	if previous_status == "Verified" and VERIFIER_ROLE not in frappe.get_roles():
+		frappe.throw(_("Only an {0} can change the verified document {1}.").format(VERIFIER_ROLE, row.document_type))
 	if row.status in VERIFIER_STATUSES:
 		if VERIFIER_ROLE not in frappe.get_roles():
 			frappe.throw(_("Only an {0} can mark {1} as {2}.").format(VERIFIER_ROLE, row.document_type, row.status))
