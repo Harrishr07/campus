@@ -7,11 +7,20 @@ from campus.admissions.aadhaar import VIEWER_ROLE
 
 MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
+OVERRIDE_ROLE = "Admission Override"  # may admit into a full quota/category row (logged)
+VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
 
 
 def setup_admissions():
 	ensure_aadhaar_role()
+	ensure_admission_roles()
 	setup_admission_fields()
+
+
+def ensure_admission_roles():
+	for role in (OVERRIDE_ROLE, VERIFIER_ROLE):
+		if not frappe.db.exists("Role", role):
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
 
 
 def ensure_aadhaar_role():
@@ -57,7 +66,9 @@ def setup_admission_fields():
 		field("oc_lead", "Link", "Enquiry (Lead)", "oc_counselling_authority", options="Lead"),
 		field("oc_admission_column", "Column Break", None, "oc_lead"),
 		field("oc_allotment_no", "Data", "Allotment No", "oc_admission_column", search_index=1),
-		field("oc_allotment_date", "Date", "Allotment Date", "oc_allotment_no"),
+		field("oc_allotment_key", "Data", "Allotment Key", "oc_allotment_no", unique=1, hidden=1, read_only=1,
+			no_copy=1, description="Counselling authority and allotment number: one applicant per allotment."),
+		field("oc_allotment_date", "Date", "Allotment Date", "oc_allotment_key"),
 		field("oc_rank", "Int", "Rank", "oc_allotment_date"),
 		field("oc_cutoff", "Float", "Cutoff", "oc_rank"),
 		field("oc_first_graduate", "Check", "First Graduate", "oc_cutoff"),
@@ -75,4 +86,8 @@ def setup_admission_fields():
 		*aadhaar_fields("oc_documents"),
 	]  # fmt: skip
 	student = aadhaar_fields("student_email_id")
-	create_custom_fields({"Student Applicant": applicant, "Student": student}, update=True)
+	enrollment = [
+		field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
+			in_standard_filter=1, description="Counted against the Seat Matrix when submitted."),
+	]  # fmt: skip
+	create_custom_fields({"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment}, update=True)

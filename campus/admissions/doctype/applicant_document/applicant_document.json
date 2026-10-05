@@ -7,7 +7,13 @@
   "document_type",
   "status",
   "original_retained",
-  "remarks"
+  "remarks",
+  "mandatory",
+  "verification_needed",
+  "original_required",
+  "from_rule",
+  "verified_by",
+  "verified_on"
  ],
  "fields": [
   {
@@ -35,11 +41,50 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "mandatory",
+   "fieldtype": "Check",
+   "label": "Mandatory",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "verification_needed",
+   "fieldtype": "Check",
+   "label": "Verification Needed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "original_required",
+   "fieldtype": "Check",
+   "label": "Original Required",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_rule",
+   "fieldtype": "Check",
+   "label": "From Rule",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verified_on",
+   "fieldtype": "Datetime",
+   "label": "Verified On",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Applicant Document",

@@ -47,6 +47,16 @@ SEED_TEMPLATES = [
 		},
 	},
 	{
+		"event_key": "admission.document_pending",
+		"purpose": "transactional",
+		"urgent": 0,
+		"channels": ["whatsapp", "sms"],
+		"bodies": {
+			"en": ("Admission documents pending", "Your admission is waiting for these documents: {{ context.documents or '' }}. Please submit them to the college office."),
+			"ta": ("சேர்க்கை ஆவணங்கள் நிலுவை", "உங்கள் சேர்க்கைக்கு இந்த ஆவணங்கள் தேவை: {{ context.documents or '' }}. கல்லூரி அலுவலகத்தில் சமர்ப்பிக்கவும்."),
+		},
+	},
+	{
 		"event_key": "attendance.shortage",
 		"purpose": "transactional",
 		"urgent": 0,

@@ -185,6 +185,13 @@ doc_events["Program Enrollment"]["validate"] = [
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
 ]
 
+doc_events["Student Applicant"]["validate"] += [
+	"campus.admissions.allotment_import.set_allotment_key",
+	"campus.admissions.documents.validate_applicant",
+]
+doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.on_enrollment_submit"
+doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.on_enrollment_cancel"
+
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {
@@ -315,7 +322,11 @@ override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions
 boot_session = "campus.campus_platform.pack_visibility.boot_session"
 
 scheduler_events = {
-	"daily": ["campus.campus_platform.positions.sync_all_roles", "campus.campus_finance.fines.daily_fine_run"],
+	"daily": [
+		"campus.campus_platform.positions.sync_all_roles",
+		"campus.campus_finance.fines.daily_fine_run",
+		"campus.admissions.documents.send_daily_reminders",
+	],
 	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
 	"cron": {
 		"*/15 * * * *": [
