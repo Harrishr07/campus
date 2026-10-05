@@ -17,6 +17,11 @@ Design
 Handler contract (exactly-once holds only within it)
 - The handler must be DB-only and must NOT commit or roll back the transaction: a commit makes the chunk
   non-atomic, so the runner aborts the run as Failed with a clear error.
+- A real deadlock (MariaDB 1213) rolls the WHOLE transaction back and destroys every savepoint. When the
+  handler raises a deadlock, or the item savepoint no longer exists, the runner does a full rollback, records
+  that item as failed (Bulk Run Row Error and counters) in a fresh transaction, commits, and re-processes the
+  other items of the chunk (their writes were rolled back too) instead of failing the run. Use small chunks
+  (chunk=1) for handlers that can deadlock so little work is redone.
 - Non-transactional side effects (email, API calls, files) cannot be rolled back with the chunk, so a crash
   can repeat them for the in-flight chunk: delivery is at-least-once unless the handler makes them idempotent
   using the item key.
@@ -163,8 +168,25 @@ def _process_chunks(run):
 		_process_chunk(run, handler, key_fn, pending[start : start + run.chunk_size])
 
 
+class _TransactionLost(Exception):
+	"""The item's failure destroyed the whole transaction (deadlock, dead savepoint): its savepoint cannot be used."""
+
+	def __init__(self, message, traceback):
+		super().__init__(message)
+		self.traceback = traceback
+
+
 def _process_chunk(run, handler, key_fn, chunk):
-	"""Process one chunk under a lock on the run row; the lock is released by the chunk's commit."""
+	"""Process one chunk; after a lost transaction the failed item is recorded and the rest is processed again."""
+	while chunk:
+		chunk = _attempt_chunk(run, handler, key_fn, chunk)
+
+
+def _attempt_chunk(run, handler, key_fn, chunk):
+	"""Process one chunk under a lock on the run row; the lock is released by the chunk's commit.
+
+	Returns the items to process again (empty normally); non-empty only after a lost transaction.
+	"""
 	frappe.db.get_value("Bulk Run", run.name, "name", for_update=True)
 	# Locking reads (for_update) see the latest committed rows; plain reads would use the REPEATABLE READ
 	# snapshot, which may predate another worker's commit (e.g. the key read done before the first chunk).
@@ -174,9 +196,26 @@ def _process_chunk(run, handler, key_fn, chunk):
 	for item in chunk:
 		item_key = _key(key_fn, item)
 		keys.append(item_key)
-		error = _run_item(handler, item, run)
+		try:
+			error = _run_item(handler, item, run)
+		except _TransactionLost as lost:
+			return _record_lost_item(run, key_fn, chunk, item_key, lost)
 		if error:
 			errors.append((item_key, *error))
+	_save_chunk(run, keys, errors)
+	return []
+
+
+def _record_lost_item(run, key_fn, chunk, item_key, lost):
+	"""Full rollback, record the failed item in a fresh transaction and commit; returns the items still to do."""
+	frappe.db.rollback()
+	frappe.db.get_value("Bulk Run", run.name, "name", for_update=True)
+	run.done, run.failed = frappe.db.get_value("Bulk Run", run.name, ["done", "failed"], for_update=True)
+	_save_chunk(run, [item_key], [(item_key, str(lost)[:1000], lost.traceback)])
+	return [item for item in chunk if _key(key_fn, item) != item_key]
+
+
+def _save_chunk(run, keys, errors):
 	run.done += len(keys) - len(errors)
 	run.failed += len(errors)
 	_insert_children(run.name, "processed_keys", "Bulk Run Item Key", [(k,) for k in keys], ("item_key",))
@@ -213,8 +252,14 @@ def _run_item(handler, item, run):
 	except Exception as e:
 		if committed:
 			_raise_handler_committed(item, e)
-		frappe.db.rollback(save_point=SAVEPOINT)
-		return str(e)[:1000], frappe.get_traceback(with_context=False)
+		trace = frappe.get_traceback(with_context=False)
+		if isinstance(e, frappe.QueryDeadlockError):
+			raise _TransactionLost(str(e), trace) from e
+		try:
+			frappe.db.rollback(save_point=SAVEPOINT)
+		except Exception:  # the savepoint is gone: the transaction was rolled back under us
+			raise _TransactionLost(str(e), trace) from e
+		return str(e)[:1000], trace
 	if committed:
 		_raise_handler_committed(item)
 	frappe.db.release_savepoint(SAVEPOINT)

@@ -158,7 +158,7 @@ class TestSeatMatrix(SeatTestCase):
 			text = str(query).lower()
 			if "`tabseat matrix`" in text and "for update" in text:
 				events.append("matrix lock")
-			elif "`tabprogram enrollment`" in text and ("for update" in text or "lock in share mode" in text or text.startswith("update")):
+			elif "`tabprogram enrollment`" in text and ("for update" in text or "lock in share mode" in text or text.startswith(("update", "insert"))):
 				events.append("enrollment lock")
 			return real_sql(query, *args, **kwargs)
 
@@ -176,6 +176,24 @@ class TestSeatMatrix(SeatTestCase):
 		submitted = frappe.get_doc("Program Enrollment", self.enrollment(GOVT, OC).name)
 		events = self.statements_of(submitted.save)  # update after submit
 		self.assertLess(events.index("matrix lock"), events.index("enrollment lock"))
+
+	def test_insert_as_submitted_locks_the_matrix_first_and_counts(self):
+		matrix = self.matrix([(GOVT, OC, 2)])
+		doc = frappe.get_doc(
+			{
+				"doctype": "Program Enrollment", "student": self.student(), "program": PROGRAM, "academic_year": year(),
+				"enrollment_date": today(), "student_category": OC, "oc_admission_quota": GOVT, "docstatus": 1,
+			}
+		)  # fmt: skip
+		events = self.statements_of(doc.insert)
+		self.assertIn("matrix lock", events)
+		self.assertLess(events.index("matrix lock"), events.index("enrollment lock"))
+		self.assertEqual(self.row(matrix, GOVT, OC).filled, 1)
+
+	def test_the_nested_save_of_a_submit_does_not_lock_the_matrix_twice(self):
+		self.matrix([(GOVT, OC, 2)])
+		enrollment = self.enrollment(GOVT, OC, submit=False)
+		self.assertEqual(self.statements_of(enrollment.submit).count("matrix lock"), 1)
 
 	def test_old_and_new_matrices_are_locked_in_key_order_when_the_program_changes(self):
 		self.matrix([(GOVT, OC, 2)])
@@ -542,32 +560,93 @@ class TestAllotmentImport(SeatTestCase):
 			allotment_import.process_row({"import": doc.name, "row_no": 2, "allotment_no": "X"}, None)
 		self.assertEqual(record.call_count, 2)
 
-	def test_dead_savepoint_propagates_and_reconcile_completes_the_import(self):
+	def start_unprocessed_import(self, rows):
+		doc = frappe.get_doc(
+			{"doctype": "Allotment Import", "company": COLLEGE, "counselling_authority": AUTHORITY, "academic_year": year(), "import_file": "/files/tnea.csv", "program_mapping": [{"source_code": "cs", "program": PROGRAM}]}
+		).insert()  # fmt: skip
+		with patch.object(allotment_import, "read_file", return_value=csv_bytes([HEADER, *rows])), patch.object(allotment_import, "make_private"), patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
+			return doc.name, allotment_import.start_import(doc.name)
+
+	def process_with_lost_transaction(self, run, deadlock, dead_savepoints):
+		"""Run the bulk run where TN002's row loses the whole transaction: a full rollback only returns to 'pre_run'."""
 		real_apply, real_rollback = allotment_import.apply_row, frappe.db.rollback
+		frappe.db.savepoint("pre_run")
 
 		def apply(item):
-			if item["allotment_no"] == "TN002":
-				raise frappe.QueryDeadlockError("deadlock")
+			if item["allotment_no"] == "TN001":  # the first row: a full rollback to 'pre_run' loses nothing else
+				raise frappe.QueryDeadlockError("deadlock found") if deadlock else RuntimeError("row failed")
 			return real_apply(item)
 
 		def rollback(*args, **kwargs):
-			if kwargs.get("save_point") == allotment_import.SAVEPOINT and self.kill_savepoint:
-				raise RuntimeError("SAVEPOINT allotment_row does not exist")
-			return real_rollback(*args, **kwargs)
+			point = kwargs.get("save_point")
+			if point in dead_savepoints:
+				raise RuntimeError(f"SAVEPOINT {point} does not exist")
+			return real_rollback(save_point=point or "pre_run")  # no argument = the full rollback
 
-		self.kill_savepoint = True
-		with patch.object(allotment_import, "apply_row", side_effect=apply), patch.object(frappe.db, "rollback", side_effect=rollback):
-			doc = self.run_import([file_row("TN001"), file_row("TN002"), file_row("TN003")])
-		self.kill_savepoint = False
-		self.assertEqual((doc.status, doc.created_rows, doc.error_rows), ("Processing", 2, 0))  # the runner recorded the failed item
-		self.assertEqual(frappe.db.get_value("Bulk Run", doc.bulk_run, "failed"), 1)
-		allotment_import.reconcile(doc.name)
-		done = frappe.get_doc("Allotment Import", doc.name)
+		with patch.object(allotment_import, "apply_row", side_effect=apply), patch.object(frappe.db, "rollback", side_effect=rollback), patch.object(frappe.db, "commit"):
+			bulk.process_bulk_run(run)
+
+	def assert_import_completes_with_an_error_row(self, name, run):
+		self.assertEqual(frappe.db.get_value("Bulk Run", run, ["status", "failed", "done"]), ("Completed with errors", 1, 2))
+		self.assertEqual(frappe.db.get_value("Allotment Import", name, "status"), "Processing")  # the failed item has no row yet
+		allotment_import.reconcile(name)
+		done = frappe.get_doc("Allotment Import", name)
 		self.assertEqual((done.status, done.created_rows, done.error_rows), ("Completed with errors", 2, 1))
-		row = frappe.db.get_value("Allotment Import Row", {"allotment_import": doc.name, "status": "Error"}, ["row_no", "message"], as_dict=True)
-		self.assertEqual(row.row_no, 3)  # file row 3 = TN002
-		allotment_import.reconcile(doc.name)  # idempotent
-		self.assertEqual(frappe.db.get_value("Allotment Import", doc.name, "error_rows"), 1)
+		errors = frappe.get_all("Allotment Import Row", {"allotment_import": name, "status": "Error"}, ["row_no", "message"])
+		self.assertEqual([e.row_no for e in errors], [2])  # file row 2 = TN001
+		allotment_import.reconcile(name)  # idempotent
+		self.assertEqual(frappe.db.get_value("Allotment Import", name, "error_rows"), 1)
+
+	def test_real_deadlock_loses_every_savepoint_and_the_run_still_completes(self):
+		name, run = self.start_unprocessed_import([file_row("TN001"), file_row("TN002"), file_row("TN003")])
+		self.process_with_lost_transaction(run, deadlock=True, dead_savepoints=())
+		self.assert_import_completes_with_an_error_row(name, run)
+
+	def test_dead_row_and_runner_savepoints_are_handled_like_a_deadlock(self):
+		name, run = self.start_unprocessed_import([file_row("TN001"), file_row("TN002"), file_row("TN003")])
+		self.process_with_lost_transaction(run, deadlock=False, dead_savepoints=(allotment_import.SAVEPOINT, bulk.SAVEPOINT))
+		self.assert_import_completes_with_an_error_row(name, run)
+
+	def test_a_lost_transaction_redoes_the_rest_of_a_larger_chunk(self):
+		CHUNK_CALLS.clear()
+		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
+			run = bulk.run_bulk("T15 chunk", [{"n": n} for n in range(4)], "campus.tests.test_seats_allotments.chunk_handler", chunk=4)
+			frappe.db.savepoint("pre_run")
+			real_rollback = frappe.db.rollback
+			with patch.object(frappe.db, "rollback", side_effect=lambda *a, **k: real_rollback(save_point=k.get("save_point") or "pre_run")):
+				bulk.process_bulk_run(run)
+		self.assertEqual(frappe.db.get_value("Bulk Run", run, ["status", "done", "failed"]), ("Completed with errors", 3, 1))
+		self.assertEqual(CHUNK_CALLS, [0, 1, 0, 2, 3])  # item 1 failed for good; item 0 was redone after the rollback
+
+	def test_a_failed_run_is_reconciled_with_not_processed_rows(self):
+		name, run = self.start_unprocessed_import([file_row("TN001"), file_row("TN002")])
+		frappe.db.set_value("Bulk Run", run, "status", "Failed")
+		allotment_import.reconcile(name)
+		done = frappe.get_doc("Allotment Import", name)
+		self.assertEqual((done.status, done.error_rows), ("Completed with errors", 2))
+		self.assertTrue(all("Not processed" in m for m in frappe.get_all("Allotment Import Row", {"allotment_import": name}, pluck="message")))
+
+	def test_one_bad_import_does_not_stop_the_hourly_reconcile(self):
+		first, run1 = self.start_unprocessed_import([file_row("TN001")])
+		second, run2 = self.start_unprocessed_import([file_row("TN002")])
+		for run in (run1, run2):
+			frappe.db.set_value("Bulk Run", run, "status", "Failed")
+		real = allotment_import.reconcile
+
+		def flaky(name):
+			if name == second:  # processed first (newest first): the failure must not undo the other import
+				raise RuntimeError("boom")
+			return real(name)
+
+		frappe.db.savepoint("pre_hourly")
+		real_rollback = frappe.db.rollback
+		with (
+			patch.object(allotment_import, "reconcile", side_effect=flaky), patch.object(frappe.db, "commit"), patch.object(frappe, "log_error") as log,
+			patch.object(frappe.db, "rollback", side_effect=lambda *a, **k: real_rollback(save_point="pre_hourly")),
+		):
+			allotment_import.reconcile_finished_imports()
+		self.assertEqual(frappe.db.get_value("Allotment Import", first, "status"), "Completed with errors")
+		self.assertEqual(log.call_count, 1)
 
 	def test_a_same_named_private_file_does_not_block_make_private(self):
 		import os
@@ -577,12 +656,13 @@ class TestAllotmentImport(SeatTestCase):
 			f.write("someone else's file")
 		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
 		file = frappe.get_doc({"doctype": "File", "file_name": "seat-clash.csv", "content": b"a,b\n1,2\n", "is_private": 0}).insert()
-		self.addCleanup(lambda: [os.remove(p) for p in (frappe.get_site_path("public", "files", file.file_name),) if os.path.exists(p)])
+		public = frappe.get_site_path("public", "files", file.file_name)
 		url = allotment_import.make_private(file.file_url)
 		self.addCleanup(lambda: os.path.exists(frappe.get_site_path(url.lstrip("/"))) and os.remove(frappe.get_site_path(url.lstrip("/"))))
 		self.assertTrue(url.startswith("/private/files/seat-clash-"))
 		self.assertEqual(frappe.db.get_value("File", {"file_url": url}, "is_private"), 1)
 		self.assertEqual(open(path).read(), "someone else's file")  # the other file is untouched
+		self.assertFalse(os.path.exists(public))  # the allotment data is no longer readable at its public url
 		frappe.db.after_rollback.reset()
 
 	def test_long_digit_runs_are_masked_in_stored_messages(self):
@@ -836,3 +916,45 @@ class TestLiveSeatMatrixReport(SeatTestCase):
 		self.assertEqual(live_seat_matrix.execute({"company": COLLEGE})[1], [])
 		frappe.set_user(PLAIN)
 		self.assertEqual(len(live_seat_matrix.execute({"company": COLLEGE})[1]), 2)
+
+
+CHUNK_CALLS = []
+
+
+def chunk_handler(item, run):
+	"""Bulk handler for the lost-transaction test: item 1 deadlocks the first time it runs."""
+	CHUNK_CALLS.append(item["n"])
+	frappe.db.sql("select 1")
+	if item["n"] == 1 and CHUNK_CALLS.count(1) == 1:
+		raise frappe.QueryDeadlockError("deadlock found")
+
+
+class TestAdmitDeadlockRetry(SeatTestCase):
+	def test_a_deadlock_is_retried_once_then_reported_as_busy(self):
+		from campus.admissions import admit as admit_module
+
+		deadlock = frappe.QueryDeadlockError("deadlock found")
+		with patch.object(frappe, "only_for"), patch.object(frappe.db, "rollback") as rollback:
+			with patch.object(admit_module, "admit_once", side_effect=[deadlock, {"student": "S"}]) as once:
+				self.assertEqual(admit_module.admit("APP-1"), {"student": "S"})
+			self.assertEqual((once.call_count, rollback.call_count), (2, 1))
+			rollback.reset_mock()
+			with patch.object(admit_module, "admit_once", side_effect=[deadlock, deadlock]) as once:
+				with self.assertRaises(frappe.ValidationError) as ctx:
+					admit_module.admit("APP-1")
+			self.assertEqual((once.call_count, rollback.call_count), (2, 2))
+			self.assertIn("busy", str(ctx.exception))
+
+	def test_a_deadlock_inside_the_admission_is_not_masked_by_the_savepoint_rollback(self):
+		from campus.admissions import admit as admit_module
+
+		state = frappe._dict()
+		with (
+			patch.object(admit_module, "lock_applicant", return_value=state), patch.object(admit_module, "check_company_access"),
+			patch.object(admit_module, "check_admittable"),
+			patch.object(admit_module, "create_admission", side_effect=frappe.QueryDeadlockError("deadlock found")),
+			patch.object(frappe.db, "rollback", side_effect=RuntimeError("SAVEPOINT campus_admit does not exist")),
+			patch.object(frappe.db, "savepoint"),
+		):
+			with self.assertRaises(frappe.QueryDeadlockError):
+				admit_module.admit_once("APP-1")

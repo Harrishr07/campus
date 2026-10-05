@@ -23,14 +23,30 @@ SAVEPOINT = "campus_admit"
 
 
 def admit(applicant):
-	"""See `campus.admissions.api.admit`."""
+	"""See `campus.admissions.api.admit`.
+
+	A deadlock (MariaDB aborts one of two admissions that lock against each other, e.g. over the naming series or
+	the Program Enrollment index gaps) rolls the transaction back; the admission is attempted once more and
+	then reported as busy. The abort is fail closed: nothing was admitted.
+	"""
 	frappe.only_for(OFFICER_ROLE)
+	for _attempt in range(2):
+		try:
+			return admit_once(applicant)
+		except frappe.QueryDeadlockError:
+			frappe.db.rollback()
+	frappe.throw(_("The admission desk is busy. Please try admitting {0} again.").format(applicant))
+
+
+def admit_once(applicant):
 	state = lock_applicant(applicant)
 	check_company_access(state.oc_company)
 	check_admittable(applicant, state)
 	frappe.db.savepoint(SAVEPOINT)
 	try:
 		return create_admission(applicant, state)
+	except frappe.QueryDeadlockError:
+		raise  # the transaction and its savepoints are gone; admit() rolls back and retries
 	except Exception:
 		frappe.db.rollback(save_point=SAVEPOINT)
 		raise

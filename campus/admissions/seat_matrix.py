@@ -30,7 +30,11 @@ enrollments (docstatus 0) are outside the counted index range, so inserting or e
 a count (an insert into the gap next to the range may wait for the counter's commit, but a draft insert holds
 nothing the counter needs). Writers that bypass this module (direct SQL, other apps) and then ask for the
 matrix can still form a cycle; MariaDB then aborts one transaction with a deadlock error: the failure mode
-is an aborted (fail closed) admission, never an undercount. SKIP LOCKED was rejected: it silently skips
+is an aborted (fail closed) admission, never an undercount. Two such cycles are known, both inside admit and
+both resolved by MariaDB aborting one transaction: (1) the naming-series counter row (Series) locked while a
+concurrent transaction waits for a gap lock this one holds; (2) the empty index gaps of two programs in the
+shared index range, where two counters hold gap locks and each then inserts into the other's gap. Admit
+catches the deadlock, rolls back and retries once, then reports "busy, retry" (see admit.admit). SKIP LOCKED was rejected: it silently skips
 committed rows locked by others, which undercounts and oversells.
 """
 
@@ -85,20 +89,37 @@ def lock_matrices(doc):
 
 
 class EnrollmentSeatLockMixin:
-	"""Program Enrollment (extend_doctype_class): take the Seat Matrix lock before Frappe locks the enrollment row."""
+	"""Program Enrollment (extend_doctype_class): take the Seat Matrix lock before Frappe locks the enrollment row.
+
+	Covers submit(), cancel(), save() of a submitted enrollment and insert() of an enrollment that is already
+	submitted (docstatus 1, e.g. frappe.client.insert). The nested save() inside submit()/cancel() does not lock
+	a second time.
+	"""
+
+	def insert(self, *args, **kwargs):
+		if self.docstatus == 1:
+			return self._seat_locked(super().insert, *args, **kwargs)
+		return super().insert(*args, **kwargs)
 
 	def submit(self):
-		lock_matrices(self)
-		return super().submit()
+		return self._seat_locked(super().submit)
 
 	def cancel(self):
-		lock_matrices(self)
-		return super().cancel()
+		return self._seat_locked(super().cancel)
 
 	def save(self, *args, **kwargs):
-		if self.docstatus == 1:
-			lock_matrices(self)
+		if self.docstatus == 1 and not self.flags.seat_matrices_locked:
+			return self._seat_locked(super().save, *args, **kwargs)
 		return super().save(*args, **kwargs)
+
+	def _seat_locked(self, method, *args, **kwargs):
+		if not self.flags.seat_matrices_locked:
+			lock_matrices(self)
+			self.flags.seat_matrices_locked = True
+		try:
+			return method(*args, **kwargs)
+		finally:
+			self.flags.seat_matrices_locked = False
 
 
 def refresh_cache_of(doc, method=None):
