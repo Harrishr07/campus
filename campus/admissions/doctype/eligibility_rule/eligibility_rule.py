@@ -15,3 +15,14 @@ class EligibilityRule(Document):
 			seen.add(row.student_category)
 			if not 0 <= flt(row.min_percent) <= 100:
 				frappe.throw(_("Row {0}: minimum marks must be between 0 and 100.").format(row.idx))
+		self.validate_single_enabled_rule()
+
+	def validate_single_enabled_rule(self):
+		if not self.enabled:
+			return
+		clash = frappe.db.exists(
+			"Eligibility Rule",
+			{"program": self.program, "regulation": self.regulation or ["is", "not set"], "enabled": 1, "name": ["!=", self.name]},
+		)
+		if clash:
+			frappe.throw(_("Eligibility Rule {0} already covers this program and regulation.").format(clash))

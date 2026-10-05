@@ -7,7 +7,8 @@
   "user",
   "reference_doctype",
   "reference_name",
-  "accessed_on"
+  "accessed_on",
+  "ip_address"
  ],
  "fields": [
   {
@@ -20,17 +21,19 @@
   },
   {
    "fieldname": "reference_doctype",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Document Type",
    "read_only": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "options": "DocType"
   },
   {
    "fieldname": "reference_name",
-   "fieldtype": "Data",
+   "fieldtype": "Dynamic Link",
    "label": "Document",
    "read_only": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "options": "reference_doctype"
   },
   {
    "fieldname": "accessed_on",
@@ -38,6 +41,12 @@
    "label": "Accessed On",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,

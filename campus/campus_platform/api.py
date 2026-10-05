@@ -11,6 +11,7 @@ from campus.campus_platform.regulation_rules import (  # noqa: F401  (public API
 	get_regulation,
 	get_rule,
 	latest_enrollment,
+	resolve_regulation,
 )
 
 PACK_CACHE = "campus_pack_enabled"

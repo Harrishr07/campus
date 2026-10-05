@@ -222,6 +222,10 @@ doc_events["Program Enrollment"]["validate"] = [
 # Overriding Methods
 # ------------------------------
 #
+extend_doctype_class = {
+	"Student": ["campus.admissions.aadhaar.AadhaarMixin"],
+	"Student Applicant": ["campus.admissions.aadhaar.AadhaarMixin"],
+}
 override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions.aadhaar.get_password"}
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "campus.event.get_events"

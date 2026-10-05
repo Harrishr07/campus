@@ -9,6 +9,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from campus.campus_platform.api import resolve_regulation
+
 
 def subject_lines(text):
 	return [s.strip() for s in (text or "").replace(",", "\n").splitlines() if s.strip()]
@@ -40,17 +42,22 @@ def minimum_reasons(minimums, category, percent, exam):
 	return []
 
 
-def find_rule(program):
-	name = frappe.db.get_value(
-		"Eligibility Rule", {"program": program, "enabled": 1}, "name", order_by="modified desc"
+def find_rule(program, regulation=None):
+	"""Enabled rule for `program`: the one naming `regulation`, else the one with a blank regulation."""
+	rules = frappe.get_all(
+		"Eligibility Rule", {"program": program, "enabled": 1}, ["name", "regulation"], order_by="modified desc"
 	)
-	return frappe.get_doc("Eligibility Rule", name) if name else None
+	for wanted in (regulation, None):
+		for rule in rules:
+			if wanted == (rule.regulation or None):
+				return frappe.get_doc("Eligibility Rule", rule.name)
+	return None
 
 
 def evaluate(applicant):
 	"""Evaluate `applicant` (name) against its program's rule; store and return {eligible, reasons}."""
 	doc = frappe.get_doc("Student Applicant", applicant)
-	rule = find_rule(doc.program)
+	rule = find_rule(doc.program, resolve_regulation(doc.oc_company, doc.program, doc.academic_year))
 	if not rule:
 		return {"eligible": False, "reasons": [_("No Eligibility Rule for program {0}.").format(doc.program)]}
 	marks = [(r.subject, flt(r.max_marks), flt(r.obtained_marks)) for r in doc.oc_qualifying_marks]

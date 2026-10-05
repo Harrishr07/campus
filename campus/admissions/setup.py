@@ -6,6 +6,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from campus.admissions.aadhaar import VIEWER_ROLE
 
 MODULE = "Admissions"
+ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 
 
 def setup_admissions():
@@ -48,7 +49,7 @@ def setup_admission_fields():
 	applicant = [
 		field("oc_admission_section", "Section Break", "Admission", "student_category"),
 		field("oc_admission_type", "Select", "Admission Type", "oc_admission_section",
-			options="\nRegular\nLateral\nPG\nTransfer", in_standard_filter=1),
+			options="\n" + "\n".join(ADMISSION_TYPES), in_standard_filter=1),
 		field("oc_admission_quota", "Link", "Admission Quota", "oc_admission_type",
 			options="Admission Quota", in_standard_filter=1),
 		field("oc_counselling_authority", "Link", "Counselling Authority", "oc_admission_quota",

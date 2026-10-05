@@ -1,18 +1,22 @@
 """P1-T14 tests (M04-01, M04-02, M04-04): Verhoeff, masking, eligibility per category, Aadhaar at rest."""
 
 import frappe
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from frappe.tests import UnitTestCase
 
 from campus.admissions import eligibility as elig
 from campus.admissions.aadhaar import is_valid_aadhaar, mask, verhoeff_valid
 from campus.admissions.api import evaluate_eligibility, reveal_aadhaar
 from campus.tests.factories import make_company, make_user
-from campus.tests.test_regulation import make_program, make_year, year_name
+from campus.tests.test_regulation import make_program, make_regulation, make_year, year_name
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "Admissions Test College"
 PROGRAM = "Admissions Test BE"
 VIEWER, PLAIN = "aadhaar-viewer@example.com", "aadhaar-plain@example.com"
+OTHER_COLLEGE, OTHER_VIEWER = "Admissions Other College", "aadhaar-other@example.com"
 SUBJECTS = "Mathematics\nPhysics\nChemistry"
 
 
@@ -90,8 +94,12 @@ class TestAdmissionsIntegration(CampusTestCase):
 		make_company(COLLEGE, "ATC")
 		make_program(PROGRAM, COLLEGE)
 		make_year("2022")
+		cls.regulation = make_regulation("R2022", COLLEGE, [PROGRAM], "2022").name
+		make_company(OTHER_COLLEGE, "ATO")
 		for user in (VIEWER, PLAIN):
 			make_user(user, [COLLEGE])
+		make_user(OTHER_VIEWER, [OTHER_COLLEGE])
+		frappe.get_doc("User", OTHER_VIEWER).add_roles("Aadhaar Viewer", "Academics User")
 		frappe.get_doc("User", VIEWER).add_roles("Aadhaar Viewer", "Academics User")
 		frappe.get_doc("User", PLAIN).add_roles("System Manager")
 		for dt in ("Student Category",):
@@ -242,3 +250,73 @@ class TestAdmissionsIntegration(CampusTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			authority("no_such_field").insert()
 		authority("oc_rank").insert()
+
+	# review fixes
+	def test_reveal_endpoints_are_post_only(self):
+		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[reveal_aadhaar], ["POST"])
+		doc = self.applicant(VALID)
+		method = frappe.get_attr(frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1])
+		frappe.set_user(VIEWER)
+		with patch.object(frappe.local, "request", SimpleNamespace(method="GET"), create=True):
+			with self.assertRaises(frappe.PermissionError):
+				method("Student Applicant", doc.name, "oc_aadhaar")
+		with patch.object(frappe.local, "request", SimpleNamespace(method="POST"), create=True):
+			self.assertEqual(method("Student Applicant", doc.name, "oc_aadhaar"), VALID)
+
+	def test_reveal_log_is_marked_for_commit_and_carries_ip(self):
+		doc = self.applicant(VALID)
+		frappe.local.flags.commit = False
+		frappe.set_user(VIEWER)
+		reveal_aadhaar("Student Applicant", doc.name)
+		self.assertTrue(frappe.local.flags.commit)
+		frappe.local.flags.commit = False
+
+	def test_jinja_get_password_is_gated_and_logged(self):
+		doc = self.applicant(VALID)
+		template = "{{ doc.get_password('oc_aadhaar') }}"
+		frappe.set_user(PLAIN)
+		with self.assertRaises(frappe.PermissionError):
+			frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)})
+		frappe.set_user(VIEWER)
+		before = frappe.db.count("Aadhaar Access Log", {"reference_name": doc.name})
+		self.assertEqual(frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)}), VALID)
+		self.assertEqual(frappe.db.count("Aadhaar Access Log", {"reference_name": doc.name}), before + 1)
+		frappe.local.flags.commit = False
+
+	def test_other_password_fields_still_readable_by_system_manager(self):
+		name = "Admissions Pwd Test"
+		frappe.db.delete("Connected App", {"name": name})
+		app = frappe.get_doc(
+			{"doctype": "Connected App", "provider_name": name, "client_id": "cid", "client_secret": "s3cret",
+			 "authorization_uri": "https://example.com/a", "token_uri": "https://example.com/t",
+			 "scopes": [{"scope": "read"}]}
+		).insert()  # fmt: skip
+		frappe.set_user(PLAIN)
+		method = frappe.get_attr(frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1])
+		self.assertEqual(method("Connected App", app.name, "client_secret"), "s3cret")
+
+	def test_viewer_of_another_company_is_denied(self):
+		doc = self.applicant(VALID)
+		frappe.set_user(OTHER_VIEWER)
+		with self.assertRaises(frappe.PermissionError):
+			reveal_aadhaar("Student Applicant", doc.name)
+
+	def test_access_log_cannot_be_deleted(self):
+		doc = self.applicant(VALID)
+		frappe.set_user(VIEWER)
+		reveal_aadhaar("Student Applicant", doc.name)
+		frappe.set_user("Administrator")
+		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name})
+		with self.assertRaises(frappe.PermissionError):
+			log.delete()
+
+	def test_rule_with_matching_regulation_wins_and_duplicates_rejected(self):
+		blank = frappe.db.get_value("Eligibility Rule", {"program": PROGRAM, "enabled": 1})
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc({"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC"}).insert()
+		self.assertEqual(elig.find_rule(PROGRAM, "No Such Regulation").name, blank)  # falls back to blank
+		specific = frappe.get_doc(
+			{"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": self.regulation}
+		).insert()
+		self.assertEqual(elig.find_rule(PROGRAM, self.regulation).name, specific.name)
+		self.assertEqual(elig.find_rule(PROGRAM).name, blank)

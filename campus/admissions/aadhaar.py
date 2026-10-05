@@ -3,8 +3,15 @@
 The full number lives in a Password field (`oc_aadhaar`): Frappe keeps it encrypted in `__Auth` and the
 document column holds only asterisks. Forms, lists and prints show `oc_aadhaar_masked`
 ("XXXX-XXXX-1234"). The only ways to read the number are `reveal_aadhaar` (role "Aadhaar Viewer",
-always logged in Aadhaar Access Log) and `frappe.client.get_password`, which is routed through the same
-checks here. Error messages never contain the number.
+always logged in Aadhaar Access Log). Every other route to the cleartext goes through the same gate:
+`AadhaarMixin.get_password` (extend_doctype_class) covers Jinja, print formats, notifications and server
+scripts, and the `frappe.client.get_password` override covers the REST call. Both require the role, document
+read permission and write a log row. Reveals are POST-only because Frappe rolls back GET requests, which
+would lose the log row. Error messages never contain the number.
+
+Residual paths this does not close (operational controls, not code): Error Log tracebacks may capture a
+local variable holding a number being saved; Data Import files and Data Export of the form payload carry
+what the uploader typed; database and `site_config` encryption_key backups together expose every number.
 """
 
 import frappe
@@ -66,32 +73,49 @@ def validate_aadhaar(doc, method=None):
 		doc.set(MASKED_FIELD, mask(number))
 
 
-@frappe.whitelist()
+class AadhaarMixin:
+	"""Gate on `get_password("oc_aadhaar")` for Student and Student Applicant (extend_doctype_class)."""
+
+	def get_password(self, fieldname="password", raise_exception=True):
+		if fieldname == AADHAAR_FIELD:
+			authorize_reveal(self)
+			log_reveal(self.doctype, self.name)
+		return super().get_password(fieldname, raise_exception)
+
+
+def authorize_reveal(doc):
+	if VIEWER_ROLE not in frappe.get_roles():
+		frappe.throw(
+			_("Only users with the role {0} can view Aadhaar numbers.").format(VIEWER_ROLE), frappe.PermissionError
+		)
+	doc.check_permission("read")  # company User Permissions apply
+
+
+@frappe.whitelist(methods=["POST"])
 def reveal_aadhaar(doctype: str, name: str):
-	"""Return the full Aadhaar number to an "Aadhaar Viewer" and log the reveal."""
+	"""Return the full Aadhaar number to an "Aadhaar Viewer" and log the reveal (POST only, see module doc)."""
 	if doctype not in AADHAAR_DOCTYPES:
 		frappe.throw(_("Aadhaar is not held on {0}.").format(doctype))
-	if VIEWER_ROLE not in frappe.get_roles():
-		frappe.throw(_("Only users with the role {0} can view Aadhaar numbers.").format(VIEWER_ROLE), frappe.PermissionError)
-	frappe.has_permission(doctype, "read", name, throw=True)
-	number = frappe.get_doc(doctype, name).get_password(AADHAAR_FIELD, raise_exception=False)
-	log_reveal(doctype, name)
-	return number
+	return frappe.get_doc(doctype, name).get_password(AADHAAR_FIELD, raise_exception=False)
 
 
 def log_reveal(doctype, name):
 	frappe.get_doc(
 		{
 			"doctype": LOG_DOCTYPE, "user": frappe.session.user, "reference_doctype": doctype,
-			"reference_name": name, "accessed_on": now_datetime(),
+			"reference_name": name, "accessed_on": now_datetime(), "ip_address": getattr(frappe.local, "request_ip", None),
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
+	frappe.local.flags.commit = True  # a reveal over a safe method must not lose its log row
 
 
 @frappe.whitelist()
-def get_password(doctype: str, name: str, fieldname: str):
-	"""Override of frappe.client.get_password: Aadhaar goes through reveal_aadhaar, the rest is unchanged."""
+def get_password(doctype: str, name: str | int, fieldname: str):
+	"""Override of frappe.client.get_password: Aadhaar needs the viewer role and POST, the rest is stock."""
 	if fieldname == AADHAAR_FIELD:
+		request = getattr(frappe.local, "request", None)
+		if request and request.method != "POST":
+			frappe.throw(_("Aadhaar can only be revealed with a POST request."), frappe.PermissionError)
 		return reveal_aadhaar(doctype, name)
 	frappe.only_for("System Manager")
 	return frappe.get_lazy_doc(doctype, name).get_password(fieldname)
