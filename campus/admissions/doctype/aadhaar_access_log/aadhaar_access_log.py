@@ -1,7 +1,9 @@
 """M04-02 Aadhaar Access Log: one immutable row per reveal of a full Aadhaar number (decision D12).
 
 Frappe's own Access Log is purged after 30 days and written through a deferred queue, so reveals are
-logged here instead: inserted in the same transaction as the reveal and never purged.
+logged here instead: each row is written on a separate database connection and committed at once
+(`campus.admissions.aadhaar.write_on_own_connection`), so it survives a rollback of the reveal's transaction,
+and is never purged.
 """
 
 import frappe

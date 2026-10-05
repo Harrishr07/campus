@@ -377,6 +377,34 @@ class TestAdmissionsIntegration(CampusTestCase):
 		self.assertNotIn(VALID, str(ctx.exception))
 		self.assertEqual(log_rows(doc.name), [])
 
+	def test_failed_log_write_records_an_error_without_site_secrets(self):
+		doc = self.applicant(VALID)
+		frappe.set_user(VIEWER)
+		with patch("campus.admissions.aadhaar.get_db", side_effect=RuntimeError("db down")):
+			with self.assertRaises(frappe.ValidationError):
+				reveal_aadhaar("Student Applicant", doc.name)
+		frappe.set_user("Administrator")
+		row = frappe.get_all(
+			"Error Log", filters={"method": "Aadhaar Access Log write failed"}, fields=["name", "error"],
+			order_by="creation desc", limit=1,
+		)[0]  # fmt: skip
+		self.addCleanup(frappe.db.delete, "Error Log", row.name)
+		error = row.error
+		self.assertIn("db down", error)
+		for secret in (frappe.conf.db_password, frappe.conf.encryption_key):
+			self.assertTrue(secret)
+			self.assertFalse(secret in error, "Error Log holds a site secret")  # never echo the secret on failure
+		self.assertFalse(VALID in error, "Error Log holds the Aadhaar number")
+		self.assertEqual(log_rows(doc.name), [])
+
+	def test_reveal_without_a_stored_number_writes_no_log_row(self):
+		doc = self.applicant()
+		frappe.set_user(VIEWER)
+		with patch("campus.admissions.aadhaar.write_on_own_connection") as write:
+			self.assertFalse(reveal_aadhaar("Student Applicant", doc.name))
+		write.assert_not_called()
+		self.assertEqual(log_rows(doc.name), [])
+
 	def test_copy_aadhaar_carries_number_and_logs_a_system_copy(self):
 		source = self.applicant(VALID)
 		student = frappe.get_doc(

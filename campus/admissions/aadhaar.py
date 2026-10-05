@@ -6,7 +6,7 @@ document column holds only asterisks. Forms, lists and prints show `oc_aadhaar_m
 always logged in Aadhaar Access Log). Every other route to the cleartext goes through the same gate:
 `AadhaarMixin.get_password` (extend_doctype_class) covers Jinja, print formats, notifications and server
 scripts, and the `frappe.client.get_password` override covers the REST call. Both require the role, document
-read permission and write a log row. Reveals are POST-only because Frappe rolls back GET requests, which
+read permission and write a log row (none when no number is stored: nothing is revealed). Reveals are POST-only because Frappe rolls back GET requests, which
 would lose the log row. Error messages never contain the number.
 
 The only sanctioned internal path to the cleartext is `copy_aadhaar(source_doc, target_doc)` (not
@@ -97,8 +97,20 @@ class AadhaarMixin:
 	def get_password(self, fieldname="password", raise_exception=True):
 		if fieldname == AADHAAR_FIELD:
 			authorize_reveal(self)
-			log_reveal(self.doctype, self.name)
+			if has_stored_aadhaar(self):  # nothing to reveal, nothing to log
+				log_reveal(self.doctype, self.name)
 		return super().get_password(fieldname, raise_exception)
+
+
+def has_stored_aadhaar(doc) -> bool:
+	auth = frappe.qb.Table("__Auth")
+	query = (
+		frappe.qb.from_(auth)
+		.select(auth.name)
+		.where((auth.doctype == doc.doctype) & (auth.name == doc.name) & (auth.fieldname == AADHAAR_FIELD))
+		.where(auth.encrypted == 1)
+	)
+	return bool(query.run())
 
 
 def authorize_reveal(doc):
@@ -134,19 +146,22 @@ def log_reveal(doctype, name, reason="reveal"):
 		write_on_own_connection(values)
 	except Exception as error:
 		try:
-			frappe.log_error("Aadhaar Access Log write failed")  # never mask the failure below
+			# explicit message: the default traceback dumps frame locals, which hold DB credentials here
+			frappe.log_error(title="Aadhaar Access Log write failed", message=frappe.get_traceback())
 		except Exception:
-			pass
+			pass  # never mask the failure below
 		raise frappe.ValidationError(_("The Aadhaar access could not be recorded; nothing was revealed.")) from error
 
 
 def write_on_own_connection(values):
-	"""Insert one log row on its own connection and commit it there."""
-	conf = frappe.local.conf
-	db_name = conf.db_name
+	"""Insert one log row on its own connection and commit it there.
+
+	Site config is read inline, never bound to a local, so no traceback with context can capture credentials.
+	"""
 	connection = get_db(
-		socket=conf.db_socket, host=conf.db_host, port=conf.db_port,
-		user=conf.db_user or db_name, password=conf.db_password, cur_db_name=db_name,
+		socket=frappe.conf.db_socket, host=frappe.conf.db_host, port=frappe.conf.db_port,
+		user=frappe.conf.db_user or frappe.conf.db_name, password=frappe.conf.db_password,
+		cur_db_name=frappe.conf.db_name,
 	)  # fmt: skip
 	try:
 		columns = ", ".join(f"`{c}`" for c in LOG_COLUMNS)
