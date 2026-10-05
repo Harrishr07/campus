@@ -9,6 +9,7 @@ MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 OVERRIDE_ROLE = "Admission Override"  # may admit into a full quota/category row (logged)
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
+OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
 
 
 def setup_admissions():
@@ -18,7 +19,7 @@ def setup_admissions():
 
 
 def ensure_admission_roles():
-	for role in (OVERRIDE_ROLE, VERIFIER_ROLE):
+	for role in (OVERRIDE_ROLE, VERIFIER_ROLE, OFFICER_ROLE):
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
 
@@ -90,4 +91,16 @@ def setup_admission_fields():
 		field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
 			in_standard_filter=1, description="Counted against the Seat Matrix when submitted."),
 	]  # fmt: skip
-	create_custom_fields({"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment}, update=True)
+	student += [
+		field("oc_register_no", "Data", "Register No", "student_applicant", unique=1, read_only=1, no_copy=1,
+			in_standard_filter=1, description="Assigned at admission from the Admission Settings pattern."),
+		field("oc_roll_no", "Data", "Roll No", "oc_register_no", read_only=1, no_copy=1),
+	]  # fmt: skip
+	invoice = [
+		field("oc_program_enrollment", "Link", "Admission Enrollment", "student", options="Program Enrollment",
+			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at admission."),
+	]  # fmt: skip
+	create_custom_fields(
+		{"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment, "Sales Invoice": invoice},
+		update=True,
+	)

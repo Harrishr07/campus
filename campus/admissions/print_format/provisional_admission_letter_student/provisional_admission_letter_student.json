@@ -1,0 +1,22 @@
+{
+ "absolute_value": 0,
+ "align_labels_right": 0,
+ "creation": "2026-10-05 00:00:00.000000",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "Student",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "html": "<div style=\"font-size:14px;line-height:1.6\">\n\t<h2 style=\"text-align:center\">{{ doc.oc_company }}</h2>\n\t<h4 style=\"text-align:center\">{{ _(\"Provisional Admission Letter\") }}</h4>\n\t{% set applicant = doc if doc.doctype == \"Student Applicant\" else frappe.get_doc(\"Student Applicant\", doc.student_applicant) if doc.student_applicant else None %}\n\t{% set program = applicant.program if applicant else (frappe.db.get_value(\"Program Enrollment\", {\"student\": doc.name, \"docstatus\": 1}, \"program\") or \"\") %}\n\t{% set year = applicant.academic_year if applicant else (frappe.db.get_value(\"Program Enrollment\", {\"student\": doc.name, \"docstatus\": 1}, \"academic_year\") or \"\") %}\n\t<p>{{ _(\"Date\") }}: {{ frappe.format(frappe.utils.today(), {\"fieldtype\": \"Date\"}) }}</p>\n\t<p>{{ _(\"Dear\") }} <b>{{ doc.title if doc.doctype == \"Student Applicant\" else doc.student_name }}</b>,</p>\n\t<p>{{ _(\"You are provisionally admitted to\") }} <b>{{ program }}</b> {{ _(\"for the academic year\") }} <b>{{ year }}</b>\n\t{% if applicant and applicant.oc_admission_quota %}{{ _(\"under the\") }} <b>{{ applicant.oc_admission_quota }}</b> {{ _(\"quota\") }}{% if applicant.student_category %} ({{ applicant.student_category }}){% endif %}{% endif %}.</p>\n\t{% if doc.doctype == \"Student\" and doc.oc_register_no %}<p>{{ _(\"Register No\") }}: <b>{{ doc.oc_register_no }}</b></p>{% endif %}\n\t<p>{{ _(\"This admission is provisional until your original documents are verified and the first fee instalment is paid. It may be cancelled if any document is found invalid.\") }}</p>\n\t<p style=\"text-align:right;margin-top:60px\">{{ _(\"Principal\") }}</p>\n</div>\n",
+ "idx": 0,
+ "line_breaks": 0,
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Provisional Admission Letter Student",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "raw_printing": 0,
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

@@ -2,7 +2,7 @@
 
 import frappe
 
-from campus.admissions import documents, eligibility
+from campus.admissions import admit as admission, documents, eligibility
 from campus.admissions import seat_matrix as seats
 from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
@@ -40,3 +40,13 @@ def pending_documents(applicant):
 def set_document_status(applicant: str, document_type: str, status: str, remarks: str | None = None, original_retained: int | None = None):
 	"""Verifier action on one checklist item; Verified/Rejected need the Admission Verifier role."""
 	return documents.set_document_status(applicant, document_type, status, remarks, original_retained)
+
+
+@frappe.whitelist(methods=["POST"])
+def admit(applicant: str):
+	"""Admit an Approved, Eligible applicant with complete documents and a free seat (role Admission Officer).
+
+	One transaction: Student (+ Customer), submitted Program Enrollment, register/roll number, fee Sales Invoice,
+	applicant status Admitted. Returns {student, program_enrollment, invoice, register_no}.
+	"""
+	return admission.admit(applicant)

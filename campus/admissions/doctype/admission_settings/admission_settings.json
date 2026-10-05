@@ -1,0 +1,57 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "owner": "Administrator",
+ "doctype": "DocType",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Admission Settings",
+ "issingle": 1,
+ "field_order": [
+  "active_admission_year",
+  "register_no_pattern",
+  "roll_no_pattern"
+ ],
+ "fields": [
+  {
+   "fieldname": "active_admission_year",
+   "fieldtype": "Link",
+   "label": "Active Admission Year",
+   "options": "Academic Year",
+   "description": "Used when an applicant has no academic year."
+  },
+  {
+   "fieldname": "register_no_pattern",
+   "fieldtype": "Data",
+   "label": "Register No Pattern",
+   "default": "{abbr}{yy}{program_code}{####}",
+   "reqd": 1,
+   "description": "Placeholders: {abbr} company abbreviation, {yy} / {yyyy} start year of the admission year, {program_code} program abbreviation. Must end with the counter, e.g. {####}."
+  },
+  {
+   "fieldname": "roll_no_pattern",
+   "fieldtype": "Data",
+   "label": "Roll No Pattern (optional)",
+   "description": "Same placeholders as the register number; use a different prefix so the counters are separate."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1
+  }
+ ]
+}
