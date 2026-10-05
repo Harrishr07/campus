@@ -1,0 +1,48 @@
+"""M09 Campus Finance setup: custom fields on Fee Category, Fee Structure, Sales Invoice and Payment Entry, and the seed fee heads."""
+
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+from campus.campus_finance.fee_heads import FEE_HEADS, seed_fee_categories
+
+MODULE = "Campus Finance"
+
+
+def field(fieldname, fieldtype, label, insert_after, **kwargs):
+	return {
+		"fieldname": fieldname, "fieldtype": fieldtype, "label": label, "insert_after": insert_after,
+		"module": MODULE, **kwargs,
+	}  # fmt: skip
+
+
+def setup_finance():
+	setup_finance_fields()
+	seed_fee_categories()
+
+
+def setup_finance_fields():
+	"""Create/refresh the finance custom fields. Idempotent."""
+	head_types = "\n".join(FEE_HEADS) + "\nOther"
+	create_custom_fields(
+		{
+			"Fee Category": [
+				field("oc_fee_head_type", "Select", "Fee Head Type", "category_name", options=head_types,
+					in_list_view=1, in_standard_filter=1),
+				field("oc_refundable", "Check", "Refundable", "oc_fee_head_type"),
+				field("oc_gst_applicable", "Check", "GST Applicable", "oc_refundable"),
+			],
+			"Fee Structure": [
+				field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
+					in_standard_filter=1),
+			],
+			"Sales Invoice": [
+				field("oc_challan_no", "Data", "Challan No", "fee_schedule", unique=1, read_only=1, no_copy=1,
+					search_index=1, description="Bank challan number; used to match bank collections."),
+			],
+			"Payment Entry": [
+				field("oc_student", "Link", "Student", "party_name", options="Student", read_only=1, no_copy=1,
+					search_index=1),
+				field("oc_receipt_no", "Data", "Fee Receipt No", "oc_student", unique=1, read_only=1, no_copy=1),
+			],
+		},
+		update=True,
+	)

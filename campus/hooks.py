@@ -185,6 +185,17 @@ doc_events["Program Enrollment"]["validate"] = [
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
 ]
 
+doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
+doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
+doc_events["Sales Invoice"] = {
+	"validate": "campus.campus_finance.fee_heads.validate_invoice_accounts",
+	"before_submit": "campus.campus_finance.challan.assign_challan_no",
+}
+doc_events["Payment Entry"] = {
+	"validate": "campus.campus_finance.challan.set_payment_student",
+	"before_submit": "campus.campus_finance.challan.assign_receipt_no",
+}
+
 # Scheduled Tasks
 # ---------------
 
@@ -304,7 +315,7 @@ override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions
 boot_session = "campus.campus_platform.pack_visibility.boot_session"
 
 scheduler_events = {
-	"daily": ["campus.campus_platform.positions.sync_all_roles"],
+	"daily": ["campus.campus_platform.positions.sync_all_roles", "campus.campus_finance.fines.daily_fine_run"],
 	"hourly": ["campus.campus_platform.approval_escalation.escalate_overdue"],
 	"cron": {
 		"*/15 * * * *": [
@@ -338,6 +349,7 @@ jinja = {
 	"methods": [
 		"campus.campus_platform.verification.oc_qr_block",
 		"campus.curriculum.structure.curriculum_structure",
+		"campus.campus_finance.challan.challan_details",
 	]
 }
 

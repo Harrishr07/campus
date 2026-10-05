@@ -1,6 +1,7 @@
 """Install and migrate hooks for OneBook Campus."""
 
 from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
+from campus.campus_finance.setup import setup_finance
 from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
 from campus.campus_platform.module_packs import seed_module_packs
@@ -26,6 +27,7 @@ def after_install():
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()
+	setup_finance()
 
 
 def after_migrate():
@@ -38,3 +40,4 @@ def after_migrate():
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()
+	setup_finance()
