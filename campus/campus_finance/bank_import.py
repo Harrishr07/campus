@@ -4,6 +4,13 @@ CSV columns: challan_no, amount, date, reference (extra columns are ignored). On
 per file row with its outcome: Matched (a Payment Entry was made), Unmatched (unknown challan, wrong company,
 settled invoice or amount above the outstanding), Duplicate (bank reference already collected) or Invalid.
 
+Concurrency (MariaDB REPEATABLE READ): the handler takes the invoice row lock (FOR UPDATE) as its first
+statement, before any plain read, and every fact it then decides on (outstanding amount, existing bank
+reference) is re-read with a locking read, since a plain read could use the chunk's older snapshot. Items are
+sorted by challan number so two imports lock invoices in the same order. After the Payment Entry is posted the
+outstanding amount is re-read under the lock and a negative one rolls the row back (reported Invalid).
+Every outcome of a row, errors included, is recorded as a Bank Collection Row so the import always completes.
+
 Re-import safety: a Matched row stores `reference_key` = company + bank reference, a unique column, so a bank
 reference can create at most one Payment Entry however often (or concurrently) a file is imported. The Payment
 Entry also carries the reference as its `reference_no`. A reference whose Payment Entry was later cancelled stays
@@ -12,6 +19,7 @@ blocked: the entry must be re-made by hand.
 
 import csv
 import io
+import math
 
 import frappe
 from frappe import _
@@ -24,25 +32,33 @@ HANDLER = "campus.campus_finance.bank_import.process_row"
 KEY = "campus.campus_finance.bank_import.row_key"
 COLUMNS = ("challan_no", "amount", "date", "reference")
 SAVEPOINT = "bank_collection_row"
+ROW_SAVEPOINT = "bank_collection_item"
 COUNTER = {"Matched": "matched_rows", "Unmatched": "unmatched_rows", "Duplicate": "duplicate_rows", "Invalid": "invalid_rows"}
 
 
 @frappe.whitelist()
 def start_import(name):
 	"""Parse the attached CSV and queue the bulk run that matches its rows; returns the Bulk Run name."""
-	doc = frappe.get_doc("Bank Collection Import", name)
-	doc.check_permission("write")
-	if doc.status != "Draft":
+	frappe.has_permission("Bank Collection Import", "write", name, throw=True)
+	status = frappe.db.get_value("Bank Collection Import", name, "status", for_update=True)  # a double click waits here
+	if status != "Draft":
 		frappe.throw(_("This import has already been started."))
+	doc = frappe.get_doc("Bank Collection Import", name)
 	rows = parse_rows(read_file(doc.collection_file))
 	doc.db_set({"total_rows": len(rows), "status": "Processing"})
 	items = [{"import": name, "company": doc.company, "row_no": no, **row} for no, row in enumerate(rows, start=1)]
+	items.sort(key=lambda i: (i["challan_no"], i["row_no"]))  # consistent invoice lock order across imports
 	run = run_bulk("Bank Collection Import", items, HANDLER, key=KEY, parameters={"import": name})
 	doc.db_set("bulk_run", run)
 	return run
 
 
 def read_file(file_url):
+	"""The attached file's content, after checking the user may read that File."""
+	file_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
+	if not file_name:
+		frappe.throw(_("The bank file {0} was not found.").format(file_url))
+	frappe.get_doc("File", file_name).check_permission("read")
 	return get_file(file_url)[1]
 
 
@@ -67,23 +83,38 @@ def row_key(item):
 
 
 def process_row(item, run):
-	"""Bulk handler: record the row's outcome and, for a match, its Payment Entry. DB-only, no commit."""
-	invalid = invalid_reason(item)
+	"""Bulk handler: record the row's outcome and, for a match, its Payment Entry. DB-only, no commit.
+
+	Whatever goes wrong inside the row (lock wait, insert error, posting failure) is rolled back to a savepoint
+	and recorded as an Invalid row with the message, so the import never stalls on a row.
+	"""
+	invalid = invalid_reason(item)  # pure checks: no database access before the lock
 	if invalid:
 		return record(item, "Invalid", invalid)
-	if frappe.db.exists("Bank Collection Row", {"reference_key": reference_key(item)}):
-		return record(item, "Duplicate", _("Bank reference already collected."))
 	invoice = frappe.db.get_value(
 		"Sales Invoice",
 		{"oc_challan_no": item["challan_no"], "docstatus": 1},
-		["name", "company", "customer", "outstanding_amount"],
+		["name", "company", "customer", "currency", "outstanding_amount"],
 		as_dict=True,
-		for_update=True,  # latest outstanding, and serialises two files paying one challan
+		for_update=True,  # first statement: lock, and see the latest outstanding amount
 	)
+	frappe.db.savepoint(ROW_SAVEPOINT)
+	try:
+		match_row(item, invoice)
+	except Exception as e:
+		frappe.db.rollback(save_point=ROW_SAVEPOINT)
+		record(item, "Invalid", _("Error: {0}").format(str(e)[:300]), invoice and invoice.name)
+
+
+def match_row(item, invoice):
+	if frappe.db.get_value("Bank Collection Row", {"reference_key": reference_key(item)}, "name", for_update=True):
+		return record(item, "Duplicate", _("Bank reference already collected."))
 	problem = unmatched_reason(invoice, item)
 	if problem:
 		return record(item, "Unmatched", problem)
-	if frappe.db.exists("Payment Entry", {"company": item["company"], "reference_no": item["reference"], "docstatus": ("<", 2)}):
+	if frappe.db.get_value(
+		"Payment Entry", {"company": item["company"], "reference_no": item["reference"], "docstatus": ("<", 2)}, "name", for_update=True
+	):
 		return record(item, "Duplicate", _("Bank reference already has a Payment Entry."), invoice.name)
 	post_collection(item, invoice)
 
@@ -97,7 +128,7 @@ def invalid_reason(item):
 		return _("Challan number and bank reference are required.")
 	try:
 		getdate(item["date"])
-		if flt(item["amount"]) <= 0:
+		if not math.isfinite(flt(item["amount"])) or flt(item["amount"]) <= 0:
 			raise ValueError
 	except Exception:
 		return _("Amount must be positive and the date valid.")
@@ -106,6 +137,8 @@ def invalid_reason(item):
 def unmatched_reason(invoice, item):
 	if not invoice or invoice.company != item["company"]:
 		return _("No submitted invoice has this challan number.")
+	if invoice.currency != frappe.get_cached_value("Company", item["company"], "default_currency"):
+		return _("The invoice is not in the company currency.")
 	if not flt(invoice.outstanding_amount):
 		return _("The invoice is already paid.")
 	if flt(item["amount"]) > flt(invoice.outstanding_amount):
@@ -142,6 +175,8 @@ def make_payment_entry(item, invoice):
 	payment.reference_date = payment.posting_date = getdate(item["date"])
 	payment.insert(ignore_permissions=True)
 	payment.submit()
+	if flt(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount", for_update=True)) < 0:
+		frappe.throw(_("The collection would overpay {0}.").format(invoice.name))
 	return payment
 
 
@@ -156,7 +191,7 @@ def insert_row(item, status, message, invoice=None, **extra):
 			"doctype": "Bank Collection Row", "bank_collection_import": item["import"], "row_no": item["row_no"],
 			"challan_no": item["challan_no"], "amount": flt(item["amount"]) if _is_number(item["amount"]) else 0,
 			"collection_date": getdate(item["date"]) if _is_date(item["date"]) else None,
-			"bank_reference": item["reference"], "status": status, "message": message, "sales_invoice": invoice, **extra,
+			"bank_reference": item["reference"], "company": item["company"], "status": status, "message": message, "sales_invoice": invoice, **extra,
 		}
 	).insert(ignore_permissions=True)
 
@@ -175,8 +210,7 @@ def bump(import_name, status):
 
 def _is_number(value):
 	try:
-		float(value)
-		return True
+		return math.isfinite(float(value))
 	except (TypeError, ValueError):
 		return False
 

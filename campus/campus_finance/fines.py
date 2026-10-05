@@ -8,7 +8,8 @@ Fine calculation (pure functions, no database)
   (`to_day - from_day + 1`), i.e. the whole slab is levied when it is crossed.
 
 The Daily Fine Run creates one fine Sales Invoice per (overdue invoice, slab). Idempotency is the primary key
-of Fine Applied, whose name is "<invoice>::<slab row name>", inserted in the same transaction as the fine invoice.
+of Fine Applied, whose name is "<invoice>::<rule>:<slab from_day>" (the from_day, not the child row name, so editing a rule
+never re-fines), inserted in the same transaction as the fine invoice.
 """
 
 import frappe
@@ -79,55 +80,77 @@ def item_key(item):
 	return applied_key(item["invoice"], item["slab"])
 
 
+def slab_key(rule, slab):
+	return f"{rule}:{slab.from_day}"
+
+
 def fine_items(as_of):
 	"""[{invoice, slab, rule}] for every overdue, unpaid student invoice and slab not yet fined."""
 	rules = frappe.get_all("Fine Rule", {"enabled": 1}, ["name", "company", "fee_category", "grace_days"])
 	if not rules:
 		return []
-	done = set(frappe.get_all("Fine Applied", pluck="name", limit=0))
+	invoices = overdue_invoices(as_of, {r.company for r in rules})
+	done = set(
+		frappe.get_all("Fine Applied", {"sales_invoice": ("in", [i.name for i in invoices] or [""])}, pluck="name", limit=0)
+	)
 	items = []
-	for invoice in overdue_invoices(as_of, {r.company for r in rules}):
+	for invoice in invoices:
 		rule = rule_for(invoice, [r for r in rules if r.company == invoice.company])
 		if not rule:
 			continue
-		slabs = frappe.get_all("Fine Rule Slab", {"parent": rule.name}, ["name", "from_day", "to_day", "amount", "percent", "per_day"])
+		slabs = frappe.get_all("Fine Rule Slab", {"parent": rule.name}, ["from_day", "to_day", "amount", "percent", "per_day"])
 		for slab in slabs_crossed(late_days(invoice.due_date, as_of, rule.grace_days), slabs):
-			if applied_key(invoice.name, slab.name) not in done:
-				items.append({"invoice": invoice.name, "slab": slab.name, "rule": rule.name})
+			if applied_key(invoice.name, slab_key(rule.name, slab)) not in done:
+				items.append({"invoice": invoice.name, "slab": slab_key(rule.name, slab), "rule": rule.name, "from_day": slab.from_day})
 	return items
 
 
 def overdue_invoices(as_of, companies):
-	fines = frappe.get_all("Fine Applied", pluck="fine_invoice", limit=0)
-	invoices = frappe.get_all(
-		"Sales Invoice",
-		{
-			"docstatus": 1, "student": ("is", "set"), "outstanding_amount": (">", 0), "due_date": ("<", as_of),
-			"company": ("in", list(companies)), "is_return": 0, "name": ("not in", fines or [""]),
-		},
-		["name", "company", "due_date"],
-		limit=0,
+	"""Overdue, unpaid student invoices that are not themselves fines (anti-join on Fine Applied.fine_invoice)."""
+	invoice, applied = frappe.qb.DocType("Sales Invoice"), frappe.qb.DocType("Fine Applied")
+	invoices = (
+		frappe.qb.from_(invoice)
+		.left_join(applied)
+		.on(applied.fine_invoice == invoice.name)
+		.select(invoice.name, invoice.company, invoice.due_date)
+		.where(
+			(invoice.docstatus == 1) & (invoice.student.isnotnull()) & (invoice.student != "")
+			& (invoice.outstanding_amount > 0) & (invoice.due_date < as_of) & (invoice.is_return == 0)
+			& invoice.company.isin(list(companies)) & applied.name.isnull()
+		)
+		.run(as_dict=True)
 	)
 	items = frappe.get_all(
 		"Sales Invoice Item", {"parent": ("in", [i.name for i in invoices] or [""])}, ["parent", "item_code"], limit=0
 	)
-	for invoice in invoices:
-		invoice.item_codes = {i.item_code for i in items if i.parent == invoice.name}
+	for row in invoices:
+		row.item_codes = {i.item_code for i in items if i.parent == row.name}
 	return invoices
 
 
 def apply_fine(item, run):
-	"""Bulk handler: record the (invoice, slab) fine and create its fine invoice. DB-only, no commit."""
+	"""Bulk handler: record the (invoice, slab) fine and create its fine invoice. DB-only, no commit.
+
+	The invoice row is locked first and its outstanding amount re-read with a locking read (a plain read could
+	use the chunk's older snapshot), so the fine is computed on what is really owed.
+	"""
 	as_of = run.get_parameters()["as_of"]
-	invoice = frappe.get_doc("Sales Invoice", item["invoice"])
-	slab = frappe.get_doc("Fine Rule Slab", item["slab"])
-	if invoice.docstatus != 1 or not flt(invoice.outstanding_amount):
+	docstatus, outstanding = frappe.db.get_value(
+		"Sales Invoice", item["invoice"], ["docstatus", "outstanding_amount"], for_update=True
+	)
+	if docstatus != 1 or not flt(outstanding):
 		return  # settled since the run was queued
-	amount = slab_amount(slab, invoice.outstanding_amount)
+	slab = frappe.db.get_value(
+		"Fine Rule Slab", {"parent": item["rule"], "from_day": item["from_day"]}, ["from_day", "to_day", "amount", "percent", "per_day"], as_dict=True
+	)
+	if not slab:
+		return  # the rule was edited since the run was queued
+	invoice = frappe.get_doc("Sales Invoice", item["invoice"])
+	amount = slab_amount(slab, outstanding)
 	applied = frappe.get_doc(
 		{
-			"doctype": "Fine Applied", "sales_invoice": invoice.name, "slab_key": slab.name, "fine_rule": item["rule"],
-			"company": invoice.company, "amount": amount, "applied_on": as_of,
+			"doctype": "Fine Applied", "sales_invoice": invoice.name, "slab_key": item["slab"],
+			"fine_rule": item["rule"], "company": invoice.company, "amount": amount, "applied_on": as_of,
 		}
 	)
 	try:

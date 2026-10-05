@@ -8,6 +8,7 @@ and a caution deposit can therefore never post to income.
 
 import frappe
 from frappe import _
+from frappe.utils.caching import request_cache
 
 TUITION, EXAM, DEVELOPMENT, LIBRARY, LAB = "Tuition", "Exam", "Development", "Library", "Lab"
 HOSTEL, MESS, TRANSPORT = "Hostel", "Mess", "Transport"
@@ -115,6 +116,7 @@ def validate_fee_category(doc, method=None):
 			)
 
 
+@request_cache
 def caution_items():
 	"""Names of the Caution Deposit categories and of their Items (item codes on invoices)."""
 	rows = frappe.get_all("Fee Category", {"oc_fee_head_type": CAUTION_DEPOSIT}, ["name", "item"], limit=0)
