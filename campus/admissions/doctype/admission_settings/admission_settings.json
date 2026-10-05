@@ -17,7 +17,10 @@
  "field_order": [
   "active_admission_year",
   "register_no_pattern",
-  "roll_no_pattern"
+  "roll_no_pattern",
+  "enquiry_section",
+  "enquiry_ack_dedupe_hours",
+  "enquiry_ack_hourly_cap"
  ],
  "fields": [
   {
@@ -40,6 +43,25 @@
    "fieldtype": "Data",
    "label": "Roll No Pattern (optional)",
    "description": "Same placeholders as the register number; use a different prefix so the counters are separate."
+  },
+  {
+   "fieldname": "enquiry_section",
+   "fieldtype": "Section Break",
+   "label": "Enquiry Acknowledgements"
+  },
+  {
+   "fieldname": "enquiry_ack_dedupe_hours",
+   "fieldtype": "Int",
+   "label": "Acknowledge a Number Once Per (Hours)",
+   "default": "24",
+   "description": "A number that already received the enquiry acknowledgement inside this window gets none. 0 disables the check."
+  },
+  {
+   "fieldname": "enquiry_ack_hourly_cap",
+   "fieldtype": "Int",
+   "label": "Acknowledgements Per College Per Hour",
+   "default": "100",
+   "description": "Past this ceiling the enquiry is still saved but no WhatsApp acknowledgement is sent. 0 disables the ceiling."
   }
  ],
  "permissions": [

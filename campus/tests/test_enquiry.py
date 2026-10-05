@@ -1,13 +1,15 @@
 """P1-T17 tests (M04-05): web form -> Lead -> WhatsApp acknowledgement -> round-robin -> Applicant, follow-ups, funnel."""
 
+import itertools
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch as unittest_patch
 
 import frappe
 from frappe.utils import add_days, nowdate
 from frappe.website.doctype.web_form.web_form import accept
 
 from campus.admissions import enquiry, enquiry_followup
+from campus.campus_messaging import quiet_hours
 from campus.admissions.api import convert_lead_to_applicant
 from campus.admissions.report.enquiry_funnel_by_source import enquiry_funnel_by_source as funnel
 from campus.tests.factories import make_company, make_user
@@ -21,10 +23,12 @@ PROGRAM = "Enquiry Test BA"
 OFFICER_A, OFFICER_B = "enquiry-a@example.com", "enquiry-b@example.com"
 OUTSIDER = "enquiry-outsider@example.com"
 MOBILE = "9876543210"
+EMAILS = itertools.count(1)  # distinct addresses: Lead emails must be unique
+OFFICER_C = "enquiry-c@example.com"
 
 
 def submit_web_form(company=COLLEGE, **values):
-	data = {"company": company, "lead_name": "Priya Lakshmi Raman", "mobile_no": MOBILE, "email_id": f"priya{len(frappe.get_all('Lead'))}@example.com",
+	data = {"company": company, "lead_name": "Priya Lakshmi Raman", "mobile_no": MOBILE, "email_id": f"priya{next(EMAILS)}@example.com",
 		"oc_program_interest": PROGRAM, **values}  # fmt: skip
 	frappe.set_user("Guest")
 	try:
@@ -58,9 +62,9 @@ class EnquiryTestCase(CampusTestCase):
 		self.clear_enquiries()
 		frappe.cache.delete(frappe.cache.make_key("oc-enquiry-rate-unknown"))
 		self.whatsapp = MagicMock(return_value="wa-1")
-		patcher = adapters(whatsapp=self.whatsapp)
-		patcher.start()
-		self.addCleanup(patcher.stop)
+		for patcher in (adapters(whatsapp=self.whatsapp), unittest_patch.object(quiet_hours, "current_release_time", return_value=None)):
+			patcher.start()
+			self.addCleanup(patcher.stop)
 
 	@staticmethod
 	def clear_enquiries():
@@ -138,7 +142,85 @@ class TestWebEnquiry(EnquiryTestCase):
 		self.assertEqual([u.user for u in frappe.get_doc("Assignment Rule", name).users], [OFFICER_B])
 
 
+class TestAckCostCap(EnquiryTestCase):
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_single_value("Admission Settings", {"enquiry_ack_dedupe_hours": 24, "enquiry_ack_hourly_cap": 100})
+
+	def test_the_same_number_is_acknowledged_once_inside_the_window(self):
+		first, second = submit_web_form(), submit_web_form(email_id="other@example.com")
+		self.assertEqual(self.whatsapp.call_count, 1)
+		self.assertEqual(frappe.db.count("Message Log", {"reference_name": first.name}), 1)
+		self.assertEqual(frappe.db.count("Message Log", {"reference_name": second.name}), 0)
+		self.assertTrue(frappe.db.exists("Lead", second.name))
+
+	def test_a_number_acknowledged_before_the_window_is_acknowledged_again(self):
+		first = submit_web_form()
+		old = frappe.utils.add_to_date(frappe.utils.now_datetime(), hours=-25)
+		frappe.db.set_value("Message Log", {"reference_name": first.name}, "creation", old, update_modified=False)
+		submit_web_form(email_id="later@example.com")
+		self.assertEqual(self.whatsapp.call_count, 2)
+
+	def test_zero_hours_disables_the_dedupe(self):
+		frappe.db.set_single_value("Admission Settings", "enquiry_ack_dedupe_hours", 0)
+		submit_web_form()
+		submit_web_form(email_id="again@example.com")
+		self.assertEqual(self.whatsapp.call_count, 2)
+
+	def test_company_ceiling_keeps_the_lead_but_skips_the_ack_and_logs_once(self):
+		frappe.db.set_single_value("Admission Settings", "enquiry_ack_hourly_cap", 2)
+		frappe.cache.delete_value(f"oc-enquiry-ceiling-logged-{COLLEGE}")
+		before = frappe.db.count("Error Log", {"error": ("like", "%acknowledgements in the last hour%")})
+		leads = [submit_web_form(mobile_no=f"98000000{n:02d}") for n in range(4)]
+		self.assertEqual(self.whatsapp.call_count, 2)
+		self.assertTrue(all(frappe.db.exists("Lead", lead.name) for lead in leads))
+		self.assertEqual(frappe.db.count("Error Log", {"error": ("like", "%acknowledgements in the last hour%")}), before + 1)
+		self.assertEqual(frappe.db.get_value("Message Log", {"reference_name": leads[0].name}, "company"), COLLEGE)
+
+	def test_ack_is_not_urgent_so_it_waits_out_quiet_hours(self):
+		self.assertEqual(frappe.db.get_value("Message Template", enquiry.ACK_EVENT, "urgent"), 0)
+		release = frappe.utils.add_to_date(frappe.utils.now_datetime(), hours=6)
+		with unittest_patch.object(quiet_hours, "current_release_time", return_value=release):
+			lead = submit_web_form()
+		self.whatsapp.assert_not_called()
+		self.assertEqual(frappe.db.get_value("Message Log", {"reference_name": lead.name}, "status"), "Scheduled")
+
+	def test_a_failing_ack_does_not_lose_the_lead_and_is_logged_with_its_reason(self):
+		with unittest_patch("campus.admissions.enquiry.send", side_effect=RuntimeError("bus down")):
+			lead = submit_web_form()
+		self.assertTrue(frappe.db.exists("Lead", lead.name))
+		self.assertTrue(frappe.db.exists("Error Log", {"error": ("like", "%RuntimeError: bus down%")}))
+
+
+class TestAssignmentRuleSync(EnquiryTestCase):
+	def test_a_failing_rule_sync_does_not_fail_the_enquiry(self):
+		with unittest_patch("campus.admissions.enquiry.sync_assignment_rule", side_effect=frappe.DuplicateEntryError("x")):
+			lead = submit_web_form()
+		self.assertTrue(frappe.db.exists("Lead", lead.name))
+		self.whatsapp.assert_called_once()
+
+	def test_a_new_officer_joins_the_rule_without_waiting_for_an_enquiry(self):
+		submit_web_form()
+		name = enquiry.RULE_PREFIX + COLLEGE
+		make_user(OFFICER_C, [COLLEGE])
+		frappe.get_doc("User", OFFICER_C).add_roles("Admission Officer")
+		self.assertEqual([u.user for u in frappe.get_doc("Assignment Rule", name).users], [OFFICER_A, OFFICER_B, OFFICER_C])
+		frappe.get_doc("User Permission", {"user": OFFICER_C, "allow": "Company", "for_value": COLLEGE}).delete()
+		self.assertEqual([u.user for u in frappe.get_doc("Assignment Rule", name).users], [OFFICER_A, OFFICER_B])
+
+	def test_rule_with_no_officers_is_disabled(self):
+		submit_web_form()
+		for user in (OFFICER_A, OFFICER_B):
+			frappe.get_doc("User Permission", {"user": user, "allow": "Company", "for_value": COLLEGE}).delete()
+		self.assertEqual(frappe.db.get_value("Assignment Rule", enquiry.RULE_PREFIX + COLLEGE, "disabled"), 1)
+
+
 class TestSpamGuard(EnquiryTestCase):
+	def test_guest_cannot_set_the_applicant_link_or_owner(self):
+		lead = submit_web_form(oc_applicant="SAPP-FAKE", lead_owner="Administrator")
+		self.assertIsNone(lead.oc_applicant)
+		self.assertIsNone(lead.lead_owner)
+
 	def test_honeypot_blocks_submission(self):
 		with self.assertRaises(frappe.ValidationError):
 			submit_web_form(oc_website_url="http://spam.example")
@@ -183,6 +265,24 @@ class TestConversion(EnquiryTestCase):
 		lead = self.make_lead(oc_program_interest=None)
 		with self.assertRaises(frappe.ValidationError):
 			convert_lead_to_applicant(lead.name, year_name("2026"))
+
+	def test_existing_applicant_heals_a_missing_back_link(self):
+		lead = self.make_lead()
+		applicant = frappe.get_doc(
+			{"doctype": "Student Applicant", "first_name": "Ravi", "program": PROGRAM, "academic_year": year_name("2026"), "oc_company": COLLEGE, "oc_lead": lead.name}
+		).insert()
+		self.assertIsNone(frappe.db.get_value("Lead", lead.name, "oc_applicant"))
+		self.assertEqual(convert_lead_to_applicant(lead.name, year_name("2026")), applicant.name)
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, "oc_applicant"), applicant.name)
+		self.assertEqual(frappe.db.count("Student Applicant", {"oc_lead": lead.name}), 1)
+
+	def test_database_refuses_a_second_applicant_for_one_enquiry(self):
+		lead = self.make_lead()
+		convert_lead_to_applicant(lead.name, year_name("2026"))
+		with self.assertRaises(frappe.UniqueValidationError):
+			frappe.get_doc(
+				{"doctype": "Student Applicant", "first_name": "Dup", "program": PROGRAM, "academic_year": year_name("2026"), "oc_company": COLLEGE, "oc_lead": lead.name}
+			).insert()
 
 	def test_default_academic_year_is_used_when_none_is_given(self):
 		lead = self.make_lead()
@@ -260,3 +360,42 @@ class TestFunnelReport(EnquiryTestCase):
 			self.assertEqual(funnel.execute({"company": BARE_COLLEGE})[1], [])
 		finally:
 			frappe.set_user("Administrator")
+
+
+class TestLeadScoping(EnquiryTestCase):
+	def other_college_lead(self):
+		lead = self.make_lead(company=BARE_COLLEGE, oc_program_interest=None)
+		frappe.db.set_value("Lead", lead.name, "oc_program_interest", PROGRAM)
+		return lead
+
+	def as_user(self, user):
+		frappe.set_user(user)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_officer_of_one_college_cannot_read_or_convert_another_colleges_lead(self):
+		lead = self.other_college_lead()
+		self.as_user(OFFICER_A)
+		self.assertFalse(frappe.has_permission("Lead", "read", lead.name))
+		self.assertNotIn(lead.name, frappe.get_list("Lead", pluck="name"))
+		with self.assertRaises(frappe.PermissionError):
+			convert_lead_to_applicant(lead.name, year_name("2026"))
+		self.assertFalse(frappe.db.exists("Student Applicant", {"oc_lead": lead.name}))
+
+	def test_officer_converts_the_lead_of_their_own_college(self):
+		lead = self.make_lead()
+		self.as_user(OFFICER_A)
+		self.assertIn(lead.name, frappe.get_list("Lead", pluck="name"))
+		self.assertTrue(convert_lead_to_applicant(lead.name, year_name("2026")))
+
+	def test_outsider_officer_cannot_convert_this_colleges_lead(self):
+		lead = self.make_lead()
+		self.as_user(OUTSIDER)
+		with self.assertRaises(frappe.PermissionError):
+			convert_lead_to_applicant(lead.name, year_name("2026"))
+
+	def test_leads_without_a_company_are_hidden_from_everyone_but_system_managers(self):
+		lead = self.make_lead(company=None, oc_program_interest=None)
+		self.assertTrue(frappe.has_permission("Lead", "read", lead.name))  # Administrator
+		self.as_user(OFFICER_A)
+		self.assertFalse(frappe.has_permission("Lead", "read", lead.name))
+		self.assertNotIn(lead.name, frappe.get_list("Lead", pluck="name"))

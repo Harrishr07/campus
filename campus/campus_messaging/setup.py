@@ -59,7 +59,7 @@ SEED_TEMPLATES = [
 	{
 		"event_key": "admission.enquiry_ack",
 		"purpose": "transactional",
-		"urgent": 1,
+		"urgent": 0,
 		"channels": ["whatsapp"],
 		"bodies": {
 			"en": ("Enquiry received", "Dear {{ doc.lead_name }}, thank you for your admission enquiry. Our admission office will contact you shortly."),

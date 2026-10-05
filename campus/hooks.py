@@ -197,6 +197,11 @@ doc_events["Lead"] = {
 	"validate": "campus.admissions.enquiry.validate",
 	"after_insert": "campus.admissions.enquiry.after_insert",
 }
+doc_events["User Permission"] = {
+	"on_update": "campus.admissions.enquiry.user_permission_changed",
+	"after_delete": "campus.admissions.enquiry.user_permission_changed",
+}
+doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
@@ -357,10 +362,12 @@ app_include_js = "/assets/campus/js/approvals.js"
 permission_query_conditions = {
 	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
+	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
+	"Lead": "campus.admissions.enquiry.has_permission",
 }
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
