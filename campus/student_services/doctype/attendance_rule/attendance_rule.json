@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "autoname": "field:regulation",
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regulation",
+  "formula",
+  "overall_min_pct",
+  "medical_band_min_pct",
+  "per_course_min_pct",
+  "clause"
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "formula",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Overall Formula",
+   "options": "sum_based\ncourse_average",
+   "reqd": 1,
+   "description": "sum_based: all attended / all conducted. course_average: mean of the course percentages."
+  },
+  {
+   "fieldname": "overall_min_pct",
+   "fieldtype": "Percent",
+   "label": "Overall Minimum %",
+   "reqd": 1
+  },
+  {
+   "fieldname": "medical_band_min_pct",
+   "fieldtype": "Percent",
+   "label": "Medical Band Minimum %",
+   "reqd": 1,
+   "description": "Lowest overall % at which a student with approved medical leave may still appear."
+  },
+  {
+   "fieldname": "per_course_min_pct",
+   "fieldtype": "Percent",
+   "label": "Per-Course Minimum %",
+   "description": "0 = no per-course minimum."
+  },
+  {
+   "fieldname": "clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Attendance Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+  {"role": "Dean Academics", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
+  {"role": "Academics User", "read": 1, "report": 1, "export": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "regulation"
+}

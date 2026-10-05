@@ -7,7 +7,8 @@ creates nothing and a partial run is completed.
     bench --site <site> execute campus.tests.demo.make_demo --kwargs "{'scale': 'full'}"
 
 Not built yet (arrive with their own tasks): quota (Student has no quota field until T14),
-roles "Exam Confidential" (skipped when the Role is absent) and regulation rule values.
+roles "Exam Confidential" (skipped when the Role is absent) and most regulation rule values
+(seeded so far: curriculum, registration and attendance rules).
 """
 
 import frappe
@@ -108,6 +109,7 @@ def build_demo(scale):
 	make_programs()
 	make_regulations()
 	make_curriculum()
+	make_attendance_rules()
 	make_users()
 	make_employees()
 	make_institution_profiles()
@@ -241,6 +243,19 @@ def make_curriculum():
 			}
 		)  # fmt: skip
 	get_or_insert("Curriculum", {"program": "B.E. CSE", "regulation": regulation, "version": 1}, {"courses": rows})
+
+
+# regulation code -> Attendance Rule values (anna-university-autonomous-rules.md, section 3)
+ATTENDANCE_RULES = {
+	"R2022": {"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0},
+	"R2026": {"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75},
+}
+
+
+def make_attendance_rules():
+	for code, values in ATTENDANCE_RULES.items():
+		regulation = regulation_name(code, ENGINEERING)
+		get_or_insert("Attendance Rule", {"regulation": regulation}, values)
 
 
 def make_users():
