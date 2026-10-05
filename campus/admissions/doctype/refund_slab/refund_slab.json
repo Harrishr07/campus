@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "days_from_admission_start",
+  "days_to_admission_start",
+  "deduction_percent",
+  "processing_fee"
+ ],
+ "fields": [
+  {
+   "fieldname": "days_from_admission_start",
+   "fieldtype": "Int",
+   "label": "From Day",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "days_to_admission_start",
+   "fieldtype": "Int",
+   "label": "To Day",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "deduction_percent",
+   "fieldtype": "Percent",
+   "label": "Deduction %",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "processing_fee",
+   "fieldtype": "Currency",
+   "label": "Fixed Processing Fee",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Refund Slab",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

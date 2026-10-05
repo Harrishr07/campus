@@ -1,0 +1,102 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type",
+  "mandatory",
+  "applies_section",
+  "admission_type",
+  "quota",
+  "student_category",
+  "handling_section",
+  "original_retained",
+  "verification_needed"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Data",
+   "label": "Document",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mandatory",
+   "fieldtype": "Check",
+   "label": "Mandatory",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "applies_section",
+   "fieldtype": "Section Break",
+   "label": "Applies To (blank = all)"
+  },
+  {
+   "fieldname": "admission_type",
+   "fieldtype": "Select",
+   "label": "Admission Type",
+   "options": "\nRegular\nLateral\nPG\nTransfer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "quota",
+   "fieldtype": "Link",
+   "label": "Quota",
+   "options": "Admission Quota"
+  },
+  {
+   "fieldname": "student_category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Student Category"
+  },
+  {
+   "fieldname": "handling_section",
+   "fieldtype": "Section Break",
+   "label": "Handling"
+  },
+  {
+   "fieldname": "original_retained",
+   "fieldtype": "Check",
+   "label": "Original Retained"
+  },
+  {
+   "fieldname": "verification_needed",
+   "fieldtype": "Check",
+   "label": "Verification Needed",
+   "default": "1"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Admission Document Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "hash",
+ "title_field": "document_type"
+}

@@ -177,6 +177,9 @@ for _dt in [
 
 _regulation_rules = "campus.campus_platform.regulation_rules"
 doc_events["Student"]["validate"] = f"{_regulation_rules}.validate_regulation_change"
+_aadhaar = "campus.admissions.aadhaar.validate_aadhaar"
+doc_events["Student"]["validate"] = [doc_events["Student"]["validate"], _aadhaar]
+doc_events["Student Applicant"]["validate"] = [doc_events["Student Applicant"]["validate"], _aadhaar]
 doc_events["Program Enrollment"]["validate"] = [
 	doc_events["Program Enrollment"]["validate"],
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
@@ -219,6 +222,7 @@ doc_events["Program Enrollment"]["validate"] = [
 # Overriding Methods
 # ------------------------------
 #
+override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions.aadhaar.get_password"}
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "campus.event.get_events"
 # }

@@ -1,5 +1,6 @@
 """Install and migrate hooks for OneBook Campus."""
 
+from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
 from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
 from campus.campus_platform.module_packs import seed_module_packs
@@ -12,6 +13,7 @@ from campus.curriculum.setup import setup_curriculum
 def before_install():
 	ensure_dean_role()  # regulation.json permissions reference it during DocType sync
 	ensure_verification_role()  # verifiable_document.json likewise
+	ensure_aadhaar_role()  # aadhaar_access_log.json likewise
 
 
 def after_install():
@@ -20,6 +22,7 @@ def after_install():
 	setup_company_fields()
 	setup_regulation_fields()
 	setup_curriculum()
+	setup_admissions()
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()
@@ -31,6 +34,7 @@ def after_migrate():
 	setup_company_fields()
 	setup_regulation_fields()
 	setup_curriculum()
+	setup_admissions()
 	seed_module_packs()
 	ensure_seed_positions()
 	setup_messaging()
