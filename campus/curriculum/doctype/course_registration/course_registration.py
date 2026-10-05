@@ -11,6 +11,7 @@ from functools import cached_property
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.permissions import has_user_permission
 from frappe.utils import cint, getdate
 
 from campus.campus_platform.api import ApprovableDocument, get_regulation, get_rule, latest_enrollment
@@ -66,6 +67,8 @@ class CourseRegistration(ApprovableDocument, Document):
 		if not enrollment:
 			frappe.throw(_("Student {0} has no Program Enrollment.").format(frappe.bold(self.student)))
 		self.company = student.oc_company
+		if not has_user_permission(frappe.get_doc("Student", self.student)):  # Company User Permissions
+			frappe.throw(_("You are not permitted to register {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
 		self.department = frappe.db.get_value("Program", enrollment.program, "department")
 		self.regulation = get_regulation(self.student)
 		self.curriculum = frappe.db.get_value(
@@ -89,7 +92,7 @@ class CourseRegistration(ApprovableDocument, Document):
 			candidates = by_course.get(item.course)
 			if not candidates:
 				frappe.throw(_("Row {0}: {1} is not in curriculum {2}.").format(item.idx, frappe.bold(item.course), self.curriculum))
-			row = next((r for r in candidates if r.semester == cint(self.semester)), candidates[0])
+			row = self.pick_curriculum_row(item, candidates)
 			item.update(
 				{
 					"credits": row.credits, "semester": row.semester, "category": row.category,
@@ -98,6 +101,20 @@ class CourseRegistration(ApprovableDocument, Document):
 			)  # fmt: skip
 			self.curriculum_rows[item.course] = row
 		self.total_credits = 0
+
+	def pick_curriculum_row(self, item, candidates):
+		"""The curriculum row of the course for this semester. A Regular course must be in this semester;
+		Arrear, Dropped, Additional, Honours and Minor courses may come from any semester of the curriculum."""
+		same_semester = [r for r in candidates if r.semester == cint(self.semester)]
+		if same_semester:
+			return same_semester[0]
+		if item.registration_type == "Regular":
+			frappe.throw(
+				_("Row {0}: {1} is not a semester {2} course of curriculum {3}; register it as Arrear or Additional.").format(
+					item.idx, frappe.bold(item.course), self.semester, self.curriculum
+				)
+			)
+		return candidates[0]
 
 	def check_items(self):
 		seen = set()
@@ -131,7 +148,10 @@ class CourseRegistration(ApprovableDocument, Document):
 		return windows[0] if windows else None
 
 	def check_window(self, window):
-		"""New registrations of courses need an open window; drops are governed by the drop deadline."""
+		"""New registrations of courses need an open window; drops are governed by the drop deadline.
+
+		Checked on creation only, by the registration date: approval may complete after the window closes.
+		"""
 		if not self.is_new() or all(i.registration_type == "Dropped" for i in self.items):
 			return
 		date = getdate(self.registration_date)
@@ -160,12 +180,21 @@ class CourseRegistration(ApprovableDocument, Document):
 		for item in self.items:
 			if item.elective_group and item.registration_type != "Dropped":
 				picked.setdefault(item.elective_group, []).append(item.course)
+		in_this = {item.course for item in self.items}
 		problems = []
 		for group, courses in picked.items():
 			choose = frappe.db.get_value("Elective Group", group, "choose_n")
-			if len(courses) > choose:
-				problems.append(prefix + _("elective group {0} allows {1} course(s); {2} chosen.").format(group, choose, len(courses)))
+			chosen = len(courses) + len(self.held_in_group(group, in_this))
+			if chosen > choose:
+				problems.append(prefix + _("elective group {0} allows {1} course(s); {2} chosen.").format(group, choose, chosen))
 		return problems
+
+	def held_in_group(self, group, skip):
+		"""Courses of the elective group the student already holds a seat in, from earlier registrations."""
+		courses = frappe.get_all(
+			"Curriculum Course", {"parent": self.curriculum, "elective_group": group}, pluck="course"
+		)
+		return [c for c in courses if c not in skip and current_offering(self.student, c, self.academic_term)]
 
 	def seat_problems(self, lock):
 		"""Seat-cap messages for the electives being added. With `lock` the Elective Group row is locked
@@ -177,7 +206,7 @@ class CourseRegistration(ApprovableDocument, Document):
 			cap = frappe.db.get_value(
 				"Elective Group", item.elective_group, "seat_cap_per_course", for_update=bool(lock)
 			)
-			enrolled = count_members(self.curriculum, item.course, self.academic_term)
+			enrolled = count_members(self.curriculum, item.course, self.academic_term, lock=lock)
 			problem = rules.seat_problem(item.course, enrolled, cap, prefix)
 			problems += [problem] if problem else []
 		return problems
@@ -192,12 +221,14 @@ class CourseRegistration(ApprovableDocument, Document):
 				item.offering = current_offering(self.student, item.course, self.academic_term)
 				continue
 			item.offering = find_offering(self.curriculum, item.course, self.academic_term, section)
+			if item.offering and frappe.db.get_value("Student Group", item.offering, "oc_company") != self.company:
+				frappe.throw(_("Row {0}: the offering belongs to another company.").format(item.idx))
 			if not item.offering:
 				frappe.throw(_("Row {0}: no offering of {1} exists for {2}.").format(item.idx, frappe.bold(item.course), self.academic_term))
 
 	def apply_rows(self, enrolling):
 		"""Enroll (or on cancel, reverse) every row; a drop does the opposite of a registration."""
-		program_enrollment = latest_enrollment_name(self.student)
+		program_enrollment = latest_enrollment(self.student).name
 		for item in self.items:
 			if (item.registration_type == "Dropped") == enrolling:
 				unenroll(self.student, item, program_enrollment)
@@ -221,9 +252,3 @@ def find_class_group(student, program):
 		.run()
 	)
 	return rows[0][0] if rows else None
-
-
-def latest_enrollment_name(student):
-	return frappe.db.get_value(
-		"Program Enrollment", {"student": student, "docstatus": ["<", 2]}, "name", order_by="enrollment_date desc, creation desc"
-	)

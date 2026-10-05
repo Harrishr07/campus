@@ -9,6 +9,7 @@ a list of problem messages that cite the regulation clause.
 from frappe import _
 from frappe.utils import add_days, cint, flt, getdate
 
+
 def n(value):
 	"""A credit figure without a trailing .0."""
 	return f"{flt(value):g}"
@@ -91,8 +92,13 @@ def elective_status(enrolled, minimum, window_closed):
 	return "Below Minimum" if window_closed else "Filling"
 
 
-def term_parity(term_name, term_start):
-	"""1 if the term runs odd semesters, 0 for even: from the name ('Odd'/'Even'), else the start month."""
+def term_parity(term_name, term_start, parity=None):
+	"""1 if the term runs odd semesters, 0 for even.
+
+	Order: the term's `oc_semester_parity` ('Odd'/'Even') when set, else the name, else the start month.
+	"""
+	if parity in ("Odd", "Even"):
+		return 1 if parity == "Odd" else 0
 	name = (term_name or "").lower()
 	if "odd" in name:
 		return 1

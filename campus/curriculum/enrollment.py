@@ -7,20 +7,24 @@ duplicate checks and the HOD report all read it. Every operation is idempotent.
 import frappe
 
 
-def count_members(curriculum, course, academic_term):
-	"""Active students across the offering groups of `course` in the term."""
+def count_members(curriculum, course, academic_term, lock=False):
+	"""Active students across the offering groups of `course` in the term.
+
+	With `lock` the membership rows are read FOR UPDATE: MariaDB's REPEATABLE READ snapshot is fixed by
+	the transaction's first read, so after taking the Elective Group lock only a locking read sees what a
+	concurrent registration committed meanwhile.
+	"""
 	group = frappe.qb.DocType("Student Group")
 	member = frappe.qb.DocType("Student Group Student")
 	rows = (
 		frappe.qb.from_(group)
 		.join(member)
 		.on(member.parent == group.name)
-		.select(frappe.qb.functions("COUNT", member.student))
+		.select(member.name)
 		.where((group.oc_curriculum == curriculum) & (group.course == course))
 		.where((group.academic_term == academic_term) & (member.active == 1))
-		.run()
 	)
-	return rows[0][0]
+	return len((rows.for_update() if lock else rows).run())
 
 
 def current_offering(student, course, academic_term):

@@ -219,6 +219,14 @@ class TestOfferingsAndRecords(RegistrationTestCase):
 		self.assertEqual(len(result["existing"]), before)
 		self.assertEqual(frappe.db.count("Student Group", {"oc_curriculum": self.curriculum.name, "academic_term": self.odd}), before)
 
+	def test_explicit_semester_parity_on_the_term_overrides_the_name(self):
+		self.assertTrue(frappe.get_meta("Academic Term").has_field("oc_semester_parity"))
+		frappe.db.set_value("Academic Term", self.even, "oc_semester_parity", "Odd")
+		self.addCleanup(frappe.db.set_value, "Academic Term", self.even, "oc_semester_parity", None)
+		result = generate_offerings(self.curriculum.name, self.even, "A")
+		self.assertIn(f"REG A-{self.even}-A", result["created"])
+		self.assertNotIn(f"REG S4-{self.even}-A", result["created"])
+
 	def test_even_term_offers_even_semester_courses(self):
 		result = generate_offerings(self.curriculum.name, self.even, "A")
 		self.assertEqual(result["created"], [f"REG S4-{self.even}-A"])
@@ -301,6 +309,14 @@ class TestRegistrationRules(RegistrationTestCase):
 		)
 		self.registration([("REG AD3", "Additional"), ("REG AD4", "Additional")])
 
+	def test_choose_n_counts_electives_held_from_earlier_registrations(self):
+		self.regular("REG EL1", "REG EL2").submit()  # fills choose-2 of G1 for student 0 (EL1 cap 1 is theirs)
+		self.assert_rejected([("REG EL3", "Regular")], r"allows 2 course\(s\); 3 chosen")
+
+	def test_regular_course_of_another_semester_is_rejected_but_arrear_is_fine(self):
+		self.assert_rejected([("REG E", "Regular")], r"not a semester 5 course.*register it as Arrear")
+		self.assertEqual(self.registration([("REG E", "Arrear")]).items[0].semester, 3)
+
 	def test_elective_group_choose_n_is_enforced(self):
 		self.assert_rejected([(c, "Regular") for c in ("REG EL1", "REG EL2", "REG EL3")], r"allows 2 course\(s\); 3 chosen")
 
@@ -366,6 +382,56 @@ class TestSeatCap(RegistrationTestCase):
 			doc.submit()
 		locked = [c for c in get_value.call_args_list if c.kwargs.get("for_update") and c.args[0] == "Elective Group"]
 		self.assertTrue(locked)
+
+	def test_post_lock_seat_count_is_a_locking_read(self):
+		"""After the Elective Group lock the membership count must be `... FOR UPDATE`: a plain SELECT would
+		read the transaction's stale REPEATABLE READ snapshot and let two concurrent submits both pass.
+		(A real two-connection test is not possible: the test world is uncommitted, so a second
+		connection cannot see it.)"""
+		doc = self.regular("REG EL1", student=0)
+		with patch("frappe.db.sql", wraps=frappe.db.sql) as sql:
+			doc.submit()
+		counts = [str(c.args[0]) for c in sql.call_args_list if "tabStudent Group Student" in str(c.args[0]) and "COUNT" not in str(c.args[0]).upper() and str(c.args[0]).lstrip().upper().startswith("SELECT")]
+		locking = [q for q in counts if q.rstrip().upper().endswith("FOR UPDATE")]
+		self.assertTrue(locking, counts)
+
+
+class TestPermissions(RegistrationTestCase):
+	def user(self, email, companies, role):
+		make_user(email, companies)  # gives Academics User
+		doc = frappe.get_doc("User", email)
+		doc.add_roles(role)
+		if role == "Student":
+			doc.remove_roles("Academics User")
+		return email
+
+	def test_user_restricted_to_another_company_cannot_register_a_student(self):
+		outsider = self.user("reg-outsider2@example.com", [OTHER_COLLEGE], "Academics User")
+		frappe.set_user(outsider)
+		with self.assertRaises(frappe.PermissionError):
+			self.regular("REG C")
+
+	def test_user_restricted_to_another_company_cannot_submit(self):
+		doc = self.regular("REG C")
+		frappe.set_user(self.user("reg-outsider3@example.com", [OTHER_COLLEGE], "Academics User"))
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Course Registration", doc.name).submit()
+
+	def test_user_of_the_same_company_can_register(self):
+		frappe.set_user(self.user("reg-insider@example.com", [COLLEGE], "Academics User"))
+		self.assertEqual(self.regular("REG C").docstatus, 0)
+
+	def test_offering_of_another_company_is_rejected(self):
+		group = f"REG C-{self.odd}-A"
+		frappe.db.set_value("Student Group", group, "oc_company", OTHER_COLLEGE)
+		self.addCleanup(frappe.db.set_value, "Student Group", group, "oc_company", COLLEGE)
+		with self.assertRaisesRegex(frappe.ValidationError, "another company"):
+			self.regular("REG C").submit()
+
+	def test_student_role_user_cannot_register_anyone(self):
+		frappe.set_user(self.user("reg-student@example.com", [COLLEGE], "Student"))
+		with self.assertRaises(frappe.PermissionError):
+			self.regular("REG C", student=1)
 
 
 class TestApprovalAndEnrollment(RegistrationTestCase):

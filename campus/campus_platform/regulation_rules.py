@@ -53,7 +53,7 @@ def latest_enrollment(student):
 	return frappe.db.get_value(
 		"Program Enrollment",
 		{"student": student, "docstatus": ["<", 2]},
-		["program", "academic_year"],
+		["program", "academic_year", "name"],
 		order_by="enrollment_date desc, creation desc",
 		as_dict=True,
 	)

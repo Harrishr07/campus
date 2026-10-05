@@ -63,7 +63,15 @@ def setup_curriculum_fields():
 		field("oc_section", "Data", "Section", "oc_offering_column", in_standard_filter=1),
 		field("oc_course_category", "Link", "Course Category", "oc_section", options="Course Category", read_only=1),
 	]  # fmt: skip
-	create_custom_fields({"Program": program, "Course": course, "Student Group": student_group}, update=True)
+	term = [
+		field(
+			"oc_semester_parity", "Select", "Semester Parity", "term_name",
+			options="\nOdd\nEven", description="Which curriculum semesters run in this term; blank: guessed from the name or start month.",
+		),
+	]  # fmt: skip
+	create_custom_fields(
+		{"Program": program, "Course": course, "Student Group": student_group, "Academic Term": term}, update=True
+	)
 
 
 def field(fieldname, fieldtype, label, insert_after, **kwargs):

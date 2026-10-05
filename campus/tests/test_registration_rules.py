@@ -97,5 +97,10 @@ class TestRegistrationRules(UnitTestCase):
 		self.assertEqual(rules.term_parity("Term A", "2022-07-01"), 1)
 		self.assertEqual(rules.term_parity("Term B", "2023-01-02"), 0)
 
+	def test_term_parity_field_wins_over_name_and_month(self):
+		self.assertEqual(rules.term_parity("Odd", "2022-06-01", "Even"), 0)
+		self.assertEqual(rules.term_parity("Term B", "2023-01-02", "Odd"), 1)
+		self.assertEqual(rules.term_parity("Odd", "2022-06-01", ""), 1)
+
 	def test_prerequisite_stub_returns_true_until_phase_two(self):
 		self.assertTrue(prerequisites_met("any-student", "any-course"))
