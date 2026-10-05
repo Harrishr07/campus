@@ -8,7 +8,7 @@ creates nothing and a partial run is completed.
 
 Not built yet (arrive with their own tasks): quota (Student has no quota field until T14),
 roles "Exam Confidential" (skipped when the Role is absent) and most regulation rule values
-(seeded so far: curriculum, registration and attendance rules).
+(seeded so far: curriculum, registration, attendance, grading and exam rules).
 """
 
 import frappe
@@ -16,6 +16,7 @@ import frappe
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.regulation_rules import latest_enrollment, resolve_regulation
 from campus.tests.factories import make_company
+from campus.examinations.seed import GRADES, seed_regulation
 
 DOMAIN = "demo.campus.test"
 TRUST = "Demo Educational Trust"
@@ -110,6 +111,7 @@ def build_demo(scale):
 	make_regulations()
 	make_curriculum()
 	make_attendance_rules()
+	make_exam_rules()
 	make_users()
 	make_employees()
 	make_institution_profiles()
@@ -256,6 +258,11 @@ def make_attendance_rules():
 	for code, values in ATTENDANCE_RULES.items():
 		regulation = regulation_name(code, ENGINEERING)
 		get_or_insert("Attendance Rule", {"regulation": regulation}, values)
+
+
+def make_exam_rules():
+	for code in GRADES:
+		seed_regulation(regulation_name(code, ENGINEERING), code)
 
 
 def make_users():

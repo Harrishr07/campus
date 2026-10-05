@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Grade Sheet",
+ "doc_type": "Student Result",
+ "module": "Examinations",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Grade Sheet\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company }} &middot; {{ doc.academic_term }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Student\") }}</th><td>{{ doc.student_name }} ({{ doc.student }})</td>\n      <th>{{ _(\"Program\") }}</th><td>{{ doc.program }}</td></tr>\n  <tr><th>{{ _(\"Regulation\") }}</th><td>{{ doc.regulation }}</td>\n      <th>{{ _(\"Exam Session\") }}</th><td>{{ doc.exam_session }}</td></tr>\n</table>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr>\n    <th>{{ _(\"Course\") }}</th><th class=\"text-right\">{{ _(\"Credits\") }}</th><th class=\"text-right\">{{ _(\"CIA\") }}</th>\n    <th class=\"text-right\">{{ _(\"ESE\") }}</th><th class=\"text-right\">{{ _(\"Total %\") }}</th>\n    <th>{{ _(\"Grade\") }}</th><th class=\"text-right\">{{ _(\"GP\") }}</th><th>{{ _(\"Result\") }}</th>\n  </tr></thead>\n  <tbody>\n  {% for row in doc.courses %}\n    <tr>\n      <td>{{ row.course }}</td><td class=\"text-right\">{{ row.credits }}</td>\n      <td class=\"text-right\">{{ row.cia }}</td><td class=\"text-right\">{{ row.ese }}</td>\n      <td class=\"text-right\">{{ \"%.2f\"|format(row.total or 0) }}</td>\n      <td>{{ row.grade }}</td><td class=\"text-right\">{{ row.grade_point }}</td><td>{{ _(row.result) }}</td>\n    </tr>\n  {% endfor %}\n  </tbody>\n</table>\n<p><strong>{{ _(\"SGPA\") }}:</strong> {{ \"%.2f\"|format(doc.sgpa or 0) }} &nbsp;\n   <strong>{{ _(\"CGPA\") }}:</strong> {{ \"%.2f\"|format(doc.cgpa or 0) }} &nbsp;\n   <strong>{{ _(\"Credits earned\") }}:</strong> {{ doc.credits_earned }}</p>\n{{ oc_qr_block(doc) }}\n",
+ "creation": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-05 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

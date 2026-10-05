@@ -86,6 +86,7 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance", "frappe_wha
 # ------------
 
 before_install = "campus.install.before_install"
+before_migrate = "campus.install.before_migrate"
 after_install = "campus.install.after_install"
 after_migrate = "campus.install.after_migrate"
 
@@ -363,11 +364,15 @@ permission_query_conditions = {
 	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
 	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
+	"Mark Sheet Entry": "campus.examinations.access.marks_permission_query",
+	"Student Result": "campus.examinations.access.result_permission_query",
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 	"Lead": "campus.admissions.enquiry.has_permission",
+	"Mark Sheet Entry": "campus.examinations.access.marks_has_permission",
+	"Student Result": "campus.examinations.access.result_has_permission",
 }
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).

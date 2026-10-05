@@ -25,6 +25,14 @@ def attendance_summary(student, academic_term):
 	return summarise(student, academic_term, term_window(academic_term), {})
 
 
+def eligibility_status(student, academic_term):
+	"""Eligible / Medical band / Shortage of `student` in the term, with no read check on the Student.
+
+	For service code that has its own authorisation (the Result Run, which only a COE can start).
+	"""
+	return summarise(student, academic_term, term_window(academic_term), {})["status"]
+
+
 def summarise(student, academic_term, window, conducted_cache):
 	rule = rule_values(student)
 	offerings = [

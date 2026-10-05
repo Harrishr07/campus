@@ -9,12 +9,18 @@ from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
 from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.setup import setup_curriculum
+from campus.examinations.setup import ensure_coe_role
 
 
 def before_install():
 	ensure_dean_role()  # regulation.json permissions reference it during DocType sync
 	ensure_verification_role()  # verifiable_document.json likewise
 	ensure_aadhaar_role()  # aadhaar_access_log.json likewise
+	ensure_coe_role()  # exam doctypes likewise
+
+
+def before_migrate():
+	ensure_coe_role()  # exam doctype permissions reference it during DocType sync
 
 
 def after_install():
@@ -31,6 +37,7 @@ def after_install():
 
 
 def after_migrate():
+	ensure_coe_role()
 	ensure_dean_role()
 	ensure_verification_role()
 	setup_company_fields()
