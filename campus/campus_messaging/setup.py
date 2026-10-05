@@ -57,6 +57,16 @@ SEED_TEMPLATES = [
 		},
 	},
 	{
+		"event_key": "admission.enquiry_ack",
+		"purpose": "transactional",
+		"urgent": 1,
+		"channels": ["whatsapp"],
+		"bodies": {
+			"en": ("Enquiry received", "Dear {{ doc.lead_name }}, thank you for your admission enquiry. Our admission office will contact you shortly."),
+			"ta": ("விசாரணை பெறப்பட்டது", "அன்புள்ள {{ doc.lead_name }}, உங்கள் சேர்க்கை விசாரணைக்கு நன்றி. எங்கள் சேர்க்கை அலுவலகம் விரைவில் உங்களை தொடர்பு கொள்ளும்."),
+		},
+	},
+	{
 		"event_key": "attendance.shortage",
 		"purpose": "transactional",
 		"urgent": 0,

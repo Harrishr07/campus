@@ -192,6 +192,12 @@ doc_events["Student Applicant"]["validate"] += [
 doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
+doc_events["Lead"] = {
+	"before_insert": "campus.admissions.enquiry.before_insert",
+	"validate": "campus.admissions.enquiry.validate",
+	"after_insert": "campus.admissions.enquiry.after_insert",
+}
+
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {
@@ -327,6 +333,7 @@ scheduler_events = {
 		"campus.campus_platform.positions.sync_all_roles",
 		"campus.campus_finance.fines.daily_fine_run",
 		"campus.admissions.documents.send_daily_reminders",
+		"campus.admissions.enquiry_followup.create_due_todos",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",

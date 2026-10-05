@@ -1,0 +1,32 @@
+{
+ "allow_comments": 0,
+ "allow_delete": 0,
+ "allow_edit": 0,
+ "allow_incomplete": 0,
+ "allow_multiple": 1,
+ "allow_print": 0,
+ "anonymous": 0,
+ "apply_document_permissions": 0,
+ "doc_type": "Lead",
+ "doctype": "Web Form",
+ "is_standard": 1,
+ "list_columns": [],
+ "login_required": 0,
+ "max_attachment_size": 0,
+ "module": "Admissions",
+ "name": "admission-enquiry",
+ "published": 1,
+ "route": "admission-enquiry",
+ "show_list": 0,
+ "show_sidebar": 0,
+ "success_message": "Thank you. Our admission office will contact you shortly.",
+ "title": "Admission Enquiry",
+ "web_form_fields": [
+  {"fieldname": "company", "fieldtype": "Link", "label": "College", "options": "Company", "reqd": 1},
+  {"fieldname": "lead_name", "fieldtype": "Data", "label": "Your Name", "reqd": 1},
+  {"fieldname": "mobile_no", "fieldtype": "Data", "label": "Mobile Number", "options": "Phone", "reqd": 1},
+  {"fieldname": "email_id", "fieldtype": "Data", "label": "Email", "options": "Email", "reqd": 0},
+  {"fieldname": "oc_program_interest", "fieldtype": "Link", "label": "Program of Interest", "options": "Program", "reqd": 1},
+  {"fieldname": "oc_website_url", "fieldtype": "Data", "label": "Leave this empty", "hidden": 1, "reqd": 0}
+ ]
+}

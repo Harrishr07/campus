@@ -3,7 +3,7 @@
 import frappe
 
 from campus.admissions import admit as admission, documents, eligibility
-from campus.admissions import seat_matrix as seats
+from campus.admissions import enquiry, seat_matrix as seats
 from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
 
@@ -50,3 +50,12 @@ def admit(applicant: str):
 	applicant status Admitted. Returns {student, program_enrollment, invoice, register_no}.
 	"""
 	return admission.admit(applicant)
+
+
+@frappe.whitelist(methods=["POST"])
+def convert_lead_to_applicant(lead: str, academic_year: str | None = None):
+	"""Convert an enquiry (Lead) into a Student Applicant (name, mobile, email, program, company) and link both ways.
+
+	Idempotent: a second call returns the existing applicant's name. The academic year defaults to the current one.
+	"""
+	return enquiry.convert_lead_to_applicant(lead, academic_year)

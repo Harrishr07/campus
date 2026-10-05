@@ -17,6 +17,9 @@ def setup_admissions():
 	ensure_aadhaar_role()
 	ensure_admission_roles()
 	setup_admission_fields()
+	from campus.admissions.enquiry_setup import setup_enquiry
+
+	setup_enquiry()
 
 
 def ensure_admission_roles():
