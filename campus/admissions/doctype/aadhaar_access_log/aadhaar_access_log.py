@@ -10,5 +10,9 @@ from frappe.model.document import Document
 
 
 class AadhaarAccessLog(Document):
+	def validate(self):
+		if not self.is_new():
+			frappe.throw(_("Aadhaar Access Log rows cannot be edited."), frappe.PermissionError)
+
 	def on_trash(self):
 		frappe.throw(_("Aadhaar Access Log rows cannot be deleted."), frappe.PermissionError)

@@ -20,9 +20,14 @@ class EligibilityRule(Document):
 	def validate_single_enabled_rule(self):
 		if not self.enabled:
 			return
-		clash = frappe.db.exists(
-			"Eligibility Rule",
-			{"program": self.program, "regulation": self.regulation or ["is", "not set"], "enabled": 1, "name": ["!=", self.name]},
+		# Serialise saves per program, then re-read with a locking read: a plain SELECT after the lock would
+		# see this transaction's older snapshot.
+		frappe.db.get_value("Program", self.program, "name", for_update=True)
+		clash = frappe.db.sql(
+			"""select name from `tabEligibility Rule`
+			where program = %s and ifnull(regulation, '') = %s and enabled = 1 and name != %s
+			limit 1 for update""",
+			(self.program, self.regulation or "", self.name or ""),
 		)
 		if clash:
-			frappe.throw(_("Eligibility Rule {0} already covers this program and regulation.").format(clash))
+			frappe.throw(_("Eligibility Rule {0} already covers this program and regulation.").format(clash[0][0]))

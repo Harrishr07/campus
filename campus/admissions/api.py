@@ -3,7 +3,7 @@
 import frappe
 
 from campus.admissions import eligibility
-from campus.admissions.aadhaar import reveal_aadhaar  # noqa: F401  (public API, whitelisted)
+from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
 
 @frappe.whitelist()

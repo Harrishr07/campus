@@ -9,6 +9,17 @@ scripts, and the `frappe.client.get_password` override covers the REST call. Bot
 read permission and write a log row. Reveals are POST-only because Frappe rolls back GET requests, which
 would lose the log row. Error messages never contain the number.
 
+The only sanctioned internal path to the cleartext is `copy_aadhaar(source_doc, target_doc)` (not
+whitelisted; P1-T16 Admit uses it to carry the number from applicant to student). It needs no viewer role
+but writes an Access Log row with reason "admission copy". Installed app code can still call
+`frappe.utils.password.get_decrypted_password` directly, which no hook can gate: review apps accordingly.
+
+Log durability: `log_reveal` marks the request for commit (GET requests are rolled back otherwise) and
+registers an `after_rollback` callback that re-inserts and commits the row if the caller rolls back the
+whole transaction (e.g. a Server Script reveals then throws). A rollback to a savepoint does not fire that
+callback and can still discard the row. Log rows are immutable, and a Student or Student Applicant with
+reveal history cannot be deleted (Dynamic Link check): intended audit behaviour.
+
 Residual paths this does not close (operational controls, not code): Error Log tracebacks may capture a
 local variable holding a number being saved; Data Import files and Data Export of the form payload carry
 what the uploader typed; database and `site_config` encryption_key backups together expose every number.
@@ -17,12 +28,14 @@ what the uploader typed; database and `site_config` encryption_key backups toget
 import frappe
 from frappe import _
 from frappe.utils import now_datetime
+from frappe.utils.password import get_decrypted_password
 
 AADHAAR_DOCTYPES = ("Student Applicant", "Student")
 AADHAAR_FIELD = "oc_aadhaar"
 MASKED_FIELD = "oc_aadhaar_masked"
 VIEWER_ROLE = "Aadhaar Viewer"
 LOG_DOCTYPE = "Aadhaar Access Log"
+COPY_REASON = "admission copy"
 
 _D = (
 	(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), (1, 2, 3, 4, 0, 6, 7, 8, 9, 5), (2, 3, 4, 0, 1, 7, 8, 9, 5, 6),
@@ -99,14 +112,32 @@ def reveal_aadhaar(doctype: str, name: str):
 	return frappe.get_doc(doctype, name).get_password(AADHAAR_FIELD, raise_exception=False)
 
 
-def log_reveal(doctype, name):
-	frappe.get_doc(
-		{
-			"doctype": LOG_DOCTYPE, "user": frappe.session.user, "reference_doctype": doctype,
-			"reference_name": name, "accessed_on": now_datetime(), "ip_address": getattr(frappe.local, "request_ip", None),
-		}
-	).insert(ignore_permissions=True)  # fmt: skip
+def log_reveal(doctype, name, reason="reveal"):
+	row = {
+		"doctype": LOG_DOCTYPE, "user": frappe.session.user, "reference_doctype": doctype,
+		"reference_name": name, "accessed_on": now_datetime(), "reason": reason,
+		"ip_address": getattr(frappe.local, "request_ip", None),
+	}  # fmt: skip
+	frappe.get_doc(row).insert(ignore_permissions=True)
 	frappe.local.flags.commit = True  # a reveal over a safe method must not lose its log row
+	frappe.db.after_rollback.add(lambda: persist_after_rollback(row))
+
+
+def persist_after_rollback(row):
+	"""The caller rolled the transaction back: write the log row again, in its own transaction."""
+	frappe.get_doc(row).insert(ignore_permissions=True, ignore_links=True)  # the document may be gone too
+	frappe.db.commit()
+
+
+def copy_aadhaar(source_doc, target_doc):
+	"""Internal, non-whitelisted: carry the number of `source_doc` onto `target_doc` (saved by the caller).
+
+	Logged as an "admission copy" under the session user. Does nothing when the source has no number.
+	"""
+	number = get_decrypted_password(source_doc.doctype, source_doc.name, AADHAAR_FIELD, raise_exception=False)
+	if number:
+		log_reveal(source_doc.doctype, source_doc.name, reason=COPY_REASON)
+		target_doc.set(AADHAAR_FIELD, number)
 
 
 @frappe.whitelist()

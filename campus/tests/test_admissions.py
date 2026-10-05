@@ -8,7 +8,7 @@ from frappe.tests import UnitTestCase
 
 from campus.admissions import eligibility as elig
 from campus.admissions.aadhaar import is_valid_aadhaar, mask, verhoeff_valid
-from campus.admissions.api import evaluate_eligibility, reveal_aadhaar
+from campus.admissions.api import copy_aadhaar, evaluate_eligibility, reveal_aadhaar
 from campus.tests.factories import make_company, make_user
 from campus.tests.test_regulation import make_program, make_regulation, make_year, year_name
 from campus.tests.utils import CampusTestCase
@@ -124,6 +124,8 @@ class TestAdmissionsIntegration(CampusTestCase):
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
+		frappe.local.flags.commit = False
+		frappe.db.after_rollback.reset()  # the suite's own rollback must not re-insert log rows
 
 	def applicant(self, aadhaar=None, category="OC", marks=(60, 60, 60)):
 		return frappe.get_doc(
@@ -267,9 +269,13 @@ class TestAdmissionsIntegration(CampusTestCase):
 		doc = self.applicant(VALID)
 		frappe.local.flags.commit = False
 		frappe.set_user(VIEWER)
-		reveal_aadhaar("Student Applicant", doc.name)
+		frappe.local.request_ip = "10.1.2.3"
+		try:
+			reveal_aadhaar("Student Applicant", doc.name)
+		finally:
+			del frappe.local.request_ip
 		self.assertTrue(frappe.local.flags.commit)
-		frappe.local.flags.commit = False
+		self.assertEqual(frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name}).ip_address, "10.1.2.3")
 
 	def test_jinja_get_password_is_gated_and_logged(self):
 		doc = self.applicant(VALID)
@@ -320,3 +326,51 @@ class TestAdmissionsIntegration(CampusTestCase):
 		).insert()
 		self.assertEqual(elig.find_rule(PROGRAM, self.regulation).name, specific.name)
 		self.assertEqual(elig.find_rule(PROGRAM).name, blank)
+
+	def test_log_row_survives_a_full_rollback_by_the_caller(self):
+		doc = self.applicant(VALID)
+		frappe.db.commit()  # keep the fixtures; only the reveal below is rolled back
+		frappe.set_user(VIEWER)
+		frappe.get_doc("Student Applicant", doc.name).get_password("oc_aadhaar")  # as a Server Script would
+		frappe.db.rollback()
+		rows = frappe.get_all("Aadhaar Access Log", {"reference_name": doc.name, "user": VIEWER}, pluck="name")
+		self.assertEqual(len(rows), 1)
+		frappe.db.delete("Aadhaar Access Log", {"reference_name": doc.name})
+		frappe.db.delete("Student Applicant", {"name": doc.name})
+		frappe.db.commit()
+
+	def test_copy_aadhaar_carries_number_and_logs_a_system_copy(self):
+		source = self.applicant(VALID)
+		student = frappe.get_doc(
+			{"doctype": "Student", "first_name": "Copy", "oc_company": COLLEGE,
+			 "student_email_id": f"copy-{frappe.generate_hash(length=8)}@example.com"}
+		)  # fmt: skip
+		copy_aadhaar(frappe.get_doc("Student Applicant", source.name), student)
+		student.insert()
+		self.assertEqual(student.oc_aadhaar_masked, f"XXXX-XXXX-{VALID[-4:]}")
+		self.assertEqual(frappe.get_doc("Student", student.name).get_password("oc_aadhaar"), VALID)
+		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": source.name})
+		self.assertEqual((log.reason, log.user), ("admission copy", "Administrator"))
+		self.assertFalse(hasattr(copy_aadhaar, "__wrapped__") or copy_aadhaar in frappe.whitelisted)
+
+	def test_copy_without_a_number_does_nothing(self):
+		source, student = self.applicant(), frappe.new_doc("Student")
+		copy_aadhaar(source, student)
+		self.assertFalse(student.get("oc_aadhaar"))
+
+	def test_log_rows_cannot_be_edited_and_block_deleting_the_document(self):
+		doc = self.applicant(VALID)
+		reveal_aadhaar("Student Applicant", doc.name)
+		log = frappe.get_last_doc("Aadhaar Access Log", {"reference_name": doc.name})
+		log.user = PLAIN
+		with self.assertRaises(frappe.PermissionError):
+			log.save()
+		with self.assertRaises(frappe.LinkExistsError):
+			frappe.delete_doc("Student Applicant", doc.name)
+
+	def test_enabled_rule_check_takes_a_lock_and_rejects_clash(self):
+		rule = frappe.get_doc({"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": None})
+		with patch.object(frappe.db, "get_value", wraps=frappe.db.get_value) as get_value:
+			with self.assertRaises(frappe.ValidationError):
+				rule.insert()
+		self.assertTrue(any(c.kwargs.get("for_update") for c in get_value.call_args_list))
