@@ -3,6 +3,7 @@
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from campus.campus_finance.fee_heads import FEE_HEADS, seed_fee_categories
+from campus.campus_finance.no_dues import seed_office_roles
 
 MODULE = "Campus Finance"
 
@@ -17,6 +18,7 @@ def field(fieldname, fieldtype, label, insert_after, **kwargs):
 def setup_finance():
 	setup_finance_fields()
 	seed_fee_categories()
+	seed_office_roles()
 
 
 def setup_finance_fields():

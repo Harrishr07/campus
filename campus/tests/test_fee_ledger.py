@@ -6,6 +6,7 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_retu
 from frappe.utils import flt, today
 
 from campus.campus_finance import api, ledger
+from campus.campus_platform.verification import verify
 from campus.campus_finance.fee_heads import CAUTION_DEPOSIT, EXAM, HOSTEL, TUITION
 from campus.campus_finance.report.student_fee_ledger import student_fee_ledger as report
 from campus.tests.factories import make_user
@@ -15,6 +16,7 @@ from campus.tests.utils import CampusTestCase
 COLLEGE, TRUST = "Ledger Test College", "Ledger Test Trust"
 YEAR, PROGRAM = "Ledger Test 2026", "Ledger Test BE"
 TRUST_USER, COLLEGE_USER = "ledger-trust@example.com", "ledger-college@example.com"
+WARDEN_USER = "ledger-warden@example.com"
 
 
 class TestSplit(CampusTestCase):
@@ -40,8 +42,10 @@ class LedgerFixture(CampusTestCase):
 		_group, cls.students = make_enrolled_students(COLLEGE, PROGRAM, YEAR, 3, "LdgStu")
 		make_user(TRUST_USER, [TRUST])
 		make_user(COLLEGE_USER, [COLLEGE])
+		make_user(WARDEN_USER, [COLLEGE])
 		for user in (TRUST_USER, COLLEGE_USER):
 			frappe.get_doc("User", user).add_roles("Accounts User")
+		frappe.get_doc("User", WARDEN_USER).add_roles("Warden")
 
 	def setUp(self):
 		frappe.db.savepoint("ledger_test")
@@ -96,9 +100,9 @@ class TestDues(LedgerFixture):
 
 	def test_scopes_restrict_dues_to_those_heads(self):
 		self.invoice_both()
-		self.assertEqual(api.has_dues(self.student, scopes=[EXAM]), {"total": 2000, "by_company": {COLLEGE: 2000}, "by_head": {EXAM: 2000}})
+		self.assertEqual(api.has_dues(self.student, scopes=[EXAM]), {"total": 2000, "by_company": {COLLEGE: 2000}, "by_head": {EXAM: 2000}, "blocking": 2000})
 		self.assertEqual(api.has_dues(self.student, scopes=[EXAM, HOSTEL]).total, 12000)
-		self.assertEqual(api.has_dues(self.student, scopes=["Library"]), {"total": 0, "by_company": {}, "by_head": {}})
+		self.assertEqual(api.has_dues(self.student, scopes=["Library"]), {"total": 0, "by_company": {}, "by_head": {}, "blocking": 0})
 
 	def test_payments_and_credit_notes_reduce_dues(self):
 		college, _trust = self.invoice_both()
@@ -110,6 +114,36 @@ class TestDues(LedgerFixture):
 		dues = api.has_dues(self.student)
 		self.assertEqual(dues.total, 52000 - 2000 - 4000)
 		self.assertEqual(dues.by_company, {COLLEGE: 42000 - 2000 - 4000, TRUST: 10000})
+
+	def test_a_credit_note_is_attributed_to_its_own_heads(self):
+		college, _trust = self.invoice_both()
+		note = make_sales_return(college.name)
+		note.items = note.items[:1]
+		note.items[0].qty = -0.1  # 4000 off the tuition line
+		note.insert().submit()
+		dues = api.has_dues(self.student)
+		self.assertEqual(dues.by_head, {TUITION: 36000, EXAM: 2000, HOSTEL: 10000})
+		self.assertEqual(api.has_dues(self.student, scopes=[EXAM]).total, 2000)
+
+	def test_a_refund_owed_by_one_company_does_not_hide_dues_of_another(self):
+		self.invoice(COLLEGE, self.college, {TUITION: 5000})
+		refund = frappe.get_doc(
+			{
+				"doctype": "Sales Invoice", "company": TRUST, "student": self.student, "is_return": 1, "posting_date": today(),
+				"due_date": today(), "customer": frappe.db.get_value("Student", self.student, "customer"),
+				"items": [{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}],
+			}
+		).insert()
+		refund.submit()
+		dues = api.has_dues(self.student)
+		self.assertEqual((dues.total, dues.blocking), (0, 5000))
+		self.assertEqual(dues.by_company, {COLLEGE: 5000, TRUST: -5000})
+
+	def test_an_invoice_without_a_student_counts_through_the_customer(self):
+		invoice = self.invoice(COLLEGE, self.college, {TUITION: 700})
+		frappe.db.set_value("Sales Invoice", invoice.name, "student", None)
+		self.assertEqual(api.has_dues(self.student).total, 700)
+		self.assertEqual([i.name for i in api.student_invoices(self.student)], [invoice.name])
 
 	def test_a_student_with_no_invoices_owes_nothing(self):
 		self.assertEqual(api.has_dues(self.students[2]).total, 0)
@@ -147,6 +181,7 @@ class TestLedgerReport(LedgerFixture):
 		for company in (COLLEGE, TRUST):
 			self.assertEqual(sum(r["debit"] - r["credit"] for r in rows if r["company"] == company), self.gl_balance(customer, company))
 		self.assertEqual(summary[0]["value"], 40000)
+		self.assertEqual({r["currency"] for r in rows}, {"INR"})
 
 	def test_invoices_split_by_head_and_payments_have_no_head(self):
 		college, _trust = self.invoice_both()
@@ -262,3 +297,73 @@ class TestNoDuesClearance(LedgerFixture):
 		doc.signoffs[1].status = "Pending"
 		doc.save()
 		self.assertFalse(doc.signoffs[1].cleared_by)
+
+	def test_a_refund_owed_elsewhere_does_not_let_a_student_with_dues_through(self):
+		self.invoice(COLLEGE, self.college, {TUITION: 5000})
+		frappe.get_doc(
+			{
+				"doctype": "Sales Invoice", "company": TRUST, "student": self.student, "is_return": 1, "posting_date": today(),
+				"due_date": today(), "customer": frappe.db.get_value("Student", self.student, "customer"),
+				"items": [{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}],
+			}
+		).insert().submit()
+		doc = self.clearance().insert()
+		self.clear_all(doc)
+		doc.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "dues"):
+			doc.submit()
+
+	def test_standard_offices_cannot_be_removed_or_made_optional(self):
+		doc = self.clearance().insert()
+		doc.remove(doc.signoffs[1])
+		with self.assertRaisesRegex(frappe.ValidationError, "Library"):
+			doc.save()
+		doc = self.clearance().insert()
+		doc.signoffs[3].mandatory = 0
+		with self.assertRaisesRegex(frappe.ValidationError, "Lab"):
+			doc.save()
+		doc = self.clearance().insert()
+		doc.signoffs[0].office = "Accts"  # renaming is removing
+		with self.assertRaisesRegex(frappe.ValidationError, "Accounts"):
+			doc.save()
+
+	def test_an_office_is_cleared_only_by_its_roles(self):
+		doc = self.clearance().insert()
+		frappe.set_user(COLLEGE_USER)  # an accounts user, not the warden
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		doc.signoffs[2].status = "Cleared"
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		doc.signoffs[0].status = "Cleared"  # Accounts: allowed
+		doc.save()
+		frappe.set_user(WARDEN_USER)
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		doc.signoffs[2].status = "Cleared"
+		doc.save()
+		self.assertEqual(doc.signoffs[2].cleared_by, WARDEN_USER)
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		doc.signoffs[0].status = "Pending"  # reopening the Accounts sign-off is not the warden's
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+
+	def test_clearance_tracks_changes(self):
+		self.assertTrue(frappe.get_meta("No Dues Clearance").track_changes)
+
+	def test_cancelling_revokes_the_certificate_and_an_amendment_issues_a_new_one(self):
+		doc = self.clearance().insert()
+		self.clear_all(doc)
+		doc.save().submit()
+		code = frappe.db.get_value("No Dues Clearance", doc.name, "verification_code")
+		self.assertEqual(verify(code).status, "Valid")
+		doc.cancel()
+		found = verify(code)
+		self.assertEqual(found.status, "Revoked")
+		self.assertIn(doc.name, found.revocation_reason)
+		amended = frappe.copy_doc(doc)
+		amended.amended_from, amended.docstatus = doc.name, 0
+		amended.insert()
+		self.clear_all(amended)
+		amended.save().submit()
+		self.assertNotEqual(amended.verification_code, code)
+		self.assertEqual(verify(amended.verification_code).status, "Valid")

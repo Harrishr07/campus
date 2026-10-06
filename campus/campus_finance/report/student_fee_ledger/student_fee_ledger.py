@@ -34,15 +34,16 @@ def columns():
 		{"fieldname": "voucher_type", "label": _("Voucher Type"), "fieldtype": "Data", "width": 120},
 		{"fieldname": "voucher_no", "label": _("Voucher No"), "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 160},
 		{"fieldname": "head", "label": _("Fee Head"), "fieldtype": "Data", "width": 130},
-		{"fieldname": "debit", "label": _("Debit"), "fieldtype": "Currency", "options": "INR", "width": 110},
-		{"fieldname": "credit", "label": _("Credit"), "fieldtype": "Currency", "options": "INR", "width": 110},
-		{"fieldname": "balance", "label": _("Balance"), "fieldtype": "Currency", "options": "INR", "width": 120},
+		{"fieldname": "currency", "label": _("Currency"), "fieldtype": "Link", "options": "Currency", "width": 70},
+		{"fieldname": "debit", "label": _("Debit"), "fieldtype": "Currency", "options": "currency", "width": 110},
+		{"fieldname": "credit", "label": _("Credit"), "fieldtype": "Currency", "options": "currency", "width": 110},
+		{"fieldname": "balance", "label": _("Balance"), "fieldtype": "Currency", "options": "currency", "width": 120},
 	]  # fmt: skip
 
 
 def summary(student, companies):
 	dues = ledger.has_dues(student, companies=companies)
-	return [{"label": _("Outstanding"), "value": dues.total, "datatype": "Currency", "indicator": "Red" if dues.total > 0 else "Green"}] + [
+	return [{"label": _("Outstanding"), "value": dues.blocking, "datatype": "Currency", "indicator": "Red" if dues.blocking > 0 else "Green"}] + [
 		{"label": label, "value": amount, "datatype": "Currency"}
 		for label, amount in (*dues.by_company.items(), *dues.by_head.items())
 	]

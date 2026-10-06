@@ -7,42 +7,202 @@
  "is_submittable": 1,
  "title_field": "student_name",
  "field_order": [
-  "naming_series", "student", "student_name", "company", "column_break", "purpose", "clearance_date",
-  "dues_section", "dues_total", "dues_checked_on", "dues_note", "signoff_section", "signoffs",
-  "certificate_section", "verification_code", "amended_from"
+  "naming_series",
+  "student",
+  "student_name",
+  "company",
+  "column_break",
+  "purpose",
+  "clearance_date",
+  "dues_section",
+  "dues_total",
+  "dues_checked_on",
+  "dues_note",
+  "signoff_section",
+  "signoffs",
+  "certificate_section",
+  "verification_code",
+  "amended_from"
  ],
  "fields": [
-  {"fieldname": "naming_series", "fieldtype": "Select", "label": "Series", "options": "NDC-.YYYY.-", "default": "NDC-.YYYY.-", "hidden": 1},
-  {"fieldname": "student", "fieldtype": "Link", "label": "Student", "options": "Student", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1, "search_index": 1},
-  {"fieldname": "student_name", "fieldtype": "Data", "label": "Student Name", "fetch_from": "student.student_name", "read_only": 1, "in_list_view": 1},
-  {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company", "fetch_from": "student.oc_company", "read_only": 1, "in_standard_filter": 1},
-  {"fieldname": "column_break", "fieldtype": "Column Break"},
-  {"fieldname": "purpose", "fieldtype": "Data", "label": "Purpose", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "clearance_date", "fieldtype": "Date", "label": "Date", "default": "Today", "reqd": 1},
-  {"fieldname": "dues_section", "fieldtype": "Section Break", "label": "Dues"},
-  {"fieldname": "dues_total", "fieldtype": "Currency", "label": "Dues (All Companies)", "read_only": 1, "no_copy": 1, "in_list_view": 1},
-  {"fieldname": "dues_checked_on", "fieldtype": "Datetime", "label": "Dues Checked On", "read_only": 1, "no_copy": 1},
-  {"fieldname": "dues_note", "fieldtype": "Small Text", "label": "Dues Note", "read_only": 1, "no_copy": 1},
-  {"fieldname": "signoff_section", "fieldtype": "Section Break", "label": "Sign-off"},
-  {"fieldname": "signoffs", "fieldtype": "Table", "label": "Sign-off", "options": "No Dues Signoff", "reqd": 1},
-  {"fieldname": "certificate_section", "fieldtype": "Section Break", "label": "Certificate"},
-  {"fieldname": "verification_code", "fieldtype": "Data", "label": "Verification Code", "read_only": 1, "no_copy": 1},
-  {"fieldname": "amended_from", "fieldtype": "Link", "label": "Amended From", "options": "No Dues Clearance", "read_only": 1, "no_copy": 1, "print_hide": 1}
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "NDC-.YYYY.-",
+   "default": "NDC-.YYYY.-",
+   "hidden": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "student.oc_company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Data",
+   "label": "Purpose",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "clearance_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "default": "Today",
+   "reqd": 1
+  },
+  {
+   "fieldname": "dues_section",
+   "fieldtype": "Section Break",
+   "label": "Dues"
+  },
+  {
+   "fieldname": "dues_total",
+   "fieldtype": "Currency",
+   "label": "Dues (All Companies)",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "dues_checked_on",
+   "fieldtype": "Datetime",
+   "label": "Dues Checked On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "dues_note",
+   "fieldtype": "Small Text",
+   "label": "Dues Note",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "signoff_section",
+   "fieldtype": "Section Break",
+   "label": "Sign-off"
+  },
+  {
+   "fieldname": "signoffs",
+   "fieldtype": "Table",
+   "label": "Sign-off",
+   "options": "No Dues Signoff",
+   "reqd": 1
+  },
+  {
+   "fieldname": "certificate_section",
+   "fieldtype": "Section Break",
+   "label": "Certificate"
+  },
+  {
+   "fieldname": "verification_code",
+   "fieldtype": "Data",
+   "label": "Verification Code",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "No Dues Clearance",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-06 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Finance",
  "name": "No Dues Clearance",
  "owner": "Administrator",
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "report": 1, "export": 1},
-  {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "report": 1, "export": 1},
-  {"role": "Accounts User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1},
-  {"role": "Academics User", "read": 1, "write": 1, "report": 1},
-  {"role": "Warden", "read": 1, "write": 1},
-  {"role": "Principal", "read": 1, "report": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "Warden",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Librarian",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Lab In-charge",
+   "read": 1,
+   "write": 1
+  }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

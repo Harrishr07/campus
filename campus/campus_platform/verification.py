@@ -102,6 +102,20 @@ def revoke(code_or_name, reason):
 	return record
 
 
+def revoke_for(doc, reason):
+	"""Revoke every valid Verifiable Document issued for `doc`, e.g. when the document is cancelled.
+
+	An internal path for controllers: no role check, as the caller is acting on its own document.
+	"""
+	for name in frappe.get_all(DOCTYPE, {"reference_doctype": doc.doctype, "reference_name": doc.name, "status": "Valid"}, pluck="name"):
+		record = frappe.get_doc(DOCTYPE, name)
+		record.status = "Revoked"
+		record.revoked_on = now_datetime()
+		record.revoked_by = frappe.session.user
+		record.revocation_reason = reason
+		record.save(ignore_permissions=True)
+
+
 def verify(code):
 	"""Pure lookup by code. Returns a dict of the verifiable facts, or None for an unknown code."""
 	name = frappe.db.get_value(DOCTYPE, {"code": normalize_code(code)}, "name")

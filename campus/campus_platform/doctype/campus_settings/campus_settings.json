@@ -9,7 +9,9 @@
   "verification_base_url",
   "data_retention_days",
   "languages_enabled",
-  "default_company"
+  "default_company",
+  "no_dues_section",
+  "no_dues_office_roles"
  ],
  "fields": [
   {
@@ -49,13 +51,25 @@
    "label": "Default Company",
    "options": "Company",
    "description": "Default company for trust users."
+  },
+  {
+   "fieldname": "no_dues_section",
+   "fieldtype": "Section Break",
+   "label": "No Dues"
+  },
+  {
+   "fieldname": "no_dues_office_roles",
+   "fieldtype": "Table",
+   "label": "No Dues Office Roles",
+   "options": "No Dues Office Role",
+   "description": "Roles allowed to clear each office on a No Dues Clearance. Offices without a row can be cleared by anyone who can edit the clearance."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-06 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Campus Settings",
