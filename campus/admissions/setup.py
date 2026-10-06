@@ -64,6 +64,8 @@ def oc_lead_can_be_unique():
 	The duplicates are logged and the constraint skipped (conversion still guards by lookup under a row
 	lock); once they are merged or cleared, the next migrate creates the index.
 	"""
+	if not frappe.db.has_column("Student Applicant", "oc_lead"):  # fresh install: the field is not created yet
+		return True
 	duplicates = frappe.db.sql(
 		"select oc_lead from `tabStudent Applicant` where oc_lead is not null and oc_lead != '' "
 		"group by oc_lead having count(*) > 1"

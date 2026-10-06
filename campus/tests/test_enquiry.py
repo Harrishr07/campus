@@ -445,3 +445,9 @@ class TestLeadLinkIndex(EnquiryTestCase):
 		from campus.admissions import setup
 
 		self.assertTrue(setup.oc_lead_can_be_unique())
+
+	def test_missing_column_on_a_fresh_install_keeps_the_unique_index(self):
+		from campus.admissions import setup
+
+		with unittest_patch.object(frappe.db, "has_column", return_value=False):
+			self.assertTrue(setup.oc_lead_can_be_unique())
