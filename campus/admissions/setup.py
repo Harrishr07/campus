@@ -58,6 +58,25 @@ def aadhaar_fields(insert_after):
 	]  # fmt: skip
 
 
+def oc_lead_can_be_unique():
+	"""False when existing applicants already share an enquiry: the unique index would fail migrate.
+
+	The duplicates are logged and the constraint skipped (conversion still guards by lookup under a row
+	lock); once they are merged or cleared, the next migrate creates the index.
+	"""
+	duplicates = frappe.db.sql(
+		"select oc_lead from `tabStudent Applicant` where oc_lead is not null and oc_lead != '' "
+		"group by oc_lead having count(*) > 1"
+	)
+	if not duplicates:
+		return True
+	frappe.log_error(
+		title="Student Applicant.oc_lead unique index skipped",
+		message="Enquiries with more than one applicant: " + ", ".join(row[0] for row in duplicates),
+	)
+	return False
+
+
 def setup_admission_fields():
 	"""Create/refresh the admission fields. Idempotent."""
 	applicant = [
@@ -68,7 +87,7 @@ def setup_admission_fields():
 			options="Admission Quota", in_standard_filter=1),
 		field("oc_counselling_authority", "Link", "Counselling Authority", "oc_admission_quota",
 			options="Counselling Authority"),
-		field("oc_lead", "Link", "Enquiry (Lead)", "oc_counselling_authority", options="Lead", unique=1, no_copy=1,
+		field("oc_lead", "Link", "Enquiry (Lead)", "oc_counselling_authority", options="Lead", unique=int(oc_lead_can_be_unique()), no_copy=1,
 			description="One applicant per enquiry."),
 		field("oc_admission_column", "Column Break", None, "oc_lead"),
 		field("oc_allotment_no", "Data", "Allotment No", "oc_admission_column", search_index=1),

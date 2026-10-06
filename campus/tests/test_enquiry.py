@@ -132,6 +132,20 @@ class TestWebEnquiry(EnquiryTestCase):
 		self.assertEqual(enquiry.whatsapp_number(doc(mobile_no="1234", whatsapp_no="9876543210")), "+919876543210")
 		self.assertIsNone(enquiry.whatsapp_number(doc(mobile_no="12345")))
 
+	def test_indian_numbers_have_one_canonical_form(self):
+		doc = frappe._dict
+		for variant in ("9876543210", "09876543210", "919876543210", "+919876543210", "+91 98765 43210",
+				"+9109876543210", "+91 0 98765 43210", "0919876543210", "+91-09876543210", "919876543210"):  # fmt: skip
+			self.assertEqual(enquiry.whatsapp_number(doc(mobile_no=variant)), "+919876543210", variant)
+
+	def test_non_indian_plus_numbers_are_left_alone_and_junk_is_rejected(self):
+		doc = frappe._dict
+		self.assertEqual(enquiry.whatsapp_number(doc(mobile_no="+1 (415) 555-0132")), "+14155550132")
+		self.assertEqual(enquiry.whatsapp_number(doc(mobile_no="+44 7911 123456")), "+447911123456")
+		self.assertIsNone(enquiry.whatsapp_number(doc(mobile_no="+9112345")))
+		self.assertIsNone(enquiry.whatsapp_number(doc(mobile_no="5876543210")))
+		self.assertEqual(enquiry.whatsapp_number(doc(mobile_no="9123456789")), "+919123456789")  # starts with 91, no prefix
+
 	def test_officer_changes_update_the_rule(self):
 		submit_web_form()
 		name = enquiry.RULE_PREFIX + COLLEGE
@@ -399,3 +413,35 @@ class TestLeadScoping(EnquiryTestCase):
 		self.as_user(OFFICER_A)
 		self.assertFalse(frappe.has_permission("Lead", "read", lead.name))
 		self.assertNotIn(lead.name, frappe.get_list("Lead", pluck="name"))
+
+	def test_sales_user_keeps_standard_access_to_company_less_leads(self):
+		sales = make_user("enquiry-sales@example.com", [])
+		frappe.get_doc("User", "enquiry-sales@example.com").add_roles("Sales User")
+		self.as_user("enquiry-sales@example.com")
+		lead = frappe.get_doc({"doctype": "Lead", "first_name": "Walkin", "email_id": f"walkin{next(EMAILS)}@example.com"}).insert()
+		self.addCleanup(frappe.delete_doc, "Lead", lead.name, force=True, ignore_permissions=True)
+		self.assertTrue(frappe.has_permission("Lead", "read", lead.name))
+		self.assertIn(lead.name, frappe.get_list("Lead", pluck="name"))
+		self.assertTrue(frappe.has_permission("Lead", "create"))
+
+	def test_new_company_less_lead_is_not_denied_to_an_officer(self):
+		self.assertTrue(enquiry.has_permission(frappe.new_doc("Lead"), "create", OFFICER_A))
+
+
+class TestLeadLinkIndex(EnquiryTestCase):
+	def test_duplicate_applicants_per_enquiry_skip_the_unique_index_and_are_logged(self):
+		from campus.admissions import setup
+
+		real_sql = frappe.db.sql
+
+		def sql(query, *args, **kwargs):
+			return (("CRM-LEAD-X",),) if "oc_lead" in str(query) else real_sql(query, *args, **kwargs)
+
+		with unittest_patch.object(frappe.db, "sql", sql):
+			self.assertFalse(setup.oc_lead_can_be_unique())
+		self.assertTrue(frappe.db.exists("Error Log", {"method": "Student Applicant.oc_lead unique index skipped"}))
+
+	def test_no_duplicates_keeps_the_unique_index(self):
+		from campus.admissions import setup
+
+		self.assertTrue(setup.oc_lead_can_be_unique())

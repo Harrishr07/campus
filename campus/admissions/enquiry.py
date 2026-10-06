@@ -70,32 +70,43 @@ def guard_guest_submission(doc):
 
 # ---- Lead scoping -------------------------------------------------------------------------
 
+ERPNEXT_LEAD_ROLES = {"System Manager", "Sales Manager", "Sales User"}
+
+
 def sees_all_leads(user):
-	return user == "Administrator" or "System Manager" in frappe.get_roles(user)
+	return user == "Administrator" or bool(ERPNEXT_LEAD_ROLES & set(frappe.get_roles(user)))
 
 
 def get_permission_query_conditions(user=None, doctype=None):
-	"""A Lead with no company belongs to no college's officers: only System Managers see it."""
+	"""A saved Lead with no company belongs to no college's officers.
+
+	Only users whose Lead access comes solely from campus admission roles are restricted; ERPNext Sales
+	users and System Managers keep the standard behaviour.
+	"""
 	if sees_all_leads(user or frappe.session.user):
 		return ""
 	return "(`tabLead`.`company` is not null and `tabLead`.`company` != '')"
 
 
 def has_permission(doc, ptype=None, user=None):
-	"""A hook can only deny: a company-less Lead is denied to everyone but System Managers."""
-	return bool(doc.get("company")) or sees_all_leads(user or frappe.session.user)
+	"""A hook can only deny: a saved company-less Lead is denied to campus-role-only users (new docs pass)."""
+	if doc.is_new() or doc.get("company"):
+		return True
+	return sees_all_leads(user or frappe.session.user)
 
 
 # ---- acknowledgement ----------------------------------------------------------------------
 
 def whatsapp_number(doc):
-	"""The enquirer's number in +91 form, or None."""
-	number = re.sub(r"[^\d+]", "", doc.whatsapp_no or doc.mobile_no or "")
-	if re.fullmatch(r"[6-9]\d{9}", number):
-		return "+91" + number
-	if re.fullmatch(r"(91|0)?[6-9]\d{9}", number):
-		return "+91" + number[-10:]
-	return number if number.startswith("+") and len(number) >= 11 else None
+	"""The enquirer's number: Indian numbers as +91 and exactly 10 digits, other + numbers as given, or None."""
+	raw = re.sub(r"[^\d+]", "", doc.whatsapp_no or doc.mobile_no or "")
+	digits = raw.replace("+", "")
+	national = digits.lstrip("0")
+	if len(national) > 10 and national.startswith("91"):
+		national = national[2:].lstrip("0")
+	if re.fullmatch(r"[6-9]\d{9}", national):
+		return "+91" + national
+	return "+" + digits if raw.startswith("+") and len(digits) >= 10 else None
 
 
 def acknowledge(doc):
