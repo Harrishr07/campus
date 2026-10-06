@@ -52,7 +52,7 @@ class IqacFixture(ExamFixture):
 			sheet = frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": offering})
 			frappe.db.set_value("Mark Sheet Entry Row", {"parent": sheet, "student": student.name}, "ese", 40)
 		self.run_session()
-		frappe.db.set_value("Exam Session", self.session.name, "is_final_year", 1)
+		frappe.db.set_value("Exam Session", self.session.name, {"is_final_year": 1, "status": "Published"})
 
 
 class TestLiveMetrics(IqacFixture):
@@ -87,6 +87,12 @@ class TestLiveMetrics(IqacFixture):
 		self.assertEqual(metric.value, 4)
 		self.assertEqual(sorted(r["name"] for r in json.loads(metric.snapshot)["inputs"]["students_admitted"]["records"]),
 			sorted(enrollments))  # fmt: skip
+
+	def test_unpublished_final_year_session_is_not_counted(self):
+		self.make_results()
+		frappe.db.set_value("Exam Session", self.session.name, "status", "Marks Entry")
+		compute.compute_cycle(self.cycle.name)
+		self.assertEqual(self.metric(NODE_26_3).value, 0)
 
 	def test_recompute_updates_in_place_and_zero_appeared_gives_zero(self):
 		compute.compute_cycle(self.cycle.name)

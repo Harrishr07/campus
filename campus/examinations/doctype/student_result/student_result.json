@@ -119,25 +119,29 @@
    "role": "System Manager",
    "read": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "print": 1
   },
   {
    "role": "COE",
    "read": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "print": 1
   },
   {
    "role": "Dean Academics",
    "read": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "print": 1
   },
   {
    "role": "Academics User",
    "read": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "print": 1
   },
   {
    "role": "Student",

@@ -310,11 +310,19 @@ class TestResultAccess(ExamFixture):
 		self.run_session()
 		self.assertEqual(len(self.visible(COE_USER)), 5)  # four results of the session and the earlier one
 
+	def test_staff_roles_may_print_results(self):
+		for role in ("System Manager", "COE", "Dean Academics", "Academics User"):
+			perm = frappe.get_all("DocPerm", {"parent": "Student Result", "role": role}, ["print"])
+			self.assertEqual([p.print for p in perm], [1], role)
+
 	def test_grade_sheet_carries_a_verifiable_qr(self):
 		self.run_session()
 		frappe.set_user(COE_USER)
 		with self.assertRaises(frappe.ValidationError):
 			api.issue_grade_sheet(self.result(self.s22).name)  # not published yet
+		self.publish(add_days(now_datetime(), 1))
+		with self.assertRaises(frappe.ValidationError):
+			api.issue_grade_sheet(self.result(self.s22).name)  # published, but publish_at is still ahead
 		self.publish(add_days(now_datetime(), -1))
 		code = frappe.db.get_value("Verifiable Document", api.issue_grade_sheet(self.result(self.s22).name), "code")
 		html = frappe.get_print("Student Result", self.result(self.s22).name, "Grade Sheet")

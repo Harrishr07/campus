@@ -44,7 +44,9 @@ def appeared_results(company, academic_year):
 	"""{Student Result: [course results]} of the final-year results in which at least one course was sat."""
 	terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
 	sessions = frappe.get_all(
-		"Exam Session", {"company": company, "is_final_year": 1, "academic_term": ["in", terms]}, pluck="name"
+		"Exam Session",
+		{"company": company, "is_final_year": 1, "status": "Published", "academic_term": ["in", terms]},
+		pluck="name",
 	)
 	if not sessions:
 		return {}

@@ -10,9 +10,11 @@ from campus.student_services.attendance_rules import eligibility, overall_percen
 RULE_FIELDS = ("formula", "overall_min_pct", "medical_band_min_pct", "per_course_min_pct")
 
 
-@frappe.whitelist()
 def attendance_summary(student, academic_term):
 	"""Attendance eligibility of `student` in `academic_term` under the student's regulation.
+
+	Not whitelisted: the Student read check alone would let any Student or Guardian role holder read a
+	classmate's attendance over HTTP. Callers are Python code (the portal resolves its own student).
 
 	Returns {"offerings": [{offering, course, conducted, attended, leave, pct}], "overall_pct",
 	"per_course_min_pct", "status"}.

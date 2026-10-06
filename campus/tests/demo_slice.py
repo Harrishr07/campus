@@ -10,8 +10,10 @@ so the demo needs no worker and leaves nothing in the job queue.
 
 The demo treats the Exam Session as the final-year session of the college (`is_final_year`): the data has
 no real final-year batch, and flagging the session is what gives AQAR metric 2.6.3 data to show.
-Attendance dates are fixed to the first eight weeks of the academic term, so the outcome never depends on
-the day the demo is built.
+Attendance dates are fixed to the first eight weeks of the academic term, so the outcome does not change
+from day to day once those weeks are past. Attendance counts only sessions dated up to today, so a demo built
+before the end of week 8 of the term (1 June 2026 start for the demo year) shows fewer conducted sessions and
+different percentages; build it after week 8.
 """
 
 import frappe

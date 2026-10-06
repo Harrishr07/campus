@@ -55,6 +55,34 @@ def marks_has_permission(doc, ptype=None, user=None):
 	return user in instructor_users(doc.course_offering)
 
 
+# ---- Student ------------------------------------------------------------------------------
+
+PORTAL_ROLES = ("Student", "Guardian")
+
+
+def sees_all_students(user):
+	"""True when a role other than Student/Guardian gives the user read access to Student."""
+	if user == "Administrator":
+		return True
+	roles = set(frappe.get_roles(user)) - set(PORTAL_ROLES)
+	return any(p.role in roles and p.read for p in frappe.get_meta("Student").permissions)
+
+
+def student_permission_query(user=None):
+	"""Upstream lets the Student and Guardian roles read every Student; narrow them to their own."""
+	user = user or frappe.session.user
+	if sees_all_students(user):
+		return ""
+	names = ", ".join(frappe.db.escape(s) for s in students_of(user)) or "''"
+	return f"`tabStudent`.name in ({names})"
+
+
+def student_has_permission(doc, ptype=None, user=None):
+	"""Deny-only hook: portal-only users get their own or guarded students, staff roles are untouched."""
+	user = user or frappe.session.user
+	return sees_all_students(user) or doc.name in students_of(user)
+
+
 # ---- Student Result -----------------------------------------------------------------------
 
 

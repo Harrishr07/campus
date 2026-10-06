@@ -3,7 +3,7 @@ const ADMIT = "campus.admissions.api.admit";
 
 frappe.ui.form.on("Student Applicant", {
 	refresh(frm) {
-		const allowed = frappe.user.has_role("Admission Officer") || frappe.user.has_role("System Manager");
+		const allowed = frappe.user.has_role("Admission Officer") || frappe.session.user === "Administrator";
 		if (frm.is_new() || frm.doc.application_status !== "Approved" || !allowed) return;
 		frm.add_custom_button(__("Admit"), () =>
 			frappe.confirm(__("Admit {0}?", [frm.doc.name]), () =>

@@ -5,10 +5,11 @@ from frappe.utils import add_days, now_datetime, today
 
 from campus.campus_platform.verification import verify  # noqa: F401  (keeps the QR hooks loaded as in production)
 from campus.student_services import portal
+from campus.student_services.api import attendance_summary
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.factories import make_company
 from campus.tests.test_attendance_eligibility import RULES
-from campus.tests.test_results import COLLEGE, GUARDIAN_USER, STUDENT_22_USER, STUDENT_26_USER, ExamFixture, make_login
+from campus.tests.test_results import COLLEGE, FACULTY, GUARDIAN_USER, STUDENT_22_USER, STUDENT_26_USER, ExamFixture, make_login
 from campus.www.campus_portal import circulars as circulars_page, fees as fees_page, index as index_page
 
 TRUST = "Portal Test Trust"
@@ -128,6 +129,39 @@ class TestPortalOwnership(PortalFixture):
 		self.assertEqual(portal.get_fees(self.s26.name).total_outstanding, 7777)
 		self.assertEqual(portal.get_fees(self.s22.name).total_outstanding, 900)
 		self.assertEqual(len(portal.my_students()), 2)
+
+	def test_student_role_reads_only_linked_students_everywhere(self):
+		for user, visible in (
+			(STUDENT_22_USER, [self.s22.name]),
+			(STUDENT_26_USER, [self.s26.name]),
+			(GUARDIAN_USER, [self.s22.name]),
+			(BOTH_GUARDIAN_USER, sorted([self.s22.name, self.s26.name])),
+			(NO_LINK_USER, []),
+		):
+			self.as_user(user)
+			mine = {self.s22.name, self.s26.name}
+			self.assertEqual(sorted(frappe.get_list("Student", {"name": ["in", list(mine)]}, pluck="name")), visible, user)
+			for student in mine - set(visible):
+				self.assertFalse(frappe.has_permission("Student", "read", student, user=user), (user, student))
+				with self.assertRaises(frappe.PermissionError):
+					frappe.get_doc("Student", student).check_permission("read")
+		self.as_user(STUDENT_22_USER)
+		self.assertEqual(frappe.get_doc("Student", self.s22.name).name, self.s22.name)
+		self.assertEqual(len(portal.get_fees().invoices), 2)  # the portal keeps working
+
+	def test_staff_still_read_every_student(self):
+		for user in ("Administrator", FACULTY):
+			self.as_user(user)
+			names = frappe.get_list("Student", {"name": ["in", [self.s22.name, self.s26.name]]}, pluck="name")
+			self.assertEqual(len(names), 2, user)
+
+	def test_attendance_summary_is_not_reachable_over_http(self):
+		self.assertNotIn(attendance_summary, frappe.whitelisted)
+		self.as_user(STUDENT_22_USER)
+		with self.assertRaises(frappe.PermissionError):
+			frappe.is_whitelisted(attendance_summary)
+		with self.assertRaises(frappe.PermissionError):
+			attendance_summary(self.s26.name, self.term)  # even called directly, a classmate is refused
 
 	def test_user_without_a_linked_student_is_refused_and_guest_is_refused(self):
 		self.as_user(NO_LINK_USER)

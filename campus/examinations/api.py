@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
 
@@ -24,6 +25,7 @@ def issue_grade_sheet(student_result):
 	frappe.only_for(MARKS_ROLES)
 	doc = frappe.get_doc("Student Result", student_result)
 	doc.check_permission("read")
-	if frappe.db.get_value("Exam Session", doc.exam_session, "status") != "Published":
-		frappe.throw(_("A Grade Sheet is issued only for a published Exam Session."))
+	status, publish_at = frappe.db.get_value("Exam Session", doc.exam_session, ["status", "publish_at"])
+	if status != "Published" or not publish_at or get_datetime(publish_at) > now_datetime():
+		frappe.throw(_("A Grade Sheet is issued only for a published Exam Session whose publication time has passed."))
 	return issue(doc, "Grade Sheet").name

@@ -367,6 +367,7 @@ permission_query_conditions = {
 	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
 	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
+	"Student": "campus.examinations.access.student_permission_query",
 	"Mark Sheet Entry": "campus.examinations.access.marks_permission_query",
 	"Student Result": "campus.examinations.access.result_permission_query",
 }
@@ -374,6 +375,7 @@ has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 	"Lead": "campus.admissions.enquiry.has_permission",
+	"Student": "campus.examinations.access.student_has_permission",
 	"Mark Sheet Entry": "campus.examinations.access.marks_has_permission",
 	"Student Result": "campus.examinations.access.result_has_permission",
 }
