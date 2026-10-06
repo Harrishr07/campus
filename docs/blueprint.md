@@ -26,6 +26,7 @@ working plan. Update the status column in section 12 as items ship.
 | D11 | Degree issuer is a setting: `degree_awarding_body` (University / College, default University) and `provisional_certificate_issuer` on Institution Profile | UGC 2023 cl. 3.4 and SXCCE R2022/R2026 say the university awards the degree, with the college name. See `docs/research/anna-university-autonomous-rules.md`. |
 | D12 | Aadhaar stored as the **full number**, in a Password-type (encrypted) field, masked in UI and prints, readable only by the "Aadhaar Viewer" role, every reveal logged | Site `encryption_key` must be backed up; losing it makes the values unrecoverable. |
 | D13 | **Extend the education Vue portal**: `campus` ships its own Vue 3 + frappe-ui SPA at `/campus-portal`, which ports the existing edu-portal pages (Schedule, Attendance, Fees, Grades, Leaves) against education's APIs and adds campus pages. Student/Guardian/Faculty home redirects there. | Education core is untouched. Ported code is GPL-3, so the `campus` app is licensed GPL-3 (also the safest choice next to ERPNext). |
+| D15 | Portal: the server-rendered /campus-portal (thin slice) is the one portal; the Vue SPA in D13 is deferred until after the pilot. | Avoids two parallel portals. |
 | D14 | Grading and pass rules are data, with **pluggable methods**: absolute, relative (Box-Cox, cohort > 30), online-course table, attempt-aware pass clauses | SXCCE R2022 vs R2026 differ in letters, points (6.5), ranges, method and attendance. |
 
 ---
