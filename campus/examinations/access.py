@@ -55,35 +55,9 @@ def marks_has_permission(doc, ptype=None, user=None):
 	return user in instructor_users(doc.course_offering)
 
 
-# ---- Student ------------------------------------------------------------------------------
+# ---- Student-linked records ---------------------------------------------------------------
 
 PORTAL_ROLES = ("Student", "Guardian")
-
-
-def sees_all_students(user):
-	"""True when a role other than Student/Guardian gives the user read access to Student."""
-	if user == "Administrator":
-		return True
-	roles = set(frappe.get_roles(user)) - set(PORTAL_ROLES)
-	return any(p.role in roles and p.read for p in frappe.get_meta("Student").permissions)
-
-
-def student_permission_query(user=None):
-	"""Upstream lets the Student and Guardian roles read every Student; narrow them to their own."""
-	user = user or frappe.session.user
-	if sees_all_students(user):
-		return ""
-	names = ", ".join(frappe.db.escape(s) for s in students_of(user)) or "''"
-	return f"`tabStudent`.name in ({names})"
-
-
-def student_has_permission(doc, ptype=None, user=None):
-	"""Deny-only hook: portal-only users get their own or guarded students, staff roles are untouched."""
-	user = user or frappe.session.user
-	return sees_all_students(user) or doc.name in students_of(user)
-
-
-# ---- Student Result -----------------------------------------------------------------------
 
 
 def students_of(user):
@@ -96,6 +70,67 @@ def students_of(user):
 		else []
 	)
 	return set(own) | set(guarded)
+
+
+def guardians_of(user):
+	"""The user's own Guardian records plus the guardians of the students the user is or guards."""
+	own = frappe.get_all("Guardian", {"user": user}, pluck="name")
+	linked = frappe.get_all(
+		"Student Guardian", {"parent": ["in", students_of(user) or [""]], "parenttype": "Student"}, pluck="guardian"
+	)
+	return set(own) | set(linked)
+
+
+def groups_of(user):
+	"""Student Groups that contain one of the user's students."""
+	rows = frappe.get_all(
+		"Student Group Student", {"student": ["in", students_of(user) or [""]], "parenttype": "Student Group"}, pluck="parent"
+	)
+	return set(rows)
+
+
+# doctype -> (field holding the scoping key, function(user) -> keys the portal user may see).
+# Upstream grants the Student/Guardian roles company-wide read on all of these.
+PORTAL_SCOPES = {
+	"Student": ("name", students_of),
+	"Guardian": ("name", guardians_of),
+	"Program Enrollment": ("student", students_of),
+	"Student Attendance": ("student", students_of),
+	"Student Leave Application": ("student", students_of),
+	"Assessment Result": ("student", students_of),
+	"Sales Invoice": ("student", students_of),
+	"Course Schedule": ("student_group", groups_of),
+}
+
+
+def sees_all_students(user, doctype="Student"):
+	"""True when a role other than Student/Guardian gives the user level-0 read access to the doctype."""
+	if user == "Administrator":
+		return True
+	roles = set(frappe.get_roles(user)) - set(PORTAL_ROLES)
+	return any(p.role in roles and p.read and not p.permlevel for p in frappe.get_meta(doctype).permissions)
+
+
+def portal_permission_query(user=None, doctype="Student"):
+	"""Narrow the Student and Guardian roles to rows of their own / linked students."""
+	user = user or frappe.session.user
+	if sees_all_students(user, doctype):
+		return ""
+	field, keys_of = PORTAL_SCOPES[doctype]
+	names = ", ".join(frappe.db.escape(k) for k in keys_of(user)) or "''"
+	return f"`tab{doctype}`.`{field}` in ({names})"
+
+
+def portal_has_permission(doc, ptype=None, user=None):
+	"""Deny-only hook: portal-only users get rows of their own or guarded students, staff roles are untouched."""
+	user = user or frappe.session.user
+	if sees_all_students(user, doc.doctype):
+		return True
+	field, keys_of = PORTAL_SCOPES[doc.doctype]
+	return doc.get(field) in keys_of(user)
+
+
+# ---- Student Result -----------------------------------------------------------------------
 
 
 def published_sessions():

@@ -1,3 +1,5 @@
+from campus.examinations.access import PORTAL_SCOPES
+
 app_name = "campus"
 app_title = "OneBook Campus"
 app_publisher = "OneBook"
@@ -363,11 +365,13 @@ doctype_js = {
 	"Student Result": "public/js/student_result.js",
 }
 
+PORTAL_SCOPED = list(PORTAL_SCOPES)  # Student/Guardian roles are scoped to their own / linked students
+
 permission_query_conditions = {
 	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
 	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
-	"Student": "campus.examinations.access.student_permission_query",
+	**{dt: "campus.examinations.access.portal_permission_query" for dt in PORTAL_SCOPED},
 	"Mark Sheet Entry": "campus.examinations.access.marks_permission_query",
 	"Student Result": "campus.examinations.access.result_permission_query",
 }
@@ -375,7 +379,7 @@ has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 	"Lead": "campus.admissions.enquiry.has_permission",
-	"Student": "campus.examinations.access.student_has_permission",
+	**{dt: "campus.examinations.access.portal_has_permission" for dt in PORTAL_SCOPED},
 	"Mark Sheet Entry": "campus.examinations.access.marks_has_permission",
 	"Student Result": "campus.examinations.access.result_has_permission",
 }
