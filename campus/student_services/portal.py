@@ -10,9 +10,9 @@ from urllib.parse import quote
 
 import frappe
 from frappe import _
-from frappe.utils import flt
 from frappe.utils.html_utils import sanitize_html
 
+from campus.campus_finance.api import has_dues, student_invoices
 from campus.student_services.api import summarise, term_window
 
 PORTAL_HOME = "/campus-portal"
@@ -59,22 +59,17 @@ def my_students():
 
 @frappe.whitelist()
 def get_fees(student=None):
-	"""Submitted Sales Invoices of the student, with outstanding totals per company."""
+	"""Submitted Sales Invoices and credit notes of the student, with outstanding totals per company.
+
+	The invoices and the dues come from the fee ledger (campus_finance.api), the one source of truth.
+	"""
 	student = resolve_student(student)
-	invoices = frappe.get_all(
-		"Sales Invoice",
-		{"student": student, "docstatus": 1},
-		["name", "company", "posting_date", "due_date", "currency", "grand_total", "outstanding_amount", "status"],
-		order_by="posting_date desc, name desc",
-	)
-	by_company = {}
-	for invoice in invoices:
-		by_company[invoice.company] = by_company.get(invoice.company, 0) + flt(invoice.outstanding_amount)
+	dues = has_dues(student)
 	return frappe._dict(
 		student=student,
-		invoices=invoices,
-		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in sorted(by_company.items())],
-		total_outstanding=sum(by_company.values()),
+		invoices=student_invoices(student),
+		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in dues.by_company.items()],
+		total_outstanding=dues.total,
 	)
 
 
