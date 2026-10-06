@@ -1,6 +1,7 @@
 """S5 end-to-end test: make_demo("slice") builds the whole pilot path and every step has its expected outcome."""
 
 import json
+from unittest.mock import patch
 
 import frappe
 
@@ -159,7 +160,39 @@ class TestSliceDemo(CampusTestCase):
 		for username in ("student_1", "guardian_1", "faculty_1", "coe", "iqac"):
 			self.assertEqual(check_password(demo.email(username), demo_slice.PASSWORD), demo.email(username))
 
+	def test_make_demo_refuses_outside_a_demo_site(self):
+		with patch.dict(frappe.local.conf, {"developer_mode": 0, "campus_demo_site": 0}):
+			with self.assertRaisesRegex(frappe.ValidationError, "demo sites only"):
+				demo.make_demo("slice")
+
+	def test_existing_passwords_are_not_reset(self):
+		from frappe.utils.password import check_password, update_password
+
+		frappe.db.savepoint("password_test")
+		self.addCleanup(frappe.db.rollback, save_point="password_test")
+		user = demo.email("coe")
+		update_password(user, "Changed#Pass2026")
+		demo.make_demo("slice")
+		self.assertEqual(check_password(user, "Changed#Pass2026"), user)
+
 	def test_second_run_creates_nothing(self):
 		before = {doctype: frappe.db.count(doctype) for doctype in COUNTED}
 		demo.make_demo("slice")
 		self.assertEqual({doctype: frappe.db.count(doctype) for doctype in COUNTED}, before)
+
+
+class TestDeskButtons(CampusTestCase):
+	def test_button_scripts_are_hooked_and_call_whitelisted_methods(self):
+		import re
+
+		from frappe import get_hooks
+
+		hooked = get_hooks("doctype_js", app_name="campus")
+		for doctype, script in (("Student Applicant", "student_applicant.js"), ("Student Result", "student_result.js")):
+			self.assertIn(f"public/js/{script}", hooked[doctype])
+			source = open(frappe.get_app_path("campus", "public", "js", script)).read()
+			constants = dict(re.findall(r'const (\w+) = "([\w.]+)"', source))
+			methods = {constants[c] for c in re.findall(r"method: (\w+)", source)}
+			self.assertTrue(methods, script)
+			for method in methods:
+				self.assertIn(frappe.get_attr(method), frappe.whitelisted, method)

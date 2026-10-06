@@ -9,7 +9,7 @@ result, student portal, one live AQAR metric with drill-down.
 - A bench with `frappe`, `erpnext`, `hrms`, `education` and `campus` installed on the site, and the site migrated
   (`bench --site <site> migrate`).
 - `bench start` running (the desk, the portal and the QR verification page are served by it).
-- A **demo site only**: the builder sets one known password on every demo login and creates a company hierarchy.
+- **Demo site only**: `make_demo` refuses to run unless `developer_mode` is on, the site config has `"campus_demo_site": 1`, or `allow_on_production=True` is passed. A login that already has a password keeps it; only logins without one get the demo password. The builder sets one known password on demo logins and creates a company hierarchy.
   Never run it on a production site.
 
 ## Build the data
@@ -84,13 +84,13 @@ profiles or private windows to switch users quickly.
 
 | Min | Who | Do this | Show |
 | --- | --- | --- | --- |
-| 0-2 | `admissions` | `/desk/student-applicant`: open **slice-6 (Nithya Shree)**, note Approved and Eligible, with the checklist document Submitted. In the browser console: `frappe.call({method: "campus.admissions.api.admit", args: {applicant: "<applicant id>"}}).then(r => console.log(r.message))` | the Student, register number (for example DCE26CSE0006), enrollment and fee invoice created in one step; the Seat Matrix (`/desk/seat-matrix`) counts the seat |
+| 0-2 | `admissions` | `/desk/student-applicant`: open **slice-6 (Nithya Shree)**, note Approved and Eligible, with the checklist document Submitted. Click **Admit** (shown for Approved applicants to an Admission Officer) and confirm | the Student, register number (for example DCE26CSE0006), enrollment and fee invoice created in one step; the Seat Matrix (`/desk/seat-matrix`) counts the seat |
 | 2-4 | `accounts` | `/desk/sales-invoice`: filter on the students; open the invoices | five paid or due fee invoices; Sanjay Prakash's Management-quota invoice of Rs 1,55,000 is the only one outstanding; `/desk/payment-entry` shows the four receipts |
 | 4-6 | `hod_cse` | `/desk/course-registration`: open one registration; `/desk/student-group`: open an offering | Effective R2026 curriculum, 14 credits, registration rules from the regulation, the student placed in the four offerings |
 | 6-8 | `hod_cse` | `/desk/query-report/Attendance Shortage`: Company = Demo College of Engineering, Academic Term = 2026-27 (Odd) | only Karthik Raja (Shortage, 58.33%) and Divya Bharathi (Medical band, 70.83%); the other three are eligible and not listed |
 | 8-9 | `faculty_1` | `/desk/mark-sheet-entry`: open the Engineering Physics sheet | CIA and ESE per student; the sheet is read-only because the session is Published |
 | 9-11 | `coe` | `/desk/exam-session`: open the session; `/desk/student-result` | status Published, Final Year ticked; Student Results per student: SA, AB, U codes and SGPA/CGPA to 2 decimals. The **Run Results** button is gone after publication (a published session cannot be re-run); the run was done by the builder |
-| 11-12 | `coe` or Administrator | open Aarav Kumar's Student Result, **Print**, format **Grade Sheet**; then open the public page `<site>/verify/<code>` in a private window (the code is on `/desk/verifiable-document` as Administrator, or scan the QR) | the QR code and the "Valid" verification page |
+| 11-12 | `coe` or Administrator | open Aarav Kumar's Student Result, **Print**, format **Grade Sheet**; then open the public page `<site>/verify/<code>` in a private window (the code is on `/desk/verifiable-document` as Administrator, or scan the QR). Another sheet: click **Issue Grade Sheet** on a Student Result as `coe`; it opens the verify page | the QR code and the "Valid" verification page |
 | 12-14 | `student_1`, then `guardian_1` | log in: the home page is `/campus-portal`. Dashboard, Fees, Attendance, Results (Grade Sheet download). The guardian sees the same student | own data only; Aarav's fees show nothing outstanding, attendance Eligible, SGPA 9.00 |
 | 14-15 | `iqac` | `/desk/accreditation-cycle`: open the 2026-27 cycle, **Compute**; then `/desk/query-report/Metric Drill-down` with Metric Value = `<cycle>-2.6.3` | 2.6.3 = 50.00 and the exact Student Results behind it (final_year_passed: Aarav and Divya; final_year_appeared: four); 2.1.1 (students admitted) |
 
@@ -107,7 +107,7 @@ Notes for the presenter:
 
 | Area | Real (built, rule-driven) | Stubbed or not in the slice |
 | --- | --- | --- |
-| Admissions | Admit transaction (Student, Program Enrollment, register number, fee invoice in one step), Seat Matrix quota and category checks, eligibility and document rules | There is no Admit button on the applicant form yet (API call only); no counselling import in the demo; no payment gateway |
+| Admissions | Admit transaction (Student, Program Enrollment, register number, fee invoice in one step), Seat Matrix quota and category checks, eligibility and document rules | no counselling import in the demo; no payment gateway |
 | Fees | Fee structures by quota and category, invoices, Payment Entry, outstanding by company | The four payments are created by the builder (UTR `DEMO-UTR-...`), not through bank challan import or a gateway |
 | Course registration | Effective curriculum, credits from L-T-P, regulation Registration Rule, window, offerings, seat membership | No approval policy exists in the demo, so registrations submit directly; prerequisites always pass |
 | Attendance | S1 rules (formula, overall, medical band, per-course minimum) from the Attendance Rule of the regulation, shortage report | Attendance rows are generated by the builder (a real college marks them in the desk); Education's holiday check is skipped; no condonation workflow |
@@ -123,7 +123,7 @@ Run after building the data and before a pilot demo.
 
 - [ ] `bench --site <site> execute campus.tests.demo.make_demo --kwargs "{'scale':'slice'}"` finishes without an error; run it a second time and confirm it finishes in a few seconds.
 - [ ] Log in as each user in the table above with `Campus@Demo2026`; students and guardians land on `/campus-portal`, staff on the desk.
-- [ ] As `admissions`, admit slice-6 with the console call; confirm the new Student, register number and invoice.
+- [ ] As `admissions`, admit slice-6 with the **Admit** button; confirm the new Student, register number and invoice.
 - [ ] As `hod_cse`, the Attendance Shortage report lists exactly Karthik Raja and Divya Bharathi.
 - [ ] As `coe`, the Exam Session is Published and every Student Result opens; Aarav's Grade Sheet prints with a QR code.
 - [ ] The public `<site>/verify/<code>` page shows Valid for that code when logged out.

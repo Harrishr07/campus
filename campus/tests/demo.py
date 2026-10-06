@@ -95,12 +95,17 @@ def year_name(start_year):
 	return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
-def make_demo(scale="small"):
+def make_demo(scale="small", allow_on_production=False):
 	"""Build the standard demo data. `scale` is "small" (fast tests), "full" (demos, 60 per batch) or "slice".
 
 	"slice" is "small" plus the whole thin-slice path (demo_slice.py): admissions, fees, registration,
 	attendance, marks, results, portal logins and an AQAR cycle, with a demo password on every login.
 	"""
+	if not (allow_on_production or frappe.conf.developer_mode or frappe.conf.campus_demo_site):
+		frappe.throw(
+			"make_demo creates logins with a published password and is for demo sites only: turn on developer_mode, "
+			'set "campus_demo_site": 1 in the site config, or pass allow_on_production=True.'
+		)
 	if scale not in (*STUDENTS_PER_BATCH, "slice"):
 		frappe.throw(f"Unknown demo scale {scale!r}; use 'small', 'full' or 'slice'.")
 	was_importing = frappe.flags.in_import

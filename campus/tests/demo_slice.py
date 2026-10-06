@@ -170,11 +170,12 @@ def make_eligibility_rule():
 def make_fee_structures():
 	"""The base fee structure and a higher management-quota one; returns the finance accounts."""
 	company = demo.ENGINEERING
+	was_ignoring = frappe.flags.ignore_root_company_validation
 	frappe.flags.ignore_root_company_validation = True  # the college is a child of the trust: its accounts are made directly
 	try:
 		accounts = make_finance_company(company, "DCE")
 	finally:
-		frappe.flags.ignore_root_company_validation = False
+		frappe.flags.ignore_root_company_validation = was_ignoring
 	frappe.db.set_value("Company", company, "default_bank_account", accounts["bank"])
 	for quota, components in ((None, FEES), (MANAGEMENT, MANAGEMENT_FEES)):
 		filters = {"company": company, "program": PROGRAM, "academic_year": YEAR, "docstatus": 1}
@@ -439,10 +440,12 @@ def link_portal_users(student):
 
 
 def set_demo_passwords():
-	"""Enable every demo login (earlier builds left them disabled) and give it the demo password."""
+	"""Enable every demo login (earlier builds left them disabled); a login with no password gets the demo one."""
 	for username in demo.USERS:
-		frappe.db.set_value("User", demo.email(username), "enabled", 1)
-		update_password(demo.email(username), PASSWORD)
+		user = demo.email(username)
+		frappe.db.set_value("User", user, "enabled", 1)
+		if not frappe.db.exists("__Auth", {"doctype": "User", "name": user, "fieldname": "password"}):
+			update_password(user, PASSWORD)
 
 
 def compute_aqar_cycle():

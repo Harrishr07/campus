@@ -358,6 +358,11 @@ doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery
 
 app_include_js = "/assets/campus/js/approvals.js"
 
+doctype_js = {
+	"Student Applicant": "public/js/student_applicant.js",
+	"Student Result": "public/js/student_result.js",
+}
+
 permission_query_conditions = {
 	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
