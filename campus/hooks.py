@@ -60,9 +60,7 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance", "frappe_wha
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {"Student": "campus-portal", "Guardian": "campus-portal"}
 
 # Generators
 # ----------
@@ -387,7 +385,14 @@ jinja = {
 	]
 }
 
-website_route_rules = [{"from_route": "/verify/<code>", "to_route": "verify"}]
+website_route_rules = [
+	{"from_route": "/verify/<code>", "to_route": "verify"},
+	{"from_route": "/campus-portal", "to_route": "campus_portal"},
+	*(
+		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
+		for page in ("fees", "attendance", "results", "circulars")
+	),
+]
 
 # Message Logs are an audit trail: they must not block deleting the documents they refer to.
 ignore_links_on_delete = ["Message Log"]

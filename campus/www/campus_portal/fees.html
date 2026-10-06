@@ -1,0 +1,21 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Fees") }}</h2>
+{% for row in fees.outstanding_by_company %}
+<div class="cp-card"><span class="cp-label">{{ row.company }}</span>
+	<span class="cp-value">{{ frappe.utils.fmt_money(row.outstanding, currency="INR") }}</span>
+	<span class="cp-label">{{ _("outstanding") }}</span></div>
+{% endfor %}
+{% if not fees.invoices %}<p class="cp-empty">{{ _("No fee invoices yet.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for i in fees.invoices %}
+	<li>
+		<strong>{{ i.name }}</strong> <span class="cp-badge">{{ _(i.status) }}</span><br>
+		{{ i.company }}<br>
+		{{ _("Due") }} {{ frappe.utils.formatdate(i.due_date) }}
+		&middot; {{ _("Total") }} {{ frappe.utils.fmt_money(i.grand_total, currency=i.currency) }}
+		&middot; {{ _("Outstanding") }} {{ frappe.utils.fmt_money(i.outstanding_amount, currency=i.currency) }}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

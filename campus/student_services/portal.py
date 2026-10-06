@@ -1,0 +1,174 @@
+"""M05-06 Student portal data (core of P1-T26): fees, attendance, results for a student or their guardian.
+
+Every function resolves the target student from the session user: a student sees only themself, a
+guardian only the students linked to them on the Student's guardian rows. A student id taken from the
+request is honoured only when it is in that set (PermissionError otherwise); it is never trusted alone.
+Whitelisted methods return plain dicts for the pages in campus/www/campus_portal.
+"""
+
+from urllib.parse import quote
+
+import frappe
+from frappe import _
+from frappe.utils import flt
+from frappe.utils.html_utils import sanitize_html
+
+from campus.student_services.api import summarise, term_window
+
+PORTAL_HOME = "/campus-portal"
+
+
+def require_login():
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Log in to use the student portal."), frappe.PermissionError)
+
+
+def linked_students(user=None):
+	"""[{name, student_name}] of the students `user` is, or guards. Own student first, then by name."""
+	user = user or frappe.session.user
+	own = frappe.get_all("Student", {"user": user}, pluck="name")
+	guardians = frappe.get_all("Guardian", {"user": user}, pluck="name")
+	guarded = (
+		frappe.get_all("Student Guardian", {"guardian": ["in", guardians], "parenttype": "Student"}, pluck="parent")
+		if guardians
+		else []
+	)
+	names = list(dict.fromkeys([*own, *sorted(guarded)]))
+	rows = frappe.get_all("Student", {"name": ["in", names or [""]], "enabled": 1}, ["name", "student_name"])
+	return sorted(rows, key=lambda row: (row.name not in own, row.student_name or row.name))
+
+
+def resolve_student(student=None):
+	"""The student the session user may act on: `student` if linked to them, else their first linked student."""
+	require_login()
+	allowed = linked_students()
+	if not allowed:
+		frappe.throw(_("No student is linked to your account."), frappe.PermissionError)
+	if not student:
+		return allowed[0].name
+	if student not in {row.name for row in allowed}:
+		frappe.throw(_("You cannot view this student."), frappe.PermissionError)
+	return student
+
+
+@frappe.whitelist()
+def my_students():
+	require_login()
+	return linked_students()
+
+
+@frappe.whitelist()
+def get_fees(student=None):
+	"""Submitted Sales Invoices of the student, with outstanding totals per company."""
+	student = resolve_student(student)
+	invoices = frappe.get_all(
+		"Sales Invoice",
+		{"student": student, "docstatus": 1},
+		["name", "company", "posting_date", "due_date", "currency", "grand_total", "outstanding_amount", "status"],
+		order_by="posting_date desc, name desc",
+	)
+	by_company = {}
+	for invoice in invoices:
+		by_company[invoice.company] = by_company.get(invoice.company, 0) + flt(invoice.outstanding_amount)
+	return frappe._dict(
+		student=student,
+		invoices=invoices,
+		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in sorted(by_company.items())],
+		total_outstanding=sum(by_company.values()),
+	)
+
+
+def student_terms(student):
+	"""Academic Terms in which the student is an active member of a course offering, newest first."""
+	group, member = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Student")
+	term = frappe.qb.DocType("Academic Term")
+	return (
+		frappe.qb.from_(group)
+		.join(member)
+		.on(member.parent == group.name)
+		.join(term)
+		.on(term.name == group.academic_term)
+		.select(term.name, term.term_start_date)
+		.where(group.group_based_on == "Course")
+		.where(member.student == student)
+		.where(member.active == 1)
+		.groupby(term.name, term.term_start_date)
+		.orderby(term.term_start_date, order=frappe.qb.desc)
+		.run(as_dict=True)
+	)
+
+
+@frappe.whitelist()
+def get_attendance(student=None, academic_term=None):
+	"""Attendance summary (S1) of the student for `academic_term` (default: their latest term).
+
+	The ownership check above replaces attendance_summary's Student read check, which portal users
+	need not hold; that check stays as it is for every other caller.
+	"""
+	student = resolve_student(student)
+	terms = [row.name for row in student_terms(student)]
+	if academic_term and academic_term not in terms:
+		frappe.throw(_("Attendance is not available for term {0}.").format(academic_term), frappe.PermissionError)
+	academic_term = academic_term or (terms[0] if terms else None)
+	summary = summarise(student, academic_term, term_window(academic_term), {}) if academic_term else None
+	return {"student": student, "terms": terms, "academic_term": academic_term, "summary": summary}
+
+
+@frappe.whitelist()
+def get_results(student=None):
+	"""Published Student Results of the student; the doctype's permission query gates publication."""
+	student = resolve_student(student)
+	names = frappe.get_list("Student Result", {"student": student}, pluck="name", order_by="creation desc")
+	results = []
+	for name in names:
+		doc = frappe.get_doc("Student Result", name)
+		doc.check_permission("read")
+		results.append(
+			{
+				"name": doc.name,
+				"exam_session": doc.exam_session,
+				"academic_term": doc.academic_term,
+				"company": doc.company,
+				"sgpa": doc.sgpa,
+				"cgpa": doc.cgpa,
+				"credits_earned": doc.credits_earned,
+				"grade_sheet_url": grade_sheet_url(doc.name),
+				"courses": [
+					{f: c.get(f) for f in ("course", "credits", "cia", "ese", "total", "grade", "grade_point", "result")}
+					for c in doc.courses
+				],
+			}
+		)
+	return {"student": student, "results": results}
+
+
+def grade_sheet_url(student_result):
+	return (
+		"/api/method/frappe.utils.print_format.download_pdf?doctype=Student%20Result"
+		f"&name={quote(student_result)}&format=Grade%20Sheet"
+	)
+
+
+def page_context(context, student=None):
+	"""Fill the shared parts of a portal page (login redirect, student switcher); returns the student.
+
+	A user with no linked student gets an empty page with a notice rather than an error."""
+	context.no_cache = 1
+	context.show_sidebar = False
+	if frappe.session.user == "Guest":
+		request = getattr(frappe.local, "request", None)
+		target = request.path if request and request.path.startswith(PORTAL_HOME) else PORTAL_HOME
+		frappe.local.flags.redirect_location = f"/login?redirect-to={quote(target)}"
+		raise frappe.Redirect
+	context.students = linked_students()
+	context.student = None
+	if context.students:
+		context.student = resolve_student(student or frappe.form_dict.get("student"))
+		context.student_name = next(s.student_name for s in context.students if s.name == context.student)
+	return context.student
+
+
+def clean_circular_body(circulars):
+	for circular in circulars:
+		circular["body"] = sanitize_html(circular.get("body") or "")
+	return circulars

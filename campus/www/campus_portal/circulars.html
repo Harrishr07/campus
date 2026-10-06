@@ -1,0 +1,35 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Circulars") }}</h2>
+{% if not circulars %}<p class="cp-empty">{{ _("No circulars.") }}</p>{% endif %}
+{% for c in circulars %}
+<article class="cp-card cp-block">
+	<h3>{{ c.title }}</h3>
+	<p class="cp-label">{{ frappe.utils.format_datetime(c.publish_from, "dd MMM yyyy") }}</p>
+	<div>{{ c.body }}</div>
+	{% for f in c.attachments %}<p><a href="{{ f.file_url }}">{{ f.file_name }}</a></p>{% endfor %}
+	{% if c.acknowledgement_required %}
+	{% if c.acknowledged %}<span class="cp-badge cp-eligible">{{ _("Acknowledged") }}</span>
+	{% else %}<button class="cp-btn" data-circular="{{ c.name }}">{{ _("Acknowledge") }}</button>{% endif %}
+	{% endif %}
+</article>
+{% endfor %}
+<script>
+document.querySelectorAll("button[data-circular]").forEach(function (button) {
+	button.addEventListener("click", function () {
+		button.disabled = true;
+		fetch("/api/method/campus.campus_messaging.circulars.acknowledge", {
+			method: "POST",
+			headers: {"Content-Type": "application/json", "X-Frappe-CSRF-Token": frappe.csrf_token},
+			body: JSON.stringify({circular: button.dataset.circular}),
+		}).then(function (response) {
+			if (!response.ok) { button.disabled = false; return; }
+			var done = document.createElement("span");
+			done.className = "cp-badge cp-eligible";
+			done.textContent = {{ _("Acknowledged")|tojson }};
+			button.replaceWith(done);
+		});
+	});
+});
+</script>
+{% endblock %}
