@@ -77,10 +77,31 @@ Desk: `http://<site>:<port>/desk`. Students and guardians land on the portal, `/
 
 Every desk login is limited to Demo College of Engineering by a Company User Permission.
 
+## Where to click (desk navigation)
+
+The desk home (`/desk`) shows one **OneBook Campus** tile. Click it to open a pop-up of area tiles; each tile opens that
+area's workspace page, and its sidebar lists the same masters, transactions, reports and settings under
+**Masters / Transactions / Reports / Settings**. A login sees only the areas its roles allow.
+
+| Login | Area tiles shown | Where the demo step lives |
+| --- | --- | --- |
+| `admissions` | Admissions, Academics, Student Services, Examinations, Communication, Approvals | Admissions > Transactions > **Student Applicant**; Admissions > Masters > **Seat Matrix** |
+| `accounts` | Fees and Finance, Approvals | Fees and Finance > Transactions > **Sales Invoice** (student invoices) and **Payment Entry** |
+| `hod_cse`, `faculty_*` | Academics, Student Services, Examinations, Communication, Approvals | Academics > Transactions > **Course Registration**, **Student Group**; Student Services > Reports > **Attendance Shortage**; Examinations > Transactions > **Mark Sheet Entry** |
+| `coe` | Academics, Student Services, Examinations, Communication, Approvals | Examinations > Transactions > **Exam Session**, **Student Result** |
+| `iqac` | the same as `coe`, plus IQAC | IQAC > Transactions > **Accreditation Cycle**; IQAC > Reports > **Metric Drill-down** |
+| `principal` | every area except IQAC, plus Administration | read-only view of the college |
+| Administrator | all nine areas | Administration > Transactions > **Verifiable Document**, **Bulk Run** |
+
+(`hod_cse`, `coe`, `iqac` and `admissions` also hold Academics User, the general staff role, which is why they see
+the Academics, Student Services, Examinations and Communication tiles.) Students and guardians have no desk; they
+land on `/campus-portal`. Each workspace page opens with shortcuts for the most used actions, then link cards.
+
 ## 15-minute click-path
 
 Replace `<site>` with your host and port, for example `http://education.localhost:8003`. Use separate browser
-profiles or private windows to switch users quickly.
+profiles or private windows to switch users quickly. Each URL is also a click in the sidebar (see the table above); the
+shortcuts at the top of each workspace page are the quickest route.
 
 | Min | Who | Do this | Show |
 | --- | --- | --- | --- |

@@ -42,6 +42,11 @@ def make_agreement(service, members, from_date=None, to_date=None, provider=TRUS
 	).insert()
 
 
+def hidden_test_workspaces(user):
+	"""The test workspace's verdict only: seeded packs (COE, IQAC) hide their own area workspaces too."""
+	return hidden_workspaces(user) & {WORKSPACE}
+
+
 class TestInstitution(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -211,23 +216,23 @@ class TestInstitution(CampusTestCase):
 		self.make_workspace_pack()
 		make_profile(DEMO, "Affiliated", packs=[{"pack": "HOSTEL", "enabled": 0}])
 		make_profile(OTHER, "Affiliated")
-		self.assertEqual(hidden_workspaces(USER_DEMO), {WORKSPACE})
-		self.assertEqual(hidden_workspaces(USER_BOTH), set())  # enabled for OTHER
+		self.assertEqual(hidden_test_workspaces(USER_DEMO), {WORKSPACE})
+		self.assertEqual(hidden_test_workspaces(USER_BOTH), set())  # enabled for OTHER
 
 	def test_workspace_visible_when_pack_enabled(self):
 		self.make_workspace_pack()
 		make_profile(DEMO)
-		self.assertEqual(hidden_workspaces(USER_DEMO), set())
+		self.assertEqual(hidden_test_workspaces(USER_DEMO), set())
 
 	def test_admin_never_hidden(self):
 		self.make_workspace_pack()
 		make_profile(DEMO, packs=[{"pack": "HOSTEL", "enabled": 0}])
-		self.assertEqual(hidden_workspaces("Administrator"), set())
+		self.assertEqual(hidden_test_workspaces("Administrator"), set())
 
 	def test_pack_roles_restrict_visibility(self):
 		self.make_workspace_pack(roles=["Auditor"])
 		make_profile(DEMO)
-		self.assertEqual(hidden_workspaces(USER_DEMO), {WORKSPACE})
+		self.assertEqual(hidden_test_workspaces(USER_DEMO), {WORKSPACE})
 
 	def test_boot_session_filters_pages_sidebars_and_icons(self):
 		self.make_workspace_pack()
@@ -238,6 +243,7 @@ class TestInstitution(CampusTestCase):
 			workspace_sidebar_item={
 				"hostel": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}]},
 				"mixed": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}, other]},
+				"area": {"label": WORKSPACE, "items": [other]},  # the sidebar of the hidden workspace itself
 			},
 			desktop_icons=[
 				{"label": "Hostel", "link_type": "Workspace Sidebar"},

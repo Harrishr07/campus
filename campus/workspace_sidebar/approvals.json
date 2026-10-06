@@ -1,6 +1,6 @@
 {
  "app": "campus",
- "creation": "2026-10-04 00:00:00.000000",
+ "creation": "2026-10-06 00:00:00.000000",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "check",
@@ -21,19 +21,39 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "list-todo",
+   "icon": "database",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Masters",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
-   "label": "My Pending Approvals",
-   "link_to": "My Pending Approvals",
-   "link_type": "Report",
+   "label": "Approval Policy",
+   "link_to": "Approval Policy",
+   "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
   },
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "file-check",
+   "icon": "clipboard-list",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Transactions",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
    "label": "Approval Request",
@@ -43,9 +63,8 @@
    "type": "Link"
   },
   {
-   "child": 0,
+   "child": 1,
    "collapsible": 1,
-   "icon": "user-round-check",
    "indent": 0,
    "keep_closed": 0,
    "label": "Approval Delegation",
@@ -57,17 +76,27 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "settings",
+   "icon": "sheet",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Reports",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
-   "label": "Approval Policy",
-   "link_to": "Approval Policy",
-   "link_type": "DocType",
+   "label": "My Pending Approvals",
+   "link_to": "My Pending Approvals",
+   "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Approvals",

@@ -1,0 +1,41 @@
+{
+ "app": "campus",
+ "bg_color": "gray",
+ "creation": "2026-10-06 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "users-round",
+ "icon_type": "Link",
+ "idx": 3,
+ "label": "Student Services",
+ "link_to": "Student Services",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "Student Services",
+ "owner": "Administrator",
+ "parent_icon": "OneBook Campus",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "Instructor"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": 1
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OneBook Campus">
+  <rect width="64" height="64" rx="14" fill="#2f5d8a"/>
+  <path d="M32 14 8 26l24 12 24-12z" fill="#ffffff"/>
+  <path d="M16 33v10c0 4 7 8 16 8s16-4 16-8V33l-16 8z" fill="#cfe0f1"/>
+  <path d="M54 28v14" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+</svg>

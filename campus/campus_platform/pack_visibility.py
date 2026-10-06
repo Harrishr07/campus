@@ -48,6 +48,9 @@ def filter_bootinfo(bootinfo, hidden):
 
 	sidebars = bootinfo.get("workspace_sidebar_item") or {}
 	for title, sidebar in list(sidebars.items()):
+		if sidebar.get("label") in hidden:  # the sidebar of a hidden workspace goes with it
+			del sidebars[title]
+			continue
 		sidebar["items"] = [
 			i for i in sidebar["items"] if not (i.get("link_type") == "Workspace" and i.get("link_to") in hidden)
 		]
