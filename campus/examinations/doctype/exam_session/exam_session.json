@@ -6,6 +6,7 @@
  "field_order": [
   "company",
   "academic_term",
+  "is_final_year",
   "status",
   "publish_at"
  ],
@@ -29,6 +30,12 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "is_final_year",
+   "fieldtype": "Check",
+   "label": "Final Year Examination",
+   "description": "Results of this session count as final-year results in IQAC metrics (pass percentage)."
   },
   {
    "fieldname": "status",

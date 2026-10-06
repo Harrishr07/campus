@@ -10,6 +10,7 @@ from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regu
 from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.setup import setup_curriculum
 from campus.examinations.setup import ensure_coe_role
+from campus.iqac.setup import ensure_iqac_role, seed_framework
 
 
 def before_install():
@@ -17,10 +18,12 @@ def before_install():
 	ensure_verification_role()  # verifiable_document.json likewise
 	ensure_aadhaar_role()  # aadhaar_access_log.json likewise
 	ensure_coe_role()  # exam doctypes likewise
+	ensure_iqac_role()  # iqac doctypes likewise
 
 
 def before_migrate():
 	ensure_coe_role()  # exam doctype permissions reference it during DocType sync
+	ensure_iqac_role()
 
 
 def after_install():
@@ -34,6 +37,7 @@ def after_install():
 	ensure_seed_positions()
 	setup_messaging()
 	setup_finance()
+	seed_framework()
 
 
 def after_migrate():
@@ -48,3 +52,4 @@ def after_migrate():
 	ensure_seed_positions()
 	setup_messaging()
 	setup_finance()
+	seed_framework()
