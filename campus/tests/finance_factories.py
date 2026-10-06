@@ -11,8 +11,10 @@ FISCAL_YEARS = range(2024, 2029)
 
 
 def ensure_fiscal_years():
+	"""Calendar-year fiscal years where none overlaps (a set-up site already has its own, e.g. 2026-2027)."""
 	for year in FISCAL_YEARS:
-		if not frappe.db.exists("Fiscal Year", str(year)):
+		overlapping = {"year_start_date": ["<=", f"{year}-12-31"], "year_end_date": [">=", f"{year}-01-01"]}
+		if not frappe.db.exists("Fiscal Year", str(year)) and not frappe.db.exists("Fiscal Year", overlapping):
 			frappe.get_doc(
 				{"doctype": "Fiscal Year", "year": str(year), "year_start_date": f"{year}-01-01", "year_end_date": f"{year}-12-31"}
 			).insert()

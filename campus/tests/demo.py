@@ -9,6 +9,8 @@ creates nothing and a partial run is completed.
 Not built yet (arrive with their own tasks): quota (Student has no quota field until T14),
 roles "Exam Confidential" (skipped when the Role is absent) and most regulation rule values
 (seeded so far: curriculum, registration, attendance, grading and exam rules).
+
+    bench --site <site> execute campus.tests.demo.make_demo --kwargs "{'scale': 'slice'}"   # the pilot demo path
 """
 
 import frappe
@@ -62,16 +64,18 @@ CATEGORY_CYCLE = [*["OC", "BC", "MBC", "SC"] * 4, "OC", "BC", "OC", "ST"]
 CATEGORIES = sorted(set(CATEGORY_CYCLE))
 
 ALL_COMPANIES = [name for name, _abbr, _parent in COMPANIES]
-# username -> (roles, companies the user is limited to)
+# username -> (roles, companies the user is limited to); Academics User is the general staff role
+# (read access to terms, programs and groups, which desk reports need for their filters)
 USERS = {
-	"principal": (["Principal"], [ENGINEERING]),
-	"hod_cse": (["HOD", "Instructor"], [ENGINEERING]),
-	"faculty_1": (["Instructor"], [ENGINEERING]),
-	"faculty_2": (["Instructor"], [ENGINEERING]),
-	"faculty_3": (["Instructor"], [ENGINEERING]),
-	"coe": (["COE"], [ENGINEERING]),
+	"principal": (["Principal", "Academics User"], [ENGINEERING]),
+	"hod_cse": (["HOD", "Instructor", "Academics User"], [ENGINEERING]),
+	"faculty_1": (["Instructor", "Academics User"], [ENGINEERING]),
+	"faculty_2": (["Instructor", "Academics User"], [ENGINEERING]),
+	"faculty_3": (["Instructor", "Academics User"], [ENGINEERING]),
+	"coe": (["COE", "Academics User"], [ENGINEERING]),
 	"exam_confidential": (["Exam Confidential"], [ENGINEERING]),
-	"iqac": (["IQAC Coordinator"], [ENGINEERING]),
+	"iqac": (["IQAC Coordinator", "Academics User"], [ENGINEERING]),
+	"admissions": (["Admission Officer", "Academics User"], [ENGINEERING]),
 	"accounts": (["Accounts User"], ALL_COMPANIES),
 	"warden": (["Warden"], ALL_COMPANIES),
 	"student_1": (["Student"], [ENGINEERING]),
@@ -92,9 +96,13 @@ def year_name(start_year):
 
 
 def make_demo(scale="small"):
-	"""Build the standard demo data. `scale` is "small" (fast tests) or "full" (demos, 60 per batch)."""
-	if scale not in STUDENTS_PER_BATCH:
-		frappe.throw(f"Unknown demo scale {scale!r}; use 'small' or 'full'.")
+	"""Build the standard demo data. `scale` is "small" (fast tests), "full" (demos, 60 per batch) or "slice".
+
+	"slice" is "small" plus the whole thin-slice path (demo_slice.py): admissions, fees, registration,
+	attendance, marks, results, portal logins and an AQAR cycle, with a demo password on every login.
+	"""
+	if scale not in (*STUDENTS_PER_BATCH, "slice"):
+		frappe.throw(f"Unknown demo scale {scale!r}; use 'small', 'full' or 'slice'.")
 	was_importing = frappe.flags.in_import
 	frappe.flags.in_import = True  # bulk load: skip Frappe's 60-users-per-minute creation throttle
 	try:
@@ -104,6 +112,15 @@ def make_demo(scale="small"):
 
 
 def build_demo(scale):
+	build_base(scale)
+	if scale == "slice":
+		from campus.tests.demo_slice import build_slice
+
+		build_slice()
+
+
+def build_base(scale):
+	scale = "small" if scale == "slice" else scale
 	make_companies()
 	make_departments()
 	make_academic_years()
@@ -135,8 +152,12 @@ def get_or_insert(doctype, filters, values):
 
 
 def make_companies():
-	for name, abbr, parent in COMPANIES:
-		make_company(name, abbr, is_group=0 if parent else 1, parent_company=parent)
+	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults a fully set-up site requires
+	try:
+		for name, abbr, parent in COMPANIES:
+			make_company(name, abbr, is_group=0 if parent else 1, parent_company=parent)
+	finally:
+		frappe.flags.in_import = was_importing
 
 
 def department_name(department, company):
@@ -274,6 +295,7 @@ def make_users():
 					"doctype": "User",
 					"email": user,
 					"first_name": username,
+					"enabled": 1,
 					"send_welcome_email": 0,
 				}
 			).insert(ignore_permissions=True)
@@ -494,7 +516,7 @@ def assign_missing_regulations():
 def make_student_users():
 	"""Link student_1 and guardian_1 to the first CSE student and a Guardian record."""
 	student = frappe.db.get_value("Student", {"student_email_id": email("student_1")})
-	if not student:
+	if not student or frappe.db.exists("Student", {"user": email("student_1")}):  # already linked, maybe by the slice demo
 		return
 	frappe.db.set_value("Student", student, "user", email("student_1"), update_modified=False)
 	guardian = get_or_insert(
