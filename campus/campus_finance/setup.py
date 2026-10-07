@@ -17,6 +17,7 @@ def field(fieldname, fieldtype, label, insert_after, **kwargs):
 
 
 CONCESSION_POLICY = "Fee Concession Approval"
+REFUND_POLICY = "Fee Refund Approval"
 
 
 def setup_finance():
@@ -24,6 +25,7 @@ def setup_finance():
 	seed_fee_categories()
 	seed_office_roles()
 	seed_concession_policy()
+	seed_refund_policy()
 
 
 def seed_concession_policy():
@@ -34,6 +36,18 @@ def seed_concession_policy():
 		{
 			"doctype": "Approval Policy", "policy_name": CONCESSION_POLICY, "document_type": "Fee Concession",
 			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "sla_hours": 72}],
+		}
+	).insert(ignore_permissions=True)
+
+
+def seed_refund_policy():
+	"""A single Accounts Manager level for Fee Refunds, unless the institution has its own policy for them."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Fee Refund"}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": REFUND_POLICY, "document_type": "Fee Refund",
+			"levels": [{"approver_type": "Role", "approver": "Accounts Manager", "title": "Accounts", "sla_hours": 72}],
 		}
 	).insert(ignore_permissions=True)
 

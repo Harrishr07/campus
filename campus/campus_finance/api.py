@@ -2,7 +2,7 @@
 
 import frappe
 
-from campus.campus_finance import bank_import, fee_heads, fines, invoices, ledger, numbering, scholarships
+from campus.campus_finance import bank_import, fee_heads, fines, gateways, invoices, ledger, numbering, refunds, scholarships
 
 
 def fee_structure_for(program, academic_year, quota, category, company):
@@ -36,3 +36,6 @@ next_number = numbering.next_number
 validate_number_prefix = numbering.validate_prefix
 scholarship_beneficiaries = scholarships.scholarship_beneficiaries
 disburse_scholarship = scholarships.disburse
+make_credit_note = refunds.make_credit_note
+make_refund_payment = refunds.make_refund_payment
+fee_payment_link = gateways.fee_payment_link

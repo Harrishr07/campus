@@ -5,6 +5,7 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
+from campus.examinations.access import students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses  # noqa: F401  (public API)
 
 
