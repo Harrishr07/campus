@@ -275,9 +275,19 @@ def make_curriculum():
 
 # regulation code -> Attendance Rule values (anna-university-autonomous-rules.md, section 3)
 ATTENDANCE_RULES = {
-	"R2022": {"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0},
-	"R2026": {"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75},
-}
+	"R2022": {
+		"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0,
+		"od_counts": 1, "medical_counts": 1, "condonation_fee": 500,
+	},
+	"R2026": {
+		"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75,
+		"od_counts": 1, "medical_counts": 1, "condonation_fee": 500,
+		"mark_bands": [
+			{"from_pct": 80, "to_pct": 85, "marks": 2}, {"from_pct": 86, "to_pct": 90, "marks": 3},
+			{"from_pct": 91, "to_pct": 95, "marks": 4}, {"from_pct": 96, "marks": 5},
+		],
+	},
+}  # fmt: skip
 
 
 def make_attendance_rules():

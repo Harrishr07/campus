@@ -344,7 +344,9 @@ def make_medical_leave(student, from_date, to_date):
 	name = frappe.db.get_value("Student Leave Application", {"student": student, "from_date": from_date})
 	if name:
 		return name
-	doc = frappe.get_doc({"doctype": "Student Leave Application", "student": student, "from_date": from_date, "to_date": to_date})
+	doc = frappe.get_doc(
+		{"doctype": "Student Leave Application", "student": student, "from_date": from_date, "to_date": to_date, "oc_leave_kind": "Medical"}
+	)
 	doc.flags.ignore_validate = True
 	doc.insert(ignore_permissions=True)
 	frappe.db.set_value("Student Leave Application", doc.name, "docstatus", 1)

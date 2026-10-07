@@ -2,10 +2,22 @@
 
 from frappe.tests import UnitTestCase
 
-from campus.student_services.attendance_rules import ELIGIBLE, MEDICAL_BAND, SHORTAGE, eligibility, overall_percentage
+from campus.student_services.attendance_rules import (
+	ATTENDED,
+	ELIGIBLE,
+	MEDICAL_BAND,
+	MEDICAL_LEAVE,
+	SHORTAGE,
+	attendance_marks,
+	bucket,
+	eligibility,
+	overall_percentage,
+)
 
-R2022 = {"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0}
-R2026 = {"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75}
+COUNTING = {"od_counts": 1, "medical_counts": 1}
+R2022 = {"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0, **COUNTING}
+R2026 = {"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75, **COUNTING}
+R2026_BANDS = [(80, 85, 2), (86, 90, 3), (91, 95, 4), (96, None, 5)]
 
 # name, courses [(conducted, attended, approved leave)], R2022 overall %, R2022 status, R2026 overall %, R2026 status.
 # Overall % is of attended periods without leave; every figure is hand computed.
@@ -30,6 +42,10 @@ SCENARIOS = [
 	("exact 80 and 75", [(100, 85, 0), (100, 75, 0)], 80, ELIGIBLE, 80, ELIGIBLE),
 	# a course with nothing conducted does not count: only the 8/10 course
 	("empty course ignored", [(0, 0, 0), (10, 8, 0)], 80, ELIGIBLE, 80, ELIGIBLE),
+	# 72 present + 10 On Duty (counted as attended) of 100 = 82 each: eligible under both
+	("on duty counted", [(100, 82, 0), (100, 82, 0)], 82, ELIGIBLE, 82, ELIGIBLE),
+	# 66 present + 6 medical of 100: sum 72 >= 65 band; per course 72 < 75 so no band under R2026
+	("medical in the band", [(100, 66, 6), (100, 66, 6)], 66, MEDICAL_BAND, 66, SHORTAGE),
 ]
 
 
@@ -53,3 +69,30 @@ class TestAttendanceRules(UnitTestCase):
 
 	def test_per_course_minimum_zero_means_none(self):
 		self.assertEqual(eligibility(R2022, [(100, 100, 0), (100, 50, 0)]), ELIGIBLE)
+
+
+class TestLeaveKindsAndMarks(UnitTestCase):
+	def test_bucket_by_leave_kind_and_rule(self):
+		counting, nothing = {"od_counts": 1, "medical_counts": 1}, {"od_counts": 0, "medical_counts": 0}
+		cases = [  # status, leave kind, counting rule, rule that counts neither
+			("Present", None, ATTENDED, ATTENDED),
+			("Absent", None, None, None),
+			("Leave", "On Duty", ATTENDED, None),
+			("Leave", "Medical", MEDICAL_LEAVE, None),
+			("Leave", "Leave", None, None),
+			("Leave", None, None, None),
+		]
+		for status, kind, with_counting, with_nothing in cases:
+			with self.subTest(status=status, kind=kind):
+				self.assertEqual(bucket(status, kind, counting), with_counting)
+				self.assertEqual(bucket(status, kind, nothing), with_nothing)
+
+	def test_attendance_mark_bands(self):
+		for pct, marks in [
+			(79.4, 0), (79.5, 2), (80, 2), (85.4, 2), (85.5, 3), (90, 3), (90.5, 4), (95.4, 4), (95.5, 5), (100, 5),
+		]:
+			with self.subTest(pct=pct):
+				self.assertEqual(attendance_marks(R2026_BANDS, pct), marks)
+
+	def test_no_bands_means_no_marks(self):
+		self.assertEqual(attendance_marks([], 100), 0)

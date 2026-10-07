@@ -204,6 +204,7 @@ doc_events["User Permission"] = {
 }
 doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
+doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {

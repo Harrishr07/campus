@@ -6,6 +6,11 @@ Decision, for one student and term (courses with nothing conducted are ignored):
   periods as attended, overall % >= the medical band minimum and every course % still meets the
   per-course minimum. Leave counts only here, never in the reported percentages.
 - Shortage (SA): otherwise.
+Leave kinds (Student Leave Application `oc_leave_kind`), per the rule:
+- On Duty counts as attended (in the reported percentages) only when the rule's `od_counts` is set.
+- Medical leave is the "leave" above only when the rule's `medical_counts` is set.
+- Plain Leave never counts.
+Attendance marks (CIA): the course % rounded to a whole number picks the Attendance Rule's mark band.
 Overall % is all attended / all conducted (`sum_based`) or the mean of the course % (`course_average`).
 With nothing conducted at all there is nothing to fall short of: Eligible, overall None.
 """
@@ -13,6 +18,41 @@ With nothing conducted at all there is nothing to fall short of: Eligible, overa
 ELIGIBLE = "Eligible"
 MEDICAL_BAND = "Medical band"
 SHORTAGE = "Shortage"
+
+ATTENDED = "attended"
+MEDICAL_LEAVE = "leave"
+
+PRESENT, ON_LEAVE = "Present", "Leave"
+ON_DUTY, MEDICAL = "On Duty", "Medical"
+
+
+def bucket(status, leave_kind, rule):
+	"""How one submitted attendance record counts: ATTENDED, MEDICAL_LEAVE or None.
+
+	`leave_kind` is the kind of the submitted Student Leave Application backing a Leave record, else None.
+	"""
+	if status == PRESENT:
+		return ATTENDED
+	if status != ON_LEAVE:
+		return None
+	if leave_kind == ON_DUTY and rule["od_counts"]:
+		return ATTENDED
+	if leave_kind == MEDICAL and rule["medical_counts"]:
+		return MEDICAL_LEAVE
+	return None
+
+
+def attendance_marks(bands, pct):
+	"""CIA marks for a course percentage. `bands` is a list of (from_pct, to_pct or None, marks).
+
+	The percentage is rounded half up to a whole number first; a band takes from_pct <= pct <= to_pct
+	(no to_pct = open ended). No bands, or no band for the percentage, gives 0.
+	"""
+	whole = int(pct + 0.5)
+	for low, high, marks in bands:
+		if low <= whole and (high is None or whole <= high):
+			return marks
+	return 0
 
 
 def percentage(attended, conducted):

@@ -10,3 +10,4 @@ campus.patches.backfill_messaging_company
 campus.patches.backfill_bank_collection_row_company
 campus.patches.enquiry_ack_respects_quiet_hours
 campus.patches.link_pack_workspaces
+campus.patches.backfill_leave_kind

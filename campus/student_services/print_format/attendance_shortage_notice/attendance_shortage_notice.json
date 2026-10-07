@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Attendance Shortage Notice",
+ "doc_type": "Attendance Eligibility Run",
+ "module": "Student Services",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "{% for row in doc.rows if row.status != \"Eligible\" %}\n<div style=\"{% if not loop.first %}page-break-before: always;{% endif %}\">\n<h3 style=\"text-align:center\">{{ _(\"Attendance Shortage Notice\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company }} &middot; {{ doc.academic_term }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Student\") }}</th><td>{{ row.student_name }} ({{ row.student }})</td>\n      <th>{{ _(\"Program\") }}</th><td>{{ row.program }}</td></tr>\n  <tr><th>{{ _(\"Overall attendance\") }}</th><td>{{ \"%.2f\"|format(row.overall_pct or 0) }}%</td>\n      <th>{{ _(\"Status\") }}</th><td>{{ _(row.status) }}</td></tr>\n  {% if row.shortage_summary %}<tr><th>{{ _(\"Courses short\") }}</th><td colspan=\"3\">{{ row.shortage_summary }}</td></tr>{% endif %}\n</table>\n{% if row.status == \"Condonation\" %}\n<p>{{ _(\"Your attendance is in the medical band. You may apply for condonation with a medical or sports certificate; you appear in the examination only if the condonation is approved.\") }}</p>\n{% else %}\n<p>{{ _(\"Your attendance is below the minimum required. You are detained for this term and may not appear in the examination.\") }}</p>\n{% endif %}\n<p style=\"margin-top:40px\">{{ _(\"Head of Department\") }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ _(\"Principal\") }}</p>\n</div>\n{% endfor %}\n",
+ "creation": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-06 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

@@ -2,7 +2,7 @@
 
 import frappe
 
-from campus.campus_finance import bank_import, fee_heads, fines, ledger
+from campus.campus_finance import bank_import, fee_heads, fines, invoices, ledger
 
 
 def fee_structure_for(program, academic_year, quota, category, company):
@@ -31,3 +31,4 @@ daily_fine_run = fines.daily_fine_run
 import_bank_collections = bank_import.start_import
 has_dues = ledger.has_dues
 student_invoices = ledger.student_invoices
+raise_fee_invoice = invoices.raise_fee_invoice

@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_pct",
+  "to_pct",
+  "marks"
+ ],
+ "fields": [
+  {
+   "fieldname": "from_pct",
+   "fieldtype": "Int",
+   "label": "From %",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_pct",
+   "fieldtype": "Int",
+   "label": "To %",
+   "in_list_view": 1,
+   "description": "Blank = no upper limit."
+  },
+  {
+   "fieldname": "marks",
+   "fieldtype": "Float",
+   "label": "Marks",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Attendance Mark Band",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

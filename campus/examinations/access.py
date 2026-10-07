@@ -97,6 +97,7 @@ PORTAL_SCOPES = {
 	"Program Enrollment": ("student", students_of),
 	"Student Attendance": ("student", students_of),
 	"Student Leave Application": ("student", students_of),
+	"Condonation Request": ("student", students_of),
 	"Assessment Result": ("student", students_of),
 	"Sales Invoice": ("student", students_of),
 	"Course Schedule": ("student_group", groups_of),

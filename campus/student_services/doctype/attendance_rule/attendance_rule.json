@@ -10,7 +10,13 @@
   "overall_min_pct",
   "medical_band_min_pct",
   "per_course_min_pct",
-  "clause"
+  "clause",
+  "section_counting",
+  "od_counts",
+  "medical_counts",
+  "condonation_fee",
+  "section_marks",
+  "mark_bands"
  ],
  "fields": [
   {
@@ -54,20 +60,75 @@
    "fieldname": "clause",
    "fieldtype": "Data",
    "label": "Clause"
+  },
+  {
+   "fieldname": "section_counting",
+   "fieldtype": "Section Break",
+   "label": "Leave and Condonation"
+  },
+  {
+   "fieldname": "od_counts",
+   "fieldtype": "Check",
+   "label": "On Duty Counts as Attended",
+   "default": "1"
+  },
+  {
+   "fieldname": "medical_counts",
+   "fieldtype": "Check",
+   "label": "Medical Leave Counts in the Medical Band",
+   "default": "1"
+  },
+  {
+   "fieldname": "condonation_fee",
+   "fieldtype": "Currency",
+   "label": "Condonation Fee",
+   "description": "Charged under the Condonation fee category when a condonation is approved. 0 = no fee."
+  },
+  {
+   "fieldname": "section_marks",
+   "fieldtype": "Section Break",
+   "label": "Attendance Marks (CIA)"
+  },
+  {
+   "fieldname": "mark_bands",
+   "fieldtype": "Table",
+   "label": "Attendance Mark Bands",
+   "options": "Attendance Mark Band",
+   "description": "Marks by whole-number course attendance %. No rows = no attendance marks."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Attendance Rule",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
-  {"role": "Dean Academics", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
-  {"role": "Academics User", "read": 1, "report": 1, "export": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",

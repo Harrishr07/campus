@@ -74,9 +74,12 @@ def mark(student, group, day, status, leave=None):
 	doc.submit()
 
 
-def approved_leave(student):
+def approved_leave(student, kind="Medical"):
 	doc = frappe.get_doc(
-		{"doctype": "Student Leave Application", "student": student, "from_date": FIRST_DAY, "to_date": FIRST_DAY}
+		{
+			"doctype": "Student Leave Application", "student": student, "from_date": FIRST_DAY, "to_date": FIRST_DAY,
+			"oc_leave_kind": kind,
+		}
 	)
 	doc.flags.ignore_validate = True
 	doc.insert(ignore_permissions=True)
