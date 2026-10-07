@@ -47,7 +47,7 @@ def start(doc):
 	"""Queue the run of `doc`; returns the Bulk Run name. Refused once locked or while a run is in progress."""
 	doc.check_permission("write")
 	doc.reload()
-	if doc.locked:
+	if frappe.db.get_value(DOCTYPE, doc.name, "locked", for_update=True):
 		frappe.throw(_("{0} is locked and cannot be run again.").format(doc.name))
 	if doc.bulk_run and frappe.db.get_value("Bulk Run", doc.bulk_run, "status") in IN_PROGRESS:
 		frappe.throw(_("{0} is already running.").format(doc.name))
@@ -63,7 +63,7 @@ def lock(doc):
 	"""Freeze the snapshot. Needs the Dean Academics or System Manager role and no run in progress."""
 	frappe.only_for(("Dean Academics", "System Manager"))
 	doc.reload()
-	if doc.locked:
+	if frappe.db.get_value(DOCTYPE, doc.name, "locked", for_update=True):
 		return
 	if doc.bulk_run and frappe.db.get_value("Bulk Run", doc.bulk_run, "status") in IN_PROGRESS:
 		frappe.throw(_("{0} is still running; lock it when the run has finished.").format(doc.name))

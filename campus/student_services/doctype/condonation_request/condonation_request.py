@@ -4,7 +4,7 @@ Allowed only while the student's attendance for the term is in the regulation's 
 student is Detained (SA) with no condonation option; above it none is needed). Approval runs through the
 generic approval engine; on final approval the request is submitted, which makes `eligibility_status`
 report the student Eligible for the term, and raises the regulation's condonation fee under the
-"Condonation" fee category when it is above zero.
+"Condonation" fee category when it is above zero (in a background job, see condonation_fee).
 """
 
 import frappe
@@ -12,12 +12,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.permissions import has_user_permission
 
-from campus.campus_finance.api import raise_fee_invoice
 from campus.campus_platform.api import ApprovableDocument
 from campus.student_services.api import rule_values, summarise, term_window
 from campus.student_services.attendance_rules import MEDICAL_BAND, SHORTAGE
-
-FEE_HEAD = "Condonation"
+from campus.student_services.condonation_fee import queue_fee
 
 
 class CondonationRequest(ApprovableDocument, Document):
@@ -25,15 +23,11 @@ class CondonationRequest(ApprovableDocument, Document):
 		super().validate()
 		self.set_company()
 		self.check_duplicate()
-		self.check_band()
+		if self.docstatus == 0:  # the approval-driven submit must not re-judge a request that was approved
+			self.check_band()
 
 	def on_submit(self):
-		if self.fee_amount:
-			invoice = raise_fee_invoice(
-				self.student, FEE_HEAD, self.fee_amount, self.company,
-				_("Condonation of attendance shortage, {0}").format(self.academic_term),
-			)  # fmt: skip
-			self.db_set("fee_invoice", invoice.name)
+		queue_fee(self)
 
 	def before_cancel(self):
 		if self.fee_invoice and frappe.db.get_value("Sales Invoice", self.fee_invoice, "docstatus") == 1:

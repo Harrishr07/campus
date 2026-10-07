@@ -6,7 +6,7 @@ import frappe
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
-from campus.student_services import eligibility_run
+from campus.student_services import condonation_fee, eligibility_run
 from campus.student_services.api import attendance_marks, attendance_summary, eligibility_status, summarise, term_window
 from campus.tests.approval_fixtures import level
 from campus.tests.broadcast_fixtures import make_guardian
@@ -220,10 +220,28 @@ class TestAttendanceCondonation(CampusTestCase):
 		frappe.db.set_value("Attendance Rule", self.rule26.name, "condonation_fee", 500)
 		customer = frappe.get_doc({"doctype": "Customer", "customer_name": "Cndband Customer", "customer_type": "Individual"}).insert()
 		frappe.db.set_value("Student", self.band, "customer", customer.name)
-		doc = self.approved_condonation()
+		doc = condonation(self.band, self.term).insert()
+		request = request_approval("Condonation Request", doc.name)
+		frappe.set_user(APPROVER)  # the approver has no Accounts rights, so the invoice is not made in his session
+		session = (frappe.session.user, frappe.session.sid, dict(frappe.local.form_dict))
+		with patch("frappe.set_user", side_effect=AssertionError("set_user in a request path")), patch(
+			"frappe.enqueue"
+		) as enqueue:
+			approve(request, None)
+		self.assertEqual((frappe.session.user, frappe.session.sid, dict(frappe.local.form_dict)), session)
+		queued = [c for c in enqueue.call_args_list if c.args and c.args[0] == condonation_fee.JOB]
+		self.assertEqual([c.kwargs["request"] for c in queued], [doc.name])
+		self.assertTrue(queued[0].kwargs["enqueue_after_commit"])
+		frappe.set_user("Administrator")
+		self.assertFalse(frappe.db.get_value("Condonation Request", doc.name, "fee_invoice"))  # not yet: the worker makes it
+		condonation_fee.raise_fee(doc.name)
+		condonation_fee.raise_fee(doc.name)  # idempotent
+		self.assertEqual(frappe.session.user, "Administrator")
+		doc.reload()
 		self.assertEqual(doc.fee_amount, 500)
 		invoice = frappe.get_doc("Sales Invoice", doc.fee_invoice)
 		self.assertEqual((invoice.docstatus, invoice.grand_total, invoice.items[0].item_code, invoice.student), (1, 500, "Condonation", self.band))
+		self.assertEqual(frappe.db.count("Sales Invoice", {"student": self.band, "remarks": ["like", "Condonation%"]}), 1)
 		with self.assertRaisesRegex(frappe.ValidationError, "fee invoice"):
 			doc.cancel()
 
