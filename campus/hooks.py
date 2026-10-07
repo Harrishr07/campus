@@ -419,7 +419,7 @@ website_route_rules = [
 	{"from_route": "/campus-portal", "to_route": "campus_portal"},
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
-		for page in ("fees", "attendance", "results", "circulars")
+		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave")
 	),
 ]
 

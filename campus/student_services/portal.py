@@ -6,18 +6,21 @@ request is honoured only when it is in that set (PermissionError otherwise); it 
 Whitelisted methods return plain dicts for the pages in campus/www/campus_portal.
 """
 
+import os
 from urllib.parse import quote
 
 import frappe
 from frappe import _
 from frappe.utils.html_utils import sanitize_html
 
-from campus.campus_finance.api import has_dues, student_invoices
-from campus.campus_platform.api import latest_request, start_request
+from campus.campus_finance.api import can_pay_online, fee_payment_link, has_dues, student_invoices
+from campus.campus_platform.api import find_policy, latest_request, start_request
 from campus.student_services import grievances
 from campus.student_services.api import student_terms, summarise, term_window
 
 PORTAL_HOME = "/campus-portal"
+UPLOAD_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png")
+UPLOAD_MAX_BYTES = 5 * 1024 * 1024
 
 
 def require_login():
@@ -67,13 +70,24 @@ def get_fees(student=None):
 	"""
 	student = resolve_student(student)
 	dues = has_dues(student)
+	invoices = student_invoices(student)
+	online = {company: can_pay_online(company) for company in {i.company for i in invoices}}
+	for invoice in invoices:
+		invoice["can_pay"] = bool(online[invoice.company] and not invoice.is_return and invoice.outstanding_amount > 0)
 	return frappe._dict(
 		student=student,
-		invoices=student_invoices(student),
+		invoices=invoices,
 		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in dues.by_company.items()],
 		total_outstanding=dues.total,
 		due_now=dues.blocking,
 	)
+
+
+@frappe.whitelist(methods=["POST"])
+def pay_invoice(invoice, student=None):
+	"""The gateway URL to pay `invoice`. fee_payment_link checks the invoice is the caller's own or a ward's."""
+	resolve_student(student)  # a login with no linked student, or a student that is not theirs, is refused
+	return {"url": fee_payment_link(invoice)}
 
 
 @frappe.whitelist()
@@ -136,7 +150,7 @@ def certificate_types():
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def request_certificate(certificate_type, purpose, student=None, leaving_date=None, reason_for_leaving=None):
 	"""Ask for a certificate for the session user's student (or a guarded one); returns the request and its state.
 
@@ -152,10 +166,25 @@ def request_certificate(certificate_type, purpose, student=None, leaving_date=No
 		}
 	)  # fmt: skip
 	request.flags.ignore_permissions = True
+	check_approval_route(request)
 	request.insert()
 	start_request(request)
 	request.reload()
 	return certificate_row(request)
+
+
+def check_approval_route(request):
+	"""A type that needs approval cannot be asked for until the college has set up its approval route."""
+	if not frappe.db.get_value("Certificate Type", request.certificate_type, "needs_approval"):
+		return
+	request.needs_approval = 1
+	request.company = frappe.db.get_value("Student", request.student, "oc_company")
+	if not find_policy(request):
+		frappe.throw(
+			_("{0} certificates need approval, which the college has not set up yet. Please contact the college office.").format(
+				request.certificate_type
+			)
+		)
 
 
 @frappe.whitelist()
@@ -238,14 +267,50 @@ def grievance_categories():
 	return frappe.get_all("Grievance Type", {"oc_applies_to_students": 1}, ["name", "description"], order_by="name")
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def raise_grievance(category, description, student=None):
 	"""Raise a grievance for the session user's student (or a guarded one); returns its row.
 
 	The student comes from resolve_student, never from the request alone. The grievance enters the
-	escalation chain of its category's policy at once."""
+	escalation chain of its category's policy at once. A file posted with it is attached privately."""
 	student = resolve_student(student)
-	return grievance_row(grievances.open_grievance(student, category, description))
+	upload = uploaded_file()  # checked before anything is created
+	grievance = grievances.open_grievance(student, category, description)
+	if upload:
+		attach_private(grievance, "attachment", *upload)
+	return grievance_row(grievance)
+
+
+def posted_file():
+	files = getattr(getattr(frappe.local, "request", None), "files", None)
+	return files.get("file") if files else None
+
+
+def uploaded_file():
+	"""(file name, content) of the file posted with the request, or None; throws if it is not an allowed kind or too big."""
+	upload = posted_file()
+	if not upload or not upload.filename:
+		return None
+	name = os.path.basename(upload.filename)
+	content = upload.stream.read(UPLOAD_MAX_BYTES + 1)
+	if not name.lower().endswith(UPLOAD_EXTENSIONS):
+		frappe.throw(_("Upload a PDF, JPG or PNG file."))
+	if len(content) > UPLOAD_MAX_BYTES:
+		frappe.throw(_("The file is larger than {0} MB.").format(UPLOAD_MAX_BYTES // (1024 * 1024)))
+	return name, content
+
+
+def attach_private(doc, fieldname, file_name, content):
+	"""Save `content` as a private File attached to `doc.fieldname`; only people who can read `doc` can open it."""
+	file = frappe.get_doc(
+		{
+			"doctype": "File", "file_name": file_name, "content": content, "is_private": 1,
+			"attached_to_doctype": doc.doctype, "attached_to_name": doc.name, "attached_to_field": fieldname,
+		}
+	)  # fmt: skip
+	file.flags.ignore_permissions = True
+	file.insert()
+	doc.db_set(fieldname, file.file_url)
 
 
 @frappe.whitelist()
@@ -262,4 +327,40 @@ def grievance_row(grievance):
 	return {
 		"name": grievance.name, "category": grievance.category, "description": grievance.description, "status": state,
 		"raised_on": grievance.raised_on, "resolution": grievance.resolution, "resolved_on": grievance.resolved_on,
+	}  # fmt: skip
+
+
+@frappe.whitelist(methods=["POST"])
+def apply_leave(from_date, to_date, leave_kind, reason=None, student=None):
+	"""Apply for leave as the session user's student (or a guarded one): a draft the college staff review and submit.
+
+	Medical and On Duty leave take a certificate posted with the request (private); staff cannot submit them without it."""
+	student = resolve_student(student)
+	upload = uploaded_file()
+	leave = frappe.get_doc(
+		{
+			"doctype": "Student Leave Application", "student": student, "from_date": from_date, "to_date": to_date,
+			"oc_leave_kind": leave_kind, "reason": (reason or "").strip(),
+		}
+	)  # fmt: skip
+	leave.flags.ignore_permissions = True
+	leave.insert()
+	if upload:
+		attach_private(leave, "oc_certificate", *upload)
+	return leave_row(leave)
+
+
+@frappe.whitelist()
+def my_leaves(student=None):
+	"""The student's leave applications, newest first; the doctype's portal scope still applies."""
+	student = resolve_student(student)
+	names = frappe.get_list("Student Leave Application", {"student": student}, pluck="name", order_by="creation desc")
+	return {"student": student, "leaves": [leave_row(frappe.get_doc("Student Leave Application", n)) for n in names]}
+
+
+def leave_row(leave):
+	state = {0: _("Requested"), 1: _("Approved"), 2: _("Cancelled")}[leave.docstatus]
+	return {
+		"name": leave.name, "from_date": leave.from_date, "to_date": leave.to_date, "leave_kind": leave.oc_leave_kind,
+		"reason": leave.reason, "status": state, "total_leave_days": leave.total_leave_days,
 	}  # fmt: skip

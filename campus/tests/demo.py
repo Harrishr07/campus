@@ -29,6 +29,7 @@ COMPANIES = [  # name, abbr, parent
 	(ENGINEERING, "DCE", TRUST),
 	(ARTS, "DAS", TRUST),
 ]
+CERTIFICATE_POLICY = "Demo Certificate Approval"
 AFFILIATING_UNIVERSITY = "Anna University"
 AUTONOMY_DATE = "2022-05-26"
 
@@ -139,11 +140,25 @@ def build_base(scale):
 	make_institution_profiles()
 	make_service_agreements()
 	make_position_holders()
+	make_certificate_policy()
 	make_categories()
 	batches = FULL_BATCHES if scale == "full" else SMALL_BATCHES
 	make_students(batches, STUDENTS_PER_BATCH[scale])
 	make_student_users()
 	assign_missing_regulations()
+
+
+def make_certificate_policy():
+	"""Certificate Requests of a needs-approval type go to the Principal of the student's college, so the portal request works."""
+	get_or_insert(
+		"Approval Policy",
+		{"policy_name": CERTIFICATE_POLICY, "document_type": "Certificate Request"},
+		{
+			"condition": "doc.needs_approval",
+			"on_final_action": "Submit",  # import mode skips DocType defaults
+			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal"}],
+		},
+	)
 
 
 def get_or_insert(doctype, filters, values):

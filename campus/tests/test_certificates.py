@@ -105,7 +105,7 @@ class TestIssue(CertificateFixture):
 		frappe.db.delete("Approval Level", {"parent": POLICY})
 		frappe.db.delete("Approval Policy", {"name": POLICY})
 		frappe.set_user(USERS["A"])
-		with self.assertRaisesRegex(frappe.ValidationError, "needs approval"):
+		with self.assertRaisesRegex(frappe.ValidationError, "contact the college office"):
 			portal.request_certificate(BONAFIDE, "Bank account")
 
 	def test_a_type_that_needs_no_approval_is_issued_at_once(self):

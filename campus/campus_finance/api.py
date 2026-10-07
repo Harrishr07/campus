@@ -39,3 +39,11 @@ disburse_scholarship = scholarships.disburse
 make_credit_note = refunds.make_credit_note
 make_refund_payment = refunds.make_refund_payment
 fee_payment_link = gateways.fee_payment_link
+
+
+def can_pay_online(company):
+	"""Whether `company` has a default Payment Gateway Account with a supported gateway (never throws)."""
+	if not frappe.db.table_exists("Payment Gateway Account"):  # the payments app is not installed
+		return False
+	gateway = frappe.db.get_value("Payment Gateway Account", {"company": company, "is_default": 1}, "payment_gateway")
+	return gateway in gateways.ADAPTERS

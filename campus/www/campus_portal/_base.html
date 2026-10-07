@@ -6,7 +6,9 @@
 	<nav class="cp-nav" aria-label="{{ _('Portal') }}">
 		{% for key, label, href in [("home", _("Dashboard"), "/campus-portal"), ("fees", _("Fees"), "/campus-portal/fees"),
 			("attendance", _("Attendance"), "/campus-portal/attendance"), ("results", _("Results"), "/campus-portal/results"),
-			("circulars", _("Circulars"), "/campus-portal/circulars")] %}
+			("circulars", _("Circulars"), "/campus-portal/circulars"),
+			("certificates", _("Certificates"), "/campus-portal/certificates"), ("grievances", _("Grievances"), "/campus-portal/grievances"),
+			("leave", _("Leave"), "/campus-portal/leave")] %}
 		<a href="{{ href }}{% if student and students|length > 1 %}?student={{ student }}{% endif %}"
 			{% if key == active %}aria-current="page"{% endif %}>{{ label }}</a>
 		{% endfor %}
@@ -29,4 +31,5 @@
 	{% block portal_body %}{% endblock %}
 	{% endif %}
 </div>
+<script src="/assets/campus/js/campus_portal.js"></script>
 {% endblock %}

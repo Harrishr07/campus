@@ -16,6 +16,12 @@
 		{{ _("Due") }} {{ frappe.utils.formatdate(i.due_date) }}
 		&middot; {{ _("Total") }} {{ frappe.utils.fmt_money(i.grand_total, currency=i.currency) }}
 		&middot; {{ _("Outstanding") }} {{ frappe.utils.fmt_money(i.outstanding_amount, currency=i.currency) }}
+		{% if i.can_pay %}
+		<br><button class="cp-btn" data-pay="{{ i.name|e }}" data-student="{{ student|e }}">{{ _("Pay online") }}</button>
+		<span class="cp-message" role="alert"></span>
+		{% elif i.outstanding_amount > 0 and not i.is_return %}
+		<br><span class="cp-label">{{ _("Online payment is not available for this invoice. Please pay at the college office.") }}</span>
+		{% endif %}
 	</li>
 	{% endfor %}
 </ul>

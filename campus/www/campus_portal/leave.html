@@ -1,0 +1,31 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Leave") }}</h2>
+<form class="cp-card cp-form" data-method="campus.student_services.portal.apply_leave">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<label for="cp-kind">{{ _("Kind") }}</label>
+	<select id="cp-kind" name="leave_kind" required>
+		{% for k in leave_kinds %}<option value="{{ k|e }}">{{ _(k) }}</option>{% endfor %}
+	</select>
+	<label for="cp-from">{{ _("From") }}</label>
+	<input id="cp-from" name="from_date" type="date" required>
+	<label for="cp-to">{{ _("To") }}</label>
+	<input id="cp-to" name="to_date" type="date" required>
+	<label for="cp-reason">{{ _("Reason") }}</label>
+	<textarea id="cp-reason" name="reason" rows="3"></textarea>
+	<label for="cp-file">{{ _("Certificate (Medical and On Duty leave; PDF, JPG or PNG; kept private)") }}</label>
+	<input id="cp-file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png">
+	<button class="cp-btn" type="submit">{{ _("Apply") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% if not leaves %}<p class="cp-empty">{{ _("No leave applications.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for l in leaves %}
+	<li>
+		<strong>{{ _(l.leave_kind) }}</strong> <span class="cp-badge">{{ l.status|e }}</span><br>
+		{{ frappe.utils.formatdate(l.from_date) }} - {{ frappe.utils.formatdate(l.to_date) }}
+		{% if l.reason %}<br>{{ l.reason|e }}{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

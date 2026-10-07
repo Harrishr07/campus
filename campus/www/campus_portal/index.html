@@ -26,4 +26,12 @@
 		<span class="cp-value">{{ pending_circulars }}</span>
 	</a>
 </div>
+{% if onboarding %}
+<h2>{{ _("Onboarding") }} ({{ onboarding.completion or 0 }}%)</h2>
+<ul class="cp-list">
+	{% for item in onboarding["items"] %}
+	<li>{{ item.title|e }}{% if item.mandatory %} *{% endif %} <span class="cp-badge">{{ _(item.status) }}</span></li>
+	{% endfor %}
+</ul>
+{% endif %}
 {% endblock %}

@@ -20,6 +20,7 @@ def get_context(context):
 		context.attendance = {"academic_term": None, "summary": None}
 	results = portal.get_results(student)["results"]
 	context.latest_result = results[0] if results else None
+	context.onboarding = portal.my_onboarding(student)
 	context.pending_circulars = sum(
 		1 for c in get_my_circulars() if c["acknowledgement_required"] and not c["acknowledged"]
 	)
