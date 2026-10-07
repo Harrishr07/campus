@@ -40,28 +40,44 @@ class NoDuesClearance(Document):
 		verification.revoke_for(self, _("No Dues Clearance {0} was cancelled.").format(self.name))
 
 	def ensure_standard_offices(self):
-		"""A new clearance gets the standard offices; later none may be removed, renamed or made optional."""
-		present = {row.office.strip().lower(): row for row in self.signoffs}
+		"""A new clearance gets the standard offices; offices are unique, and none of the standard ones may be
+		removed, renamed or made optional."""
+		if self.is_new():
+			listed = {no_dues.normalise(row.office) for row in self.signoffs}
+			for office in no_dues.STANDARD_OFFICES:
+				if no_dues.normalise(office) not in listed:
+					self.append("signoffs", {"office": office, "mandatory": 1, "status": PENDING})
+		offices = [no_dues.normalise(row.office) for row in self.signoffs]
+		for office in set(offices):
+			if offices.count(office) > 1:
+				frappe.throw(_("The office {0} is listed more than once.").format(office.title()))
+		present = dict(zip(offices, self.signoffs, strict=True))
 		for office in no_dues.STANDARD_OFFICES:
-			row = present.get(office.lower())
-			if row is None and self.is_new():
-				self.append("signoffs", {"office": office, "mandatory": 1, "status": PENDING})
-			elif row is None:
+			row = present.get(no_dues.normalise(office))
+			if row is None:
 				frappe.throw(_("The {0} sign-off is required and cannot be removed.").format(office))
-			elif not row.mandatory:
+			if not row.mandatory:
 				frappe.throw(_("The {0} sign-off is mandatory.").format(office))
 
 	def stamp_signoffs(self):
 		"""Who cleared a row and when is set by the server, whenever a row becomes Cleared; reset on Pending.
 
-		Changing a row's status needs one of the office's roles.
+		Changing a row's status needs one of the office's roles (managers only for an office with no mapping).
+		Renaming a row's office is a change of both offices: it needs the old office's roles if the row was
+		Cleared, and the row stays Cleared only if the user may clear the new office.
 		"""
 		before = self.get_doc_before_save()
-		earlier = {row.name: row.status for row in before.signoffs} if before else {}
+		earlier = {row.name: (row.status, row.office) for row in before.signoffs} if before else {}
 		for row in self.signoffs:
-			if row.name in earlier and earlier[row.name] == row.status:
+			old_status, old_office = earlier.get(row.name, (PENDING, row.office))
+			renamed = no_dues.normalise(old_office) != no_dues.normalise(row.office)
+			if old_status == row.status and not renamed:
 				continue
-			if row.status == CLEARED or earlier.get(row.name) == CLEARED:
+			if old_status == CLEARED:
+				no_dues.check_may_clear(old_office)
+			if row.status == CLEARED and renamed and not no_dues.may_clear(row.office):
+				row.status = PENDING
+			elif row.status == CLEARED:
 				no_dues.check_may_clear(row.office)
 			if row.status == CLEARED:
 				row.cleared_by, row.cleared_on = frappe.session.user, now_datetime()

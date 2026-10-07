@@ -70,6 +70,7 @@ def get_fees(student=None):
 		invoices=student_invoices(student),
 		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in dues.by_company.items()],
 		total_outstanding=dues.total,
+		due_now=dues.blocking,
 	)
 
 

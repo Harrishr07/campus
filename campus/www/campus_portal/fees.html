@@ -4,8 +4,9 @@
 {% for row in fees.outstanding_by_company %}
 <div class="cp-card"><span class="cp-label">{{ row.company }}</span>
 	<span class="cp-value">{{ frappe.utils.fmt_money(row.outstanding, currency="INR") }}</span>
-	<span class="cp-label">{{ _("outstanding") }}</span></div>
+	<span class="cp-label">{{ _("net outstanding") }}</span></div>
 {% endfor %}
+<p class="cp-label">{{ _("Due now (credit balances not set off)") }}: <strong>{{ frappe.utils.fmt_money(fees.due_now, currency="INR") }}</strong></p>
 {% if not fees.invoices %}<p class="cp-empty">{{ _("No fee invoices yet.") }}</p>{% endif %}
 <ul class="cp-list">
 	{% for i in fees.invoices %}

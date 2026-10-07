@@ -6,9 +6,9 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_retu
 from frappe.utils import flt, today
 
 from campus.campus_finance import api, ledger
-from campus.campus_platform.verification import verify
 from campus.campus_finance.fee_heads import CAUTION_DEPOSIT, EXAM, HOSTEL, TUITION
 from campus.campus_finance.report.student_fee_ledger import student_fee_ledger as report
+from campus.campus_platform.verification import verify
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import make_enrolled_students, make_finance_company, make_year_and_program
 from campus.tests.utils import CampusTestCase
@@ -225,6 +225,9 @@ class TestNoDuesClearance(LedgerFixture):
 	def clearance(self, **values):
 		return frappe.get_doc({"doctype": "No Dues Clearance", "student": self.student, "purpose": "Transfer Certificate", **values})
 
+	def row(self, doc, office):
+		return next(r for r in doc.signoffs if r.office == office)
+
 	def clear_all(self, doc):
 		for row in doc.signoffs:
 			row.status = "Cleared"
@@ -367,3 +370,60 @@ class TestNoDuesClearance(LedgerFixture):
 		amended.save().submit()
 		self.assertNotEqual(amended.verification_code, code)
 		self.assertEqual(verify(amended.verification_code).status, "Valid")
+
+	def test_duplicate_offices_are_rejected(self):
+		doc = self.clearance().insert()
+		doc.append("signoffs", {"office": " hostel ", "mandatory": 0})
+		with self.assertRaisesRegex(frappe.ValidationError, "more than once"):
+			doc.save()
+
+	def test_renaming_a_cleared_row_to_another_office_is_not_a_way_round_the_roles(self):
+		doc = self.clearance()
+		doc.append("signoffs", {"office": "Sports", "mandatory": 0})
+		doc.insert()
+		self.row(doc, "Sports").status = "Cleared"  # Sports has no mapping: a manager (Administrator) clears it
+		doc.save()
+		frappe.set_user(WARDEN_USER)
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		self.row(doc, "Sports").office = "Sports Complex"  # old office was cleared: not the warden's to touch
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+
+	def test_a_row_renamed_to_an_office_the_user_may_not_clear_resets_to_pending(self):
+		settings = frappe.get_single("Campus Settings")
+		settings.append("no_dues_office_roles", {"office": "Sports", "role": "Accounts Manager"})
+		settings.append("no_dues_office_roles", {"office": "Games", "role": "Warden"})
+		settings.save()
+		doc = self.clearance()
+		doc.append("signoffs", {"office": "Games", "mandatory": 0})
+		doc.insert()
+		frappe.set_user(WARDEN_USER)
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		self.row(doc, "Games").status = "Cleared"
+		doc.save()
+		self.row(doc, "Games").office = "Sports"  # the warden may clear Games but not Sports
+		doc.save()
+		row = self.row(doc, "Sports")
+		self.assertEqual((row.status, row.cleared_by), ("Pending", None))
+
+	def test_an_unmapped_office_is_cleared_by_managers_only(self):
+		doc = self.clearance()
+		doc.append("signoffs", {"office": "Sports", "mandatory": 0})
+		doc.insert()
+		frappe.set_user(COLLEGE_USER)  # an accounts user, not a manager
+		doc = frappe.get_doc("No Dues Clearance", doc.name)
+		self.row(doc, "Sports").status = "Cleared"
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+
+	def test_migrate_reseeds_a_missing_standard_mapping_only(self):
+		from campus.campus_finance.no_dues import clearing_roles, seed_office_roles
+
+		settings = frappe.get_single("Campus Settings")
+		settings.no_dues_office_roles = [r for r in settings.no_dues_office_roles if r.office != "Library"]
+		settings.append("no_dues_office_roles", {"office": "Sports", "role": "Warden"})
+		settings.save()
+		self.assertFalse(clearing_roles("Library"))
+		seed_office_roles()
+		self.assertEqual(clearing_roles("Library"), {"Librarian"})
+		self.assertEqual(clearing_roles("Sports"), {"Warden"})
