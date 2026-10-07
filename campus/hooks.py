@@ -210,13 +210,18 @@ doc_events["Student"]["validate"].append("campus.student_services.mentors.set_cl
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {
+	"before_validate": "campus.campus_finance.concessions.apply_to_invoice",
 	"validate": "campus.campus_finance.fee_heads.validate_invoice_accounts",
 	"before_submit": "campus.campus_finance.challan.assign_challan_no",
+	"on_submit": "campus.campus_finance.concessions.mark_applied",
+	"on_cancel": "campus.campus_finance.concessions.release",
 }
 doc_events["Payment Entry"] = {
 	"validate": "campus.campus_finance.challan.set_payment_student",
 	"before_submit": "campus.campus_finance.challan.assign_receipt_no",
+	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
 }
+doc_events["Journal Entry"] = {"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel"}
 
 # Scheduled Tasks
 # ---------------

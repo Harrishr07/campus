@@ -5,10 +5,13 @@ final_year_appeared / final_year_passed: Student Results of the company's Exam S
 whose term belongs to the academic year. A student appeared when at least one course was sat (Pass or Fail;
 SA and AB rows are not sittings) and passed when, in addition, every course of the result is Pass.
 Counts are per Student Result, i.e. per student per final-year session.
+scholarship_govt_students / scholarship_inst_students (AQAR 5.1.1 / 5.1.2): distinct students with a sanctioned
+Scholarship Application of a government / institutional scheme of the company in the academic year.
 """
 
 import frappe
 
+from campus.campus_finance.api import scholarship_beneficiaries
 from campus.iqac.registry import campus_metric
 
 
@@ -60,3 +63,18 @@ def appeared_results(company, academic_year):
 	for row in rows:
 		by_result.setdefault(row.parent, []).append(row.result)
 	return {name: outcomes for name, outcomes in by_result.items() if {"Pass", "Fail"} & set(outcomes)}
+
+
+def scholarship_students(company, academic_year, scheme_type):
+	rows = scholarship_beneficiaries(company, academic_year, scheme_type)
+	return {"value": len({r.student for r in rows}), "records": refs("Scholarship Application", sorted(r.name for r in rows))}
+
+
+@campus_metric("scholarship_govt_students")
+def scholarship_govt_students(company, academic_year):
+	return scholarship_students(company, academic_year, "Government")
+
+
+@campus_metric("scholarship_inst_students")
+def scholarship_inst_students(company, academic_year):
+	return scholarship_students(company, academic_year, "Institutional")

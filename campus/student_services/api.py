@@ -105,6 +105,35 @@ def rule_values(student):
 	}
 
 
+def student_terms(student):
+	"""Academic Terms in which the student is an active member of a course offering, newest first."""
+	group, member = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Student")
+	term = frappe.qb.DocType("Academic Term")
+	return (
+		frappe.qb.from_(group)
+		.join(member)
+		.on(member.parent == group.name)
+		.join(term)
+		.on(term.name == group.academic_term)
+		.select(term.name, term.term_start_date)
+		.where(group.group_based_on == "Course")
+		.where(member.student == student)
+		.where(member.active == 1)
+		.groupby(term.name, term.term_start_date)
+		.orderby(term.term_start_date, order=frappe.qb.desc)
+		.run(as_dict=True)
+	)
+
+
+def latest_attendance(student):
+	"""(academic term, overall attendance %) of the student's latest term, or (None, None) without a term or a
+	percentage. No read check on the Student: for service code with its own authorisation (renewal rules)."""
+	terms = student_terms(student)
+	if not terms:
+		return None, None
+	return terms[0].name, summarise(student, terms[0].name, term_window(terms[0].name), {})["overall_pct"]
+
+
 def term_window(academic_term):
 	"""(first day, last day counted): the term start and the earlier of term end and today."""
 	start, end = frappe.db.get_value("Academic Term", academic_term, ["term_start_date", "term_end_date"])

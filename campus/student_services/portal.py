@@ -15,7 +15,7 @@ from frappe.utils.html_utils import sanitize_html
 from campus.campus_finance.api import has_dues, student_invoices
 from campus.campus_platform.api import latest_request, start_request
 from campus.student_services import grievances
-from campus.student_services.api import summarise, term_window
+from campus.student_services.api import student_terms, summarise, term_window
 
 PORTAL_HOME = "/campus-portal"
 
@@ -73,26 +73,6 @@ def get_fees(student=None):
 		outstanding_by_company=[{"company": c, "outstanding": v} for c, v in dues.by_company.items()],
 		total_outstanding=dues.total,
 		due_now=dues.blocking,
-	)
-
-
-def student_terms(student):
-	"""Academic Terms in which the student is an active member of a course offering, newest first."""
-	group, member = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Student")
-	term = frappe.qb.DocType("Academic Term")
-	return (
-		frappe.qb.from_(group)
-		.join(member)
-		.on(member.parent == group.name)
-		.join(term)
-		.on(term.name == group.academic_term)
-		.select(term.name, term.term_start_date)
-		.where(group.group_based_on == "Course")
-		.where(member.student == student)
-		.where(member.active == 1)
-		.groupby(term.name, term.term_start_date)
-		.orderby(term.term_start_date, order=frappe.qb.desc)
-		.run(as_dict=True)
 	)
 
 
