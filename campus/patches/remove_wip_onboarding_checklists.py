@@ -14,6 +14,6 @@ OLD_DOCTYPES = [
 
 def execute():
 	for name in OLD_DOCTYPES:
-		if frappe.db.exists("DocType", name):
+		if frappe.db.get_value("DocType", name, "module") == "Student Services":
 			frappe.delete_doc("DocType", name, force=True, ignore_permissions=True)
 		frappe.db.sql_ddl(f"drop table if exists `tab{name}`")

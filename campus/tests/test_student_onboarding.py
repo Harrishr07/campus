@@ -1,5 +1,7 @@
 """P1-T18 tests (M05-01, M05-07): student fields, student onboarding, mentor allocation and visibility, ID card."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import add_days, today
 
@@ -37,6 +39,28 @@ def make_employee(user):
 			"user_id": user, "create_user_permission": 0,
 		}
 	).insert().name
+
+
+def make_userless_employee(company):
+	return frappe.get_doc(
+		{"doctype": "Employee", "naming_series": "HR-EMP-", "first_name": "T18 Userless", "gender": "Female",
+		"date_of_birth": "1980-01-01", "date_of_joining": "2015-06-01", "status": "Active", "company": company,
+		"create_user_permission": 0}
+	).insert().name
+
+
+def make_foreign_mentor():
+	"""An active MENTOR position holder employed by the other college."""
+	user = "t18-foreign-mentor@example.com"
+	make_role_user(user)
+	employee = make_employee(user)
+	frappe.db.set_value("Employee", employee, "company", OTHER_COLLEGE)
+	group = frappe.db.get_value("Student Group", {"student_group_name": "T18 Mentor Scope"})
+	frappe.get_doc(
+		{"doctype": "Position Holder", "position": "MENTOR", "user": user, "scope_value": group,
+		"from_date": add_days(today(), -30)}
+	).insert()
+	return employee
 
 
 class TestStudentFields(AdmitTestCase):
@@ -238,6 +262,46 @@ class TestMentors(AdmitTestCase):
 		result = self.allocate_as(HOD, per_mentor=3, use_default_mentors=True)
 		self.assertEqual(set(result), set(self.employees))
 
+	def test_no_position_holders_means_no_mentors_not_userless_employees(self):
+		userless = make_userless_employee(COLLEGE)
+		frappe.db.delete("Position Holder", {"position": "MENTOR"})
+		with self.assertRaises(frappe.ValidationError):
+			api.allocate_mentors(program=PROGRAM, batch=YEAR)
+		with self.assertRaises(frappe.ValidationError):
+			api.allocate_mentors(program=PROGRAM, batch=YEAR, mentors=[userless])
+		self.assertFalse(frappe.db.exists("Student", {"oc_mentor": userless}))
+
+	def test_mentor_must_belong_to_the_students_company(self):
+		from campus.student_services.mentors import position_employees
+
+		foreign = make_foreign_mentor()
+		self.assertIn(foreign, position_employees(OTHER_COLLEGE))
+		self.assertNotIn(foreign, position_employees(COLLEGE))
+		frappe.set_user(HOD)
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				api.allocate_mentors(program=PROGRAM, batch=YEAR, mentors=[foreign])
+		finally:
+			frappe.set_user("Administrator")
+		result = self.allocate_as(HOD, use_default_mentors=True)
+		self.assertNotIn(foreign, result)
+
+	def test_program_cohort_over_the_cap_needs_a_student_group(self):
+		with patch("campus.student_services.mentors.MAX_PROGRAM_COHORT", 3):
+			with self.assertRaises(frappe.ValidationError):
+				self.allocate_as(HOD)
+			self.assertFalse(frappe.db.exists("Student", {"oc_mentor": ["is", "set"], "name": ["in", self.students]}))
+			group = frappe.get_doc(
+				{"doctype": "Student Group", "student_group_name": f"T18 Cap {SERIAL[0]}", "group_based_on": "Activity",
+				"academic_year": YEAR, "program": PROGRAM, "students": [{"student": s, "active": 1} for s in self.students]}
+			).insert()
+			frappe.set_user(HOD)
+			try:
+				result = api.allocate_mentors(student_group=group.name, mentors=self.employees)
+			finally:
+				frappe.set_user("Administrator")
+		self.assertEqual(sum(len(v) for v in result.values()), 7)
+
 	def test_non_holder_is_not_a_mentor(self):
 		outsider = make_employee(PLAIN_USER)
 		with self.assertRaises(frappe.ValidationError):
@@ -330,6 +394,26 @@ class TestCleanup(AdmitTestCase):
 		for name in OLD_DOCTYPES:
 			self.assertFalse(frappe.db.exists("DocType", name), name)
 			self.assertFalse(frappe.db.table_exists(name), name)
+
+
+class TestIdCardEscaping(AdmitTestCase):
+	def test_name_and_photo_are_escaped_on_the_card(self):
+		onboarding.ensure_default_template(COLLEGE)
+		self.matrix([(QUOTA, OC, 2)])
+		student = self.admit_as_officer(self.applicant())["student"]
+		frappe.db.set_value("Student", student, {"student_name": "<script>alert(1)</script>", "image": '/x.png" onerror="y'})
+		html = frappe.get_print("Student", student, "Student ID Card")
+		self.assertNotIn("<script>alert(1)</script>", html)
+		self.assertNotIn('onerror="y', html)
+
+
+class TestMenteeGuard(AdmitTestCase):
+	def test_blank_user_has_no_mentees(self):
+		from campus.examinations.access import mentees_of
+
+		make_userless_employee(COLLEGE)
+		self.assertEqual(mentees_of(""), set())
+		self.assertEqual(mentees_of(None), set())
 
 
 class TestIdCard(AdmitTestCase):

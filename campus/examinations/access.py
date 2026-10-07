@@ -76,6 +76,8 @@ def students_of(user):
 
 def mentees_of(user):
 	"""Students whose Student.oc_mentor is an Employee of the user (the mentor allocation tool sets it)."""
+	if not user:
+		return set()
 	employees = frappe.get_all("Employee", {"user_id": user}, pluck="name")
 	return set(frappe.get_all("Student", {"oc_mentor": ["in", employees]}, pluck="name")) if employees else set()
 

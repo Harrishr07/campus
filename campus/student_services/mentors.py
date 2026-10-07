@@ -13,14 +13,17 @@ from campus.student_services.onboarding import mark_item_done
 
 ALLOCATOR_ROLES = ("HOD", "Dean Academics", "Dean Student Affairs")
 MENTOR_POSITION = "MENTOR"
+# A program-wide cohort is one long request holding a lock on every student row: above this size the HOD
+# allocates per Student Group instead.
+MAX_PROGRAM_COHORT = 150
 
 
 def allocate(student_group=None, program=None, batch=None, mentors=None, per_mentor=None):
 	"""See `campus.student_services.api.allocate_mentors`."""
 	frappe.only_for(ALLOCATOR_ROLES)
-	mentors = resolve_mentors(mentors)
 	students = cohort(student_group, program, batch)
 	check_company_access(students)
+	mentors = resolve_mentors(mentors, cohort_company(students))
 	check_capacity(len(students), len(mentors), per_mentor)
 	assignment = {}
 	for index, student in enumerate(students):
@@ -31,24 +34,36 @@ def allocate(student_group=None, program=None, batch=None, mentors=None, per_men
 	return assignment
 
 
-def position_employees():
-	"""{employee: user} for active employees whose user holds the MENTOR position today."""
+def position_employees(company):
+	"""{employee: user} for active employees of `company` whose user holds the MENTOR position today."""
 	users = resolve_position(MENTOR_POSITION)
+	if not users:
+		return {}
 	rows = frappe.get_all(
-		"Employee", filters={"user_id": ["in", users or [""]], "status": "Active"}, fields=["name", "user_id"], order_by="name"
+		"Employee",
+		filters={"user_id": ["in", users], "status": "Active", "company": company},
+		fields=["name", "user_id"],
+		order_by="name",
 	)
 	return {row.name: row.user_id for row in rows}
 
 
-def resolve_mentors(mentors):
-	"""The Employees to allocate to: the given ones, or every active MENTOR position holder."""
-	holders = position_employees()
+def cohort_company(students):
+	companies = {s.oc_company for s in students}
+	if len(companies) > 1:
+		frappe.throw(_("The students belong to more than one company; allocate one company at a time."))
+	return companies.pop()
+
+
+def resolve_mentors(mentors, company):
+	"""The Employees of `company` to allocate to: the given ones, or every active MENTOR position holder there."""
+	holders = position_employees(company)
 	chosen = list(dict.fromkeys(frappe.parse_json(mentors) or [])) or list(holders)
 	if not chosen:
-		frappe.throw(_("No mentors: no active employee holds the Mentor position."))
+		frappe.throw(_("No mentors: no active employee of {0} holds the Mentor position.").format(company))
 	for employee in chosen:
 		if employee not in holders:
-			frappe.throw(_("Employee {0} does not hold the Mentor position.").format(employee))
+			frappe.throw(_("Employee {0} does not hold the Mentor position in {1}.").format(employee, company))
 	return chosen
 
 
@@ -67,6 +82,12 @@ def cohort(student_group, program, batch):
 	students = query.where(student.name.isin(names or [""])).for_update().run(as_dict=True)  # locked: facts below are current
 	if not student_group:
 		students = [s for s in students if s.oc_batch == batch]
+		if len(students) > MAX_PROGRAM_COHORT:
+			frappe.throw(
+				_("{0} students is too many to allocate at once (limit {1}); allocate per Student Group.").format(
+					len(students), MAX_PROGRAM_COHORT
+				)
+			)
 	if not students:
 		frappe.throw(_("No students found to allocate."))
 	return sorted(students, key=lambda s: (s.oc_register_no or "", s.name))
