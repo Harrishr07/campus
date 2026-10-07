@@ -13,6 +13,7 @@ from frappe import _
 from frappe.utils.html_utils import sanitize_html
 
 from campus.campus_finance.api import has_dues, student_invoices
+from campus.campus_platform.api import latest_request, start_request
 from campus.student_services.api import summarise, term_window
 
 PORTAL_HOME = "/campus-portal"
@@ -142,6 +143,67 @@ def grade_sheet_url(student_result):
 	return (
 		"/api/method/frappe.utils.print_format.download_pdf?doctype=Student%20Result"
 		f"&name={quote(student_result)}&format=Grade%20Sheet"
+	)
+
+
+@frappe.whitelist()
+def certificate_types():
+	"""Certificate types a student may ask for, with their fee and whether approval is needed."""
+	require_login()
+	return frappe.get_all(
+		"Certificate Type", {"enabled": 1}, ["name", "fee_amount", "needs_approval", "is_transfer_certificate"], order_by="name"
+	)
+
+
+@frappe.whitelist()
+def request_certificate(certificate_type, purpose, student=None, leaving_date=None, reason_for_leaving=None):
+	"""Ask for a certificate for the session user's student (or a guarded one); returns the request and its state.
+
+	The student comes from resolve_student, never from the request alone. The request is made with
+	ignore_permissions (portal roles may only read Certificate Request) and then sent through approval, or
+	issued at once when the type needs none.
+	"""
+	student = resolve_student(student)
+	request = frappe.get_doc(
+		{
+			"doctype": "Certificate Request", "student": student, "certificate_type": certificate_type,
+			"purpose": (purpose or "").strip(), "leaving_date": leaving_date, "reason_for_leaving": reason_for_leaving,
+		}
+	)  # fmt: skip
+	request.flags.ignore_permissions = True
+	request.insert()
+	start_request(request)
+	request.reload()
+	return certificate_row(request)
+
+
+@frappe.whitelist()
+def my_certificates(student=None):
+	"""The student's certificate requests, newest first: state, number and, once issued, the PDF and verification links."""
+	student = resolve_student(student)
+	names = frappe.get_list("Certificate Request", {"student": student}, pluck="name", order_by="creation desc")
+	return {"student": student, "certificates": [certificate_row(frappe.get_doc("Certificate Request", n)) for n in names]}
+
+
+def certificate_row(request):
+	issued = request.docstatus == 1
+	state = {0: _("Requested"), 1: _("Issued"), 2: _("Cancelled")}[request.docstatus]
+	approval = latest_request(request) if request.docstatus == 0 else None
+	if approval:  # Pending, Rejected, Returned
+		state = _(approval.status)
+	return {
+		"name": request.name, "certificate_type": request.certificate_type, "purpose": request.purpose, "status": state,
+		"certificate_number": request.certificate_number, "issued_on": request.issued_on, "fee_amount": request.fee_amount,
+		"pdf_url": certificate_pdf_url(request) if issued else None,
+		"verification_code": request.verification_code,
+	}  # fmt: skip
+
+
+def certificate_pdf_url(request):
+	print_format = frappe.db.get_value("Certificate Type", request.certificate_type, "print_format")
+	return (
+		"/api/method/frappe.utils.print_format.download_pdf?doctype=Certificate%20Request"
+		f"&name={quote(request.name)}&format={quote(print_format)}"
 	)
 
 

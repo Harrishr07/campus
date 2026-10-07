@@ -4,6 +4,7 @@ import frappe
 from frappe.utils import today
 
 from campus.campus_platform.approval_access import pending_approvals  # noqa: F401  (public API)
+from campus.campus_platform.approval_engine import latest_request, start_request  # noqa: F401  (public API)
 from campus.campus_platform.approvals import ApprovableDocument, request_approval  # noqa: F401  (public API)
 from campus.campus_platform.pack_rules import effective_status, status_allows_pack
 from campus.campus_platform.positions import resolve_position  # noqa: F401  (public API)
@@ -65,3 +66,9 @@ def service_provider(service, company):
 
 def _agreements_with_member(company):
 	return frappe.get_all("Shared Service Member", filters={"company": company}, pluck="parent") or [""]
+
+
+def is_approved(doc):
+	"""True when the latest approval request of `doc` ended Approved."""
+	latest = latest_request(doc)
+	return bool(latest and latest.status == "Approved")

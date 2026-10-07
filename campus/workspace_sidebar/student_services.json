@@ -63,6 +63,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Certificate Type",
+   "link_to": "Certificate Type",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "clipboard-list",
@@ -151,6 +162,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Certificate Request",
+   "link_to": "Certificate Request",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "sheet",
@@ -171,9 +193,31 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Certificates Issued",
+   "link_to": "Certificates Issued",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "TC Register",
+   "link_to": "TC Register",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-07 00:00:00.000000",
+ "modified": "2026-10-07 02:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",

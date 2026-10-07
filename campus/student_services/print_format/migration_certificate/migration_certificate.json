@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Migration Certificate",
+ "doc_type": "Certificate Request",
+ "module": "Student Services",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "<div class=\"oc-cert\">\n<h2 style=\"text-align:center\">{{ doc.company }}</h2>\n<h3 style=\"text-align:center\">{{ _(\"Migration Certificate\") }}</h3>\n<p style=\"text-align:right\">{{ _(\"No.\") }} {{ doc.certificate_number }}<br>{{ _(\"Date\") }}: {{ frappe.format(doc.issued_on, {\"fieldtype\": \"Date\"}) if doc.issued_on else \"\" }}</p>\n{% set dob = frappe.db.get_value(\"Student\", doc.student, \"date_of_birth\") %}\n<p>{{ _(\"This is to certify that\") }} <strong>{{ doc.student_name }}</strong> ({{ doc.student }}){% if dob %}, {{ _(\"born on\") }} {{ frappe.format(dob, {\"fieldtype\": \"Date\"}) }},{% endif %} {{ _(\"is permitted to migrate to another institution or university. This institution has no objection.\") }}</p>\n<p>{{ _(\"This certificate is issued for the purpose of\") }}: <strong>{{ doc.purpose }}</strong>.</p>\n<p style=\"text-align:right;margin-top:60px\">{{ _(\"Principal\") }}</p>\n</div>\n{{ oc_qr_block(doc) }}\n",
+ "creation": "2026-10-07 00:00:00.000000",
+ "modified": "2026-10-07 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

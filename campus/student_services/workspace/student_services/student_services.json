@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -55,10 +55,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Certificate Type",
+   "link_count": 0,
+   "link_to": "Certificate Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 7,
+   "link_count": 8,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -140,10 +151,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Certificate Request",
+   "link_count": 0,
+   "link_to": "Certificate Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 1,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -157,9 +179,31 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "Certificate Request",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Certificates Issued",
+   "link_count": 0,
+   "link_to": "Certificates Issued",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Certificate Request",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "TC Register",
+   "link_count": 0,
+   "link_to": "TC Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-07 01:00:00.000000",
+ "modified": "2026-10-07 02:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",
