@@ -230,3 +230,21 @@ def clean_circular_body(circulars):
 	for circular in circulars:
 		circular["body"] = sanitize_html(circular.get("body") or "")
 	return circulars
+
+
+@frappe.whitelist()
+def my_onboarding(student=None):
+	"""Onboarding status of the session user's student (or a guarded one): {student, completion, items} or None.
+
+	Items carry title, mandatory and status only; uploaded affidavits are not exposed.
+	"""
+	student = resolve_student(student)
+	name = frappe.db.get_value("Student Onboarding", {"student": student})
+	if not name:
+		return None
+	doc = frappe.get_doc("Student Onboarding", name)
+	return {
+		"student": student,
+		"completion": doc.completion,
+		"items": [{"title": _(row.title), "mandatory": row.mandatory, "status": row.status} for row in doc.items],
+	}

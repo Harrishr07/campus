@@ -18,6 +18,7 @@ from campus.admissions.aadhaar import copy_aadhaar
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
 from campus.campus_platform.company_scope import permitted_companies
+from campus.student_services.api import create_onboarding
 
 SAVEPOINT = "campus_admit"
 
@@ -87,6 +88,7 @@ def create_admission(applicant, state):
 	student = create_student(source, state, year)
 	enrollment = create_enrollment(student, source, state, year)
 	invoice = create_fee_invoice(student, enrollment, state, year)
+	create_onboarding(student.name)
 	frappe.db.set_value("Student Applicant", applicant, "application_status", "Admitted")
 	return {
 		"student": student.name, "program_enrollment": enrollment.name, "invoice": invoice.name,
@@ -104,6 +106,8 @@ def create_student(source, state, year):
 	settings = frappe.get_doc("Admission Settings")
 	student.oc_company = state.oc_company
 	student.joining_date = today()
+	student.oc_admission_quota = state.oc_admission_quota
+	student.oc_lateral_entry = int(source.oc_admission_type == "Lateral")
 	student.oc_register_no = numbers.next_number(settings.register_no_pattern, state.oc_company, state.program, year)
 	if settings.roll_no_pattern:
 		student.oc_roll_no = numbers.next_number(settings.roll_no_pattern, state.oc_company, state.program, year)

@@ -16,6 +16,9 @@ from campus.student_services.attendance_rules import (
 	percentage,
 )
 from campus.student_services.attendance_rules import attendance_marks as marks_for_pct
+from campus.student_services import mentors as allocation
+from campus.student_services.onboarding import create_for_student as create_onboarding  # noqa: F401  (public API)
+from campus.student_services.onboarding import mark_item_done
 
 RULE_FIELDS = ("overall_min_pct", "medical_band_min_pct", "per_course_min_pct")
 
@@ -172,3 +175,29 @@ def marked_counts(student, offering, window, rule):
 	)
 	buckets = [bucket(row.status, row.oc_leave_kind, rule) for row in rows]
 	return buckets.count(ATTENDED), buckets.count(MEDICAL_LEAVE)
+
+
+ID_CARD_FORMAT = "Student ID Card"
+
+
+@frappe.whitelist(methods=["POST"])
+def allocate_mentors(student_group=None, program=None, batch=None, mentors=None, per_mentor=None):
+	"""HOD/Dean tool (M05-07): spread the students of a group (or of a program and batch) evenly over mentors.
+
+	`mentors` is an optional list of Employee ids (JSON list accepted); each must hold the MENTOR position.
+	Left out, every active MENTOR position holder is used. Round-robin in register-number order, so the order of
+	`mentors` decides who gets the extra student when the split is uneven. `per_mentor` is an optional ceiling:
+	the call fails if the cohort would need more. Returns {mentor: [students]}.
+	"""
+	return allocation.allocate(student_group, program, batch, mentors, per_mentor)
+
+
+@frappe.whitelist(methods=["POST"])
+def issue_id_card(student):
+	"""Issue a verifiable Student ID Card (photo + QR); returns its code and verification URL."""
+	from campus.campus_platform import verification
+
+	frappe.has_permission("Student", "write", student, throw=True)
+	record = verification.issue(frappe.get_doc("Student", student), ID_CARD_FORMAT)
+	mark_item_done(student, "ID-CARD")
+	return {"code": record.code, "url": verification.verification_url(record.code)}

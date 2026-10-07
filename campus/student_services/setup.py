@@ -1,10 +1,14 @@
-"""M05-02 Student Services setup: leave kind and certificate on Student Leave Application, with their submit check."""
+"""M05-01, M05-02 Student Services setup: Student profile fields, leave kind and certificate on Student Leave Application
+(with their submit check), certificate types, default onboarding templates, Mentor read right."""
 
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.permissions import add_permission
 
+from campus.examinations.access import MENTOR_ROLE
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
+from campus.student_services.onboarding import ensure_default_templates
 
 MODULE = "Student Services"
 LEAVE_KINDS = ["Leave", MEDICAL, ON_DUTY]
@@ -25,25 +29,60 @@ CERTIFICATE_TYPES = [
 
 
 def setup_student_services():
-	"""Create/refresh the Student and Student Leave Application custom fields and the seed certificate types. Idempotent."""
+	"""Create/refresh the Student and Student Leave Application custom fields, the Mentor read right and the seed
+	records (certificate types, default onboarding templates). Idempotent."""
 	setup_student_fields()
+	ensure_mentor_read_access()
 	seed_certificate_types()
+	ensure_default_templates()
 	setup_leave_fields()
 
 
+def field(fieldname, fieldtype, label, insert_after, **kwargs):
+	return {
+		"fieldname": fieldname, "fieldtype": fieldtype, "label": label,
+		"insert_after": insert_after, "module": MODULE, **kwargs,
+	}  # fmt: skip
+
+
+def student_fields():
+	"""The blueprint section 7 Student fields not defined elsewhere (company, register/roll no, regulation, batch live
+	with their own modules)."""
+	return [
+		field("oc_profile_section", "Section Break", "Campus Profile", "oc_regulation_history"),
+		field("oc_admission_quota", "Link", "Admission Quota", "oc_profile_section", options="Admission Quota",
+			in_standard_filter=1),
+		field("oc_current_semester", "Int", "Current Semester", "oc_admission_quota", in_standard_filter=1),
+		field("oc_section", "Data", "Section", "oc_current_semester"),
+		field("oc_academic_status", "Select", "Academic Status", "oc_section",
+			options="\n".join(ACADEMIC_STATUSES), default="Active", in_standard_filter=1),
+		field("oc_abc_id", "Data", "ABC ID", "oc_academic_status", description="Academic Bank of Credits id."),
+		field("oc_profile_column", "Column Break", None, "oc_abc_id"),
+		field("oc_mentor", "Link", "Mentor", "oc_profile_column", options="Employee", in_standard_filter=1,
+			description="Set by the mentor allocation tool."),
+		field("oc_class_advisor", "Link", "Class Advisor", "oc_mentor", options="User", read_only=1, no_copy=1,
+			description="Resolved from the CLASS-ADVISOR Position Holder of the student's group when saved."),
+		field("oc_hostel_resident", "Check", "Hostel Resident", "oc_class_advisor"),
+		field("oc_transport_user", "Check", "Transport User", "oc_hostel_resident"),
+		field("oc_first_graduate", "Check", "First Graduate", "oc_transport_user"),
+		field("oc_differently_abled", "Check", "Differently Abled", "oc_first_graduate"),
+		field("oc_lateral_entry", "Check", "Lateral Entry", "oc_differently_abled"),
+		field("oc_onboarding_completion", "Percent", "Onboarding Completion", "oc_lateral_entry", read_only=1,
+			no_copy=1, description="From the Student Onboarding."),
+	]  # fmt: skip
+
+
 def setup_student_fields():
-	create_custom_fields(
-		{
-			"Student": [
-				{
-					"fieldname": "oc_academic_status", "fieldtype": "Select", "label": "Academic Status",
-					"options": "\n".join(ACADEMIC_STATUSES), "default": "Active", "insert_after": "oc_section",
-					"in_standard_filter": 1, "module": MODULE,
-				},
-			]
-		},
-		update=True,
-	)
+	create_custom_fields({"Student": student_fields()}, update=True)
+
+
+def ensure_mentor_read_access():
+	"""The Mentor role (granted by holding the MENTOR position) reads Student; campus.examinations.access narrows
+	that to the user's own mentees."""
+	if not frappe.db.exists("Role", MENTOR_ROLE):
+		frappe.get_doc({"doctype": "Role", "role_name": MENTOR_ROLE, "desk_access": 1}).insert(ignore_permissions=True)
+	if not frappe.db.exists("Custom DocPerm", {"parent": "Student", "role": MENTOR_ROLE, "permlevel": 0}):
+		add_permission("Student", MENTOR_ROLE, 0)
 
 
 def seed_certificate_types():

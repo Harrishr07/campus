@@ -58,6 +58,8 @@ def marks_has_permission(doc, ptype=None, user=None):
 # ---- Student-linked records ---------------------------------------------------------------
 
 PORTAL_ROLES = ("Student", "Guardian")
+MENTOR_ROLE = "Mentor"  # read right on Student only, narrowed to the user's mentees below
+SCOPED_ROLES = (*PORTAL_ROLES, MENTOR_ROLE)
 
 
 def students_of(user):
@@ -70,6 +72,17 @@ def students_of(user):
 		else []
 	)
 	return set(own) | set(guarded)
+
+
+def mentees_of(user):
+	"""Students whose Student.oc_mentor is an Employee of the user (the mentor allocation tool sets it)."""
+	employees = frappe.get_all("Employee", {"user_id": user}, pluck="name")
+	return set(frappe.get_all("Student", {"oc_mentor": ["in", employees]}, pluck="name")) if employees else set()
+
+
+def visible_students(user):
+	"""What a Student-scoped user may read: their own / guarded students plus their mentees."""
+	return students_of(user) | mentees_of(user)
 
 
 def guardians_of(user):
@@ -92,7 +105,7 @@ def groups_of(user):
 # doctype -> (field holding the scoping key, function(user) -> keys the portal user may see).
 # Upstream grants the Student/Guardian roles company-wide read on all of these.
 PORTAL_SCOPES = {
-	"Student": ("name", students_of),
+	"Student": ("name", visible_students),
 	"Guardian": ("name", guardians_of),
 	"Program Enrollment": ("student", students_of),
 	"Student Attendance": ("student", students_of),
@@ -106,15 +119,15 @@ PORTAL_SCOPES = {
 
 
 def sees_all_students(user, doctype="Student"):
-	"""True when a role other than Student/Guardian gives the user level-0 read access to the doctype."""
+	"""True when a role other than Student/Guardian/Mentor gives the user level-0 read access to the doctype."""
 	if user == "Administrator":
 		return True
-	roles = set(frappe.get_roles(user)) - set(PORTAL_ROLES)
+	roles = set(frappe.get_roles(user)) - set(SCOPED_ROLES)
 	return any(p.role in roles and p.read and not p.permlevel for p in frappe.get_meta(doctype).permissions)
 
 
 def portal_permission_query(user=None, doctype="Student"):
-	"""Narrow the Student and Guardian roles to rows of their own / linked students."""
+	"""Narrow the Student, Guardian and Mentor roles to rows of their own / linked / mentored students."""
 	user = user or frappe.session.user
 	if sees_all_students(user, doctype):
 		return ""
