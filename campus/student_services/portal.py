@@ -14,6 +14,7 @@ from frappe.utils.html_utils import sanitize_html
 
 from campus.campus_finance.api import has_dues, student_invoices
 from campus.campus_platform.api import latest_request, start_request
+from campus.student_services import grievances
 from campus.student_services.api import summarise, term_window
 
 PORTAL_HOME = "/campus-portal"
@@ -248,3 +249,37 @@ def my_onboarding(student=None):
 		"completion": doc.completion,
 		"items": [{"title": _(row.title), "mandatory": row.mandatory, "status": row.status} for row in doc.items],
 	}
+
+
+@frappe.whitelist()
+def grievance_categories():
+	"""Grievance categories a student may raise: [{name, description}]."""
+	require_login()
+	return frappe.get_all("Grievance Type", {"oc_applies_to_students": 1}, ["name", "description"], order_by="name")
+
+
+@frappe.whitelist()
+def raise_grievance(category, description, student=None):
+	"""Raise a grievance for the session user's student (or a guarded one); returns its row.
+
+	The student comes from resolve_student, never from the request alone. The grievance enters the
+	escalation chain of its category's policy at once."""
+	student = resolve_student(student)
+	return grievance_row(grievances.open_grievance(student, category, description))
+
+
+@frappe.whitelist()
+def my_grievances(student=None):
+	"""The student's grievances, newest first. Ownership comes from resolve_student; the doctype's permission
+	query still applies, so a confidential grievance is listed to the student who raised it and no one else."""
+	student = resolve_student(student)
+	names = frappe.get_list("Student Grievance", {"student": student}, pluck="name", order_by="creation desc")
+	return {"student": student, "grievances": [grievance_row(frappe.get_doc("Student Grievance", n)) for n in names]}
+
+
+def grievance_row(grievance):
+	state = {0: _(grievance.status), 1: _("Resolved"), 2: _("Cancelled")}[grievance.docstatus]
+	return {
+		"name": grievance.name, "category": grievance.category, "description": grievance.description, "status": state,
+		"raised_on": grievance.raised_on, "resolution": grievance.resolution, "resolved_on": grievance.resolved_on,
+	}  # fmt: skip

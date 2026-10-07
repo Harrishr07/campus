@@ -112,10 +112,30 @@ PORTAL_SCOPES = {
 	"Student Leave Application": ("student", students_of),
 	"Condonation Request": ("student", students_of),
 	"Certificate Request": ("student", students_of),
+	"Student Grievance": ("student", students_of),
 	"Assessment Result": ("student", students_of),
 	"Sales Invoice": ("student", students_of),
 	"Course Schedule": ("student_group", groups_of),
 }
+
+
+# Confidential rows (e.g. an ICC grievance) are for the committee roles alone, whatever else a role may read;
+# the student who raised one still sees their own through the portal scope above.
+COMMITTEE_ROLE = "Grievance Committee"
+COMMITTEE_ROLES = (COMMITTEE_ROLE, "System Manager")
+CONFIDENTIAL_FIELDS = {"Student Grievance": "is_confidential"}
+
+
+def confidential_clause(user, doctype):
+	field = CONFIDENTIAL_FIELDS.get(doctype)
+	if not field or has_any_role(user, COMMITTEE_ROLES):
+		return ""
+	return f"ifnull(`tab{doctype}`.`{field}`, 0) = 0"
+
+
+def may_see_confidential(doc, user):
+	field = CONFIDENTIAL_FIELDS.get(doc.doctype)
+	return not (field and doc.get(field)) or has_any_role(user, COMMITTEE_ROLES)
 
 
 def sees_all_students(user, doctype="Student"):
@@ -130,7 +150,7 @@ def portal_permission_query(user=None, doctype="Student"):
 	"""Narrow the Student, Guardian and Mentor roles to rows of their own / linked / mentored students."""
 	user = user or frappe.session.user
 	if sees_all_students(user, doctype):
-		return ""
+		return confidential_clause(user, doctype)
 	field, keys_of = PORTAL_SCOPES[doctype]
 	names = ", ".join(frappe.db.escape(k) for k in keys_of(user)) or "''"
 	return f"`tab{doctype}`.`{field}` in ({names})"
@@ -140,7 +160,7 @@ def portal_has_permission(doc, ptype=None, user=None):
 	"""Deny-only hook: portal-only users get rows of their own or guarded students, staff roles are untouched."""
 	user = user or frappe.session.user
 	if sees_all_students(user, doc.doctype):
-		return True
+		return may_see_confidential(doc, user)
 	field, keys_of = PORTAL_SCOPES[doc.doctype]
 	return doc.get(field) in keys_of(user)
 

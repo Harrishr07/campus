@@ -6,7 +6,7 @@ from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission
 
-from campus.examinations.access import MENTOR_ROLE
+from campus.examinations.access import COMMITTEE_ROLE, MENTOR_ROLE
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
 from campus.student_services.onboarding import ensure_default_templates
 
@@ -36,6 +36,58 @@ def setup_student_services():
 	seed_certificate_types()
 	ensure_default_templates()
 	setup_leave_fields()
+	setup_grievances()
+
+
+GRIEVANCE_POLICY = "Student Grievance Escalation"
+# title, position, scope field, SLA hours
+GRIEVANCE_LEVELS = [("HOD", "HOD", "department", 48), ("COE", "COE", "company", 48), ("Principal", "PRINCIPAL", "company", 72)]
+
+
+def ensure_grievance_role():
+	"""The committee role Student Grievance permissions and the confidentiality rule refer to."""
+	if not frappe.db.exists("Role", COMMITTEE_ROLE):
+		frappe.get_doc({"doctype": "Role", "role_name": COMMITTEE_ROLE, "desk_access": 1}).insert(ignore_permissions=True)
+
+
+def setup_grievances():
+	"""Grievance Type (HRMS) gets the student-grievance settings; seed the HOD -> COE -> Principal policy and an
+	Evaluation category on it. Existing records are left as the college configured them."""
+	ensure_grievance_role()
+	create_custom_fields({"Grievance Type": grievance_type_fields()}, update=True)
+	seed_grievance_policy()
+
+
+def grievance_type_fields():
+	return [
+		field("oc_section", "Section Break", "Student Grievance", "description"),
+		field("oc_applies_to_students", "Check", "Applies to Students", "oc_section", default="0",
+			description="Students may raise grievances of this category (portal and desk)."),
+		field("oc_confidential", "Check", "Confidential", "oc_applies_to_students", default="0",
+			description="Visible to the Grievance Committee only, not to the HOD, COE or Principal."),
+		field("oc_escalation_policy", "Link", "Escalation Policy", "oc_confidential", options="Approval Policy",
+			depends_on="oc_applies_to_students", description="Its levels are the escalation chain; each level's SLA hours drive escalation."),
+	]  # fmt: skip
+
+
+def seed_grievance_policy():
+	if not frappe.db.exists("Approval Policy", GRIEVANCE_POLICY):
+		frappe.get_doc(
+			{
+				"doctype": "Approval Policy", "policy_name": GRIEVANCE_POLICY, "document_type": "Student Grievance",
+				"levels": [
+					{"approver_type": "Position", "approver": position, "scope_field": scope, "title": title, "sla_hours": hours}
+					for title, position, scope, hours in GRIEVANCE_LEVELS
+				],
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
+	if not frappe.db.exists("Grievance Type", "Evaluation"):
+		frappe.get_doc(
+			{
+				"doctype": "Grievance Type", "__newname": "Evaluation", "description": "Valuation, revaluation and marks queries.",
+				"oc_applies_to_students": 1, "oc_escalation_policy": GRIEVANCE_POLICY,
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
 
 
 def field(fieldname, fieldtype, label, insert_after, **kwargs):

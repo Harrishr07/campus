@@ -11,7 +11,7 @@ from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.setup import setup_curriculum
 from campus.examinations.setup import ensure_coe_role
 from campus.iqac.setup import ensure_iqac_role, seed_framework
-from campus.student_services.setup import setup_student_services
+from campus.student_services.setup import ensure_grievance_role, setup_student_services
 
 
 def before_install():
@@ -20,11 +20,13 @@ def before_install():
 	ensure_aadhaar_role()  # aadhaar_access_log.json likewise
 	ensure_coe_role()  # exam doctypes likewise
 	ensure_iqac_role()  # iqac doctypes likewise
+	ensure_grievance_role()  # student_grievance.json likewise
 
 
 def before_migrate():
 	ensure_coe_role()  # exam doctype permissions reference it during DocType sync
 	ensure_iqac_role()
+	ensure_grievance_role()
 
 
 def after_install():

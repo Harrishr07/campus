@@ -21,14 +21,15 @@ from campus.campus_platform.approver_resolution import document_company, resolve
 from campus.campus_platform.notify import notify
 
 
-def start_request(doc):
+def start_request(doc, policy=None):
+	"""Start approval of a draft under `policy` (an Approval Policy doc), else under the policy matching its values."""
 	if doc.docstatus != 0:
 		frappe.throw(_("Only a draft can be sent for approval."))
 	frappe.db.get_value(doc.doctype, doc.name, "name", for_update=True)  # one request at a time per doc
 	latest = latest_request(doc)
 	if latest and latest.status in (rules.PENDING, rules.APPROVED):
 		frappe.throw(_("{0} is already {1} in {2}.").format(doc.name, _(latest.status).lower(), latest.name))
-	policy = find_policy(doc)
+	policy = policy or find_policy(doc)
 	if not policy:
 		doc.flags.ignore_permissions = True
 		doc.submit()
