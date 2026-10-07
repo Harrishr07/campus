@@ -205,6 +205,7 @@ doc_events["User Permission"] = {
 doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
 doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
+doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.clear_draft_tags"}
 doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
@@ -222,7 +223,11 @@ doc_events["Payment Entry"] = {
 	"before_submit": "campus.campus_finance.challan.assign_receipt_no",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
 }
-doc_events["Journal Entry"] = {"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel"}
+doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
+doc_events["Journal Entry"] = {
+	"validate": "campus.campus_finance.scholarships.block_amend",
+	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
+}
 
 # Scheduled Tasks
 # ---------------

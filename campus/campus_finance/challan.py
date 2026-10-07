@@ -32,7 +32,7 @@ def set_payment_student(doc, method=None):
 
 def assign_receipt_no(doc, method=None):
 	"""Number a student's fee receipt on submit and use the college's letter head from the Challan Format."""
-	if not doc.oc_student or doc.oc_receipt_no:
+	if doc.flags.skip_fee_receipt or not doc.oc_student or doc.oc_receipt_no:  # a scholarship credit is not a fee receipt
 		return
 	fmt = challan_format(doc.company)
 	if fmt:

@@ -3,7 +3,9 @@
 A concession names a fee category that is configured as concession-eligible (Fee Category.oc_concession_allowed),
 a percent or an amount, and an academic year. When a Sales Invoice for the student is validated as a draft, each open
 concession whose year covers the posting date discounts one line of its fee category (the line is tagged with the
-concession). Submitting the invoice marks the concession Applied under the
+concession). Concessions are of the student's own company (Fee Concession.company = student.oc_company), so a trust-raised hostel or
+mess invoice cannot take one; that needs a shared-service rule later. Submitting the invoice re-reads the concession under
+its lock (live, same student and company, still open) and marks the concession Applied under the
 concession's row lock, so one concession discounts one invoice; cancelling the invoice releases it.
 """
 
@@ -41,18 +43,47 @@ def open_concessions(student, company, posting_date):
 	)
 
 
+def live_for_invoice(name, doc):
+	"""Whether concession `name` may discount `doc`: submitted, and either open or already consumed by this invoice,
+	and of the invoice's student and company."""
+	found = frappe.db.get_value("Fee Concession", name, ["docstatus", "status", "applied_invoice", "student", "company"], as_dict=True)
+	return bool(
+		found and found.docstatus == 1 and (found.student, found.company) == (doc.get("student"), doc.company)
+		and (found.status == OPEN or found.applied_invoice == doc.name)
+	)
+
+
+def strip_stale_tags(doc):
+	"""Remove the tag and discount from lines whose concession can no longer discount this invoice."""
+	for row in doc.items:
+		name = row.get("oc_fee_concession")
+		if name and not live_for_invoice(name, doc):
+			row.oc_fee_concession = None
+			row.discount_amount = 0
+			row.rate = flt(row.price_list_rate) or flt(row.rate)
+
+
 def apply_to_invoice(doc, method=None):
 	"""Doc event (Sales Invoice before_validate): discount the fee line of each open concession of the student.
 
 	One concession discounts one line (ERPNext's own line discount, so the invoice shows price list rate, discount
-	and rate); a concession with no untouched line of its category waits for the next invoice."""
-	if doc.docstatus != 0 or doc.is_return or not doc.get("student"):
+	and rate); a concession with no untouched line of its category waits for the next invoice. Lines tagged with a
+	concession that is no longer usable (cancelled, used by another invoice, another student's) are cleaned first."""
+	if doc.is_return or not doc.get("student") or doc.docstatus > 1:
+		return
+	if not doc.is_new() and frappe.db.get_value(doc.doctype, doc.name, "docstatus") != 0:
+		return  # an invoice already submitted is not touched (this event also runs while submitting a draft)
+	strip_stale_tags(doc)
+	if doc.docstatus != 0:
 		return
 	tagged = {row.get("oc_fee_concession") for row in doc.items}
 	for concession in open_concessions(doc.student, doc.company, doc.posting_date):
 		if concession.name in tagged:
 			continue
-		item = frappe.db.get_value("Fee Category", concession.fee_category, "item")
+		category = frappe.db.get_value("Fee Category", concession.fee_category, ["item", "oc_concession_allowed"], as_dict=True)
+		if not category.oc_concession_allowed:
+			continue
+		item = category.item
 		line = next((r for r in doc.items if r.item_code == item and not r.get("oc_fee_concession") and flt(r.rate) > 0), None)
 		if not line:
 			continue
@@ -72,9 +103,13 @@ def mark_applied(doc, method=None):
 		name = row.get("oc_fee_concession")
 		if not name:
 			continue
-		status, invoice = frappe.db.get_value("Fee Concession", name, ["status", "applied_invoice"], for_update=True)
-		if status != OPEN and invoice != doc.name:
-			frappe.throw(_("Fee Concession {0} is already applied to {1}.").format(name, invoice))
+		found = frappe.db.get_value(
+			"Fee Concession", name, ["docstatus", "status", "applied_invoice", "student", "company"], as_dict=True, for_update=True
+		)  # re-read under the lock: the tag on the line is only a claim
+		if not (found and found.docstatus == 1 and (found.student, found.company) == (doc.get("student"), doc.company)):
+			frappe.throw(_("Fee Concession {0} cannot discount this invoice.").format(name))
+		if found.status != OPEN and found.applied_invoice != doc.name:
+			frappe.throw(_("Fee Concession {0} is already applied to {1}.").format(name, found.applied_invoice))
 		frappe.db.set_value(
 			"Fee Concession", name, {"status": APPLIED, "applied_invoice": doc.name, "discount_amount": flt(row.discount_amount) * flt(row.qty)}, update_modified=False
 		)
@@ -87,3 +122,18 @@ def release(doc, method=None):
 			frappe.db.set_value(
 				"Fee Concession", name, {"status": OPEN, "applied_invoice": None, "discount_amount": 0}, update_modified=False
 			)
+
+
+def clear_draft_tags(concession, method=None):
+	"""Doc event (Fee Concession on_cancel): draft invoices carrying the concession lose the tag and the discount
+	(Frappe would refuse to save them with a link to a cancelled document); saving them recalculates the totals."""
+	item, parent = frappe.qb.DocType("Sales Invoice Item"), frappe.qb.DocType("Sales Invoice")
+	drafts = (
+		frappe.qb.from_(item).join(parent).on(parent.name == item.parent).select(item.name)
+		.where(item.oc_fee_concession == concession.name).where(parent.docstatus == 0).run(pluck=True)
+	)  # fmt: skip
+	if drafts:
+		frappe.db.sql(
+			"update `tabSales Invoice Item` set oc_fee_concession = null, discount_amount = 0, rate = price_list_rate where name in %s",
+			(drafts,),
+		)

@@ -3,7 +3,8 @@
 New applications check the scheme's eligibility rule; a renewal also needs the earlier sanctioned application and is
 blocked, with every reason listed, while the student has more arrears than the scheme allows or attendance below its
 bar (campus.campus_finance.scholarships.renewal_check). The sanctioned amount defaults to the scheme's amount rule
-and may only be lowered. If an Approval Policy covers the doctype, sanction goes through the approval engine.
+and may only be lowered. If an Approval Policy covers the doctype, sanction goes through the approval engine; without one
+the submitter sanctions alone (no separation of duties), so colleges should add a policy.
 Disbursements are rows linking Payment Entries or Journal Entries (campus.campus_finance.scholarships.disburse).
 """
 
@@ -82,11 +83,17 @@ class ScholarshipApplication(ApprovableDocument, Document):
 		if not scheme.renewable:
 			return [_("The scheme cannot be renewed.")]
 		previous = self.previous_application and frappe.db.get_value(
-			"Scholarship Application", self.previous_application, ["student", "scheme", "docstatus"], as_dict=True
+			"Scholarship Application", self.previous_application, ["student", "scheme", "docstatus", "academic_year"], as_dict=True
 		)
 		if not previous or previous.docstatus != 1 or (previous.student, previous.scheme) != (self.student, self.scheme):
 			return [_("A renewal needs the student's sanctioned application of the same scheme.")]
+		if not self.is_earlier_year(previous.academic_year):
+			return [_("The renewed application must be of an earlier academic year.")]
 		return scholarships.renewal_check(self.student, scheme)
+
+	def is_earlier_year(self, academic_year):
+		start = frappe.db.get_value("Academic Year", academic_year, "year_start_date")
+		return bool(start) and start < frappe.db.get_value("Academic Year", self.academic_year, "year_start_date")
 
 	def set_amount(self):
 		scheme = frappe.get_doc("Scholarship Scheme", self.scheme)

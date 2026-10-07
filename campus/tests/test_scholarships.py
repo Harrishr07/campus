@@ -9,6 +9,7 @@ from frappe.utils import add_days, add_to_date, now_datetime, today
 
 from campus.campus_finance import api as finance
 from campus.campus_finance import concessions, scholarships
+from campus.campus_finance.fee_heads import category_for_type
 from campus.campus_finance.report.concession_register import concession_register
 from campus.campus_finance.report.scholarship_beneficiaries import scholarship_beneficiaries as beneficiaries_report
 from campus.campus_platform.approvals import approve, request_approval
@@ -26,6 +27,7 @@ YEAR, PROGRAM = "Scholarship Test 2026", "Scholarship Test BE"
 GOVT, INST = "SCH Test Government", "SCH Test Institutional"
 APPROVER, ACCOUNTS, PLAIN = "sch-approver@example.com", "sch-accounts@example.com", "sch-plain@example.com"
 POLICY = "SCH Test Concession Policy"
+PREVIOUS_YEAR = "Scholarship Test 2025"
 
 
 class TestRules(UnitTestCase):
@@ -271,7 +273,12 @@ class TestApplicationRules(ScholarshipFixture):
 class TestRenewal(ScholarshipFixture):
 	def setUp(self):
 		super().setUp()
-		self.first = self.application(self.a, self.inst)
+		year = int(today()[:4]) - 1
+		if not frappe.db.exists("Academic Year", PREVIOUS_YEAR):
+			frappe.get_doc(
+				{"doctype": "Academic Year", "academic_year_name": PREVIOUS_YEAR, "year_start_date": f"{year}-01-01", "year_end_date": f"{year}-12-31"}
+			).insert()
+		self.first = self.application(self.a, self.inst, academic_year=PREVIOUS_YEAR)
 		for target, value in (("campus.examinations.api.arrear_courses", []), ("campus.student_services.api.latest_attendance", ("T1", 90.0))):
 			patcher = patch(target, return_value=value)
 			patcher.start()
@@ -511,3 +518,126 @@ class TestSetup(CampusTestCase):
 		self.assertTrue(frappe.get_meta("Fee Category").has_field("oc_concession_allowed"))
 		self.assertTrue(frappe.get_meta("Sales Invoice Item").has_field("oc_fee_concession"))
 		self.assertTrue(frappe.db.exists("Approval Policy", {"document_type": "Fee Concession"}))
+
+
+class TestFixRound1(ScholarshipFixture):
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_value("Fee Category", "Tuition", "oc_concession_allowed", 1)
+		frappe.db.delete("Approval Level", {"parent": ["in", [POLICY, "Fee Concession Approval"]]})
+		frappe.db.delete("Approval Policy", {"name": ["in", [POLICY, "Fee Concession Approval"]]})
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": POLICY, "document_type": "Fee Concession", "levels": [level("User", APPROVER, title="Principal")]}
+		).insert()
+
+	def approved(self, student=None, **values):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Fee Concession", "student": student or self.a, "academic_year": YEAR, "fee_category": "Tuition",
+				"concession_type": "Percent", "percent": 10, "reason": "Merit", **values,
+			}
+		).insert()
+		request = request_approval("Fee Concession", doc.name)
+		frappe.set_user(APPROVER)
+		approve(request, None)
+		frappe.set_user("Administrator")
+		return doc.reload()
+
+	def draft_invoice(self, student=None, amount=10000):
+		student = student or self.a
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Sales Invoice", "company": COLLEGE, "customer": frappe.db.get_value("Student", student, "customer"), "student": student,
+				"posting_date": today(), "set_posting_time": 1, "due_date": add_days(today(), 15),
+				"debit_to": frappe.db.get_value("Company", COLLEGE, "default_receivable_account"),
+				"items": [{"item_code": category_for_type("Tuition"), "qty": 1, "rate": amount}],
+			}
+		)
+		invoice.flags.ignore_permissions = True
+		return invoice.insert()
+
+	def test_cancelling_a_concession_clears_its_discount_from_draft_invoices(self):
+		concession = self.approved()
+		invoice = self.draft_invoice()
+		self.assertEqual(invoice.grand_total, 9000)
+		concession.reload().cancel()
+		invoice.reload().save()  # validation strips the stale tag and the discount
+		self.assertEqual((invoice.grand_total, invoice.items[0].oc_fee_concession), (10000, None))
+		self.assertEqual(invoice.submit().grand_total, 10000)
+		self.assertEqual(frappe.db.get_value("Fee Concession", concession.name, "status"), "Open")  # not flipped to Applied
+
+	def test_mark_applied_refuses_a_cancelled_or_foreign_concession(self):
+		cancelled, foreign = self.approved(), self.approved(self.b)
+		cancelled.reload().cancel()
+		invoice = self.draft_invoice()
+		for name in (cancelled.name, foreign.name):
+			invoice.items[0].oc_fee_concession = name
+			invoice.items[0].discount_amount = 1000
+			with self.assertRaisesRegex(frappe.ValidationError, "cannot discount"):
+				concessions.mark_applied(invoice)
+
+	def test_another_students_tag_is_stripped_on_save(self):
+		foreign = self.approved(self.b)
+		invoice = self.draft_invoice()  # student a: nothing to apply
+		invoice.items[0].oc_fee_concession = foreign.name
+		invoice.items[0].price_list_rate, invoice.items[0].discount_amount, invoice.items[0].rate = 10000, 1000, 9000
+		invoice.save()
+		self.assertEqual((invoice.grand_total, invoice.items[0].oc_fee_concession), (10000, None))
+
+	def test_two_drafts_one_concession_the_second_submits_cleanly_without_it(self):
+		concession = self.approved()
+		first, second = self.draft_invoice(), self.draft_invoice()
+		self.assertEqual((first.grand_total, second.grand_total), (9000, 9000))
+		first.submit()
+		self.assertEqual(second.reload().submit().grand_total, 10000)
+		self.assertEqual(frappe.db.get_value("Fee Concession", concession.name, "applied_invoice"), first.name)
+
+	def test_a_category_unflagged_after_approval_is_no_longer_discounted(self):
+		self.approved()
+		frappe.db.set_value("Fee Category", "Tuition", "oc_concession_allowed", 0)
+		self.assertEqual(self.draft_invoice().grand_total, 10000)
+
+	def test_a_cancelled_and_amended_voucher_cannot_take_the_disbursement_past_the_sanction(self):
+		self.owe(self.a, COLLEGE)
+		application = self.application(self.a, self.govt)
+		row = scholarships.disburse(application.name, 50000)
+		payment = frappe.get_doc("Payment Entry", row["voucher"])
+		payment.cancel()
+		amended = frappe.copy_doc(payment)
+		amended.amended_from, amended.docstatus = payment.name, 0
+		with self.assertRaisesRegex(frappe.ValidationError, "Disburse"):
+			amended.insert()
+		scholarships.disburse(application.name, 50000)  # the sanction is still whole after the cancel
+		with self.assertRaises(frappe.ValidationError):
+			scholarships.disburse(application.name, 1)
+
+	def test_a_scholarship_payment_entry_takes_no_fee_receipt_number(self):
+		self.owe(self.a, COLLEGE)
+		application = self.application(self.a, self.govt)
+		row = scholarships.disburse(application.name, 10000)
+		self.assertFalse(frappe.db.get_value("Payment Entry", row["voucher"], "oc_receipt_no"))
+
+	def test_the_receivable_comes_from_the_party_account(self):
+		self.owe(self.a, COLLEGE)
+		customer = frappe.db.get_value("Student", self.a, "customer")
+		with patch("campus.campus_finance.scholarships.get_party_account", return_value=self.college_receivable()) as account:
+			scholarships.disburse(self.application(self.a, self.govt).name, 100)
+		account.assert_called_with("Customer", customer, COLLEGE)
+
+	def college_receivable(self):
+		return frappe.db.get_value("Company", COLLEGE, "default_receivable_account")
+
+	def test_the_beneficiaries_report_respects_user_permissions(self):
+		self.application(self.a, self.govt)
+		frappe.set_user(PLAIN)  # an Academics User with no read right on Scholarship Application
+		with self.assertRaises(frappe.PermissionError):
+			beneficiaries_report.execute({"company": COLLEGE, "academic_year": YEAR})
+
+	def test_a_renewal_needs_an_earlier_year_than_the_application_it_renews(self):
+		scheme = self.make_scheme("SCH Test Renewable", "Institutional", self.expense, renewable=1)
+		first = self.application(self.b, scheme)
+		renewal = frappe.get_doc(
+			{"doctype": "Scholarship Application", "student": self.b, "scheme": scheme.name, "academic_year": YEAR, "application_type": "Renewal", "previous_application": first.name}
+		)
+		with patch.object(type(renewal), "check_duplicate"), self.assertRaisesRegex(frappe.ValidationError, "earlier academic year"):
+			renewal.insert()

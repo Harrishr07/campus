@@ -10,6 +10,7 @@ row lock and the invoices' row locks and re-reads what it needs under them.
 """
 
 import frappe
+from erpnext.accounts.party import get_party_account
 from frappe import _
 from frappe.utils import flt, today
 
@@ -149,10 +150,11 @@ def refresh_totals(application):
 	)  # fmt: skip
 
 
-def receivable_of(company):
-	account = frappe.db.get_value("Company", company, "default_receivable_account")
+def receivable_of(customer, company):
+	"""The receivable account of `customer` in `company` (the party's own, else the company default)."""
+	account = get_party_account("Customer", customer, company)
 	if not account:
-		frappe.throw(_("Company {0} has no default receivable account.").format(frappe.bold(company)))
+		frappe.throw(_("Company {0} has no receivable account for {1}.").format(frappe.bold(company), customer))
 	return account
 
 
@@ -162,7 +164,7 @@ def make_payment_entry(application, scheme, amount, allocations, left, reference
 	payment = frappe.get_doc(
 		{
 			"doctype": PAYMENT_ENTRY, "payment_type": "Receive", "company": application.company, "posting_date": today(),
-			"party_type": "Customer", "party": customer, "paid_from": receivable_of(application.company), "paid_to": scheme.account,
+			"party_type": "Customer", "party": customer, "paid_from": receivable_of(customer, application.company), "paid_to": scheme.account,
 			"paid_amount": amount, "received_amount": amount, "reference_no": reference_no or application.name,
 			"reference_date": today(), "remarks": remarks(application, scheme),
 			"references": [
@@ -171,13 +173,15 @@ def make_payment_entry(application, scheme, amount, allocations, left, reference
 		}
 	)  # fmt: skip
 	payment.flags.ignore_permissions = True  # every input is server-resolved; the caller was checked in `disburse`
+	payment.flags.skip_fee_receipt = True
 	payment.insert()
 	return PAYMENT_ENTRY, payment.submit().name
 
 
 def make_journal_entry(application, scheme, amount, allocations, left, reference_no):
 	"""Waive `amount` of the student's dues: debit the scheme's expense account, credit the receivable; returns ("Journal Entry", name)."""
-	customer, receivable = student_customer(application.student), receivable_of(application.company)
+	customer = student_customer(application.student)
+	receivable = receivable_of(customer, application.company)
 	credits = [{"reference_type": "Sales Invoice", "reference_name": name, "credit_in_account_currency": part} for name, part in allocations]
 	if left > 0:
 		credits.append({"credit_in_account_currency": left})  # no invoice left to settle: credit on account
@@ -208,6 +212,15 @@ def remarks(application, scheme):
 	return _("Scholarship {0} ({1}) of {2}").format(scheme.name, application.name, application.academic_year)
 
 
+def block_amend(doc, method=None):
+	"""Doc event (Payment Entry / Journal Entry validate): a cancelled disbursement voucher is redone with Disburse, not
+	amended, because an amended voucher would credit the student again with no disbursement row to count against the cap."""
+	if doc.get("amended_from") and frappe.db.exists(
+		"Scholarship Disbursement", {"voucher_type": doc.doctype, "voucher": doc.amended_from, "parenttype": "Scholarship Application"}
+	):
+		frappe.throw(_("{0} was a scholarship disbursement; do not amend it, disburse again with Disburse.").format(doc.amended_from))
+
+
 def refresh_after_voucher_cancel(doc, method=None):
 	"""Doc event (Payment Entry / Journal Entry on_cancel): a cancelled disbursement voucher stops counting."""
 	for application in frappe.get_all(
@@ -220,14 +233,17 @@ def refresh_after_voucher_cancel(doc, method=None):
 # ---- Beneficiaries (reports, IQAC data points) ----------------------------------------------
 
 
-def scholarship_beneficiaries(company, academic_year=None, scheme_type=None):
-	"""Sanctioned applications of `company` (optionally of one year and scheme type), with the AQAR clause of each."""
+def scholarship_beneficiaries(company, academic_year=None, scheme_type=None, respect_permissions=False):
+	"""Sanctioned applications of `company` (optionally of one year and scheme type), with the AQAR clause of each.
+
+	`respect_permissions` reads through get_list (role and User Permissions of the session user); data points use get_all."""
 	filters = {"docstatus": 1, "company": company}
 	if academic_year:
 		filters["academic_year"] = academic_year
 	if scheme_type:
 		filters["scheme_type"] = scheme_type
-	rows = frappe.get_all(
+	getter = frappe.get_list if respect_permissions else frappe.get_all
+	rows = getter(
 		"Scholarship Application", filters,
 		["name", "student", "student_name", "scheme", "scheme_type", "academic_year", "sanctioned_amount", "disbursed_amount"],
 		order_by="scheme_type, student_name", limit=0,

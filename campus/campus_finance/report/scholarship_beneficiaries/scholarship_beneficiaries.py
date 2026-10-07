@@ -34,7 +34,7 @@ def data(filters):
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and filters.company not in permitted:
 		return []
-	return scholarship_beneficiaries(filters.company, filters.get("academic_year"), filters.get("scheme_type"))
+	return scholarship_beneficiaries(filters.company, filters.get("academic_year"), filters.get("scheme_type"), respect_permissions=True)
 
 
 def summary(rows):
