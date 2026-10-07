@@ -7,7 +7,7 @@ and only once the session is Published and now >= publish_at.
 """
 
 import frappe
-from frappe.utils import now_datetime
+from frappe.utils import getdate, now_datetime, today
 
 COE_ROLE = "COE"
 MARKS_ROLES = (COE_ROLE, "System Manager")
@@ -122,22 +122,61 @@ PORTAL_SCOPES = {
 
 
 # Confidential rows (e.g. an ICC grievance) are for the committee roles alone, whatever else a role may read;
-# the student who raised one still sees their own through the portal scope above.
+# the student who raised one still sees their own through the portal scope above, but a guardian does not.
 COMMITTEE_ROLE = "Grievance Committee"
 COMMITTEE_ROLES = (COMMITTEE_ROLE, "System Manager")
 CONFIDENTIAL_FIELDS = {"Student Grievance": "is_confidential"}
+# Handlers other than these see a Student Grievance only for their own department or one they handled.
+COMPANY_WIDE_HANDLERS = ("Principal", "Dean Student Affairs")
+HANDLER_POSITION = "HOD"
+
+
+def held_scopes(user, position):
+	"""Scope values (e.g. departments) of the active holdings of `position` by `user`."""
+	today_ = getdate(today())
+	return frappe.get_all(
+		"Position Holder",
+		{"user": user, "position": position, "from_date": ["<=", today_]},
+		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", today_]],
+		pluck="scope_value",
+	)
+
+
+def handled_grievances_sql(user):
+	"""Sub-select of the Student Grievances `user` is or was an approver of."""
+	return (
+		"select r.reference_name from `tabApproval Request` r join `tabApproval Request Approver` a on a.parent = r.name"
+		f" where r.reference_doctype = 'Student Grievance' and a.user = {frappe.db.escape(user)}"
+	)
 
 
 def confidential_clause(user, doctype):
+	"""Extra list condition for a role that sees all rows of `doctype`: committee sees everything; others never see
+	confidential rows, and (Student Grievance) only their department's or handled rows unless company-wide."""
 	field = CONFIDENTIAL_FIELDS.get(doctype)
 	if not field or has_any_role(user, COMMITTEE_ROLES):
 		return ""
-	return f"ifnull(`tab{doctype}`.`{field}`, 0) = 0"
+	clause = f"ifnull(`tab{doctype}`.`{field}`, 0) = 0"
+	if has_any_role(user, COMPANY_WIDE_HANDLERS):
+		return clause
+	departments = ", ".join(frappe.db.escape(d) for d in held_scopes(user, HANDLER_POSITION)) or "''"
+	return f"{clause} and (`tab{doctype}`.name in ({handled_grievances_sql(user)}) or `tab{doctype}`.department in ({departments}))"
 
 
 def may_see_confidential(doc, user):
 	field = CONFIDENTIAL_FIELDS.get(doc.doctype)
-	return not (field and doc.get(field)) or has_any_role(user, COMMITTEE_ROLES)
+	if not field or has_any_role(user, COMMITTEE_ROLES):
+		return True
+	if doc.get(field):
+		return False
+	if has_any_role(user, COMPANY_WIDE_HANDLERS):
+		return True
+	handled = frappe.db.sql(f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}")
+	return bool(handled) or doc.get("department") in held_scopes(user, HANDLER_POSITION)
+
+
+def own_students(user):
+	return set(frappe.get_all("Student", {"user": user}, pluck="name"))
 
 
 def sees_all_students(user, doctype="Student"):
@@ -155,7 +194,11 @@ def portal_permission_query(user=None, doctype="Student"):
 		return confidential_clause(user, doctype)
 	field, keys_of = PORTAL_SCOPES[doctype]
 	names = ", ".join(frappe.db.escape(k) for k in keys_of(user)) or "''"
-	return f"`tab{doctype}`.`{field}` in ({names})"
+	clause = f"`tab{doctype}`.`{field}` in ({names})"
+	if doctype in CONFIDENTIAL_FIELDS:  # a guardian reads the ordinary rows of their ward, not the confidential ones
+		own = ", ".join(frappe.db.escape(k) for k in own_students(user)) or "''"
+		clause += f" and (ifnull(`tab{doctype}`.`{CONFIDENTIAL_FIELDS[doctype]}`, 0) = 0 or `tab{doctype}`.`{field}` in ({own}))"
+	return clause
 
 
 def portal_has_permission(doc, ptype=None, user=None):
@@ -164,6 +207,8 @@ def portal_has_permission(doc, ptype=None, user=None):
 	if sees_all_students(user, doc.doctype):
 		return may_see_confidential(doc, user)
 	field, keys_of = PORTAL_SCOPES[doc.doctype]
+	if doc.doctype in CONFIDENTIAL_FIELDS and doc.get(CONFIDENTIAL_FIELDS[doc.doctype]):
+		return doc.get(field) in own_students(user)
 	return doc.get(field) in keys_of(user)
 
 

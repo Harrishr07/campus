@@ -205,6 +205,7 @@ doc_events["User Permission"] = {
 doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
 doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
+doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}

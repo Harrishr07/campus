@@ -21,8 +21,9 @@ from campus.campus_platform.approver_resolution import document_company, resolve
 from campus.campus_platform.notify import notify
 
 
-def start_request(doc, policy=None):
-	"""Start approval of a draft under `policy` (an Approval Policy doc), else under the policy matching its values."""
+def start_request(doc, policy=None, level=1):
+	"""Start approval of a draft under `policy` (an Approval Policy doc), else under the policy matching its values,
+	at 1-based `level` (first by default)."""
 	if doc.docstatus != 0:
 		frappe.throw(_("Only a draft can be sent for approval."))
 	frappe.db.get_value(doc.doctype, doc.name, "name", for_update=True)  # one request at a time per doc
@@ -41,7 +42,7 @@ def start_request(doc, policy=None):
 	request.status = rules.PENDING
 	request.cycle = (request.cycle or 0) + 1
 	add_action(request, rules.REQUEST, 0)
-	start_level(request, policy, doc, 1)
+	start_level(request, policy, doc, level)
 	request.save(ignore_permissions=True)
 	return request
 

@@ -14,7 +14,6 @@ from frappe.permissions import has_user_permission
 from frappe.utils import now_datetime
 
 from campus.campus_platform.api import ApprovableDocument
-from campus.campus_platform.approval_engine import start_request
 from campus.student_services import grievances
 
 
@@ -22,6 +21,7 @@ class StudentGrievance(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
 		if self.is_new():
+			grievances.check_description(self.description)
 			self.set_context()
 			self.raised_on = now_datetime()
 			self.status = "Open"
@@ -37,10 +37,11 @@ class StudentGrievance(ApprovableDocument, Document):
 		self.escalation_policy = category.oc_escalation_policy
 
 	def after_insert(self):
-		start_request(self, frappe.get_doc("Approval Policy", self.escalation_policy))
+		grievances.route(self)
 
 	def before_submit(self):
-		super().before_submit()
+		if not self.flags.unrouted:  # no approval request ever existed (no resolvable level); the committee resolves it
+			super().before_submit()
 		if not (self.resolution or "").strip():
 			frappe.throw(_("Give the resolution before closing the grievance."))
 		self.status = "Resolved"

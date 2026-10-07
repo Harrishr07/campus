@@ -7,11 +7,13 @@ import frappe
 from frappe.utils import add_days, add_to_date, now_datetime, time_diff_in_hours, today
 
 from campus.campus_platform import approval_rules as rules
+from campus.campus_platform.approval_escalation import escalate_overdue as generic_escalate_overdue
 from campus.student_services import grievances, portal
 from campus.student_services.report.grievance_sla import grievance_sla
 from campus.student_services.setup import GRIEVANCE_POLICY
 from campus.tests.approval_fixtures import level, make_department
 from campus.tests.factories import make_user
+from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.finance_factories import make_enrolled_students, make_finance_company, make_year_and_program
 from campus.tests.test_results import make_login
 from campus.tests.utils import CampusTestCase
@@ -22,6 +24,7 @@ POLICY, ICC_POLICY = "GRV Test Escalation", "GRV Test Committee"
 EVALUATION, ICC, STAFF_ONLY = "GRV Test Evaluation", "GRV Test ICC", "GRV Test Staff Only"
 HOD, COE, PRINCIPAL, COMMITTEE = "grv-hod@example.com", "grv-coe@example.com", "grv-principal@example.com", "grv-committee@example.com"
 STUDENT_A, STUDENT_B = "grv-student-a@example.com", "grv-student-b@example.com"
+HOD_B, GUARDIAN = "grv-hod-b@example.com", "grv-guardian@example.com"
 
 
 def make_category(name, policy, **values):
@@ -53,6 +56,11 @@ class GrievanceFixture(CampusTestCase):
 			make_user(user, [COLLEGE])
 		make_user(COMMITTEE, [COLLEGE])
 		frappe.get_doc("User", COMMITTEE).add_roles("Grievance Committee")
+		cls.department_b = make_department("Grievance Test ECE", COLLEGE)
+		make_user(HOD_B, [COLLEGE])
+		hold("HOD", cls.department_b, HOD_B)
+		make_login(GUARDIAN, "Guardian")
+		make_guardian("Grvguardian", [cls.a], user=GUARDIAN)
 		hold("HOD", cls.department, HOD)
 		hold("COE", COLLEGE, COE)
 		hold("PRINCIPAL", COLLEGE, PRINCIPAL)
@@ -314,3 +322,102 @@ class TestSetup(CampusTestCase):
 		policy = frappe.get_doc("Approval Policy", GRIEVANCE_POLICY)
 		self.assertEqual([(lv.approver, lv.sla_hours) for lv in policy.levels], [("HOD", 48), ("COE", 48), ("PRINCIPAL", 72)])
 		self.assertEqual(frappe.db.get_value("Grievance Type", "Evaluation", "oc_escalation_policy"), GRIEVANCE_POLICY)
+
+
+class TestFixRound1(GrievanceFixture):
+	def seat_ended(self, position, scope):
+		frappe.db.set_value("Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1))
+
+	def test_the_generic_escalation_job_leaves_grievances_to_the_grievance_job(self):
+		grievance = self.raise_for()
+		request = self.request_of(grievance)
+		self.make_overdue(request)
+		generic_escalate_overdue()
+		grievances.escalate_overdue()
+		request = self.request_of(grievance)
+		self.assertEqual(request.current_level, 2)
+		self.assertEqual([a.action for a in request.actions].count(rules.ESCALATE), 1)
+		self.assertFalse([s for s in notified_grievance(COE) if s.startswith("Overdue approval")])
+		self.assertEqual(request.escalated, 0)
+
+	def test_a_category_policy_must_be_a_student_grievance_policy(self):
+		other = frappe.get_doc({"doctype": "Approval Policy", "policy_name": "GRV Test Other", "document_type": "Fee Concession",
+			"levels": [level("User", COMMITTEE)]}).insert()  # fmt: skip
+		with self.assertRaisesRegex(frappe.ValidationError, "Student Grievance policy"):
+			make_category(STAFF_ONLY, other.name)
+
+	def test_a_confidential_category_needs_a_committee_only_policy(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Grievance Committee"):
+			make_category(STAFF_ONLY, POLICY, oc_confidential=1)
+		make_category(STAFF_ONLY, ICC_POLICY, oc_confidential=1)
+
+	def test_a_vacant_hod_seat_does_not_refuse_the_complaint(self):
+		self.seat_ended("HOD", self.department)
+		grievance = self.raise_for()
+		request = self.request_of(grievance)
+		self.assertEqual((grievance.docstatus, request.current_level), (0, 2))
+		self.assertEqual([r.user for r in request.approvers], [COE])
+
+	def test_a_student_without_a_department_still_gets_a_routed_grievance(self):
+		frappe.db.set_value("Program", PROGRAM, "department", None)
+		request = self.request_of(self.raise_for())
+		self.assertEqual(request.current_level, 2)
+
+	def test_with_no_resolvable_level_the_committee_handles_it_and_the_student_sees_no_internals(self):
+		for position, scope in (("HOD", self.department), ("COE", COLLEGE), ("PRINCIPAL", COLLEGE)):
+			self.seat_ended(position, scope)
+		frappe.set_user(STUDENT_A)
+		row = portal.raise_grievance(EVALUATION, "Nobody is listening.")
+		frappe.set_user("Administrator")
+		self.assertEqual(row["status"], "Open")
+		self.assertFalse(frappe.db.exists("Approval Request", {"reference_name": row["name"]}))
+		self.assertTrue(notified_grievance(COMMITTEE))
+		frappe.set_user(HOD)
+		with self.assertRaises(frappe.PermissionError):
+			grievances.resolve(row["name"], "Not mine.")
+		frappe.set_user(COMMITTEE)
+		self.assertEqual(grievances.resolve(row["name"], "Heard by the committee."), "Resolved")
+
+	def test_a_guardian_reads_ordinary_grievances_of_their_ward_but_never_a_confidential_one(self):
+		ordinary, icc = self.raise_for(self.a, EVALUATION), self.raise_for(self.a, ICC)
+		frappe.set_user(GUARDIAN)
+		self.assertEqual(set(frappe.get_list("Student Grievance", pluck="name")), {ordinary.name})
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Student Grievance", icc.name).check_permission("read")
+		self.assertEqual([g["name"] for g in portal.my_grievances()["grievances"]], [ordinary.name])
+		frappe.set_user(STUDENT_A)
+		self.assertEqual({g["name"] for g in portal.my_grievances()["grievances"]}, {ordinary.name, icc.name})
+
+	def test_a_hod_sees_only_their_department_or_grievances_they_handled(self):
+		grievance = self.raise_for(self.a)  # department A
+		for user, expected in ((HOD, True), (HOD_B, False), (COE, False), (PRINCIPAL, True)):
+			frappe.set_user(user)
+			self.assertEqual(grievance.name in frappe.get_list("Student Grievance", pluck="name"), expected, user)
+			self.assertEqual(frappe.has_permission("Student Grievance", "read", grievance.name), expected, user)
+			frappe.set_user("Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			frappe.set_user(HOD_B)
+			grievances.resolve(grievance.name, "Not my department.")
+
+	def test_the_coe_sees_a_grievance_once_it_is_escalated_to_them_and_keeps_seeing_it(self):
+		grievance = self.raise_for(self.a)
+		grievances.escalate(self.make_overdue(self.request_of(grievance)).name)
+		frappe.set_user(COE)
+		self.assertIn(grievance.name, frappe.get_list("Student Grievance", pluck="name"))
+		frappe.set_user(HOD)  # was an approver, still department HOD
+		self.assertIn(grievance.name, frappe.get_list("Student Grievance", pluck="name"))
+
+	def test_a_past_handler_outside_the_department_keeps_sight_of_what_they_handled(self):
+		self.seat_ended("HOD", self.department)
+		grievance = self.raise_for(self.a)  # routed to the COE (level 2)
+		frappe.set_user(COE)
+		self.assertIn(grievance.name, frappe.get_list("Student Grievance", pluck="name"))
+
+	def test_resolve_is_post_only_and_a_description_has_a_length_cap(self):
+		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[grievances.resolve], ["POST"])
+		with self.assertRaisesRegex(frappe.ValidationError, "too long"):
+			grievances.open_grievance(self.a, EVALUATION, "x" * 5001)
+
+
+def notified_grievance(user):
+	return frappe.get_all("Notification Log", filters={"for_user": user, "document_type": "Student Grievance"}, pluck="subject")

@@ -76,6 +76,8 @@ def row(grievance, request, now):
 def sla_status(grievance, request, now):
 	if grievance.docstatus != 0:
 		return _("Closed")
+	if not request:
+		return _("Unrouted")
 	if request.get("due_at") and get_datetime(request.due_at) < now:
 		return _("Overdue")
 	return _("Within SLA")

@@ -12,10 +12,13 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from campus.campus_platform import approval_rules as rules
-from campus.campus_platform.approval_engine import acting_capacity, acting_for, add_action, latest_request, start_level
-from campus.examinations.access import COMMITTEE_ROLES, has_any_role
+from campus.campus_platform.approval_engine import acting_for, add_action, latest_request, start_level, start_request
+from campus.campus_platform.approver_resolution import resolve_approvers
+from campus.campus_platform.notify import notify
+from campus.examinations.access import COMMITTEE_ROLE, COMMITTEE_ROLES, has_any_role
 
 SAVEPOINT = "grievance_escalation"
+DESCRIPTION_LIMIT = 5000
 
 
 def category_settings(category):
@@ -30,6 +33,42 @@ def category_settings(category):
 	return settings
 
 
+def validate_category(doc, method=None):
+	"""Doc event (Grievance Type validate): a student category's policy must be a Student Grievance policy, and a
+	confidential category's levels must all be the committee, or the handlers would be notified of what they cannot read."""
+	if not doc.get("oc_escalation_policy"):
+		return
+	policy = frappe.get_doc("Approval Policy", doc.oc_escalation_policy)
+	if policy.document_type != "Student Grievance":
+		frappe.throw(_("{0} is not a Student Grievance policy.").format(frappe.bold(policy.name)))
+	if doc.oc_confidential and not all(lv.approver_type == "Role" and lv.approver in COMMITTEE_ROLES for lv in policy.levels):
+		frappe.throw(_("A confidential category needs a policy whose every level is the Grievance Committee role."))
+
+
+def check_description(description):
+	if len(description or "") > DESCRIPTION_LIMIT:
+		frappe.throw(_("The description is too long (at most {0} characters).").format(DESCRIPTION_LIMIT))
+
+
+def route(grievance):
+	"""Start the grievance's approval request at the first level that can be resolved (a vacant HOD seat or a student
+	with no department must not refuse a complaint). With no resolvable level the committee is told and handles it.
+	Only the intake is lenient: nothing about the policy reaches the student."""
+	policy = frappe.get_doc("Approval Policy", grievance.escalation_policy)
+	for level_no in range(1, len(policy.levels) + 1):
+		frappe.db.savepoint(SAVEPOINT)
+		try:
+			return start_request(grievance, policy, level_no)
+		except frappe.ValidationError:
+			frappe.db.rollback(save_point=SAVEPOINT)
+	notify(
+		resolve_approvers("Role", COMMITTEE_ROLE, grievance),
+		_("Unrouted grievance: {0}").format(grievance.name),
+		_("No approver could be found for the escalation levels; the grievance committee should handle it."),
+		grievance,
+	)
+
+
 def student_department(student):
 	"""Department of the programme of the student's latest submitted enrolment, or None."""
 	program = frappe.db.get_value(
@@ -40,6 +79,7 @@ def student_department(student):
 
 def open_grievance(student, category, description, attachment=None):
 	"""Raise a grievance for `student` (the caller has resolved who the student is); returns the document."""
+	check_description(description)
 	grievance = frappe.get_doc(
 		{
 			"doctype": "Student Grievance", "student": student, "category": category,
@@ -50,26 +90,36 @@ def open_grievance(student, category, description, attachment=None):
 	return grievance.insert()
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def resolve(name, resolution):
 	"""Close grievance `name` with `resolution`: current approvers and committee members only."""
 	grievance = frappe.get_doc("Student Grievance", name, for_update=True)
 	grievance.check_permission("read")
 	if grievance.docstatus != 0:
 		frappe.throw(_("{0} is already closed.").format(name))
-	request_name = latest_request(grievance).name
-	request = frappe.get_doc("Approval Request", request_name, for_update=True)
-	if request.status != rules.PENDING:
-		frappe.throw(_("{0} is {1}; it cannot be resolved.").format(name, _(request.status)))
-	on_behalf_of = None if has_any_role(frappe.session.user, COMMITTEE_ROLES) else acting_for(request, frappe.session.user)
-	add_action(request, rules.APPROVE, request.current_level, on_behalf_of=on_behalf_of, comment=resolution)
-	request.status = rules.APPROVED
-	request.save(ignore_permissions=True)
+	committee = has_any_role(frappe.session.user, COMMITTEE_ROLES)
+	latest = latest_request(grievance)
+	if latest:
+		close_request(latest.name, committee, resolution, name)
+	elif committee:
+		grievance.flags.unrouted = True
+	else:  # unrouted: only the committee can take it
+		frappe.throw(_("Only the grievance committee can resolve {0}.").format(name), frappe.PermissionError)
 	grievance.resolution = resolution
 	grievance.flags.ignore_approval_lock = True
 	grievance.flags.ignore_permissions = True  # the approver or committee member was checked above
 	grievance.submit()
 	return grievance.status
+
+
+def close_request(request_name, committee, resolution, grievance_name):
+	request = frappe.get_doc("Approval Request", request_name, for_update=True)
+	if request.status != rules.PENDING:
+		frappe.throw(_("{0} is {1}; it cannot be resolved.").format(grievance_name, _(request.status)))
+	on_behalf_of = None if committee else acting_for(request, frappe.session.user)
+	add_action(request, rules.APPROVE, request.current_level, on_behalf_of=on_behalf_of, comment=resolution)
+	request.status = rules.APPROVED
+	request.save(ignore_permissions=True)
 
 
 def escalate_overdue():
