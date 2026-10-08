@@ -5,7 +5,7 @@ Submitting, in one transaction and under the invoice's row lock (campus_finance.
 does not exceed what was paid for the head, makes the Credit Note against the invoice, for a Caution Deposit sets the
 amount off against the student's dues in the company by a Journal Entry, and drafts the Payment Entry for the cash
 that remains (accounts adds the bank reference and submits it). Damages kept from a deposit move to the company's damages income account. Cancelling a Fee Refund cancels
-all of that, which frees the amount to be refunded again.
+all of that, which frees the amount to be refunded again; it is refused while any submitted payment pays out the credit note.
 Admission fees are refunded by Admission Cancellation, not here.
 """
 
@@ -49,8 +49,13 @@ class FeeRefund(ApprovableDocument, Document):
 		self.db_set({"credit_note": note.name, "adjustment_entry": adjustment, "damages_entry": damages, "payment_entry": payment and payment.name})
 
 	def before_cancel(self):
-		if self.payment_entry and frappe.db.get_value("Payment Entry", self.payment_entry, "docstatus") == 1:
-			frappe.throw(_("The refund was paid out. If the bank payment was reversed, cancel Payment Entry {0} in Accounts first.").format(self.payment_entry))
+		"""Refused while any payment (its own, an amended one or another Accounts voucher) pays out the credit note:
+		cancelling the note would unlink that payment and free the amount to be refunded again."""
+		if self.payment_entry:
+			frappe.db.get_value("Payment Entry", self.payment_entry, "docstatus", for_update=True)
+		paid_by = fee_refunds.paid_by(self.credit_note, exclude=(self.adjustment_entry, self.damages_entry))
+		if paid_by:
+			frappe.throw(_("The refund was paid out by {0} {1}. If the bank payment was reversed, cancel {0} {1} in Accounts first.").format(*paid_by))
 
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ("Sales Invoice", "Payment Entry", "Journal Entry")

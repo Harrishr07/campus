@@ -148,17 +148,38 @@ def make_damages_entry(refund, deposit_account):
 	return entry.submit().name
 
 
+def paid_by(credit_note, exclude=()):
+	"""(doctype, name) of a submitted Payment Entry or Journal Entry paying `credit_note` (Journal Entries in `exclude`
+	aside), or None. Locks the credit note first, then reads with locking reads."""
+	if not credit_note:
+		return None
+	frappe.db.get_value("Sales Invoice", credit_note, "name", for_update=True)
+	payments = frappe.db.sql_list(
+		"select pe.name from `tabPayment Entry Reference` ref join `tabPayment Entry` pe on pe.name = ref.parent"
+		" where ref.reference_doctype = 'Sales Invoice' and ref.reference_name = %s and pe.docstatus = 1 order by pe.name for update",
+		credit_note,
+	)
+	if payments:
+		return "Payment Entry", payments[0]
+	entries = frappe.db.sql_list(
+		"select je.name from `tabJournal Entry Account` acc join `tabJournal Entry` je on je.name = acc.parent"
+		" where acc.reference_type = 'Sales Invoice' and acc.reference_name = %s and je.docstatus = 1 and je.name not in %s"
+		" order by je.name for update",
+		(credit_note, [name for name in exclude if name] or [""]),
+	)
+	return ("Journal Entry", entries[0]) if entries else None
+
+
 def reverse_vouchers(refund):
 	"""Cancel what a Fee Refund made, last made first: the payment (deleted while still a draft; a submitted one blocks
 	the cancel in before_cancel), the set-off and damages entries, then the credit note. Those Accounts cancelled already stay."""
 	if refund.payment_entry:
-		if frappe.db.get_value("Payment Entry", refund.payment_entry, "docstatus") == 0:  # a paid one blocks the cancel
+		if frappe.db.get_value("Payment Entry", refund.payment_entry, "docstatus", for_update=True) == 0:  # a paid one blocks the cancel
 			frappe.delete_doc("Payment Entry", refund.payment_entry, force=True, ignore_permissions=True)
 			refund.db_set("payment_entry", None)
 	for doctype, name in (("Journal Entry", refund.damages_entry), ("Journal Entry", refund.adjustment_entry), ("Sales Invoice", refund.credit_note)):
 		if name and frappe.db.get_value(doctype, name, "docstatus") == 1:
 			voucher = frappe.get_doc(doctype, name)
-			voucher.ignore_linked_doctypes = ("Fee Refund",)
 			voucher.flags.ignore_permissions = True
 			voucher.cancel()
 

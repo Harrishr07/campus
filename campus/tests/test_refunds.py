@@ -281,6 +281,64 @@ class TestFeeRefund(RefundFixture):
 		self.assertEqual(frappe.db.get_value("Sales Invoice", doc.credit_note, "docstatus"), 2)
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 10000)
 
+	def test_a_refund_paid_by_an_amended_payment_cannot_be_cancelled(self):
+		invoice = self.invoice(self.a, "Tuition", 10000)
+		doc = self.approved(self.refund(invoice, amount=4000))
+		original = self.submit_payment(doc)
+		original.cancel()
+		amended = frappe.copy_doc(original)
+		amended.amended_from, amended.docstatus = original.name, 0
+		amended.insert().submit()
+		with self.assertRaisesRegex(frappe.ValidationError, f"cancel Payment Entry {amended.name}"):
+			doc.reload().cancel()
+		self.assertEqual(frappe.db.get_value("Sales Invoice", doc.credit_note, "docstatus"), 1)
+		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)  # the cap is not freed
+
+	def test_a_refund_paid_by_another_accounts_payment_cannot_be_cancelled(self):
+		invoice = self.invoice(self.a, "Tuition", 10000)
+		doc = self.approved(self.refund(invoice, amount=4000))
+		payment = get_payment_entry("Sales Invoice", doc.credit_note)
+		payment.reference_no, payment.reference_date = "BANKREF2", today()
+		payment.insert().submit()
+		with self.assertRaisesRegex(frappe.ValidationError, f"cancel Payment Entry {payment.name}"):
+			doc.cancel()
+		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)
+
+	def test_a_refund_paid_by_a_journal_entry_cannot_be_cancelled(self):
+		invoice = self.invoice(self.a, "Tuition", 10000)
+		doc = self.approved(self.refund(invoice, amount=4000))
+		note = frappe.get_doc("Sales Invoice", doc.credit_note)
+		entry = frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "voucher_type": "Bank Entry", "company": COLLEGE, "posting_date": today(),
+				"cheque_no": "BANKREF3", "cheque_date": today(),
+				"accounts": [
+					{"account": note.debit_to, "party_type": "Customer", "party": note.customer, "debit_in_account_currency": 4000,
+					 "reference_type": "Sales Invoice", "reference_name": note.name},
+					{"account": self.college["bank"], "credit_in_account_currency": 4000},
+				],
+			}
+		).insert()  # fmt: skip
+		entry.submit()
+		with self.assertRaisesRegex(frappe.ValidationError, f"cancel Journal Entry {entry.name}"):
+			doc.cancel()
+		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)
+
+	def test_cancel_reads_the_payments_of_the_credit_note_with_locking_reads(self):
+		invoice = self.invoice(self.a, "Tuition", 10000)
+		doc = self.approved(self.refund(invoice, amount=4000))
+		real_sql, queries = frappe.db.sql, []
+
+		def spy_sql(query, *args, **kwargs):
+			queries.append(str(query).lower())
+			return real_sql(query, *args, **kwargs)
+
+		with patch.object(frappe.db, "sql", spy_sql):
+			doc.cancel()
+		for table in ("payment entry reference", "journal entry account"):
+			first = next(q for q in queries if q.lstrip().startswith("select") and table in q)
+			self.assertTrue(first.rstrip().endswith("for update"), first)
+
 	def submit_payment(self, doc):
 		payment = frappe.get_doc("Payment Entry", doc.payment_entry)
 		payment.reference_no, payment.reference_date = "BANKREF1", today()
