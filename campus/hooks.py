@@ -221,7 +221,10 @@ doc_events["Sales Invoice"] = {
 doc_events["Payment Entry"] = {
 	"validate": "campus.campus_finance.challan.set_payment_student",
 	"before_submit": "campus.campus_finance.challan.assign_receipt_no",
-	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
+	"on_cancel": [
+		"campus.campus_finance.scholarships.refresh_after_voucher_cancel",
+		"campus.campus_finance.fee_refunds.allow_payment_cancel",  # after ERPNext's own on_cancel, which sets the ignore list
+	],
 }
 doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
 doc_events["Journal Entry"] = {

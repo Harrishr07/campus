@@ -255,21 +255,31 @@ class TestFeeRefund(RefundFixture):
 	def test_cancelling_a_refund_reverses_its_vouchers_and_restores_the_cap(self):
 		invoice = self.invoice(self.a, "Tuition", 10000)
 		doc = self.approved(self.refund(invoice, amount=4000))
+		payment, note = doc.payment_entry, doc.credit_note
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)
 		doc.cancel()
-		self.assertEqual((frappe.db.get_value("Fee Refund", doc.name, "docstatus"), frappe.db.get_value("Sales Invoice", doc.credit_note, "docstatus")), (2, 2))
-		self.assertIn(frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus"), (None, 2))
+		self.assertEqual((frappe.db.get_value("Fee Refund", doc.name, "docstatus"), frappe.db.get_value("Sales Invoice", note, "docstatus")), (2, 2))
+		self.assertFalse(frappe.db.exists("Payment Entry", payment))  # the draft is deleted
+		self.assertIsNone(frappe.db.get_value("Fee Refund", doc.name, "payment_entry"))
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 10000)
 		self.assertEqual(self.outstanding(invoice.name), 0)
 		self.assertEqual(self.approved(self.refund(invoice, amount=10000)).docstatus, 1)  # refundable again
 
-	def test_cancelling_after_the_payment_was_made_cancels_it_too(self):
+	def test_a_refund_whose_payment_was_made_cannot_be_cancelled(self):
 		invoice = self.invoice(self.a, "Tuition", 10000)
 		doc = self.approved(self.refund(invoice, amount=4000))
-		self.submit_payment(doc)
-		doc.cancel()
-		self.assertEqual(frappe.db.get_value("Payment Entry", doc.payment_entry, "docstatus"), 2)
+		payment = self.submit_payment(doc)
+		with self.assertRaisesRegex(frappe.ValidationError, f"cancel Payment Entry {payment.name}"):
+			doc.cancel()
+		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)  # the cap is not freed
+
+	def test_after_accounts_cancels_the_payment_the_refund_can_be_cancelled(self):
+		invoice = self.invoice(self.a, "Tuition", 10000)
+		doc = self.approved(self.refund(invoice, amount=4000))
+		self.submit_payment(doc).cancel()
+		doc.reload().cancel()
 		self.assertEqual(frappe.db.get_value("Sales Invoice", doc.credit_note, "docstatus"), 2)
+		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 10000)
 
 	def submit_payment(self, doc):
 		payment = frappe.get_doc("Payment Entry", doc.payment_entry)

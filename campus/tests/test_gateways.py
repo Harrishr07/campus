@@ -44,9 +44,10 @@ def signed(body, secret):
 
 
 def captured(payment_request, amount, payment_id="pay_1", currency="INR"):
-	return json.dumps(
-		{"event": "payment.captured", "payload": {"payment": {"entity": {"id": payment_id, "amount": int(amount * 100), "currency": currency, "notes": {"payment_request": payment_request}}}}}
-	).encode()
+	entity = {"id": payment_id, "amount": int(amount * 100), "notes": {"payment_request": payment_request}}
+	if currency:
+		entity["currency"] = currency
+	return json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": entity}}}).encode()
 
 
 class GatewayFixture(CampusTestCase):
@@ -245,9 +246,9 @@ class TestWebhook(GatewayFixture):
 
 	def test_a_wrong_amount_is_refused(self):
 		invoice, request = self.pay_request()
-		with self.assertRaisesRegex(frappe.ValidationError, "does not match"):
-			self.deliver(request.payment_gateway_account, captured(request.name, 4000))
+		self.deliver(request.payment_gateway_account, captured(request.name, 4000))
 		self.assertFalse(self.payment_entries(invoice))
+		self.assertIn("paid 4000", self.not_settled_logs()[0].error)
 
 	def test_other_events_and_unknown_requests_are_ignored(self):
 		invoice, request = self.pay_request()
@@ -283,10 +284,10 @@ class TestWebhook(GatewayFixture):
 
 	def test_a_payment_in_another_currency_is_not_settled(self):
 		invoice, request = self.pay_request()
-		with self.assertRaisesRegex(frappe.ValidationError, "currency"):
-			self.deliver(request.payment_gateway_account, captured(request.name, 5000, currency="USD"))
+		for currency in ("USD", None):  # a missing currency is refused too
+			self.deliver(request.payment_gateway_account, captured(request.name, 5000, currency=currency))
 		self.assertFalse(self.payment_entries(invoice))
-		self.assertEqual(len(self.not_settled_logs()), 1)
+		self.assertEqual(len(self.not_settled_logs()), 2)  # logged, not raised: a raise would roll the log back
 
 	def test_a_capture_for_a_cancelled_or_unknown_request_is_logged_not_lost(self):
 		invoice, request = self.pay_request()

@@ -220,15 +220,13 @@ def settle(account, event):
 	if not found or found.docstatus != 1 or found.payment_gateway_account != account:
 		return unsettled(event, _("no open Payment Request for this account"))
 	if found.status == "Paid":
-		if frappe.db.exists("Comment", settled_comment(event)):
+		if frappe.db.sql("select name from `tabComment` where reference_doctype = 'Payment Request' and reference_name = %s and content = %s for update", (event.payment_request, settled_comment(event)["content"])):
 			return {"status": "duplicate"}
 		return unsettled(event, _("the Payment Request is already paid by another payment"))
-	if event.currency and event.currency != found.currency:
-		unsettled(event, _("paid in {0}, asked in {1}").format(event.currency, found.currency))
-		frappe.throw(_("The currency paid does not match the payment request."))
+	if event.currency != found.currency:  # also a payment that names no currency; logged, not raised, so the log survives
+		return unsettled(event, _("paid in {0}, asked in {1}").format(event.currency or "?", found.currency))
 	if abs(flt(found.grand_total) - event.amount) > 0.005:
-		unsettled(event, _("paid {0}, asked {1}").format(event.amount, found.grand_total))
-		frappe.throw(_("The amount paid does not match the payment request."))
+		return unsettled(event, _("paid {0}, asked {1}").format(event.amount, found.grand_total))
 	request = frappe.get_doc("Payment Request", event.payment_request)
 	request.flags.ignore_permissions = True
 	request.set_as_paid()

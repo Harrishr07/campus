@@ -149,19 +149,22 @@ def make_damages_entry(refund, deposit_account):
 
 
 def reverse_vouchers(refund):
-	"""Cancel what a Fee Refund made, last made first: the payment (deleted while still a draft), the set-off and damages
-	entries, then the credit note."""
+	"""Cancel what a Fee Refund made, last made first: the payment (deleted while still a draft; a submitted one blocks
+	the cancel in before_cancel), the set-off and damages entries, then the credit note. Those Accounts cancelled already stay."""
 	if refund.payment_entry:
-		payment = frappe.get_doc("Payment Entry", refund.payment_entry)
-		if payment.docstatus == 0:
-			frappe.delete_doc("Payment Entry", payment.name, force=True, ignore_permissions=True)
-		else:
-			payment.ignore_linked_doctypes = ("Fee Refund",)
-			payment.flags.ignore_permissions = True
-			payment.cancel()
+		if frappe.db.get_value("Payment Entry", refund.payment_entry, "docstatus") == 0:  # a paid one blocks the cancel
+			frappe.delete_doc("Payment Entry", refund.payment_entry, force=True, ignore_permissions=True)
+			refund.db_set("payment_entry", None)
 	for doctype, name in (("Journal Entry", refund.damages_entry), ("Journal Entry", refund.adjustment_entry), ("Sales Invoice", refund.credit_note)):
-		if name:
+		if name and frappe.db.get_value(doctype, name, "docstatus") == 1:
 			voucher = frappe.get_doc(doctype, name)
 			voucher.ignore_linked_doctypes = ("Fee Refund",)
 			voucher.flags.ignore_permissions = True
 			voucher.cancel()
+
+
+def allow_payment_cancel(doc, method=None):
+	"""Doc event (Payment Entry on_cancel): Accounts may cancel a refund payment its Fee Refund still links to;
+	the Fee Refund is then cancellable (and not before: see FeeRefund.before_cancel)."""
+	if frappe.db.exists("Fee Refund", {"payment_entry": doc.name, "docstatus": 1}):
+		doc.ignore_linked_doctypes = (*(doc.get("ignore_linked_doctypes") or ()), "Fee Refund")

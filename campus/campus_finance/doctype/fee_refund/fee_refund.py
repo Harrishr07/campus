@@ -48,6 +48,10 @@ class FeeRefund(ApprovableDocument, Document):
 		payment = self.draft_payment(note) if flt(self.cash_refund) > 0 else None
 		self.db_set({"credit_note": note.name, "adjustment_entry": adjustment, "damages_entry": damages, "payment_entry": payment and payment.name})
 
+	def before_cancel(self):
+		if self.payment_entry and frappe.db.get_value("Payment Entry", self.payment_entry, "docstatus") == 1:
+			frappe.throw(_("The refund was paid out. If the bank payment was reversed, cancel Payment Entry {0} in Accounts first.").format(self.payment_entry))
+
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ("Sales Invoice", "Payment Entry", "Journal Entry")
 		fee_refunds.reverse_vouchers(self)
