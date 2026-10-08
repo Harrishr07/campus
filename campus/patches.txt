@@ -12,3 +12,4 @@ campus.patches.enquiry_ack_respects_quiet_hours
 campus.patches.link_pack_workspaces
 campus.patches.backfill_leave_kind
 campus.patches.remove_wip_onboarding_checklists
+campus.patches.link_governance_workspace

@@ -41,7 +41,7 @@ def campus_modules():
 class TestNavigation(CampusTestCase):
 	def test_areas_are_complete_and_agree(self):
 		sidebars = {s.name for s in campus_sidebars()}
-		self.assertEqual(len(sidebars), 10)
+		self.assertEqual(len(sidebars), 11)
 		self.assertEqual(sidebars, {w.name for w in campus_workspaces()})
 		self.assertEqual(sidebars, set(frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name")))
 		self.assertTrue(frappe.db.exists("Desktop Icon", {"name": APP_ICON, "icon_type": "App", "app": "campus"}))
@@ -104,7 +104,7 @@ class TestNavigation(CampusTestCase):
 			)
 
 	def test_module_packs_hide_their_area(self):
-		for code, area in (("COE", "Examinations"), ("IQAC", "IQAC")):
+		for code, area in (("COE", "Examinations"), ("GOVERNANCE", "Academic Governance"), ("IQAC", "IQAC")):
 			self.assertIn(area, frappe.get_all("Module Pack Workspace", {"parent": code}, pluck="workspace"), code)
 
 	# role mapping

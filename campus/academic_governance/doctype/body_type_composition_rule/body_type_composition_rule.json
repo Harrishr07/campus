@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "minimum_count",
+  "maximum_count",
+  "mandatory_for_quorum"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Member Category",
+   "options": "\nInternal\nExternal Expert\nIndustry\nAlumni\nStudent\nUniversity Nominee",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "minimum_count",
+   "fieldtype": "Int",
+   "label": "Minimum",
+   "default": "0",
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "maximum_count",
+   "fieldtype": "Int",
+   "label": "Maximum",
+   "default": "0",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "0 means no upper limit."
+  },
+  {
+   "fieldname": "mandatory_for_quorum",
+   "fieldtype": "Check",
+   "label": "Mandatory for Quorum",
+   "in_list_view": 1,
+   "description": "A meeting without an attending member of this category is not quorate."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-08 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Body Type Composition Rule",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1
+}

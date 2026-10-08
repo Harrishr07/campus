@@ -1,0 +1,41 @@
+{
+ "app": "campus",
+ "bg_color": "gray",
+ "creation": "2026-10-08 14:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "landmark",
+ "icon_type": "Link",
+ "idx": 11,
+ "label": "Academic Governance",
+ "link_to": "Academic Governance",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-10-08 14:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "Academic Governance",
+ "owner": "Administrator",
+ "parent_icon": "OneBook Campus",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": 1
+}

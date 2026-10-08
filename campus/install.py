@@ -1,5 +1,6 @@
 """Install and migrate hooks for OneBook Campus."""
 
+from campus.academic_governance.setup import setup_academic_governance
 from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
 from campus.campus_finance.setup import setup_finance
 from campus.campus_messaging.setup import setup_messaging
@@ -44,6 +45,7 @@ def after_install():
 	setup_finance()
 	setup_student_services()
 	setup_faculty()
+	setup_academic_governance()
 	seed_framework()
 
 
@@ -62,4 +64,5 @@ def after_migrate():
 	setup_finance()
 	setup_student_services()
 	setup_faculty()
+	setup_academic_governance()
 	seed_framework()

@@ -20,7 +20,7 @@ SEED_PACKS = {
 }
 
 # Packs whose module has a desk area: the area's workspace goes with the pack (hidden when the pack is off).
-PACK_WORKSPACES = {"COE": ["Examinations"], "IQAC": ["IQAC"]}
+PACK_WORKSPACES = {"COE": ["Examinations"], "GOVERNANCE": ["Academic Governance"], "IQAC": ["IQAC"]}
 
 
 def seed_module_packs():
