@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "type_name",
+  "requires_curriculum",
+  "changes_regulation",
+  "aqar_category",
+  "route_section",
+  "route"
+ ],
+ "fields": [
+  {
+   "fieldname": "type_name",
+   "fieldtype": "Data",
+   "label": "Type",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "requires_curriculum",
+   "fieldtype": "Check",
+   "label": "Needs a Curriculum Draft",
+   "description": "The proposal must link a Draft or Approved Curriculum and say which batches it is effective for."
+  },
+  {
+   "fieldname": "changes_regulation",
+   "fieldtype": "Check",
+   "label": "Changes the Regulation",
+   "description": "Final approval makes the linked Draft or Approved Regulation Effective."
+  },
+  {
+   "fieldname": "aqar_category",
+   "fieldtype": "Select",
+   "label": "AQAR Data Point",
+   "options": "\nSyllabus Revision\nNew Course",
+   "description": "Courses of approved proposals count towards AQAR 1.1.2 (Syllabus Revision) or 1.2.1 (New Course)."
+  },
+  {
+   "fieldname": "route_section",
+   "fieldtype": "Section Break",
+   "label": "Route"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Table",
+   "label": "Route (in order)",
+   "options": "Proposal Route Stage",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Proposal Type",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:type_name",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "track_changes": 1
+}

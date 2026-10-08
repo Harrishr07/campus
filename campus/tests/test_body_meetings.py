@@ -206,11 +206,12 @@ class TestBodyMeetings(CampusTestCase):
 		self.assertTrue(this_year.resolutions[0].resolution_no.endswith("/001"))
 		self.assertEqual(len({m.resolutions[0].resolution_no for m in (this_year, next_year, elsewhere)}), 3)
 
-	def test_a_resolution_can_carry_a_proposal_reference_for_the_proposal_stage(self):
+	def test_a_resolution_proposal_reference_is_a_link_to_academic_proposal(self):
+		self.assertEqual(frappe.get_meta("Meeting Resolution").get_field("proposal").options, "Academic Proposal")
 		meeting = self.attend(self.meeting(0), self.employees[0], self.nominee)
-		meeting.append("resolutions", {"resolution_text": "Adopt syllabus", "decision": "Approved", "proposal": "PROP-0001"})
-		meeting.save()
-		self.assertEqual(meeting.resolutions[0].proposal, "PROP-0001")
+		meeting.append("resolutions", {"resolution_text": "Adopt syllabus", "decision": "Approved", "proposal": "PROP-NOPE"})
+		with self.assertRaises(frappe.LinkValidationError):
+			meeting.save()
 
 	# notice (AC1)
 	def notice_logs(self, meeting, event=NOTICE):

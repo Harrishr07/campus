@@ -20,11 +20,16 @@ uses; a department keeps the students with a submitted Program Enrollment in one
 
 Phase 2 (P2-T05): full_time_teachers, sanctioned_posts, phd_teachers, teacher_experience_years and student_teacher_ratio
 come from campus.faculty.api (see campus/faculty/staffing.py for the counting rules); `department` is Employee.department.
+
+Phase 2 (P2-T03): syllabus_revised_courses (AQAR 1.1.2) and new_courses_introduced (AQAR 1.2.1): distinct courses named on
+Academic Proposals of that Proposal Type category that were finally approved within the academic year (`department` is
+the proposal's department); see campus.academic_governance.api.proposal_courses.
 """
 
 import frappe
 from frappe.utils import getdate
 
+from campus.academic_governance import api as governance
 from campus.campus_finance.api import scholarship_beneficiaries
 from campus.faculty import api as faculty
 from campus.iqac.registry import campus_metric
@@ -219,3 +224,15 @@ def teacher_experience_years(company, academic_year, department=None):
 @campus_metric("student_teacher_ratio")
 def student_teacher_ratio(company, academic_year, department=None):
 	return faculty.student_teacher_ratio(company, academic_year, department)
+
+
+@campus_metric("syllabus_revised_courses")
+def syllabus_revised_courses(company, academic_year, department=None):
+	courses = governance.proposal_courses(company, academic_year, "Syllabus Revision", department)
+	return {"value": len(courses), "records": refs("Course", courses)}
+
+
+@campus_metric("new_courses_introduced")
+def new_courses_introduced(company, academic_year, department=None):
+	courses = governance.proposal_courses(company, academic_year, "New Course", department)
+	return {"value": len(courses), "records": refs("Course", courses)}

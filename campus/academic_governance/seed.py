@@ -58,6 +58,32 @@ def seed_message_templates():
 		).insert(ignore_permissions=True)
 
 
+# The bodies every proposal passes (Body Types), in order.
+PROPOSAL_ROUTE = ["Board of Studies", "Academic Council", "Governing Body"]
+# (name, needs a curriculum draft, changes the regulation, AQAR data point)
+PROPOSAL_TYPES = [
+	("New Course", 0, 0, "New Course"),
+	("Syllabus Revision", 1, 0, "Syllabus Revision"),
+	("New Elective", 1, 0, "New Course"),
+	("Regulation Change", 0, 1, ""),
+	("New Programme", 0, 0, ""),
+]
+
+
+def seed_proposal_types():
+	"""The five proposal types on the BoS, Academic Council, Governing Body route. An existing (possibly edited) type is left alone."""
+	for name, requires_curriculum, changes_regulation, aqar_category in PROPOSAL_TYPES:
+		if frappe.db.exists("Proposal Type", name):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Proposal Type", "type_name": name, "requires_curriculum": requires_curriculum,
+				"changes_regulation": changes_regulation, "aqar_category": aqar_category,
+				"route": [{"body_type": body_type} for body_type in PROPOSAL_ROUTE],
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
+
+
 CONFIDENTIAL = {"Internal Complaints Committee", "Anti-Ragging Committee", "Grievance Redressal Committee"}
 
 

@@ -1,0 +1,238 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "proposal_type",
+  "company",
+  "department",
+  "column_break_subject",
+  "status",
+  "current_stage",
+  "current_body_type",
+  "approved_on",
+  "approving_resolution",
+  "subject_section",
+  "regulation",
+  "curriculum",
+  "column_break_batches",
+  "batches",
+  "courses_section",
+  "courses",
+  "description_section",
+  "justification",
+  "attachments",
+  "resolutions_section",
+  "stage_resolutions"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "proposal_type",
+   "fieldtype": "Link",
+   "label": "Type",
+   "options": "Proposal Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_subject",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nIn Route\nApproved\nRejected",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "current_stage",
+   "fieldtype": "Int",
+   "label": "Current Stage",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "current_body_type",
+   "fieldtype": "Link",
+   "label": "Awaiting",
+   "options": "Body Type",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Date",
+   "label": "Approved On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "approving_resolution",
+   "fieldtype": "Data",
+   "label": "Approving Resolution",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "subject_section",
+   "fieldtype": "Section Break",
+   "label": "Subject"
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "curriculum",
+   "fieldtype": "Link",
+   "label": "Curriculum Draft",
+   "options": "Curriculum",
+   "description": "The draft version this proposal makes Effective."
+  },
+  {
+   "fieldname": "column_break_batches",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "batches",
+   "fieldtype": "Table",
+   "label": "Effective for Batches",
+   "options": "Curriculum Batch"
+  },
+  {
+   "fieldname": "courses_section",
+   "fieldtype": "Section Break",
+   "label": "Courses Concerned"
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Academic Proposal Course"
+  },
+  {
+   "fieldname": "description_section",
+   "fieldtype": "Section Break",
+   "label": "Justification and Attachments"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Text Editor",
+   "label": "Justification"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Attachments",
+   "options": "Academic Proposal Attachment"
+  },
+  {
+   "fieldname": "resolutions_section",
+   "fieldtype": "Section Break",
+   "label": "Resolutions per Stage"
+  },
+  {
+   "fieldname": "stage_resolutions",
+   "fieldtype": "Table",
+   "label": "Stage Resolutions",
+   "options": "Academic Proposal Resolution",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Academic Proposal",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:PROP-{YYYY}-{#####}",
+ "title_field": "title",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "allow_import": 0,
+ "show_title_field_in_link": 1
+}

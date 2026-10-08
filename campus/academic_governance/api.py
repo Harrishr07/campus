@@ -28,3 +28,24 @@ def quorum_rule(body_type):
 	"""(quorum percentage, mandatory categories) of a Body Type."""
 	percent = frappe.get_cached_value("Body Type", body_type, "quorum_percent")
 	return percent or 0, quorum_mandatory_categories(body_type)
+
+
+def proposal_courses(company, academic_year, aqar_category, department=None):
+	"""Courses named on Approved Academic Proposals of the AQAR category (Proposal Type) approved within the academic year."""
+	year = frappe.db.get_value("Academic Year", academic_year, ["year_start_date", "year_end_date"], as_dict=True)
+	if not year:
+		return []
+	proposal, kind, course = (frappe.qb.DocType(d) for d in ("Academic Proposal", "Proposal Type", "Academic Proposal Course"))
+	query = (
+		frappe.qb.from_(proposal)
+		.join(kind).on(kind.name == proposal.proposal_type)
+		.join(course).on((course.parent == proposal.name) & (course.parenttype == "Academic Proposal"))
+		.select(course.course)
+		.distinct()
+		.where((proposal.company == company) & (proposal.status == "Approved") & (kind.aqar_category == aqar_category))
+		.where(proposal.approved_on.between(year.year_start_date, year.year_end_date))
+		.orderby(course.course)
+	)  # fmt: skip
+	if department:
+		query = query.where(proposal.department == department)
+	return [row[0] for row in query.run()]

@@ -1,0 +1,67 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "company",
+   "label": "Company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "\nDraft\nIn Route\nApproved\nRejected"
+  },
+  {
+   "fieldname": "proposal_type",
+   "label": "Type",
+   "fieldtype": "Link",
+   "options": "Proposal Type"
+  },
+  {
+   "fieldname": "department",
+   "label": "Department",
+   "fieldtype": "Link",
+   "options": "Department"
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Proposal Tracker",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Academic Proposal",
+ "report_name": "Proposal Tracker",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "IQAC Coordinator"
+  }
+ ]
+}

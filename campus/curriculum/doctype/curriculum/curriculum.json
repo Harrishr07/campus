@@ -16,7 +16,10 @@
   "courses_section",
   "courses",
   "requirements_section",
-  "category_requirements"
+  "category_requirements",
+  "applicability_section",
+  "applicable_batches",
+  "approving_resolution"
  ],
  "fields": [
   {
@@ -111,12 +114,31 @@
    "fieldtype": "Table",
    "label": "Category Credit Minimums",
    "options": "Category Credit Requirement"
+  },
+  {
+   "fieldname": "applicability_section",
+   "fieldtype": "Section Break",
+   "label": "Applicability"
+  },
+  {
+   "fieldname": "applicable_batches",
+   "fieldtype": "Table",
+   "label": "Effective for Batches",
+   "options": "Curriculum Batch",
+   "description": "Set by an Academic Proposal. Empty: effective for every batch of the regulation."
+  },
+  {
+   "fieldname": "approving_resolution",
+   "fieldtype": "Data",
+   "label": "Approving Resolution",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-09 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Curriculum",

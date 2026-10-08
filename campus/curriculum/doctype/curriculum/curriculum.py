@@ -68,7 +68,7 @@ class Curriculum(Document):
 			return
 		if self.status not in TRANSITIONS.get(old, ()):
 			frappe.throw(_("A curriculum cannot move from {0} to {1}.").format(_(old or "New"), _(self.status)))
-		if self.status == "Effective" and DEAN_ROLE not in frappe.get_roles():
+		if self.status == "Effective" and DEAN_ROLE not in frappe.get_roles() and not self.flags.via_academic_proposal:
 			frappe.throw(_("Only the {0} can make a curriculum Effective.").format(DEAN_ROLE))
 
 	def validate_lock(self):
@@ -92,7 +92,7 @@ class Curriculum(Document):
 			for df in self.meta.fields
 			if df.fieldtype not in NO_VALUE_FIELDS and df.fieldname != "status"
 		}
-		for table in ("courses", "category_requirements"):
+		for table in ("courses", "category_requirements", "applicable_batches"):
 			values[table] = [
 				{
 					k: cstr(v)
@@ -266,11 +266,13 @@ class Curriculum(Document):
 				)
 
 	def supersede_previous(self):
-		"""Only one Effective curriculum per programme and regulation: an older one is superseded.
+		"""An Effective curriculum without listed batches supersedes the older Effective ones of its programme and regulation.
 
 		Runs in the transaction that holds the sibling lock from validate. The direct db.set_value
 		intentionally bypasses the Effective snapshot lock: this is the one allowed change to a locked record.
 		"""
+		if self.applicable_batches:  # limited to some batches: the other Effective versions still serve the rest
+			return
 		for sibling in self.lock_siblings():
 			if sibling.status == "Effective" and sibling.name != self.name:
 				frappe.db.set_value("Curriculum", sibling.name, "status", "Superseded")

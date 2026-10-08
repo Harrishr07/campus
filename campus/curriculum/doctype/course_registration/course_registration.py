@@ -16,7 +16,7 @@ from frappe.utils import cint, getdate
 
 from campus.campus_platform.api import ApprovableDocument, get_regulation, get_rule, latest_enrollment
 from campus.curriculum import registration_rules as rules
-from campus.curriculum.api import prerequisites_met
+from campus.curriculum.api import effective_curriculum, prerequisites_met
 from campus.curriculum.enrollment import (
 	count_members,
 	current_offering,
@@ -71,9 +71,8 @@ class CourseRegistration(ApprovableDocument, Document):
 			frappe.throw(_("You are not permitted to register {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
 		self.department = frappe.db.get_value("Program", enrollment.program, "department")
 		self.regulation = get_regulation(self.student)
-		self.curriculum = frappe.db.get_value(
-			"Curriculum", {"program": enrollment.program, "regulation": self.regulation, "status": "Effective"}
-		)
+		batch = frappe.db.get_value("Student", self.student, "oc_batch") or enrollment.academic_year
+		self.curriculum = effective_curriculum(enrollment.program, self.regulation, batch)
 		if not self.curriculum:
 			frappe.throw(
 				_("No Effective curriculum of regulation {0} for programme {1}.").format(
