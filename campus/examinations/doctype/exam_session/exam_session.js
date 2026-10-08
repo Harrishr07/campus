@@ -21,6 +21,11 @@ frappe.ui.form.on("Exam Session", {
 				__("Create Exam Registrations")
 			);
 		});
+		frm.add_custom_button(__("Re-raise Exam Fee Invoices"), () =>
+			frappe
+				.xcall("campus.examinations.api.reraise_exam_fee_invoices", { exam_session: frm.doc.name })
+				.then((run) => run && frappe.show_alert({ message: __("Exam fee invoices queued"), indicator: "green" }))
+		);
 		frm.add_custom_button(__("Generate Hall Tickets"), () =>
 			frappe
 				.xcall("campus.examinations.api.generate_hall_tickets", { exam_session: frm.doc.name })

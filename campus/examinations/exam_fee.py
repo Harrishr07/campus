@@ -6,7 +6,9 @@ registration closing date (registration_rules.late_fee); both are records, never
 The student confirms in a portal request, and a student has no access to the accounts a Sales Invoice posts to,
 which ERPNext checks for the session user. So the invoice is made in a background job queued after the
 confirmation commits, running as Administrator as a worker may (the web session is never touched), as the
-condonation fee does. The job is idempotent: a registration gets at most one invoice.
+condonation fee does. The job is idempotent: a registration gets at most one invoice. Confirmation checks the
+invoice can be raised (Customer, receivable account, Exam fee head) before fixing the fee; should the job still
+fail, the COE re-raises the missing invoices of a session (reraise_invoices, a bulk run of the same job).
 
 Exam dues (fee head type Exam) never block registration; exam_dues_block is the gate for hall tickets.
 """
@@ -15,12 +17,16 @@ import frappe
 from frappe import _
 from frappe.utils import date_diff, flt, today
 
-from campus.campus_finance.api import has_dues, raise_fee_invoice
+from campus.campus_finance.api import check_fee_invoice, has_dues, raise_fee_invoice
+from campus.campus_platform.bulk import run_bulk
+from campus.examinations.access import COE_ROLE
 from campus.examinations.registration_rules import late_fee
 
 JOB = "campus.examinations.exam_fee.raise_fee"
 EXAM_HEAD = "Exam"
 RATE, DOCTYPE = "Exam Fee Rate", "Exam Registration"
+RERAISE_RUN = "Exam Fee Invoice"
+RERAISE_HANDLER = "campus.examinations.exam_fee.reraise_fee_item"
 
 
 def fee_rate(company, program):
@@ -44,6 +50,11 @@ def registration_fee(company, program, eligible_courses, registration_closes):
 		frappe.throw(_("Registration for this session closed {0} days ago.").format(days))
 	exam = flt(rate.fee_per_course) * eligible_courses
 	return {"late_days": days, "exam_fee": exam, "late_fee": late, "fee_total": exam + late}
+
+
+def check_invoiceable(student, company):
+	"""Throw unless the exam fee invoice of `student` in `company` can be raised (checked before confirming)."""
+	check_fee_invoice(student, EXAM_HEAD, company)
 
 
 def queue_fee(registration):
@@ -71,6 +82,29 @@ def raise_fee(registration):
 		frappe.db.set_value(DOCTYPE, registration, "fee_invoice", invoice.name)
 	finally:
 		frappe.set_user(caller)
+
+
+def reraise_invoices(exam_session):
+	"""Queue the invoice job for the session's confirmed registrations that have a fee and no invoice (COE only).
+
+	Returns the Bulk Run name, or None when none is missing. Idempotent: raise_fee skips an invoiced registration.
+	"""
+	frappe.only_for((COE_ROLE, "System Manager"))
+	frappe.get_doc("Exam Session", exam_session).check_permission("write")
+	names = frappe.get_all(
+		DOCTYPE,
+		{"exam_session": exam_session, "confirmed": 1, "fee_total": [">", 0], "fee_invoice": ["is", "not set"]},
+		pluck="name", order_by="name",
+	)  # fmt: skip
+	if not names:
+		frappe.msgprint(_("Every confirmed registration of {0} has its exam fee invoice.").format(frappe.bold(exam_session)))
+		return None
+	return run_bulk(RERAISE_RUN, names, RERAISE_HANDLER)
+
+
+def reraise_fee_item(registration, run):
+	"""Bulk handler of reraise_invoices: raise one registration's missing invoice (in the worker, no commit)."""
+	raise_fee(registration)
 
 
 def exam_dues_block(student, exam_session):

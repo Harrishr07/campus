@@ -5,13 +5,22 @@ the student confirms on /campus-portal, which fixes the fee and queues the exam 
 (campus.examinations.exam_fee). Eligibility is recomputed on every save from the snapshot attendance status
 and the detention / debarment flags (registration_rules). Exam dues do not block registration; they block
 hall tickets (exam_fee.exam_dues_block).
+
+The confirmation and fee fields and each course row's course, offering and kind are server-owned: only
+registration.confirm (flags.server_fields) sets the former, and only the bulk job sets the latter (on a new row).
+A hand edit of either is refused.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cstr, flt
 
 from campus.examinations import registration_rules as rules
+
+
+SERVER_FIELDS = ("confirmed", "confirmed_on", "late_days", "exam_fee", "late_fee", "fee_total", "fee_invoice")
+ROW_FIELDS = ("course", "course_offering", "kind")
 
 
 def registration_name(exam_session, student):
@@ -31,8 +40,29 @@ class ExamRegistration(Document):
 			frappe.throw(_("Give the reason for the detention."))
 		if self.debarred and not (self.debarment_reason or "").strip():
 			frappe.throw(_("Give the reason for the debarment."))
+		self.guard_server_fields()
 		self.validate_courses()
 		self.set_eligibility()
+
+	def guard_server_fields(self):
+		if self.flags.server_fields:
+			return
+		before = self.get_doc_before_save()
+		old = before or frappe._dict()
+		changed = [f for f in SERVER_FIELDS if _plain(self.get(f)) != _plain(old.get(f))]
+		old_rows = {row.name: row for row in before.courses} if before else {}
+		changed += [
+			f"{row.idx}.{f}"
+			for row in self.courses
+			if row.name in old_rows
+			for f in ROW_FIELDS
+			if _plain(row.get(f)) != _plain(old_rows[row.name].get(f))
+		]
+		if changed:
+			frappe.throw(
+				_("{0} of an Exam Registration are set by the server only.").format(", ".join(changed)),
+				title=_("Server-owned fields"),
+			)
 
 	def validate_courses(self):
 		seen = set()
@@ -51,3 +81,10 @@ class ExamRegistration(Document):
 
 	def eligible_courses(self):
 		return [row for row in self.courses if row.eligibility == rules.ELIGIBLE]
+
+
+def _plain(value):
+	"""A comparable form of a field value: blanks alike, numbers by value."""
+	if not value:
+		return None
+	return flt(value) if isinstance(value, int | float) else cstr(value)

@@ -301,6 +301,47 @@ class TestBulkRegistration(ExamRegistrationFixture):
 		doc.save()
 		self.assertEqual({r.eligibility for r in doc.courses}, {"Not eligible (Debarred)"})  # the arrear too
 
+	def test_a_stale_snapshot_tops_up_instead_of_inserting_a_duplicate(self):
+		self.register_all()
+		group = frappe.get_doc("Student Group", self.offerings["EXR D"])
+		group.append("students", {"student": self.ok})
+		group.save()
+		name = registration.registration_name(self.session.name, self.ok)
+		real_exists = frappe.db.exists
+
+		def stale_exists(doctype, *args, **kwargs):  # what a plain read of a snapshot older than the insert sees
+			return None if doctype == "Exam Registration" else real_exists(doctype, *args, **kwargs)
+
+		with patch.object(frappe.db, "exists", side_effect=stale_exists):
+			self.assertEqual(registration.register(self.ok, self.session.name), name)
+		self.assertEqual({r.course for r in self.reg(self.ok).courses}, {"EXR A", "EXR B", "EXR D"})
+
+	def test_start_refuses_while_a_registration_run_of_the_session_is_live(self):
+		frappe.set_user(COE_USER)
+		with patch.object(bulk, "enqueue_run"):
+			first = api.start_registration(self.session.name)
+			with self.assertRaisesRegex(frappe.ValidationError, first):
+				api.start_registration(self.session.name)
+			frappe.db.set_value("Bulk Run", first, "status", "Completed")
+			self.assertNotEqual(api.start_registration(self.session.name), first)
+
+	def test_server_owned_fields_cannot_be_edited_by_hand(self):
+		self.register_all()
+		invoice = raise_fee_invoice(self.ok, "Exam", 100, COLLEGE, "An unrelated invoice").name
+		for field, value in (("confirmed", 1), ("fee_total", 5), ("exam_fee", 5), ("fee_invoice", invoice)):
+			doc = self.reg(self.ok)
+			doc.set(field, value)
+			with self.assertRaisesRegex(frappe.ValidationError, "server"):
+				doc.save()
+		doc = self.reg(self.ok)
+		doc.courses[0].kind = "Arrear"
+		with self.assertRaisesRegex(frappe.ValidationError, "server"):
+			doc.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "server"):
+			frappe.get_doc(
+				{"doctype": "Exam Registration", "exam_session": self.session.name, "student": self.dues, "confirmed": 1}
+			).insert()
+		self.reg(self.sa).save()  # an untouched save passes
 
 class TestAttendanceSnapshot(ExamRegistrationFixture):
 	def test_only_a_locked_run_counts_and_an_approved_condonation_makes_a_medical_band_eligible(self):
@@ -395,6 +436,43 @@ class TestExamFee(ExamRegistrationFixture):
 		self.confirm_as(OK_USER, self.ok)
 		self.assertEqual(self.reg(self.ok).exam_fee, 900)  # 2 x 450
 
+	def test_confirmation_is_refused_before_it_is_fixed_when_no_invoice_can_be_raised(self):
+		self.register_all()
+		frappe.db.set_value("Student", self.ok, "customer", None)
+		with self.assertRaisesRegex(frappe.ValidationError, "Customer"):
+			self.confirm_as(OK_USER, self.ok)
+		frappe.set_user("Administrator")
+		self.assertFalse(self.reg(self.ok).confirmed)
+		frappe.db.set_value("Company", COLLEGE, "default_receivable_account", None)
+		with self.assertRaisesRegex(frappe.ValidationError, "receivable"):
+			self.confirm_as(DROP_USER, self.drop)
+		frappe.set_user("Administrator")
+		self.assertFalse(self.reg(self.drop).confirmed)
+
+	def test_confirmation_is_refused_once_the_exams_start(self):
+		self.register_all()
+		frappe.db.set_value("Exam Session", self.session.name, "exam_start", today())
+		with self.assertRaisesRegex(frappe.ValidationError, "started"):
+			self.confirm_as(OK_USER, self.ok)
+
+	def test_coe_re_raises_missing_exam_fee_invoices_once(self):
+		self.register_all()
+		self.confirm_as(DROP_USER, self.drop)  # the invoice job is mocked away: confirmed without an invoice
+		self.confirm_as(OK_USER, self.ok)
+		frappe.set_user("Administrator")
+		exam_fee.raise_fee(self.reg(self.ok).name)  # already invoiced: left alone
+		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.reraise_exam_fee_invoices], ["POST"])
+		frappe.set_user(FACULTY)
+		with self.assertRaises(frappe.PermissionError):
+			api.reraise_exam_fee_invoices(self.session.name)
+		frappe.set_user(COE_USER)
+		with patch.object(exam_fee, "run_bulk", inline_bulk):
+			api.reraise_exam_fee_invoices(self.session.name)
+			api.reraise_exam_fee_invoices(self.session.name)  # idempotent
+		frappe.set_user("Administrator")
+		self.assertTrue(self.reg(self.drop).fee_invoice)
+		for student in (self.drop, self.ok):
+			self.assertEqual(frappe.db.count("Sales Invoice", {"student": student, "docstatus": 1}), 1)
 
 class TestDuesGating(ExamRegistrationFixture):
 	def test_exam_dues_block_hall_tickets_not_registration(self):

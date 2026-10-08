@@ -1,15 +1,17 @@
 """M12-02 Arrears: courses a student has sat (or been barred from) and not yet cleared.
 
-Only published Student Results count. A course is an arrear when its latest published outcome is not a Pass
-(Fail, SA shortage of attendance or AB absent); a later Pass of the same course clears it.
+Only published Student Results count, and a later Pass of a course clears it. Two views:
+- an arrear (arrear_courses, for transcripts and progression) is any course whose latest outcome is not a Pass:
+  Fail (U), SA shortage of attendance, AB absent or WD withdrawn;
+- a reappearance course (reappearance_courses, for exam registration, M06-01) is the subset written again as an
+  arrear in a later session: Fail, AB and WD. An SA course is not one; the student redoes the course first.
 """
 
 import frappe
 from frappe.utils import now_datetime
 
 PASS = "Pass"
-# Outcomes written again as an arrear in a later session (U fail, absent, withdrawn). An SA course is not one:
-# the student redoes the course (re-registers it) before writing it again.
+# Outcomes a reappearance course has (U fail, absent, withdrawn); see the module docstring.
 REAPPEAR = ("Fail", "AB", "WD")
 
 
@@ -20,12 +22,12 @@ def outstanding_arrears(outcomes):
 
 
 def arrear_courses(student):
-	"""Arrear courses of `student` from the published Student Results."""
+	"""Arrear courses (sorted) of `student`: latest published outcome anything but a Pass, SA included."""
 	return outstanding_arrears(published_outcomes(student))
 
 
 def reappearance_courses(student):
-	"""Courses (sorted) whose latest published outcome is a fail, an absence or a withdrawal (REAPPEAR)."""
+	"""Reappearance courses (sorted) of `student`: latest published outcome Fail, AB or WD (REAPPEAR), never SA."""
 	latest = dict(published_outcomes(student))
 	return sorted(course for course, result in latest.items() if result in REAPPEAR)
 

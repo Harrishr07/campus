@@ -44,6 +44,7 @@ head_types = ledger.head_types
 CAUTION_DEPOSIT = fee_heads.CAUTION_DEPOSIT
 student_invoices = ledger.student_invoices
 raise_fee_invoice = invoices.raise_fee_invoice
+check_fee_invoice = invoices.check_fee_invoice
 next_number = numbering.next_number
 validate_number_prefix = numbering.validate_prefix
 scholarship_beneficiaries = scholarships.scholarship_beneficiaries

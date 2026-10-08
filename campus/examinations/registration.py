@@ -9,7 +9,8 @@ Courses of a student in a session (registrable_courses):
 Attendance comes from the locked Attendance Eligibility Run (student_services.api.attendance_snapshot). A
 student with courses of the term but no snapshot row fails (the bulk run records the error) instead of passing.
 
-The bulk handler is DB-only and does not commit. It is idempotent: a re-run adds only missing courses, keeps
+Only one registration run of a session is live at a time (start locks the session row and refuses a Queued or
+Running one). The bulk handler is DB-only and does not commit. It is idempotent: a re-run adds only missing courses, keeps
 the existing rows and refreshes the attendance status. A confirmed registration is left as it is (its fee is fixed).
 """
 
@@ -31,6 +32,7 @@ DOCTYPE, SESSION = "Exam Registration", "Exam Session"
 RUN_TYPE = "Exam Registration"
 HANDLER = "campus.examinations.registration.register_student"
 REGISTRATION_KINDS = {"Dropped": DROPPED, "Arrear": ARREAR}  # Course Registration Item type -> kind
+LIVE = ("Queued", "Running")
 
 
 def start(exam_session, program=None):
@@ -44,8 +46,25 @@ def start(exam_session, program=None):
 		frappe.throw(_("Set the registration closing date of {0} first.").format(frappe.bold(exam_session)))
 	if program and frappe.db.get_value("Program", program, "oc_company") != session.company:
 		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
+	frappe.db.get_value(SESSION, exam_session, "name", for_update=True)  # one start of a session at a time
+	running = live_run(exam_session)
+	if running:
+		frappe.throw(_("Exam registration run {0} of this session is still running.").format(frappe.bold(running)))
 	students = candidate_students(session, program)
 	return run_bulk(RUN_TYPE, students, HANDLER, parameters={"exam_session": exam_session})
+
+
+def live_run(exam_session):
+	"""The Queued or Running registration Bulk Run of the session, or None (a locking read: call under the session lock)."""
+	run = frappe.qb.DocType("Bulk Run")
+	rows = (
+		frappe.qb.from_(run)
+		.select(run.name, run.parameters)
+		.where((run.run_type == RUN_TYPE) & run.status.isin(LIVE))
+		.for_update()
+		.run()
+	)
+	return next((name for name, parameters in rows if frappe.parse_json(parameters or "{}").get("exam_session") == exam_session), None)
 
 
 def candidate_students(session, program=None):
@@ -94,7 +113,8 @@ def register(student, exam_session):
 		return None
 	status = attendance_status(student, session, courses)
 	name = registration_name(exam_session, student)
-	if not frappe.db.exists(DOCTYPE, name):
+	# a locking read: a plain one after the session lock sees this transaction's older snapshot
+	if not frappe.db.get_value(DOCTYPE, name, "name", for_update=True):
 		return frappe.get_doc(
 			{
 				"doctype": DOCTYPE, "exam_session": exam_session, "student": student,
@@ -158,25 +178,32 @@ def attendance_status(student, session, courses):
 def confirm(name):
 	"""Confirm a registration: fix its fee (per eligible course plus today's late fee slab) and queue the invoice.
 
-	The caller has checked who may confirm (the portal: the student themself). The registration row is locked
+	Refused for a published session, before registration opens, once the exams start, past the last late fee slab
+	and when the fee invoice could not be raised. The caller has checked who may confirm (the portal: the student themself). The registration row is locked
 	and re-read first, so a double submit or a concurrent bulk top-up cannot confirm twice or change the courses.
 	"""
 	doc = frappe.get_doc(DOCTYPE, name, for_update=True)
 	if doc.confirmed:
 		frappe.throw(_("This exam registration is already confirmed."))
 	session = frappe.db.get_value(
-		SESSION, doc.exam_session, ["status", "registration_opens", "registration_closes"], as_dict=True
+		SESSION, doc.exam_session, ["status", "registration_opens", "registration_closes", "exam_start"], as_dict=True
 	)
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session takes no registrations."))
 	if session.registration_opens and getdate(today()) < getdate(session.registration_opens):
 		frappe.throw(_("Registration opens on {0}.").format(frappe.format(session.registration_opens, "Date")))
+	if session.exam_start and getdate(today()) >= getdate(session.exam_start):
+		frappe.throw(_("The examinations of this session have started; registration is closed."))
 	eligible = doc.eligible_courses()
 	if not eligible:
 		frappe.throw(_("No course of this registration is eligible for the examination."))
-	doc.update(exam_fee.registration_fee(doc.company, doc.program, len(eligible), session.registration_closes))
+	fee = exam_fee.registration_fee(doc.company, doc.program, len(eligible), session.registration_closes)
+	if fee["fee_total"] > 0:
+		exam_fee.check_invoiceable(doc.student, doc.company)  # refuse now rather than confirm a fee never invoiced
+	doc.update(fee)
 	doc.confirmed, doc.confirmed_on = 1, now_datetime()
 	doc.flags.ignore_permissions = True  # the student confirms; every value is server-side
+	doc.flags.server_fields = True  # confirmed and the fee are set here only
 	doc.save()
 	exam_fee.queue_fee(doc)
 	return doc

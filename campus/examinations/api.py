@@ -57,6 +57,15 @@ def generate_hall_tickets(exam_session):
 	return hall_tickets.start(exam_session)
 
 
+@frappe.whitelist(methods=["POST"])
+def reraise_exam_fee_invoices(exam_session):
+	"""Queue the missing exam fee invoices of the session's confirmed registrations (COE only); returns the Bulk Run
+	name or None. Idempotent: a registration gets at most one invoice."""
+	from campus.examinations import exam_fee
+
+	return exam_fee.reraise_invoices(exam_session)
+
+
 def exam_dues_block(student, exam_session):
 	"""{blocked, amount}: the hall ticket gate. Unpaid Exam-head dues in the session's company block a hall ticket
 	(never the registration itself)."""
