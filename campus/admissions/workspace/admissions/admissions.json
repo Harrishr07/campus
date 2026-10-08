@@ -165,7 +165,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 8,
+   "link_count": 9,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -225,6 +225,17 @@
    "type": "Link"
   },
   {
+   "dependencies": "Data Import",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Import Check",
+   "link_count": 0,
+   "link_to": "Import Check",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
@@ -277,7 +288,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",
