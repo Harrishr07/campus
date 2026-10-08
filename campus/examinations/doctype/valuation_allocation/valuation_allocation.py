@@ -2,21 +2,29 @@
 
 Rounds 1 and 2 take every script of the bundle. Round 3 is created by campus.examinations.valuation when two
 valuations differ beyond the rule, holding only those scripts, Unassigned until the COE names an examiner.
-One examiner values a bundle in one round only. Who reads it: campus.examinations.valuation_access.
+One examiner values a bundle in one round only, and only a Complete bundle is allocated. A teacher of the course
+in the session's term is refused unless every Exam Rule Set of the bundle's students allows it
+(`allow_course_teacher_as_examiner`). Who reads it: campus.examinations.valuation_access.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
+
+from campus.examinations import valuation
 
 THIRD = "3"
 
 
 class ValuationAllocation(Document):
 	def validate(self):
-		bundle = frappe.db.get_value("Answer Script Bundle", self.bundle, ["exam_session", "course", "company"], as_dict=True)
+		bundle = frappe.db.get_value("Answer Script Bundle", self.bundle, ["exam_session", "course", "company", "status"], as_dict=True)
+		if bundle.pop("status") != "Complete":
+			frappe.throw(_("Only a Complete bundle can be allocated."))
 		self.update(bundle)
 		self.set_examiner()
+		self.check_course_teacher()
 		self.check_unique()
 		self.set_scripts()
 		self.check_frozen_after_valuation()
@@ -32,6 +40,13 @@ class ValuationAllocation(Document):
 			self.examiner = email and frappe.db.get_value("User", {"email": email})
 		if not self.examiner and self.valuation_round != THIRD:
 			frappe.throw(_("Choose the examiner's user, or an Employee / External Member that has one."))
+
+	def check_course_teacher(self):
+		if not self.examiner or self.examiner not in course_teachers(self.exam_session, self.course):
+			return
+		rule_sets = valuation.bundle_rule_sets(self.bundle)
+		if not rule_sets or not all(cint(r.allow_course_teacher_as_examiner) for r in rule_sets):
+			frappe.throw(_("{0} teaches {1} this term and cannot value its scripts.").format(self.examiner, self.course))
 
 	def check_unique(self):
 		others = frappe.get_all(
@@ -70,3 +85,22 @@ class ValuationAllocation(Document):
 			return "Unassigned"
 		valued = set(frappe.get_all("Valuation Entry", {"allocation": self.name, "docstatus": 1}, pluck="dummy_number"))
 		return "Completed" if self.scripts and all(s.dummy_number in valued for s in self.scripts) else "Allocated"
+
+
+def course_teachers(exam_session, course):
+	"""Users of the instructors of any offering of `course` in the session's term."""
+	term = frappe.db.get_value("Exam Session", exam_session, "academic_term")
+	group, teacher = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Instructor")
+	instructor, employee = frappe.qb.DocType("Instructor"), frappe.qb.DocType("Employee")
+	return set(
+		frappe.qb.from_(teacher)
+		.join(group).on(group.name == teacher.parent)
+		.join(instructor).on(instructor.name == teacher.instructor)
+		.join(employee).on(employee.name == instructor.employee)
+		.select(employee.user_id)
+		.where(
+			(teacher.parenttype == "Student Group") & (group.course == course) & (group.academic_term == term)
+			& (group.group_based_on == "Course") & employee.user_id.isnotnull()
+		)
+		.run(pluck=True)
+	)  # fmt: skip

@@ -21,15 +21,14 @@ class ValuationEntry(Document):
 		self.update({f: alloc.get(f) for f in ("valuation_round", "exam_session", "course", "bundle", "examiner")})
 		if self.dummy_number not in {s.dummy_number for s in alloc.scripts}:
 			frappe.throw(_("Script {0} is not in this allocation.").format(self.dummy_number))
+		script = valuation.lock_script(self)  # the round and result-lock checks below run one at a time per script
 		self.check_once_per_round()
 		self.validate_marks()
-		valuation.check_script(self)
+		valuation.check_script(self, script)
 
 	def check_once_per_round(self):
-		if frappe.db.exists(
-			self.doctype,
-			{"dummy_number": self.dummy_number, "valuation_round": self.valuation_round, "docstatus": ["<", 2], "name": ["!=", self.name]},
-		):  # fmt: skip
+		filters = {"dummy_number": self.dummy_number, "valuation_round": self.valuation_round, "docstatus": ["<", 2]}
+		if any(n != self.name for n in frappe.qb.get_query(self.doctype, filters=filters, fields=["name"], for_update=True).run(pluck=True)):
 			frappe.throw(_("Script {0} is already valued in round {1}.").format(self.dummy_number, self.valuation_round))
 
 	def validate_marks(self):

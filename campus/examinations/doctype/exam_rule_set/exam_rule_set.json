@@ -15,7 +15,8 @@
   "valuation_section",
   "third_valuation_diff_pct",
   "column_break_valuation",
-  "final_valuation_method"
+  "final_valuation_method",
+  "allow_course_teacher_as_examiner"
  ],
  "fields": [
   {
@@ -95,11 +96,18 @@
    "options": "Average of Closest Two\nAverage of Third and Nearer",
    "default": "Average of Closest Two",
    "description": "With two valuations their average; with three, this rule. Rounded half up to a whole mark."
+  },
+  {
+   "fieldname": "allow_course_teacher_as_examiner",
+   "fieldtype": "Check",
+   "label": "Allow Course Teacher as Examiner",
+   "default": "0",
+   "description": "When off, a teacher of the course in the session's term cannot value its scripts."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:30:00.000000",
+ "modified": "2026-10-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",

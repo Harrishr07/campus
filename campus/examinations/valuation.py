@@ -3,10 +3,11 @@
 When both valuations of a script are submitted the student's Exam Rule Set decides: a difference above
 `third_valuation_diff_pct` % of the ESE maximum puts the script on the bundle's third-valuation allocation
 (created Unassigned for the COE to give an examiner); otherwise, or once the third is in, the final mark
-(`final_valuation_method`) is stored on the Dummy Number Map and written to the student's Mark Sheet Entry
-row as its ESE. The dummy-to-student join happens here on the server only; nothing it finds is returned to,
-or named in a message to, the examiner. Once the student's result has been run (or the session published)
-the script's marks are locked.
+(`final_valuation_method`) is stored on the Dummy Number Map only. Nothing in an examiner's request touches a
+mark sheet: Exam Confidential's write-back job (valuation_write_back) carries the marks over once the course's
+allocations are Completed. The dummy-to-student join happens here on the server only; nothing it finds is
+returned to, or named in a message to, the examiner. Once the student's result has been run (or the session
+published) the script's marks are locked.
 """
 
 import frappe
@@ -16,7 +17,7 @@ from frappe.utils import flt
 from campus.campus_platform.api import get_rule
 from campus.examinations import dummy_numbers, valuation_rules
 from campus.examinations.courses import offering_course, student_limits
-from campus.examinations.valuation_access import DUMMY_NUMBER_MAP, require_confidential
+from campus.examinations.valuation_access import DUMMY_NUMBER_MAP
 
 ALLOCATION, ENTRY, BUNDLE = "Valuation Allocation", "Valuation Entry", "Answer Script Bundle"
 
@@ -62,6 +63,17 @@ def my_allocations():
 	return allocations
 
 
+def bundle_rule_sets(bundle):
+	"""The Exam Rule Sets of the regulations of the bundle's students (server-side join, no names returned)."""
+	students = frappe.get_all(
+		DUMMY_NUMBER_MAP,
+		{"dummy_number": ["in", frappe.get_all("Answer Script Bundle Script", {"parent": bundle, "parenttype": BUNDLE}, pluck="dummy_number") or [""]]},
+		pluck="student",
+	)  # fmt: skip
+	regulations = set(frappe.get_all("Student", {"name": ["in", students or [""]]}, pluck="oc_regulation"))
+	return frappe.get_all("Exam Rule Set", {"regulation": ["in", list(regulations) or [""]]}, ["name", "allow_course_teacher_as_examiner"])
+
+
 def bundle_questions(bundle):
 	return frappe.get_all(
 		"Answer Script Bundle Question", {"parent": bundle, "parenttype": BUNDLE}, ["question", "max_marks"], order_by="idx"
@@ -71,11 +83,16 @@ def bundle_questions(bundle):
 # ---- checks on an entry (confidential join, anonymous messages) ------------------------------
 
 
-def check_script(entry):
-	"""Refuse an entry over the ESE maximum or on a script whose result has been run."""
-	row = dummy_numbers.script(entry.dummy_number)
-	if not row or (row.exam_session, row.course) != (entry.exam_session, entry.course):
+def lock_script(entry):
+	"""The entry's map row, locked: the rounds and the result lock of one script are checked one at a time."""
+	row = dummy_numbers.script(entry.dummy_number, for_update=True)
+	if not row or row.void or (row.exam_session, row.course) != (entry.exam_session, entry.course):
 		frappe.throw(_("Script {0} is not a script of this course.").format(entry.dummy_number))
+	return row
+
+
+def check_script(entry, row):
+	"""Refuse an entry over the ESE maximum or on a script whose result has been run (`row` locked)."""
 	if result_locked(row):
 		frappe.throw(_("The marks of script {0} are locked: its result has been run.").format(entry.dummy_number))
 	ese_max = ese_max_of(row)
@@ -91,10 +108,6 @@ def result_locked(row):
 
 def ese_max_of(row):
 	return anonymous(row, lambda: student_limits(row.student, offering_course(offering_of(row)))["ese_max"])
-
-
-def rule_of(row):
-	return anonymous(row, lambda: get_rule(row.student, "Exam Rule Set"))
 
 
 def anonymous(row, lookup):
@@ -130,8 +143,12 @@ def offering_of(row):
 
 
 def after_valuation(entry):
-	"""Third valuation or final mark once both valuations of the script are in."""
+	"""Third valuation or final mark once both valuations of the script are in; errors name the dummy number only."""
 	row = dummy_numbers.script(entry.dummy_number, for_update=True)  # serialises the rounds of one script
+	anonymous(row, lambda: settle(entry, row))
+
+
+def settle(entry, row):
 	marks = {
 		int(r.valuation_round): flt(r.total)
 		for r in frappe.qb.get_query(
@@ -141,11 +158,13 @@ def after_valuation(entry):
 	refresh_allocation_status(entry.allocation)
 	if not {1, 2} <= set(marks):
 		return
-	rule = rule_of(row)
-	if 3 not in marks and valuation_rules.needs_third_valuation(marks[1], marks[2], ese_max_of(row), rule.third_valuation_diff_pct):
+	rule = get_rule(row.student, "Exam Rule Set")
+	ese_max = student_limits(row.student, offering_course(offering_of(row)))["ese_max"]
+	if 3 not in marks and valuation_rules.needs_third_valuation(marks[1], marks[2], ese_max, rule.third_valuation_diff_pct):
 		allocate_third(entry.bundle, entry.dummy_number)
 		return
-	finalise(row, valuation_rules.final_mark(marks, rule.final_valuation_method))
+	final = valuation_rules.final_mark(marks, rule.final_valuation_method)
+	frappe.db.set_value(DUMMY_NUMBER_MAP, row.name, {"finalised": 1, "final_ese": final, "ese_written": 0, "write_back_issue": None})
 
 
 def allocate_third(bundle, dummy_number):
@@ -163,45 +182,3 @@ def refresh_allocation_status(allocation):
 	status = alloc.computed_status()
 	if status != alloc.status:
 		frappe.db.set_value(ALLOCATION, allocation, "status", status)
-
-
-def finalise(row, final):
-	frappe.db.set_value(DUMMY_NUMBER_MAP, row.name, {"finalised": 1, "final_ese": final, "ese_written": 0})
-	row.final_ese = final
-	write_back(row)
-
-
-def write_back(row):
-	"""Write the final mark to the student's Mark Sheet Entry row; leaves it pending when that cannot be done."""
-	sheet_name = frappe.db.get_value(
-		"Mark Sheet Entry", {"exam_session": row.exam_session, "course_offering": offering_of(row)}
-	)
-	if not sheet_name or result_locked(row):
-		return False
-	sheet = frappe.get_doc("Mark Sheet Entry", sheet_name)
-	mark_row = next((r for r in sheet.marks if r.student == row.student), None)
-	if not mark_row:
-		return False
-	mark_row.update({"ese": row.final_ese, "absent": 0, "ese_from_valuation": 1})
-	sheet.flags.valuation_write_back = True
-	frappe.db.savepoint("valuation_write_back")
-	try:
-		sheet.save(ignore_permissions=True)
-	except (frappe.ValidationError, frappe.PermissionError):  # e.g. the session is no longer in Marks Entry: Exam Confidential re-runs it
-		frappe.db.rollback(save_point="valuation_write_back")
-		frappe.clear_messages()
-		return False
-	frappe.db.set_value(DUMMY_NUMBER_MAP, row.name, "ese_written", 1)
-	return True
-
-
-@frappe.whitelist(methods=["POST"])
-def write_back_pending(exam_session, course):
-	"""Exam Confidential: write the final marks not yet on the mark sheets; returns how many were written."""
-	require_confidential()
-	rows = frappe.get_all(
-		DUMMY_NUMBER_MAP,
-		{"exam_session": exam_session, "course": course, "finalised": 1, "ese_written": 0},
-		dummy_numbers.SCRIPT_FIELDS,
-	)
-	return sum(1 for row in rows if write_back(row))

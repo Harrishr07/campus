@@ -10,10 +10,12 @@
   "column_break_student",
   "student",
   "dummy_number",
+  "void",
   "section_final",
   "finalised",
   "final_ese",
-  "ese_written"
+  "ese_written",
+  "write_back_issue"
  ],
  "fields": [
   {
@@ -66,6 +68,13 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "void",
+   "fieldtype": "Check",
+   "label": "Void",
+   "read_only": 1,
+   "description": "The student was marked absent after the number was drawn: the script is not valued."
+  },
+  {
    "fieldname": "section_final",
    "fieldtype": "Section Break",
    "label": "Final ESE Mark"
@@ -87,11 +96,17 @@
    "fieldtype": "Check",
    "label": "Written to Mark Sheet",
    "read_only": 1
+  },
+  {
+   "fieldname": "write_back_issue",
+   "fieldtype": "Small Text",
+   "label": "Write-back Issue",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:30:00.000000",
+ "modified": "2026-10-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Dummy Number Map",

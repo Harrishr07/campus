@@ -3,14 +3,15 @@ question pattern its examiners mark against and a movement log.
 
 Every script must be a dummy number of the course in the session and sit in one bundle only; the check runs
 on the server against the confidential map and names dummy numbers only. A bundle is Complete only when the
-expected number of scripts is received. Logged movements are never changed; the question pattern is fixed
-once valuation starts.
+expected number of scripts is received. The expected count is fixed once saved, and the scripts (and the
+Complete status) once the bundle is allocated. Logged movements are never changed; the question pattern is
+fixed once valuation starts.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, flt, now_datetime
+from frappe.utils import cint, cstr, flt, get_datetime, now_datetime
 
 from campus.examinations import dummy_numbers, valuation_rules
 
@@ -19,6 +20,7 @@ class AnswerScriptBundle(Document):
 	def validate(self):
 		if cint(self.expected_count) <= 0:
 			frappe.throw(_("Enter the expected number of scripts."))
+		self.check_frozen()
 		self.validate_scripts()
 		self.validate_questions()
 		self.log_movements()
@@ -26,6 +28,17 @@ class AnswerScriptBundle(Document):
 			missing = valuation_rules.missing_scripts(self.expected_count, [s.received for s in self.scripts])
 			if missing:
 				frappe.throw(_("{0} of {1} scripts are missing: the bundle cannot be complete.").format(missing, self.expected_count))
+
+	def check_frozen(self):
+		if self.is_new():
+			return
+		before = self.get_doc_before_save()
+		if cint(self.expected_count) != cint(before.expected_count):
+			frappe.throw(_("The expected number of scripts is fixed once the bundle is saved."))
+		if frappe.db.exists("Valuation Allocation", {"bundle": self.name}) and (
+			script_list(self) != script_list(before) or self.status != before.status
+		):
+			frappe.throw(_("The scripts of an allocated bundle are fixed."))
 
 	def validate_scripts(self):
 		numbers = [s.dummy_number for s in self.scripts]
@@ -57,11 +70,18 @@ class AnswerScriptBundle(Document):
 	def log_movements(self):
 		before = {} if self.is_new() else {m.name: m for m in self.get_doc_before_save().movements}
 		kept = {m.name for m in self.movements if m.name in before}
-		fields = ("from_location", "to_location", "handed_to", "moved_on", "moved_by", "remarks")
-		if kept != set(before) or any(
-			any(m.get(f) != before[m.name].get(f) for f in fields) for m in self.movements if m.name in before
-		):
+		if kept != set(before) or any(movement_key(m) != movement_key(before[m.name]) for m in self.movements if m.name in before):
 			frappe.throw(_("A logged movement cannot be changed or removed."))
 		for movement in self.movements:
 			if movement.name not in before:
 				movement.moved_on, movement.moved_by = now_datetime(), frappe.session.user
+
+
+def script_list(doc):
+	return [(s.dummy_number, cint(s.received)) for s in doc.scripts]
+
+
+def movement_key(movement):
+	"""A movement as stored, whatever types a client posted it with (datetime or string, None or "")."""
+	moved_on = movement.moved_on and get_datetime(movement.moved_on).replace(microsecond=0)
+	return (moved_on, *(cstr(movement.get(f)) for f in ("from_location", "to_location", "handed_to", "moved_by", "remarks")))
