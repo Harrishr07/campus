@@ -122,12 +122,19 @@ def setup_admission_fields():
 			in_standard_filter=1, description="Assigned at admission from the Admission Settings pattern."),
 		field("oc_roll_no", "Data", "Roll No", "oc_register_no", read_only=1, no_copy=1),
 	]  # fmt: skip
+	category = [
+		field("oc_is_reserved", "Check", "Reserved Category", "category", in_list_view=1,
+			description="Seats of this category count as reserved in the IQAC data points."),
+	]  # fmt: skip
 	invoice = [
 		field("oc_program_enrollment", "Link", "Admission Enrollment", "student", options="Program Enrollment",
 			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at admission."),
 	]  # fmt: skip
 	create_custom_fields(
-		{"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment, "Sales Invoice": invoice},
+		{
+			"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment,
+			"Student Category": category, "Sales Invoice": invoice,
+		},
 		update=True,
 	)
 	grant_officer_read_access()
