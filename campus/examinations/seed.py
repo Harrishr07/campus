@@ -67,7 +67,8 @@ ATTEMPT_RULES = {
 	"R2026": {"cia_carry_forward": 0, "absent_counts_as_attempt": 1, "max_attempts": 0, "internal_only_min_pct": 50},
 }  # fmt: skip
 
-# class, variant, CGPA min, first appearance required, max years (0: none), break of study included
+# class, variant, CGPA min, first appearance required, max years (0: none), break of study included,
+# max years for lateral entry (0: max years applies)
 CLASS_FIELDS = (
 	"class_name",
 	"variant",
@@ -75,22 +76,24 @@ CLASS_FIELDS = (
 	"first_appearance_required",
 	"max_years",
 	"break_of_study_included",
+	"max_years_lateral",
 )
 CLASSES = {
 	"AU-R2021": [
-		("First Class with Distinction", "Regular", 8.5, 1, 0, 0), ("First Class", "Regular", 6.5, 0, 0, 0),
-		("Second Class", "Regular", 0, 0, 0, 0),
+		("First Class with Distinction", "Regular", 8.5, 1, 0, 0, 0), ("First Class", "Regular", 6.5, 0, 0, 0, 0),
+		("Second Class", "Regular", 0, 0, 0, 0, 0),
 	],
-	# R2022: within 5 years including the authorised break of study; Honours first class needs 7.5.
+	# R2022: within 5 years including the authorised break of study (4 for lateral entry, distinction rows only);
+	# Honours first class needs 7.5.
 	"R2022": [
-		("First Class with Distinction", "Honours", 8.5, 1, 5, 1), ("First Class", "Honours", 7.5, 0, 5, 1),
-		("First Class with Distinction", "Regular", 8.5, 1, 5, 1), ("First Class", "Regular", 6.5, 0, 5, 1),
-		("Second Class", "Regular", 0, 0, 0, 0),
+		("First Class with Distinction", "Honours", 8.5, 1, 5, 1, 4), ("First Class", "Honours", 7.5, 0, 5, 1, 0),
+		("First Class with Distinction", "Regular", 8.5, 1, 5, 1, 4), ("First Class", "Regular", 6.5, 0, 5, 1, 0),
+		("Second Class", "Regular", 0, 0, 0, 0, 0),
 	],
 	"R2026": [
-		("First Class with Distinction", "Honours", 8.5, 1, 0, 0),
-		("First Class with Distinction", "Regular", 8.5, 1, 0, 0), ("First Class", "Regular", 6.5, 0, 0, 0),
-		("Second Class", "Regular", 0, 0, 0, 0),
+		("First Class with Distinction", "Honours", 8.5, 1, 0, 0, 0),
+		("First Class with Distinction", "Regular", 8.5, 1, 0, 0, 0), ("First Class", "Regular", 6.5, 0, 0, 0, 0),
+		("Second Class", "Regular", 0, 0, 0, 0, 0),
 	],
 }  # fmt: skip
 

@@ -60,3 +60,28 @@
 - Ruling: review = one Sonnet review per task; only Critical/Important fixed, max 2 fix rounds; minors deferred.
 - Ruling: missing desk buttons (Admit on Student Applicant, Issue Grade Sheet on Student Result/Exam Session) are Important for a pilot demo — to be added in the S5 fix round — cost if wrong: demo relies on console calls.
 - Ruling: final fix wave also locks Student read for Student/Guardian roles to own/linked records (reviewer's "declined" upstream exposure; root cause of I1) — privacy before any real pilot — cost if wrong: an Education feature relying on students reading other Student rows breaks (none on the demo path).
+
+## Phase 2
+
+### P2-T12 fix round 1 (coordinator rulings)
+- Ruling: once the ESE-alone rule applies (R2022, from the 3rd attempt) a pass is graded on the better of the total and the ESE % — a higher CIA never gives a lower grade — `rules.graded_mark(..., ese_alone_applies)`.
+- Ruling: classification takes the entry type; a Classification Rule Class row has `max_years_lateral` (0: `max_years` applies). R2022 distinction: 5 years regular, 4 years lateral.
+- Ruling: a degenerate relative cohort (a non-positive mark, fewer than 3 distinct marks, or a Box-Cox lambda at the ±5 search bound) is graded absolutely instead of raising.
+
+### Pending confirmation (unsourced values seeded by P2-T12 / P2-T13; source: docs/research/anna-university-autonomous-rules.md is silent)
+| # | Item | Seeded value |
+|---|------|--------------|
+| 1 | R2022 relative grade SD cut-offs | O ≥ +1.5, A+ ≥ +0.5, A ≥ -0.5, B+ ≥ -1.0, B ≥ -1.5 SD; C takes the rest |
+| 2 | AU-R2021 grade mark ranges | the R2022 ranges (O 91-100 … C 50-55, U < 50); no Theory with Lab row |
+| 3 | Grading of an ESE-alone pass | the better of total % and ESE % (fix round 1 ruling above) |
+| 4 | Absence counts as an attempt | yes, in AU-R2021, R2022 and R2026 |
+| 5 | Maximum attempts | 0 (no cap beyond the programme duration) in all three |
+| 6 | CIA carry-forward | R2022 only (1); AU-R2021 and R2026 0 |
+| 7 | R2022 ESE-alone rule course types | every course type (Theory, Theory with Lab, Lab, Project) from attempt 3 at 50% |
+| 8 | Classification year limits | R2022 5 years incl. break of study (lateral distinction 4); AU-R2021 and R2026 no limit; Honours first class 7.5 in R2022 |
+| 9 | Online-course grade tables | not seeded (the note gives only end rows) |
+| 10 | GPA exclusions | MC excluded in all three; additional courses count once Honours/Minor is completed in R2022 and R2026, not in AU-R2021 |
+| 11 | x.5 boundary rounding of a total to a grade | half up to a whole mark before the grade range lookup (deferred ruling) |
+| 12 | CIA conversion rounding (P2-T13) | weighted assessments rounded half up to a whole mark, then attendance marks added |
+| 13 | R2026 theory CIA split (P2-T13) | R2022's two assessments (40 assignment + 60 test each) scaled to 35, plus up to 5 attendance marks |
+| 14 | Theory with Lab / Project / R2021 and R2026 lab CIA templates (P2-T13) | not seeded |

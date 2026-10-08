@@ -19,9 +19,11 @@ PASS, FAIL, ABSENT = "Pass", "Fail", "AB"
 WITHDRAWAL_CODES = ("W", "WD", "WC")
 ALWAYS_ABSOLUTE = ("Lab", "Project")
 ABSOLUTE, RELATIVE, ONLINE = "Absolute", "Relative Box-Cox", "Online Table"
-REGULAR = "Regular"
+REGULAR, LATERAL = "Regular", "Lateral"
 LAMBDA_RANGE = (-5.0, 5.0)
 LAMBDA_STEPS = 200
+MIN_DISTINCT_MARKS = 3  # numerical guard, not a regulation value
+LAMBDA_EDGE = 0.01
 
 
 def pct(mark, maximum):
@@ -68,9 +70,30 @@ def pass_status(cia, ese, cia_max, ese_max, ese_min_pct, total_min_pct, **attemp
 	return pass_basis(cia, ese, cia_max, ese_max, ese_min_pct, total_min_pct, **attempt_rule) is not None
 
 
-def graded_mark(cia, ese, cia_max, ese_max, basis):
-	"""The 0-100 mark a pass is graded on: the total, or the ESE % when the ESE alone passed the course."""
-	return pct(ese, ese_max) if basis == "ese" else total_pct(cia, ese, cia_max, ese_max)
+def ese_alone_applies(attempt, ese_only_from_attempt):
+	"""True from the attempt on which the regulation lets the ESE alone pass the course."""
+	return bool(ese_only_from_attempt) and attempt >= ese_only_from_attempt
+
+
+def graded_mark(cia, ese, cia_max, ese_max, ese_alone_applies=False):
+	"""The 0-100 mark a pass is graded on: the total; once the ESE-alone rule applies, the better of the total
+	and the ESE % (coordinator ruling: a higher CIA never gives a lower grade)."""
+	total = total_pct(cia, ese, cia_max, ese_max)
+	return max(total, pct(ese, ese_max)) if ese_alone_applies else total
+
+
+def course_outcome(cia, ese, rule, grades, attempt=1):
+	"""(result, letter, grade point) of one course: `rule` is an Exam Rule Set Type row as a dict,
+	`grades` the Grading Scheme rows (absolute grading)."""
+	maxima = (rule["cia_max"], rule["ese_max"])
+	basis = pass_basis(
+		cia, ese, *maxima, rule["ese_min_pct"], rule["total_min_pct"],
+		attempt=attempt, ese_only_from_attempt=rule["ese_only_from_attempt"], ese_only_min_pct=rule["ese_only_min_pct"],
+	)  # fmt: skip
+	if not basis:
+		return (FAIL, FAIL_LETTER, 0)
+	applies = ese_alone_applies(attempt, rule["ese_only_from_attempt"])
+	return (PASS, *grade(graded_mark(cia, ese, *maxima, applies), grades))
 
 
 def internal_pass(cia, cia_max, internal_only_min_pct):
@@ -116,14 +139,24 @@ def grade(total, grades):
 	raise ValueError(f"No grade covers {mark}")
 
 
-def grading_method(course_type, method, passed_count, min_cohort):
-	"""The method that grades a course: relative only when more than `min_cohort` students passed it;
-	labs and projects are always absolute; a course type without a method row (`method` None) is absolute."""
+def grading_method(course_type, method, passed_count, min_cohort, totals=None):
+	"""The method that grades a course: relative only when more than `min_cohort` students passed it and their
+	`totals` (when given) are not degenerate; labs and projects are always absolute; a course type without a
+	method row (`method` None) is absolute."""
 	if course_type in ALWAYS_ABSOLUTE or not method:
 		return ABSOLUTE
-	if method == RELATIVE and passed_count <= min_cohort:
+	if method == RELATIVE and (passed_count <= min_cohort or (totals is not None and degenerate_cohort(totals))):
 		return ABSOLUTE
 	return method
+
+
+def degenerate_cohort(totals):
+	"""True when Box-Cox bands would be meaningless: a non-positive mark, fewer than MIN_DISTINCT_MARKS
+	distinct marks, or a maximum-likelihood lambda at the edge of LAMBDA_RANGE."""
+	values = sorted(totals)
+	if not values or values[0] <= 0 or len(set(values)) < MIN_DISTINCT_MARKS:
+		return True
+	return min(abs(boxcox_lambda(values) - bound) for bound in LAMBDA_RANGE) < LAMBDA_EDGE
 
 
 def boxcox(value, lam):
@@ -225,12 +258,15 @@ def passed_at_first_appearance(results_by_course):
 	return True
 
 
-def classify(cgpa_value, classes, variant=REGULAR, first_appearance=True, years_taken=0, break_years=0):
+def classify(
+	cgpa_value, classes, variant=REGULAR, first_appearance=True, years_taken=0, break_years=0, entry_type=REGULAR
+):
 	"""(class name, variant) of the first Classification Rule row the student meets, or None.
 
 	Rows of the student's `variant` are tried first, then Regular rows (an Honours student below every
 	Honours class still gets a regular class). `years_taken` counts from admission to completion including
-	any break of study; a row without break_of_study_included discounts `break_years`.
+	any break of study; a row without break_of_study_included discounts `break_years`. A Lateral `entry_type`
+	is held to the row's max_years_lateral, falling back to max_years when that is 0.
 	"""
 	ordered = [c for c in classes if c["variant"] == variant]
 	if variant != REGULAR:
@@ -240,10 +276,17 @@ def classify(cgpa_value, classes, variant=REGULAR, first_appearance=True, years_
 		if (
 			reaches(cgpa_value, row["cgpa_min"])
 			and (first_appearance or not row["first_appearance_required"])
-			and (not row["max_years"] or years <= row["max_years"])
+			and within_years(row, years, entry_type)
 		):
 			return row["class_name"], row["variant"]
 	return None
+
+
+def within_years(row, years, entry_type):
+	limit = row["max_years"]
+	if entry_type == LATERAL and row.get("max_years_lateral"):
+		limit = row["max_years_lateral"]
+	return not limit or years <= limit
 
 
 def gpa(courses):

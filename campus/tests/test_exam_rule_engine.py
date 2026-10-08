@@ -14,6 +14,7 @@ from campus.examinations.rules import (
 	cgpa,
 	classify,
 	counts_in_gpa,
+	course_outcome,
 	grade,
 	graded_mark,
 	grading_method,
@@ -38,15 +39,7 @@ CLASSES = {code: seed.rows(seed.CLASS_FIELDS, values) for code, values in seed.C
 
 def outcome(code, course_type, cia, ese, attempt=1):
 	"""(result, letter, grade point) of one course under the seeded rules of regulation `code`."""
-	rule = RULES[code][course_type]
-	maxima = (rule["cia_max"], rule["ese_max"])
-	basis = pass_basis(
-		cia, ese, *maxima, rule["ese_min_pct"], rule["total_min_pct"],
-		attempt=attempt, ese_only_from_attempt=rule["ese_only_from_attempt"], ese_only_min_pct=rule["ese_only_min_pct"],
-	)  # fmt: skip
-	if not basis:
-		return ("Fail", "U", 0)
-	return ("Pass", *grade(graded_mark(cia, ese, *maxima, basis), GRADES[code]))
+	return course_outcome(cia, ese, RULES[code][course_type], GRADES[code], attempt)
 
 
 # regulation, course type, CIA, ESE, attempt, expected (result, letter, grade point); comments give ESE % / total %
@@ -69,14 +62,16 @@ FIXTURES = [
 	("R2022", "Theory", 33.6, 26.4, 1, ("Fail", "U", 0)),  # 44 / 60
 	("R2022", "Theory", 33, 27, 1, ("Pass", "B", 6)),  # 45 / 60
 	("R2022", "Theory", 38, 57, 1, ("Pass", "O", 10)),  # 95 / 95
-	("R2022", "Theory", 18, 30, 3, ("Pass", "C", 5)),  # AC2: 50 / 48 on the 3rd attempt, graded on the ESE 50
+	("R2022", "Theory", 18, 30, 3, ("Pass", "C", 5)),  # AC2: 50 / 48 on the 3rd attempt, graded on the better: ESE 50
 	("R2022", "Theory", 18, 30, 1, ("Fail", "U", 0)),  # 50 / 48 on the 1st attempt
 	("R2022", "Theory", 18, 30, 2, ("Fail", "U", 0)),  # 50 / 48 on the 2nd attempt
 	("R2022", "Theory", 26.8, 28.2, 1, ("Pass", "C", 5)),  # AC2: 47 / 55 on the 1st attempt
 	("R2022", "Theory", 26.8, 28.2, 3, ("Pass", "C", 5)),  # 47 / 55 still passes on the total from attempt 3
 	("R2022", "Theory", 10, 29.4, 3, ("Fail", "U", 0)),  # 49 / 39.4 on the 3rd attempt
-	("R2022", "Theory", 0, 45, 4, ("Pass", "A", 8)),  # 75 alone on the 4th attempt, graded on the ESE 75
-	("R2022", "Theory", 40, 30, 3, ("Pass", "B+", 7)),  # 50 / 70: the total grades it when it passes too
+	("R2022", "Theory", 0, 45, 4, ("Pass", "A", 8)),  # 75 / 45 on the 4th attempt: the better of the two is the ESE 75
+	("R2022", "Theory", 40, 30, 3, ("Pass", "B+", 7)),  # 50 / 70 on the 3rd attempt: the better of the two is the total 70
+	("R2022", "Theory", 10, 45, 3, ("Pass", "A", 8)),  # 75 / 55 on the 3rd attempt: the ESE 75 beats the total 55
+	("R2022", "Theory", 10, 45, 2, ("Pass", "C", 5)),  # 75 / 55 on the 2nd attempt: no ESE-alone rule yet, total 55
 	("R2022", "Theory with Lab", 45, 45, 1, ("Pass", "A+", 9)),  # 90 / 90
 	("R2022", "Theory with Lab", 25, 23, 1, ("Fail", "U", 0)),  # 46 / 48
 	("R2022", "Lab", 45, 30, 1, ("Pass", "A", 8)),  # 75 / 75
@@ -102,7 +97,7 @@ FIXTURES = [
 
 
 class TestFixtureTable(UnitTestCase):
-	def test_fixture_table_has_at_least_40_cases_for_every_regulation(self):
+	def test_fixture_table_has_40_cases_across_the_three_regulations(self):
 		self.assertGreaterEqual(len(FIXTURES), 40)
 		self.assertEqual({case[0] for case in FIXTURES}, set(seed.GRADES))
 
@@ -133,9 +128,21 @@ class TestAttempts(UnitTestCase):
 			pass_status(18, 30, 40, 60, 45, 50, attempt=3, ese_only_from_attempt=3, ese_only_min_pct=50)
 		)
 
-	def test_graded_mark_is_the_ese_pct_on_an_ese_alone_pass(self):
-		self.assertAlmostEqual(graded_mark(18, 30, 40, 60, "ese"), 50)
-		self.assertAlmostEqual(graded_mark(18, 30, 40, 60, "total"), 48)
+	def test_graded_mark_is_the_better_of_total_and_ese_once_ese_alone_applies(self):
+		self.assertAlmostEqual(graded_mark(18, 30, 40, 60, ese_alone_applies=True), 50)
+		self.assertAlmostEqual(graded_mark(40, 30, 40, 60, ese_alone_applies=True), 70)
+		self.assertAlmostEqual(graded_mark(18, 30, 40, 60), 48)
+		self.assertAlmostEqual(graded_mark(0, 45, 40, 60), 45)
+
+	def test_higher_cia_never_gives_a_lower_grade(self):
+		# R2022 theory, ESE 45/60 = 75% on the 3rd attempt: CIA 0 passes on the ESE alone (total 45) and CIA 10
+		# passes on the total (55); both are graded on the better mark, the ESE 75 (A)
+		self.assertEqual(outcome("R2022", "Theory", 0, 45, 3), ("Pass", "A", 8))
+		self.assertEqual(outcome("R2022", "Theory", 10, 45, 3), ("Pass", "A", 8))
+		rule, grades = RULES["R2022"]["Theory"], GRADES["R2022"]
+		for attempt in (1, 3):
+			points = [course_outcome(cia, 45, rule, grades, attempt)[2] for cia in range(0, 41)]
+			self.assertEqual(points, sorted(points), attempt)
 
 	def test_attempt_number_counts_fails_and_absences_only_when_ruled(self):
 		self.assertEqual(attempt_number([], True), 1)
@@ -228,6 +235,15 @@ class TestRelativeGrading(UnitTestCase):
 	def test_equal_marks_cannot_be_graded_relatively(self):
 		with self.assertRaises(ValueError):
 			relative_grade_bands([70] * 35, GRADES["R2022"])
+
+	def test_a_degenerate_cohort_falls_back_to_absolute(self):
+		relative = ("Theory", "Relative Box-Cox", 35, 30)
+		self.assertEqual(grading_method(*relative, totals=[70] * 35), "Absolute")  # identical marks
+		self.assertEqual(grading_method(*relative, totals=[60, 80] * 17 + [60]), "Absolute")  # two distinct values
+		self.assertEqual(grading_method(*relative, totals=[99.9] * 32 + [99.8, 50, 51]), "Absolute")  # lambda 5.0, the bound
+		self.assertEqual(grading_method(*relative, totals=[50.1] * 33 + [99, 98]), "Absolute")  # lambda -5.0
+		self.assertEqual(grading_method(*relative, totals=cohort(7, 35)), "Relative Box-Cox")
+		self.assertEqual(grading_method(*relative), "Relative Box-Cox")  # no marks given: cohort size only
 
 
 GPA_COURSES = [
@@ -328,6 +344,18 @@ class TestClassification(UnitTestCase):
 		self.assertEqual(
 			classify(8.9, CLASSES["R2026"], "Honours", years_taken=4),
 			("First Class with Distinction", "Honours"),
+		)
+
+	def test_lateral_entry_has_four_years_for_distinction_in_r2022(self):
+		self.assertEqual(
+			classify(8.7, CLASSES["R2022"], years_taken=4, entry_type="Lateral")[0], "First Class with Distinction"
+		)
+		self.assertEqual(classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Lateral")[0], "First Class")
+		self.assertEqual(
+			classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Regular")[0], "First Class with Distinction"
+		)
+		self.assertEqual(
+			classify(8.7, CLASSES["R2022"], "Honours", years_taken=5, entry_type="Lateral"), ("First Class", "Honours")
 		)
 
 	def test_no_matching_row_is_none(self):
