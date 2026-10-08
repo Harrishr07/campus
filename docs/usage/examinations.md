@@ -10,8 +10,8 @@ Desk: **Examinations** workspace.
    `max_marks` and is worth `weight` converted marks. The weights plus the attendance maximum must equal
    the Exam Rule Set's CIA maximum. A template locks once its regulation is Effective.
 2. **CIA Schedule**: one per course offering. The template is picked from the offering's curriculum
-   regulation and course type. Set the assessment dates and the **entry deadline**. Only the COE (or a
-   Dean Academics) can change the deadline.
+   regulation and course type. Set the assessment dates and the **entry deadline**. Only the COE can set or
+   change the deadline, and only before it has passed; after that only an approved unlock reopens entry.
 3. The offering's faculty fill in the **question pattern**. Each question has a component, a maximum, a CO tag
    and a Bloom level, and the questions of a component must add up to its entered-out-of marks.
 

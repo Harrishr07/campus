@@ -3,14 +3,18 @@
 permissions and the two CIA reports. Expected values are hand-computed in the comments (AC1-AC4)."""
 
 import frappe
+from unittest.mock import patch
+
 from frappe.utils import add_days, add_to_date, now_datetime
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations import cia
+from campus.examinations.doctype.cia_schedule.cia_schedule import DEADLINE_ROLES
 from campus.examinations.report.cia_marks_audit_trail.cia_marks_audit_trail import execute as audit_report
 from campus.examinations.report.cia_status_by_offering.cia_status_by_offering import execute as status_report
 from campus.tests.approval_fixtures import level, make_department
 from campus.tests.test_grievances import hold
+from campus.tests.test_regulation import make_program
 from campus.tests.test_results import COE_USER, COLLEGE, FACULTY, OTHER_FACULTY, PROGRAM, ExamFixture, make_login
 
 HOD_USER = "cia-hod@example.com"
@@ -52,6 +56,7 @@ class CIAFixture(ExamFixture):
 
 	def setUp(self):
 		super().setUp()
+		self.addCleanup(frappe.set_user, "Administrator")  # helpers switch users; a failing assert must not leak one
 		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]})
 		frappe.db.delete("Approval Policy", {"document_type": "CIA Unlock Request"})
 		frappe.get_doc(
@@ -322,6 +327,72 @@ class TestCIALock(CIAFixture):
 		self.assertEqual(audit_report({"company": "Some Other College"})[1], [])
 
 
+	def test_a_passed_deadline_cannot_be_moved_to_reopen(self):  # fix 1
+		schedule, _sheet = self.locked_sheet()
+		frappe.set_user(COE_USER)
+		schedule = frappe.get_doc("CIA Schedule", schedule.name)
+		schedule.entry_deadline = add_days(now_datetime(), 3)
+		with self.assertRaises(frappe.ValidationError):
+			schedule.save()
+		self.assertEqual(cia.lock_state(schedule.name), cia.LOCKED)
+
+	def test_deadline_moves_before_the_lock_are_audited(self):  # fix 1
+		schedule = self.schedule(self.offerings22["EXM TH"], THEORY_PATTERN)
+		old = schedule.entry_deadline
+		frappe.set_user(COE_USER)
+		schedule.reload()
+		schedule.entry_deadline = add_days(now_datetime(), 4)
+		schedule.save(ignore_version=False)  # tests skip versions by default
+		rows = audit_report({"company": COLLEGE, "course_offering": self.offerings22["EXM TH"]})[1]
+		moves = [r for r in rows if r["event"] == "Deadline changed"]
+		self.assertEqual([(r["document"], r["user"]) for r in moves], [(schedule.name, COE_USER)])
+		# the Version keeps whole seconds
+		self.assertEqual(frappe.utils.get_datetime(moves[0]["old_value"]), frappe.utils.get_datetime(old).replace(microsecond=0))
+
+	def test_no_unlock_without_a_completed_approval(self):  # fix 2
+		schedule, _sheet = self.locked_sheet()
+		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]})
+		frappe.db.delete("Approval Policy", {"document_type": "CIA Unlock Request"})  # no policy: the engine would submit directly
+		frappe.set_user(FACULTY)
+		request = frappe.get_doc(
+			{"doctype": "CIA Unlock Request", "cia_schedule": schedule.name, "reason": "x",
+			"unlock_until": add_to_date(now_datetime(), hours=2)}
+		).insert()  # fmt: skip
+		with self.assertRaises(frappe.ValidationError):
+			request_approval("CIA Unlock Request", request.name)
+		frappe.set_user(COE_USER)
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc("CIA Unlock Request", request.name).submit()
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("CIA Unlock Request", request.name, "docstatus"), 0)
+		self.assertEqual(cia.lock_state(schedule.name), cia.LOCKED)
+
+	def test_question_tags_are_frozen_by_the_lock(self):  # minor: CO / Bloom / max are part of the snapshot
+		self.locked_sheet()
+		sheet = self.sheet(self.offerings22["EXM TH"])
+		sheet.cia_marks[0].course_outcome = "CO6"
+		with self.assertRaises(frappe.ValidationError):
+			sheet.save()
+
+	def test_lock_job_picks_due_schedules_once(self):  # fix 3
+		due = self.schedule(self.offerings22["EXM TH"], THEORY_PATTERN)
+		self.enter(self.offerings22["EXM TH"], THEORY_PATTERN, {self.s22.name: THEORY_163})
+		later = self.schedule(self.offerings22["EXM LB"], LAB_PATTERN)
+		self.pass_deadline(due)
+		with patch.object(frappe.db, "commit"), patch.object(frappe.db, "rollback"):  # the job commits per schedule
+			cia.lock_due_schedules()
+			stamped = frappe.db.get_value("CIA Schedule", due.name, "locked_on")
+			sheet_modified = frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": due.name}, "modified")
+			self.assertTrue(stamped)
+			self.assertFalse(frappe.db.get_value("CIA Schedule", later.name, "locked_on"))  # deadline ahead
+			cia.lock_due_schedules()  # a second run finds nothing to do
+			cia.lock_schedule(due.name)  # nor does a direct call on a stamped schedule
+			cia.lock_schedule(later.name)  # or on one whose deadline is ahead
+		self.assertEqual(frappe.db.get_value("CIA Schedule", due.name, "locked_on"), stamped)
+		self.assertEqual(frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": due.name}, "modified"), sheet_modified)
+		self.assertFalse(frappe.db.get_value("CIA Schedule", later.name, "locked_on"))
+
+
 class TestCIAPermissions(CIAFixture):
 	def test_versions_are_kept(self):
 		for doctype in ("Mark Sheet Entry", "CIA Schedule", "CIA Unlock Request", "CIA Component Template"):
@@ -339,6 +410,22 @@ class TestCIAPermissions(CIAFixture):
 		self.assertEqual(frappe.get_list("CIA Schedule", pluck="name"), [schedule.name])
 		frappe.set_user(OTHER_FACULTY)
 		self.assertEqual(frappe.get_list("CIA Schedule", pluck="name"), [])
+
+	def test_hod_does_not_read_another_departments_offering(self):
+		make_program("CIA Other BE", COLLEGE)
+		frappe.db.set_value("Program", "CIA Other BE", "department", make_department("CIA Other Department", COLLEGE))
+		offering = self.offerings26["EXM LB"]
+		frappe.db.set_value("Student Group", offering, "program", "CIA Other BE")
+		sheet = self.sheet(offering)
+		self.assertFalse(frappe.has_permission("Mark Sheet Entry", "read", sheet, user=HOD_USER))
+		self.assertTrue(frappe.has_permission("Mark Sheet Entry", "read", self.sheet(self.offerings26["EXM TH"]), user=HOD_USER))
+		frappe.set_user(HOD_USER)
+		self.assertNotIn(sheet.name, frappe.get_list("Mark Sheet Entry", pluck="name"))
+
+	def test_dean_academics_reads_schedules_but_the_coe_owns_deadlines(self):  # minor
+		self.assertNotIn("Dean Academics", DEADLINE_ROLES)
+		perms = frappe.get_all("DocPerm", {"parent": "CIA Schedule", "role": "Dean Academics"}, ["read", "write", "create"])
+		self.assertEqual([(p.read, p.write, p.create) for p in perms], [(1, 0, 0)])
 
 	def test_only_the_coe_sets_the_deadline(self):
 		schedule = self.schedule(self.offerings22["EXM TH"], THEORY_PATTERN)

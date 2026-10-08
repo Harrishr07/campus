@@ -108,12 +108,14 @@ class SheetCIA:
 
 
 def cia_snapshot(sheet):
-	"""What the lock freezes: the question marks and the consolidated CIA columns."""
+	"""What the lock freezes: the question marks with their maxima and CO / Bloom tags, and the consolidated CIA."""
 	if not sheet:
 		return None
 	questions = sorted(
-		(r.student, r.component, r.question, float(r.marks or 0), int(r.absent or 0)) for r in sheet.get("cia_marks", [])
-	)
+		(r.student, r.component, r.question, float(r.marks or 0), int(r.absent or 0), float(r.max_marks or 0),
+		r.course_outcome or "", r.bloom_level or "")
+		for r in sheet.get("cia_marks", [])
+	)  # fmt: skip
 	columns = sorted((r.student, float(r.cia or 0), float(r.cia_attendance or 0)) for r in sheet.marks)
 	return questions, columns
 
@@ -132,6 +134,10 @@ def lock_due_schedules():
 
 
 def lock_schedule(schedule):
+	"""Consolidate the schedule's sheets once after its deadline; a no-op when stamped already or not yet due."""
+	values = frappe.db.get_value(SCHEDULE, schedule, ["entry_deadline", "locked_on"], as_dict=True, for_update=True)
+	if not values or values.locked_on or get_datetime(values.entry_deadline) >= now_datetime():
+		return
 	for sheet in frappe.get_all("Mark Sheet Entry", {"cia_schedule": schedule}, ["name", "exam_session"]):
 		if frappe.db.get_value("Exam Session", sheet.exam_session, "status") == "Published":
 			continue  # a published sheet is final already

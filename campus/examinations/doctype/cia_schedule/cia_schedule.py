@@ -2,17 +2,18 @@
 regulation and course type), assessment dates, the question pattern (CO tag and Bloom level per question) and the
 entry deadline, after which the offering's CIA marks lock (campus.examinations.cia).
 
-The deadline is the COE's to set; the instructors of the offering may edit the question pattern until the lock."""
+The deadline is the COE's to set and cannot be moved once it has passed (reopening goes through an approved
+CIA Unlock Request); the instructors of the offering may edit the question pattern until the lock."""
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, get_datetime
+from frappe.utils import flt, get_datetime, now_datetime
 
 from campus.examinations import cia
 from campus.examinations.access import MARKS_ROLES, has_any_role
 
-DEADLINE_ROLES = (*MARKS_ROLES, "Dean Academics")
+DEADLINE_ROLES = MARKS_ROLES  # the COE owns CIA deadlines
 
 
 class CIASchedule(Document):
@@ -35,8 +36,11 @@ class CIASchedule(Document):
 		moved = not before or get_datetime(before.entry_deadline) != get_datetime(self.entry_deadline)
 		if moved and not has_any_role(frappe.session.user, DEADLINE_ROLES):
 			frappe.throw(_("Only the COE sets the CIA entry deadline."), frappe.PermissionError)
-		if moved:
-			self.locked_on = None  # a moved deadline locks (and consolidates) again
+		if moved and before and now_datetime() > get_datetime(before.entry_deadline):
+			frappe.throw(
+				_("The CIA entry deadline has passed and cannot be moved. An approved CIA Unlock Request reopens entry."),
+				title=_("CIA Locked"),
+			)
 
 	def pattern_changed(self):
 		before = self.get_doc_before_save()

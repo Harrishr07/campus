@@ -1,6 +1,6 @@
 """M06-08 CIA Marks Audit Trail: every change to CIA marks (question marks, absent flags, consolidated CIA)
-from the Mark Sheet Entry version history, with the CIA Unlock Requests raised for the offering and the
-decisions on them from their approval trail.
+from the Mark Sheet Entry version history, the entry-deadline moves of the CIA Schedule, and the CIA Unlock
+Requests raised for the offering with the decisions on them from their approval trail.
 
 Limited to the companies the user is permitted for and to the Mark Sheet Entries the user may read."""
 
@@ -45,7 +45,7 @@ def data(filters):
 	conditions = {"company": filters.company}
 	if filters.course_offering:
 		conditions["course_offering"] = filters.course_offering
-	rows = sheet_rows(filters, conditions) + unlock_rows(filters, conditions)
+	rows = sheet_rows(filters, conditions) + deadline_rows(filters, conditions) + unlock_rows(filters, conditions)
 	return sorted(rows, key=lambda row: (row["timestamp"], row["event"]))
 
 
@@ -84,6 +84,19 @@ def row_labels(sheet):
 	for row in frappe.get_all("Mark Sheet Entry Row", {"parent": sheet, "parenttype": SHEET}, ["name", "student"]):
 		labels[row.name] = (row.student, "")
 	return labels
+
+
+def deadline_rows(filters, conditions):
+	"""Moves of a CIA Schedule's entry deadline (only possible before it has passed)."""
+	schedules = {s.name: s.course_offering for s in frappe.get_list(cia.SCHEDULE, filters=conditions, fields=["name", "course_offering"])}
+	rows = []
+	for version in versions(cia.SCHEDULE, list(schedules), filters):
+		for field, old, new in json.loads(version.data).get("changed", []):
+			if field == "entry_deadline":
+				rows.append({"document_type": cia.SCHEDULE, "document": version.docname, "timestamp": version.creation,
+					"course_offering": schedules[version.docname], "user": version.owner, "event": _("Deadline changed"),
+					"detail": "entry_deadline", "old_value": str(old), "new_value": str(new)})  # fmt: skip
+	return rows
 
 
 def unlock_rows(filters, conditions):
