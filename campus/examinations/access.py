@@ -132,14 +132,16 @@ HANDLER_POSITION = "HOD"
 
 
 def held_scopes(user, position):
-	"""Scope values (e.g. departments) of the active holdings of `position` by `user`."""
+	"""Scope values (e.g. departments) of the active holdings of `position` by `user`; a holding with a blank scope
+	gives none (it must never match a row whose scope is blank too)."""
 	today_ = getdate(today())
-	return frappe.get_all(
+	values = frappe.get_all(
 		"Position Holder",
 		{"user": user, "position": position, "from_date": ["<=", today_]},
 		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", today_]],
 		pluck="scope_value",
 	)
+	return [value for value in values if value]
 
 
 def handled_grievances_sql(user):
@@ -172,7 +174,8 @@ def may_see_confidential(doc, user):
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return True
 	handled = frappe.db.sql(f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}")
-	return bool(handled) or doc.get("department") in held_scopes(user, HANDLER_POSITION)
+	department = doc.get("department")
+	return bool(handled) or bool(department and department in held_scopes(user, HANDLER_POSITION))
 
 
 def own_students(user):

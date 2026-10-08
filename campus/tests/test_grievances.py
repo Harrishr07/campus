@@ -25,6 +25,8 @@ EVALUATION, ICC, STAFF_ONLY = "GRV Test Evaluation", "GRV Test ICC", "GRV Test S
 HOD, COE, PRINCIPAL, COMMITTEE = "grv-hod@example.com", "grv-coe@example.com", "grv-principal@example.com", "grv-committee@example.com"
 STUDENT_A, STUDENT_B = "grv-student-a@example.com", "grv-student-b@example.com"
 HOD_B, GUARDIAN = "grv-hod-b@example.com", "grv-guardian@example.com"
+BLANK_HOD, SYSTEM_MANAGER = "grv-hod-blank@example.com", "grv-sysmgr@example.com"
+HOD_ONLY_POLICY = "GRV Test HOD Only"
 
 
 def make_category(name, policy, **values):
@@ -418,6 +420,72 @@ class TestFixRound1(GrievanceFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "too long"):
 			grievances.open_grievance(self.a, EVALUATION, "x" * 5001)
 
+
+
+class TestFinalReviewFixes(GrievanceFixture):
+	def seat_ended(self, position, scope):
+		frappe.db.set_value("Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1))
+
+	def test_a_hod_with_a_blank_scope_cannot_open_a_grievance_without_department(self):
+		frappe.db.set_value("Program", PROGRAM, "department", None)
+		grievance = self.raise_for()  # no department: routed to the COE
+		self.assertFalse(grievance.department)
+		make_user(BLANK_HOD, [COLLEGE])
+		hold("HOD", make_department("Grievance Test MECH", COLLEGE), BLANK_HOD)
+		frappe.db.set_value("Position Holder", {"user": BLANK_HOD, "position": "HOD"}, "scope_value", None)  # a broken seat
+		frappe.set_user(BLANK_HOD)
+		self.assertIn("HOD", frappe.get_roles())
+		self.assertFalse(frappe.has_permission("Student Grievance", "read", grievance.name))
+		self.assertNotIn(grievance.name, frappe.get_list("Student Grievance", pluck="name"))
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Student Grievance", grievance.name).check_permission("read")
+
+	def test_an_unroutable_level_is_logged_plainly_and_shows_the_student_nothing(self):
+		self.seat_ended("HOD", self.department)
+		frappe.local.message_log = []
+		with patch("campus.student_services.grievances.frappe.log_error") as log:
+			grievance = self.raise_for()
+		self.assertEqual(self.request_of(grievance).current_level, 2)
+		log.assert_called_once()
+		kwargs = log.call_args.kwargs
+		self.assertIn(grievance.name, kwargs["title"])
+		self.assertTrue(kwargs["message"])  # an explicit message: no traceback with context
+		self.assertEqual((kwargs["reference_doctype"], kwargs["reference_name"]), ("Student Grievance", grievance.name))
+		self.assertEqual(frappe.local.message_log, [])
+
+	def unroutable_category(self):
+		self.make_policy(HOD_ONLY_POLICY, [level("Position", "HOD", title="HOD", scope_field="department", sla_hours=24)])
+		make_category(STAFF_ONLY, HOD_ONLY_POLICY)
+		self.seat_ended("HOD", self.department)
+		frappe.db.delete("Has Role", {"parent": COMMITTEE, "role": "Grievance Committee"})
+
+	def test_with_no_committee_an_unrouted_grievance_goes_to_the_principal(self):
+		self.unroutable_category()
+		grievance = self.raise_for(category=STAFF_ONLY)
+		self.assertFalse(frappe.db.exists("Approval Request", {"reference_name": grievance.name}))
+		self.assertEqual(notified_grievance(PRINCIPAL), [f"Unrouted grievance: {grievance.name}"])
+
+	def test_with_no_committee_and_no_principal_the_system_manager_is_told(self):
+		self.unroutable_category()
+		self.seat_ended("PRINCIPAL", COLLEGE)
+		make_user(SYSTEM_MANAGER, [COLLEGE])
+		frappe.get_doc("User", SYSTEM_MANAGER).add_roles("System Manager")
+		grievance = self.raise_for(category=STAFF_ONLY)
+		self.assertEqual(notified_grievance(SYSTEM_MANAGER), [f"Unrouted grievance: {grievance.name}"])
+		self.assertFalse(notified_grievance(PRINCIPAL))
+
+	def test_an_overdue_last_level_reminds_its_approvers_once(self):
+		request = self.request_of(self.raise_for())
+		for _n in range(2):
+			grievances.escalate(self.make_overdue(request).name)
+		self.make_overdue(request)
+		grievances.escalate_overdue()
+		grievances.escalate_overdue()
+		request = frappe.get_doc("Approval Request", request.name)
+		self.assertEqual((request.current_level, request.escalated), (3, 1))
+		reminders = [s for s in notified_grievance(PRINCIPAL) if s.startswith("Overdue grievance")]
+		self.assertEqual(len(reminders), 1)
+		self.assertEqual([a.action for a in request.actions].count(rules.ESCALATE), 2)  # a reminder is not an escalation
 
 def notified_grievance(user):
 	return frappe.get_all("Notification Log", filters={"for_user": user, "document_type": "Student Grievance"}, pluck="subject")
