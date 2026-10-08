@@ -13,8 +13,14 @@ class APIScoreRule(Document):
 		self.name = f"{self.company} - {self.effective_from}"
 
 	def validate(self):
+		self.check_not_in_use()
 		self.check_rows()
 		self.check_kras()
+
+	def check_not_in_use(self):
+		"""A version that a submitted Appraisal was scored with is history: change it by adding a new version."""
+		if not self.is_new() and frappe.db.exists("Appraisal", {"oc_api_rule": self.name, "docstatus": 1}):
+			frappe.throw(_("{0} was used for a submitted Appraisal. Add a new version with a later Effective From instead.").format(self.name))
 
 	def check_rows(self):
 		activities = [row.activity for row in self.rows]

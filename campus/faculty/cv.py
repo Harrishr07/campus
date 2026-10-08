@@ -14,7 +14,7 @@ def faculty_cv_sections(employee):
 		order_by="achievement_date desc, name", limit_page_length=0,
 	)  # fmt: skip
 	events = frappe.get_all("Training Event Employee", {"employee": employee, "attendance": "Present", "parenttype": "Training Event"}, pluck="parent")
-	fdps = frappe.get_list(
+	fdps = frappe.get_all(  # after the Employee read check above: a teacher sees their own FDPs without Training Event rights
 		"Training Event",
 		{"name": ["in", events or [""]], "oc_is_fdp": 1, "docstatus": 1},
 		["event_name", "start_time"],

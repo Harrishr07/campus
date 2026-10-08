@@ -231,10 +231,13 @@ doc_events["Journal Entry"] = {
 	"validate": "campus.campus_finance.scholarships.block_amend",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
 }
-doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee"}
+doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee", "on_update": "campus.faculty.setup.grant_employee_role"}
 doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
 doc_events["Room"]["validate"] = "campus.examinations.exam_halls.validate_room"
 doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
+doc_events["Employee Performance Feedback"] = {
+	e: "campus.faculty.self_appraisal.block_feedback_on_self_appraisal" for e in ("validate", "before_submit", "before_cancel")
+}
 doc_events["Appraisal"] = {
 	"before_validate": "campus.faculty.self_appraisal.before_validate",
 	"before_submit": "campus.faculty.self_appraisal.before_submit",

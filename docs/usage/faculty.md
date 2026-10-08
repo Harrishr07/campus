@@ -75,5 +75,15 @@ Not yet: electives of a group in parallel, cross-timetable clash checks (educati
 
 Not yet: feeding approved leave into Timetable faculty unavailability (that table is per Timetable, by weekday), half-day leave (the whole day's periods are proposed), holidays.
 
+## Achievements, FDPs and self-appraisal (M07-04, M07-05)
+
+1. Teaching staff with a login need the HRMS **Employee** role to open their Appraisal. Saving an Employee with Staff Type Teaching and a User ID grants it (`campus.faculty.setup.grant_employee_role`); Appraisal permissions stay HRMS's (no Custom DocPerm on Appraisal).
+2. Faculty Achievement (conference, resource person, award, membership, certification) takes private evidence; HR verifies it. A change to a verified achievement by anyone but HR clears the verification. FDP attendance is not entered here: create the HRMS Training Event, tick Faculty Development Programme and mark attendance.
+3. API Score Rule (one version per company and Effective From) holds points, annual caps, KRA weightages and targets. A version used by a submitted Appraisal is locked: add a new version.
+4. Employee > Faculty > Self-Appraisal computes the score for an Appraisal Cycle into an HRMS Appraisal. Request HOD Review sends it to the HOD, or to the Principal when the appraisee is an HOD. Scores are frozen while the review is open or approved; a rejected review releases them. Approval submits the Appraisal. HR can submit directly only with an override reason (HR Override Reason on the Appraisal).
+5. Reports FDP Participation (6.3.4) and Conference Financial Support (6.3.2); print format Faculty CV on Employee.
+
+Not yet: scoping the reports to a department through User Permissions (they use the user's Employee permissions), publications and student feedback (Phase 3).
+
 ## Payroll (M07-07)
 Aided and self-financing payroll on HRMS: see [payroll.md](payroll.md).

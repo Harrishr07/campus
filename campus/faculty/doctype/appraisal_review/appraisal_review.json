@@ -10,6 +10,7 @@
   "employee_name",
   "company",
   "department",
+  "appraisee_is_hod",
   "column_break_1",
   "appraisal_cycle",
   "api_total",
@@ -74,6 +75,13 @@
    "in_standard_filter": 1
   },
   {
+   "fieldname": "appraisee_is_hod",
+   "fieldtype": "Check",
+   "label": "Appraisee Is an HOD",
+   "read_only": 1,
+   "description": "Then the Principal reviews."
+  },
+  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -117,7 +125,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Appraisal Review",

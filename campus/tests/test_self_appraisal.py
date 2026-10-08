@@ -15,11 +15,11 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform.approval_engine import latest_request
-from campus.campus_platform.approvals import approve
+from campus.campus_platform.approvals import approve, reject
 from campus.faculty import api, self_appraisal
 from campus.faculty.report.conference_financial_support import conference_financial_support
 from campus.faculty.report.fdp_participation import fdp_participation
-from campus.faculty.setup import seed_appraisal_review_policy
+from campus.faculty.setup import grant_employee_role, seed_appraisal_review_policy
 from campus.iqac import registry
 from campus.tests import demo
 from campus.tests.utils import CampusTestCase
@@ -37,8 +37,8 @@ class SelfAppraisalFixture(CampusTestCase):
 		super().setUp()
 		frappe.db.savepoint("sa_test")
 		self.faculty, self.hod = demo.employee_of("faculty_1"), demo.employee_of("hod_cse")
-		for username in ("faculty_1", "hod_cse"):
-			frappe.get_doc("User", demo.email(username)).add_roles("Employee")
+		for employee in (self.faculty, self.hod):
+			grant_employee_role(frappe.get_doc("Employee", employee))
 		self.make_rule()
 		self.cycle = self.make_cycle()
 		seed_appraisal_review_policy()
@@ -169,6 +169,35 @@ class TestAchievementAndRule(SelfAppraisalFixture):
 		with self.assertRaises(frappe.ValidationError):
 			self.achievement(self.faculty, amount=-1, verified=0)
 
+	def test_changing_a_verified_achievement_resets_verification_unless_hr(self):
+		frappe.set_user(demo.email("faculty_1"))
+		try:
+			doc = frappe.get_doc(
+				{"doctype": "Faculty Achievement", "employee": self.faculty, "achievement_type": "Conference", "title": "Paper",
+				"achievement_date": "2026-08-10", "evidence": "/private/files/a.pdf", "financial_support_amount": 100}
+			).insert()  # fmt: skip
+		finally:
+			frappe.set_user("Administrator")
+		doc.reload()
+		doc.verified = 1
+		doc.save()  # HR verifies
+		doc.financial_support_amount = 100000
+		doc.save()  # HR edits keep it
+		self.assertEqual(frappe.db.get_value("Faculty Achievement", doc.name, "verified"), 1)
+		frappe.set_user(demo.email("faculty_1"))
+		try:
+			doc.reload()
+			doc.financial_support_amount = 5000
+			doc.save()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Faculty Achievement", doc.name, "verified"), 0)
+
+	def test_a_conference_cannot_point_at_an_fdp_training_event(self):
+		event = self.fdp("SA FDP linked", "2026-07-10", [(self.faculty, "Present")])
+		with self.assertRaises(frappe.ValidationError):
+			self.achievement(self.faculty, "Conference", training_event=event.name, verified=0)
+
 	def test_training_attendance_is_not_a_faculty_achievement_type(self):
 		options = frappe.get_meta("Faculty Achievement").get_field("achievement_type").options.split("\n")
 		self.assertNotIn("FDP Attended", options)
@@ -283,12 +312,75 @@ class TestHodReview(SelfAppraisalFixture):
 			self.act_as(demo.email("faculty_1"), review)
 		self.assertEqual(frappe.db.get_value("Appraisal", self.appraisal_doc.name, "docstatus"), 0)
 
-	def test_an_hod_cannot_approve_their_own_appraisal(self):
+	def test_an_hod_appraisee_is_reviewed_by_the_principal_not_the_hod(self):
 		own = self.appraisal(self.hod)
-		review = self_appraisal.request_review(own.name)  # raised by Administrator (HR), so only the HOD position could approve
+		review = self_appraisal.request_review(own.name)  # raised by Administrator (HR)
+		with self.assertRaises(frappe.PermissionError):
+			self.act_as(demo.email("hod_cse"), review)  # the HOD is the appraisee and not an approver
+		self.assertEqual(self.act_as(demo.email("principal"), review), "Approved")
+		self.assertEqual(frappe.db.get_value("Appraisal", own.name, "docstatus"), 1)
+
+	def test_review_of_an_hod_fails_up_front_without_a_principal(self):
+		own = self.appraisal(self.hod)
+		frappe.db.delete("Position Holder", {"position": "PRINCIPAL"})
 		with self.assertRaises(frappe.ValidationError):
-			self.act_as(demo.email("hod_cse"), review)
-		self.assertEqual(frappe.db.get_value("Appraisal", own.name, "docstatus"), 0)
+			self_appraisal.request_review(own.name)
+
+	def test_hr_can_submit_directly_only_with_a_recorded_reason(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.appraisal_doc.submit()
+		appraisal = frappe.get_doc("Appraisal", self.appraisal_doc.name)
+		appraisal.oc_api_override_reason = "HOD on long leave; Principal instructed"
+		appraisal.submit()
+		self.assertEqual(frappe.db.get_value("Appraisal", appraisal.name, ["docstatus", "oc_api_override_by"]), (1, "Administrator"))
+
+	def test_faculty_cannot_change_scores_while_the_review_is_pending(self):
+		self.request_as(demo.email("faculty_1"), self.appraisal_doc)
+		frappe.set_user(demo.email("faculty_1"))
+		try:
+			appraisal = frappe.get_doc("Appraisal", self.appraisal_doc.name)
+			appraisal.goals[0].score = 5
+			with self.assertRaisesRegex(frappe.ValidationError, "review"):
+				appraisal.save()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(self.goals(frappe.get_doc("Appraisal", self.appraisal_doc.name)), {TEACHING: (60, 3.0), PD: (40, 4.0)})
+
+	def test_a_rejected_review_does_not_freeze_the_appraisal(self):
+		review = self.request_as(demo.email("faculty_1"), self.appraisal_doc)
+		frappe.set_user(demo.email("hod_cse"))
+		try:
+			reject(latest_request(frappe.get_doc("Appraisal Review", review)).name, "Not convincing")
+		finally:
+			frappe.set_user("Administrator")
+		self.achievement(self.faculty, "Award", "Late award", "2026-11-20")
+		self.assertEqual(self.appraisal().name, self.appraisal_doc.name)  # recomputes
+		self.assertTrue(self.request_as(demo.email("faculty_1"), self.appraisal_doc))  # and can be sent again
+
+	def test_performance_feedback_cannot_move_a_submitted_self_appraisal(self):
+		review = self.request_as(demo.email("faculty_1"), self.appraisal_doc)
+		self.act_as(demo.email("hod_cse"), review)
+		feedback = frappe.get_doc(
+			{
+				"doctype": "Employee Performance Feedback", "appraisal": self.appraisal_doc.name, "employee": self.faculty,
+				"reviewer": self.hod, "feedback": "Good", "added_on": frappe.utils.now(), "company": demo.ENGINEERING,
+			}
+		)  # fmt: skip
+		feedback.flags.ignore_permissions = True
+		frappe.set_user(demo.email("hod_cse"))
+		try:
+			with self.assertRaisesRegex(frappe.ValidationError, "self-appraisal"):
+				feedback.insert()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_rule_used_by_a_submitted_appraisal_is_locked(self):
+		review = self.request_as(demo.email("faculty_1"), self.appraisal_doc)
+		self.act_as(demo.email("hod_cse"), review)
+		rule = frappe.get_doc("API Score Rule", self.appraisal_doc.oc_api_rule)
+		rule.rows[0].points = 9
+		with self.assertRaises(frappe.ValidationError):
+			rule.save()
 
 	def test_another_teacher_cannot_request_a_review(self):
 		with self.assertRaises(frappe.PermissionError):
@@ -341,6 +433,31 @@ class TestReportsAndCv(SelfAppraisalFixture):
 	def test_reports_need_company_and_year(self):
 		self.assertEqual(fdp_participation.execute({})[1], [])
 		self.assertEqual(conference_financial_support.execute({"company": demo.ENGINEERING})[1], [])
+
+	def test_teaching_employee_gets_the_employee_role_when_saved(self):
+		user = demo.email("faculty_2")
+		frappe.db.delete("Has Role", {"parent": user, "role": "Employee"})
+		grant_employee_role(frappe.get_doc("Employee", demo.employee_of("faculty_2")))
+		self.assertIn("Employee", frappe.get_roles(user))
+
+	def test_fdp_report_runs_for_the_hod_through_the_report_runner(self):
+		from frappe.desk.query_report import run
+
+		frappe.set_user(demo.email("hod_cse"))
+		try:
+			result = run("FDP Participation", filters=FILTERS)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(len(result["result"]), 3)
+
+	def test_cv_lists_fdps_for_a_teacher_without_training_event_rights(self):
+		from campus.faculty.cv import faculty_cv_sections
+
+		frappe.set_user(demo.email("faculty_1"))
+		try:
+			self.assertEqual(sorted(r.event_name for r in faculty_cv_sections(self.faculty)["fdps"]), ["SA FDP one", "SA FDP two"])
+		finally:
+			frappe.set_user("Administrator")
 
 	def test_faculty_cv_prints_escaped(self):
 		hostile = self.achievement(self.faculty, "Award", "placeholder", amount=0)

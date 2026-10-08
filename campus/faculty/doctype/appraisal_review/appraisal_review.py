@@ -1,7 +1,7 @@
 """M07-04 Appraisal Review: the HOD's review of an HRMS Appraisal made from a faculty self-appraisal.
 
 The HRMS Appraisal stays the appraisal; this document only carries it through the approval engine. The department's HOD
-approves; the requester and owner never can (engine), nor the appraisee. Final approval submits the Appraisal, after
+approves, or the Principal when the appraisee is an HOD; the requester and owner never can (engine), nor the appraisee. Final approval submits the Appraisal, after
 which nobody can change it. The Appraisal cannot be submitted any other way (campus.faculty.self_appraisal).
 """
 
@@ -16,6 +16,7 @@ from campus.faculty import self_appraisal
 class AppraisalReview(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
+		self_appraisal.set_appraisee_is_hod(self)
 		self_appraisal.check_reviewable(self)
 
 	def before_submit(self):

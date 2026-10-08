@@ -80,18 +80,41 @@ def seed_course_allocation_policy():
 
 
 APPRAISAL_REVIEW_POLICY = "Appraisal Review - HOD"
+APPRAISAL_REVIEW_PRINCIPAL_POLICY = "Appraisal Review - Principal"
+NOT_HOD = 'not doc.get("appraisee_is_hod")'
 
 
 def seed_appraisal_review_policy():
-	"""Appraisals made from a self-appraisal are reviewed by the HOD of the appraisee's department, unless the college has its own policy."""
-	if frappe.db.exists("Approval Policy", {"document_type": "Appraisal Review"}) or not frappe.db.exists("Position", "HOD"):
+	"""Self-appraisals are reviewed by the HOD of the appraisee's department, or by the Principal when the appraisee is an HOD
+	themselves; a college's own policy for Appraisal Review is left alone."""
+	if not frappe.db.exists("Position", "HOD"):
 		return
+	hod = frappe.db.exists("Approval Policy", APPRAISAL_REVIEW_POLICY)
+	if hod:
+		if not frappe.db.get_value("Approval Policy", hod, "condition"):
+			frappe.db.set_value("Approval Policy", hod, "condition", NOT_HOD)
+	elif not frappe.db.exists("Approval Policy", {"document_type": "Appraisal Review"}):
+		insert_review_policy(APPRAISAL_REVIEW_POLICY, NOT_HOD, 0, "HOD", "department")
+	if not frappe.db.exists("Approval Policy", APPRAISAL_REVIEW_PRINCIPAL_POLICY) and frappe.db.exists("Position", "PRINCIPAL"):
+		insert_review_policy(APPRAISAL_REVIEW_PRINCIPAL_POLICY, 'doc.get("appraisee_is_hod")', 1, "PRINCIPAL", "company")
+
+
+def insert_review_policy(name, condition, priority, position, scope_field):
 	frappe.get_doc(
 		{
-			"doctype": "Approval Policy", "policy_name": APPRAISAL_REVIEW_POLICY, "document_type": "Appraisal Review",
-			"levels": [{"approver_type": "Position", "approver": "HOD", "scope_field": "department", "title": "HOD", "limit_to_company": 1}],
+			"doctype": "Approval Policy", "policy_name": name, "document_type": "Appraisal Review", "condition": condition, "priority": priority,
+			"levels": [{"approver_type": "Position", "approver": position, "scope_field": scope_field, "title": position.title(), "limit_to_company": 1}],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
+
+
+def grant_employee_role(employee, method=None):
+	"""Teaching staff with a login get the HRMS Employee role (it carries their rights on Appraisal; Appraisal permissions
+	are HRMS's and are not copied into Custom DocPerm). Doc event of Employee and the onboarding helper."""
+	if employee.get("oc_staff_type") != "Teaching" or not employee.get("user_id") or employee.user_id == "Administrator":
+		return
+	if "Employee" not in frappe.get_roles(employee.user_id):
+		frappe.get_doc("User", employee.user_id).add_roles("Employee")
 
 
 def training_event_fields():
@@ -110,6 +133,11 @@ def appraisal_fields():
 		field("oc_api_rule", "Link", "API Score Rule", "oc_api_section", options="API Score Rule", read_only=1, no_copy=1),
 		field("oc_api_total", "Float", "API Points", "oc_api_rule", read_only=1, no_copy=1),
 		field("oc_api_breakdown", "Small Text", "API Breakdown", "oc_api_total", read_only=1, no_copy=1),
+		field(
+			"oc_api_override_reason", "Small Text", "HR Override Reason", "oc_api_breakdown", no_copy=1,
+			description="Only HR can submit a self-appraisal without the HOD review, and must give the reason here.",
+		),
+		field("oc_api_override_by", "Link", "Override By", "oc_api_override_reason", options="User", read_only=1, no_copy=1),
 	]  # fmt: skip
 
 
