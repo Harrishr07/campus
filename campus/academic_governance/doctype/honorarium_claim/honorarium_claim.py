@@ -1,10 +1,13 @@
-"""M02-05 Honorarium Claim: an External Member's honorarium and TA/DA for a Body Meeting they attended.
+"""M02-05 Honorarium Claim: an External Member's honorarium, TA and DA for a Body Meeting they attended.
 
-Needs an approved approval request (Accounts Manager of the company by default; the requester and owner cannot approve).
-The final approval submits the claim, which drafts a Purchase Invoice for the member's Supplier. TDS is not computed
-here: the honorarium line carries the claim's Tax Withholding Category and ERPNext / india_compliance withhold per its
-rate and threshold; the TA/DA line is left out of withholding. One live claim per member per meeting, checked under a
-lock on the meeting row with locking re-reads. Cancelling deletes the draft invoice; it is refused once that is submitted.
+Needs an approved approval request (Accounts Manager of the company by default; the requester and owner cannot approve;
+the engine's submit guard refuses a submit without it). The final approval submits the claim, which drafts a Purchase
+Invoice for the member's Supplier. TDS is not computed here: ERPNext / india_compliance withhold per the Supplier's Tax
+Withholding Category (rate and threshold) on the honorarium, the DA and the TA; TA is left out only when claimed at
+actuals with the bill attached (ruling P2-T04 fix 1, docs/rulings.md). One live claim per member per meeting, checked
+under a lock on the meeting row with locking re-reads. The creator must be able to read the meeting (confidential bodies).
+When Accounts submits or cancels the invoice, the claim's TDS and net figures follow it (honorarium.refresh_claim).
+Cancelling the claim deletes a draft invoice; it is refused once the invoice is submitted.
 """
 
 import frappe
@@ -13,54 +16,73 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate, today
 
 from campus.academic_governance import honorarium
-from campus.campus_platform.api import ApprovableDocument, is_approved
+from campus.campus_platform.api import ApprovableDocument
 
 
 class HonorariumClaim(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
+		self.check_meeting_access()
 		self.set_from_masters()
-		self.total_amount = flt(self.honorarium) + flt(self.ta_da)
+		self.total_amount = flt(self.honorarium) + flt(self.travel_allowance) + flt(self.daily_allowance)
 		if flt(self.honorarium) <= 0:
 			frappe.throw(_("Enter the honorarium."))
+		self.check_ta_bill()
 		honorarium.service_items(self)
 		self.check_meeting_and_duplicates()
 
-	def before_submit(self):
-		super().before_submit()
-		if not is_approved(self):
-			frappe.throw(_("{0} needs approval before it can be submitted. Use Request Approval.").format(self.name))
-
 	def on_submit(self):
 		invoice = honorarium.draft_purchase_invoice(self)
-		self.db_set(
-			{"purchase_invoice": invoice.name, "tds_amount": honorarium.withheld(invoice), "net_payable": invoice.grand_total}
-		)
+		self.db_set({"purchase_invoice": invoice.name, **honorarium.payable_figures(invoice)})
 
 	def before_cancel(self):
 		if self.purchase_invoice and frappe.db.get_value("Purchase Invoice", self.purchase_invoice, "docstatus", for_update=True) == 1:
 			frappe.throw(_("Purchase Invoice {0} is submitted; cancel it in Accounts first.").format(self.purchase_invoice))
 
 	def on_cancel(self):
-		invoice, self.purchase_invoice = self.purchase_invoice, None
-		self.db_set("purchase_invoice", None)
-		if invoice and frappe.db.exists("Purchase Invoice", invoice):
+		"""A draft invoice goes with the claim; a cancelled one stays (Accounts' record) and stays linked."""
+		if self.purchase_invoice and frappe.db.get_value("Purchase Invoice", self.purchase_invoice, "docstatus") == 0:
+			invoice, self.purchase_invoice = self.purchase_invoice, None
+			self.db_set("purchase_invoice", None)
 			frappe.delete_doc("Purchase Invoice", invoice, ignore_permissions=True)
 
+	def live_figures(self):
+		"""TDS and net payable from the linked invoice as it stands now (for the voucher); the stored ones otherwise."""
+		if self.purchase_invoice and frappe.db.exists("Purchase Invoice", self.purchase_invoice):
+			return frappe._dict(honorarium.payable_figures(frappe.get_doc("Purchase Invoice", self.purchase_invoice)))
+		return frappe._dict(tds_amount=self.tds_amount, net_payable=self.net_payable)
+
+	def check_meeting_access(self):
+		"""The creator (or whoever moves the claim to another meeting) must be able to read that meeting."""
+		if self.is_new() or self.has_value_changed("body_meeting"):
+			frappe.has_permission("Body Meeting", "read", doc=self.body_meeting, throw=True)
+
 	def set_from_masters(self):
-		"""Company, body and date from the meeting, Supplier from the member; posted values are ignored."""
+		"""Company, body and date from the meeting; Supplier and TDS section from the member's Supplier. Posted values are ignored."""
 		meeting = frappe.db.get_value("Body Meeting", self.body_meeting, ["company", "body", "meeting_date"], as_dict=True)
 		if not meeting:
 			frappe.throw(_("Body Meeting {0} does not exist.").format(self.body_meeting))
 		self.company, self.body, self.meeting_date = meeting.company, meeting.body, meeting.meeting_date
+		self.currency = frappe.get_cached_value("Company", self.company, "default_currency")
 		member = frappe.db.get_value("External Member", self.external_member, ["member_name", "supplier"], as_dict=True)
 		if not member:
 			frappe.throw(_("External Member {0} does not exist.").format(self.external_member))
 		self.member_name, self.supplier = member.member_name, member.supplier
 		if not self.supplier:
 			frappe.throw(_("{0} has no Supplier; create one from the External Member first.").format(self.member_name))
+		self.tds_section = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
 		if not self.tds_section:
-			self.tds_section = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
+			frappe.throw(_("Ask Accounts to set the TDS category on Supplier {0}.").format(self.supplier))
+
+	def check_ta_bill(self):
+		if not self.ta_actuals:
+			return
+		if not self.ta_bill or not frappe.db.exists("File", {"file_url": self.ta_bill}):
+			frappe.throw(_("Attach the travel bill to claim TA at actuals."))
+
+	def ta_exempt(self):
+		"""TA is left out of TDS only at actuals with the bill attached."""
+		return bool(self.ta_actuals and self.ta_bill)
 
 	def check_meeting_and_duplicates(self):
 		"""Lock the meeting, then re-read attendance and other claims with locking reads."""

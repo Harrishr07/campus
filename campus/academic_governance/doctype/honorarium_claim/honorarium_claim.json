@@ -14,9 +14,13 @@
   "body",
   "meeting_date",
   "company",
+  "currency",
   "section_break_amounts",
   "honorarium",
-  "ta_da",
+  "travel_allowance",
+  "ta_actuals",
+  "ta_bill",
+  "daily_allowance",
   "total_amount",
   "column_break_2",
   "tds_section",
@@ -72,7 +76,8 @@
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "description": "A meeting the member attended (marked present)."
+   "description": "A meeting the member attended (marked present).",
+   "search_index": 1
   },
   {
    "fieldname": "body",
@@ -97,6 +102,15 @@
    "description": "The company of the meeting's Body."
   },
   {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "The company's default currency."
+  },
+  {
    "fieldname": "section_break_amounts",
    "fieldtype": "Section Break",
    "label": "Amounts"
@@ -105,24 +119,46 @@
    "fieldname": "honorarium",
    "fieldtype": "Currency",
    "label": "Honorarium",
-   "options": "INR",
+   "options": "currency",
    "reqd": 1,
    "non_negative": 1,
    "in_list_view": 1
   },
   {
-   "fieldname": "ta_da",
+   "fieldname": "travel_allowance",
    "fieldtype": "Currency",
-   "label": "TA / DA",
-   "options": "INR",
+   "label": "Travel Allowance (TA)",
+   "options": "currency",
    "non_negative": 1,
-   "description": "Travel and daily allowance, reimbursed without TDS."
+   "description": "Subject to TDS with the honorarium unless claimed at actuals with the bill attached."
+  },
+  {
+   "default": "0",
+   "fieldname": "ta_actuals",
+   "fieldtype": "Check",
+   "label": "TA at Actuals",
+   "description": "The TA reimburses the actual fare shown on the attached bill; it is then left out of TDS."
+  },
+  {
+   "depends_on": "ta_actuals",
+   "mandatory_depends_on": "ta_actuals",
+   "fieldname": "ta_bill",
+   "fieldtype": "Attach",
+   "label": "Travel Bill"
+  },
+  {
+   "fieldname": "daily_allowance",
+   "fieldtype": "Currency",
+   "label": "Daily Allowance (DA)",
+   "options": "currency",
+   "non_negative": 1,
+   "description": "Always subject to TDS with the honorarium."
   },
   {
    "fieldname": "total_amount",
    "fieldtype": "Currency",
    "label": "Total",
-   "options": "INR",
+   "options": "currency",
    "read_only": 1
   },
   {
@@ -134,7 +170,8 @@
    "fieldtype": "Link",
    "label": "TDS Section",
    "options": "Tax Withholding Category",
-   "description": "Tax Withholding Category applied to the honorarium on the Purchase Invoice; defaults from the Supplier. Rate and threshold come from the category."
+   "description": "The Supplier's Tax Withholding Category (kept by Accounts). Rate and threshold come from the category.",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_invoice",
@@ -154,7 +191,7 @@
    "fieldname": "tds_amount",
    "fieldtype": "Currency",
    "label": "TDS Withheld",
-   "options": "INR",
+   "options": "currency",
    "read_only": 1,
    "no_copy": 1
   },
@@ -162,7 +199,7 @@
    "fieldname": "net_payable",
    "fieldtype": "Currency",
    "label": "Net Payable",
-   "options": "INR",
+   "options": "currency",
    "read_only": 1,
    "no_copy": 1
   },
@@ -180,17 +217,64 @@
  "is_submittable": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-10 10:00:00.000000",
+ "modified": "2026-10-11 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Honorarium Claim",
  "owner": "Administrator",
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "amend": 1, "delete": 1, "report": 1, "print": 1, "export": 1},
-  {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "print": 1, "export": 1},
-  {"role": "Accounts User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1},
-  {"role": "Principal", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1},
-  {"role": "Academics User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",

@@ -95,3 +95,10 @@ UGC 2023 cl. 12 as summarised in docs/research/anna-university-autonomous-rules.
 | 3 | Finance Committee | term 3 years, 2 meetings a year, quorum 50% |
 | 4 | Non-statutory committees | no composition, term, meetings or quorum seeded |
 Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, at least 1 University Nominee (mandatory for quorum); Academic Council at least 3 University Nominees, 3-year term, 2 meetings a year.
+
+### Pending confirmation (P2-T04 fix round 1: TDS on external member honorarium)
+| # | Item | Rule applied |
+|---|------|--------------|
+| 1 | TDS base (194J / new-Act professional fees) | the gross: honorarium + DA + TA (CBDT Circular 715 treats reimbursements billed with the fee as part of it) |
+| 2 | TA exemption | TA is left out of TDS only when "TA at Actuals" is ticked AND the travel bill is attached; DA is always taxed |
+| 3 | TDS section | always the Supplier's Tax Withholding Category (kept by Accounts); a claim is refused when the Supplier has none |
