@@ -8,7 +8,7 @@ from collections import Counter
 
 from frappe.tests import UnitTestCase
 
-from campus.examinations.invigilation_rules import Hall, assign, spread as duty_spread
+from campus.examinations.invigilation_rules import Hall, assign, eligible_faculty, spread as duty_spread
 
 FACULTY = ["E1", "E2", "E3", "E4"]
 
@@ -44,6 +44,8 @@ class TestBalance(UnitTestCase):
 		sittings = halls(6, courses={"R1": {"C1"}, "R2": {"C2"}})
 		duties, unfilled = assign(sittings, FACULTY, own_courses={"E1": {"C1"}}, on_leave={("E2", "2026-11-03")})
 		self.assertEqual(unfilled, [])
+		self.assertFalse([h for h, e in duties if e == "E1" and h.room == "R1"])  # rebalancing keeps the exclusions
+		self.assertFalse([h for h, e in duties if e == "E2" and h.date == "2026-11-03"])
 		self.assertLessEqual(spread(duties, "FN"), 1)
 		self.assertLessEqual(spread(duties, "AN"), 1)
 
@@ -56,13 +58,22 @@ class TestBalance(UnitTestCase):
 		duties, unfilled = assign(sittings, faculty, own_courses={"E2": {"C2"}, "E3": {"C2"}})
 		self.assertEqual(unfilled, [])
 		self.assertEqual([(h.date, e) for h, e in duties], [("2026-11-01", "E2"), ("2026-11-02", "E1")])
-		self.assertEqual(duty_spread(duties, faculty), {"FN": 1})
+		self.assertEqual(duty_spread(duties, eligible_faculty(sittings, faculty, {"E2": {"C2"}, "E3": {"C2"}})), {"FN": 1})
 
 	def test_spread_is_per_session_type_and_counts_faculty_without_duties(self):
 		h = Hall("2026-11-01", "FN", "R1", frozenset())
 		a = Hall("2026-11-01", "AN", "R1", frozenset())
 		duties = [(h, "E1"), (h._replace(date="2026-11-02"), "E1"), (a, "E2")]
-		self.assertEqual(duty_spread(duties, ["E1", "E2", "E3"]), {"FN": 2, "AN": 1})
+		self.assertEqual(duty_spread(duties, {"FN": {"E1", "E2", "E3"}, "AN": {"E1", "E2", "E3"}}), {"FN": 2, "AN": 1})
+
+	def test_faculty_who_can_take_no_place_of_a_session_type_do_not_count(self):
+		fn = [Hall("2026-11-01", "FN", "R1", frozenset()), Hall("2026-11-02", "FN", "R1", frozenset())]
+		an = [Hall("2026-11-01", "AN", "R1", frozenset())]
+		leave = {("E3", "2026-11-01"), ("E3", "2026-11-02")}  # E3 is away for every sitting
+		eligible = eligible_faculty(fn + an, ["E1", "E2", "E3"], on_leave=leave)
+		self.assertEqual(eligible, {"FN": {"E1", "E2"}, "AN": {"E1", "E2"}})
+		duties, _unfilled = assign(fn + an, ["E1", "E2", "E3"], on_leave=leave)
+		self.assertEqual(duty_spread(duties, eligible), {"FN": 0, "AN": 1})
 
 
 class TestExclusions(UnitTestCase):

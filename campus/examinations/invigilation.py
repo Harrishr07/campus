@@ -29,9 +29,8 @@ def generate(roster):
 		doc.set("faculty", [{"employee": e} for e in company_teachers(doc.company)])
 	faculty = sorted(row.employee for row in doc.faculty)
 	halls = session_halls(doc.exam_session)
-	duties, unfilled = invigilation_rules.assign(
-		halls, faculty, own_courses(faculty, doc.exam_session), leave_days(faculty, halls), doc.invigilators_per_hall
-	)
+	taught, away = own_courses(faculty, doc.exam_session), leave_days(faculty, halls)
+	duties, unfilled = invigilation_rules.assign(halls, faculty, taught, away, doc.invigilators_per_hall)
 	if unfilled:
 		names = ", ".join(sorted({f"{h.room} ({frappe.utils.formatdate(h.date)} {h.slot})" for h in unfilled}))
 		frappe.throw(_("No free invigilator for {0}. Add faculty to the pool.").format(names))
@@ -40,7 +39,7 @@ def generate(roster):
 		"duties",
 		[{"exam_date": h.date, "slot": h.slot, "room": h.room, "employee": e, "employee_name": people.get(e)} for h, e in duties],
 	)
-	gaps = invigilation_rules.spread(duties, faculty)
+	gaps = invigilation_rules.spread(duties, invigilation_rules.eligible_faculty(halls, faculty, taught, away))
 	doc.duty_spread = max(gaps.values(), default=0)
 	doc.flags.generating = True
 	doc.save()

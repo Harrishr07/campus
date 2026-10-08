@@ -16,6 +16,7 @@ from campus.tests.test_exam_seating import COE_USER, DAY1, SeatingFixture, cours
 
 DEBARRED = "Not eligible (Debarred)"
 INVIGILATOR, OTHER_INVIGILATOR = demo.email("faculty_1"), demo.email("faculty_2")
+DECISION_FIELDS = "committee_decision\ndecision_remarks"
 
 
 class MalpracticeFixture(SeatingFixture):
@@ -29,7 +30,7 @@ class MalpracticeFixture(SeatingFixture):
 			frappe.db.delete("Approval Policy", {"document_type": "Malpractice Report"})
 			frappe.get_doc(
 				{"doctype": "Approval Policy", "policy_name": "Seat Test Malpractice", "document_type": "Malpractice Report",
-				"levels": [level("User", COE_USER, title="COE")]}
+				"levels": [level("User", COE_USER, title="COE", can_edit_fields=DECISION_FIELDS)]}
 			).insert()  # fmt: skip
 
 	def policies(self):
@@ -104,6 +105,21 @@ class TestMalpractice(MalpracticeFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "committee decision"):
 			self.approved(report)
 
+	def test_another_users_unattached_file_cannot_be_claimed(self):
+		frappe.set_user(OTHER_INVIGILATOR)
+		url = self.evidence()  # uploaded by faculty_2, not yet attached anywhere
+		frappe.set_user(INVIGILATOR)
+		with self.assertRaisesRegex(frappe.ValidationError, "another"):
+			self.report(decision="", evidence=url)
+
+	def test_an_amendment_keeps_the_evidence_of_the_cancelled_report(self):
+		report = self.approved(self.report(decision="Warning"))
+		report.cancel()
+		amended = frappe.copy_doc(report)
+		amended.amended_from, amended.docstatus = report.name, 0
+		amended.insert()
+		self.assertEqual(amended.evidence[0].file, report.evidence[0].file)
+
 	def test_evidence_must_be_a_private_file_of_this_report(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "private"):
 			self.report(evidence=self.evidence(private=0))
@@ -125,6 +141,39 @@ class TestMalpractice(MalpracticeFixture):
 		self.student = self.make_outsider()
 		with self.assertRaises(frappe.ValidationError):
 			self.report()
+
+
+class TestCommitteeDecision(MalpracticeFixture):
+	def test_an_invigilator_cannot_set_the_decision(self):
+		frappe.set_user(INVIGILATOR)
+		report = self.report(decision="Debarment")
+		self.assertFalse(report.committee_decision)  # permlevel 1: reset for a user without write there
+		frappe.set_user("Administrator")
+		doc = frappe.get_doc("Malpractice Report", report.name)
+		doc.committee_decision = "Debarment"
+		frappe.set_user(INVIGILATOR)
+		with self.assertRaisesRegex(frappe.ValidationError, "Only the COE"):
+			doc.save(ignore_permissions=True)  # even a server-side save on the invigilator's behalf
+
+	def test_the_coe_records_the_decision_during_approval_and_debarment_flows(self):
+		frappe.set_user(INVIGILATOR)
+		report = self.report(decision="")
+		request = request_approval("Malpractice Report", report.name)
+		frappe.set_user(COE_USER)
+		doc = frappe.get_doc("Malpractice Report", report.name)
+		doc.committee_decision, doc.decision_remarks = "Debarment", "Committee meeting 3"
+		doc.save()
+		self.assertEqual(doc.decision_set_by, COE_USER)
+		approve(request, None)
+		frappe.set_user("Administrator")
+		self.assertEqual(report.reload().docstatus, 1)
+		self.assertEqual(self.registration().debarred, 1)
+
+	def test_a_decision_not_set_by_the_exam_office_is_refused_at_submit(self):
+		report = self.report(decision="Debarment")
+		frappe.db.set_value("Malpractice Report", report.name, "decision_set_by", INVIGILATOR)  # legacy or imported row
+		with self.assertRaisesRegex(frappe.ValidationError, "committee decision"):
+			self.approved(report.reload())
 
 
 class TestConfidentiality(MalpracticeFixture):
@@ -156,8 +205,13 @@ class TestSeededPolicy(MalpracticeFixture):
 			"employee": demo.employee_of("coe"), "from_date": "2022-06-01"}
 		).insert()  # fmt: skip
 		frappe.set_user(INVIGILATOR)
-		report = self.report()
-		report = self.approved(report, approver=coe)
+		report = self.report(decision="")
+		request = request_approval("Malpractice Report", report.name)
+		frappe.set_user(coe)
+		doc = frappe.get_doc("Malpractice Report", report.name)
+		doc.committee_decision = "Debarment"
+		doc.save()  # the seeded level lets the approver record the decision
+		approve(request, None)
 		frappe.set_user("Administrator")
-		self.assertEqual(report.docstatus, 1)
+		self.assertEqual(report.reload().docstatus, 1)
 		self.assertEqual(self.registration().debarred, 1)

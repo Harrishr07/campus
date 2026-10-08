@@ -65,7 +65,7 @@ class TestRoster(RosterFixture):
 		roster = self.roster()
 		self.assertLessEqual(roster.duty_spread, 1)
 		frappe.clear_messages()
-		with patch.object(invigilation.invigilation_rules, "spread", lambda duties, faculty: {"FN": 2, "AN": 0}):
+		with patch.object(invigilation.invigilation_rules, "spread", lambda duties, eligible: {"FN": 2, "AN": 0}):
 			invigilation.generate(roster.name)
 		self.assertEqual(roster.reload().duty_spread, 2)
 		self.assertIn("differ by 2", str(frappe.message_log))

@@ -7,7 +7,7 @@ then the lowest id, who is not already in another hall of the same sitting. A re
 from a faculty member to one with at least two fewer of that session type who may take it and is free in that
 sitting, while such a move exists (each move lowers the sum of squared loads, so it ends). That keeps duties
 within one per faculty per session type unless the exclusions force otherwise; `spread` reports the gap so the
-caller can warn. A place nobody may take is returned unfilled.
+caller can warn (over the faculty who could take a place of that type). A place nobody may take is returned unfilled.
 """
 
 from collections import Counter, namedtuple
@@ -68,12 +68,24 @@ def rebalance(duties, by_slot, busy):
 			duty[1], moved = taker, True
 
 
-def spread(duties, faculty):
-	"""{session type: most duties - fewest duties} over all `faculty`, for each session type with duties."""
+def eligible_faculty(halls, faculty, own_courses=None, on_leave=()):
+	"""{session type: faculty who may take at least one of its places} (not on leave, not teaching a course there)."""
+	own_courses, on_leave, eligible = own_courses or {}, set(on_leave), {}
+	for hall in halls:
+		eligible.setdefault(hall.slot, set()).update(
+			e for e in faculty if (e, str(hall.date)) not in on_leave and not set(own_courses.get(e, ())) & set(hall.courses)
+		)
+	return eligible
+
+
+def spread(duties, eligible):
+	"""{session type: most duties - fewest duties} over the faculty eligible for that type (`eligible_faculty`);
+	someone away for every sitting of a type does not count as a light load."""
 	counts = Counter((hall.slot, employee) for hall, employee in duties)
 	return {
-		slot: max(counts[slot, e] for e in faculty) - min(counts[slot, e] for e in faculty)
-		for slot in sorted({hall.slot for hall, _e in duties}, key=slot_rank)
+		slot: max(counts[slot, e] for e in people) - min(counts[slot, e] for e in people)
+		for slot, people in sorted(eligible.items(), key=lambda item: slot_rank(item[0]))
+		if people
 	}
 
 
