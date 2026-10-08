@@ -7,9 +7,12 @@ from collections import Counter
 import frappe
 from frappe.boot import get_bootinfo
 
+from campus.campus_platform.api import clear_pack_cache
+from campus.tests.factories import make_company
 from campus.tests.utils import CampusTestCase
 
 APP_ICON = "OneBook Campus"
+COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
 TEST_ONLY_DOCTYPES = {"Approval Test Document"}
 SECTIONS = ["Masters", "Transactions", "Reports", "Settings"]
 USERS = {
@@ -113,8 +116,17 @@ class TestNavigation(CampusTestCase):
 		bootinfo = get_bootinfo()
 		return {i["label"] for i in bootinfo.desktop_icons if i.get("app") == "campus"}, bootinfo
 
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_company(COLLEGE, "CNTC")  # a pack shows only to users of an institution it is enabled for
+		if not frappe.db.exists("Institution Profile", COLLEGE):
+			frappe.get_doc({"doctype": "Institution Profile", "company": COLLEGE, "institution_status": "Autonomous"}).insert()
+
 	def setUp(self):
 		frappe.db.savepoint("navigation_test")
+		clear_pack_cache()
+		self.addCleanup(clear_pack_cache)
 		for email, roles in USERS.values():
 			if not frappe.db.exists("User", email):
 				frappe.get_doc({"doctype": "User", "email": email, "first_name": "nav", "send_welcome_email": 0,
