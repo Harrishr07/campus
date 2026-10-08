@@ -2,11 +2,17 @@
 pure-Python solver (clash-free result, unmet constraints reported, demo scale inside the time limit)."""
 
 import time
+import unittest
 
 from frappe.tests import UnitTestCase
 
-from campus.faculty.timetable import rules, solver
+from campus.faculty.timetable import backtracking, rules, solver
 from campus.faculty.timetable.rules import Entry, Grid, Room
+
+try:
+	from campus.faculty.timetable import cpsat
+except ImportError:  # OR-Tools not installed: the CP-SAT tests are skipped
+	cpsat = None
 from campus.faculty.timetable.solver import Problem, Session
 
 DAYS = ["Monday", "Tuesday", "Wednesday"]
@@ -84,6 +90,18 @@ class TestHardConstraints(UnitTestCase):
 		grid = make_grid(rooms={**make_grid().rooms, "L2": Room(40, True)})
 		self.assertEqual(rules_of([lab(1), lab(2, room="L2")], grid), [rules.LAB_BLOCK])  # block moves between labs
 
+	def test_a_lab_room_must_seat_the_section(self):
+		grid = make_grid(rooms={**make_grid().rooms, "L20": Room(20, True)})
+		entries = [entry("LAB-A", faculty="T3", room="L20", period=p, kind="Practical") for p in (1, 2)]
+		self.assertEqual(rules_of(entries, grid), [rules.CAPACITY] * 2)  # 20 seats for 30 students
+
+	def test_a_practical_run_longer_than_the_template_block_is_refused(self):
+		lab = [entry("LAB-A", faculty="T3", room="L1", period=p, kind="Practical") for p in (1, 2, 4)]
+		self.assertEqual(rules_of(lab[:2]), [])
+		three = [entry("LAB-A", faculty="T3", room="L1", period=p, kind="Practical") for p in (1, 2, 3)]
+		grid = make_grid(periods={1: False, 2: False, 3: False, 4: True, 5: False})
+		self.assertEqual(rules_of(three, grid), [rules.LAB_BLOCK])  # block is 2 periods
+
 	def test_violation_messages_name_the_slot_and_the_parties(self):
 		(violation,) = rules.violations([entry(), entry(offering="DS-B", section="CSE-3-B", room="C2")], make_grid())
 		self.assertEqual((violation.day, violation.period, violation.subject), ("Monday", 1, "T1"))
@@ -116,41 +134,67 @@ class TestSolver(UnitTestCase):
 	def test_places_every_session_without_hard_violations(self):
 		sessions = [session(1), session(2), session(3, offering="DS-B", section="CSE-3-B", faculty="T2"),
 			session(4, offering="LAB-A", faculty="T3", kind="Practical", length=2)]  # fmt: skip
-		result = solver.solve(small_problem(sessions))
+		result = backtracking.solve(small_problem(sessions))
 		self.assertEqual(result.unmet, [])
 		self.assertEqual(len(result.entries), 5)
 		self.assertEqual(rules.violations(result.entries, make_grid()), [])
 
 	def test_a_lecture_course_is_spread_over_different_days(self):
-		result = solver.solve(small_problem([session(i) for i in (1, 2, 3)]))
+		result = backtracking.solve(small_problem([session(i) for i in (1, 2, 3)]))
 		self.assertEqual(len({e.day for e in result.entries}), 3)
 
 	def test_an_unplaceable_session_is_reported_with_the_reason(self):
 		grid = {"unavailable": {("T1", day, p) for day in DAYS for p in (1, 2, 4, 5)}}
-		result = solver.solve(small_problem([session(1), session(2, faculty="T2", offering="DS-B", section="B")], **grid))
+		result = backtracking.solve(small_problem([session(1), session(2, faculty="T2", offering="DS-B", section="B")], **grid))
 		self.assertEqual(len(result.entries), 1)
 		self.assertEqual(len(result.unmet), 1)
 		self.assertIn("T1", result.unmet[0])
 		self.assertIn("unavailable", result.unmet[0])
 
 	def test_no_lab_big_enough_is_reported_up_front(self):
-		result = solver.solve(small_problem([session(1, offering="LAB-A", faculty="T3", kind="Practical", length=2, strength=60)]))
+		result = backtracking.solve(small_problem([session(1, offering="LAB-A", faculty="T3", kind="Practical", length=2, strength=60)]))
 		self.assertEqual(result.entries, [])
 		self.assertIn("no Lab room", result.unmet[0])
 
 	def test_a_block_longer_than_any_run_of_periods_is_reported(self):
-		result = solver.solve(small_problem([session(1, kind="Practical", length=3)]))  # runs are 1-2 and 4-5 only
+		result = backtracking.solve(small_problem([session(1, kind="Practical", length=3)]))  # runs are 1-2 and 4-5 only
 		self.assertEqual(len(result.unmet), 1)
 
 	def test_a_faculty_with_more_hours_than_slots_places_what_fits(self):
 		sessions = [session(i, offering=f"O{i}", section=f"S{i}", faculty="T1") for i in range(1, 15)]  # 14 hours, 12 slots
-		result = solver.solve(small_problem(sessions, strengths={}))
+		result = backtracking.solve(small_problem(sessions, strengths={}))
 		self.assertEqual((len(result.entries), len(result.unmet)), (12, 2))
 		self.assertEqual(rules.violations(result.entries, make_grid(strengths={})), [])
 
+	def test_an_unplaceable_message_says_not_placed_by_the_search(self):
+		grid = {"unavailable": {("T1", day, p) for day in DAYS for p in (1, 2, 4, 5)}}
+		result = backtracking.solve(small_problem([session(1)], **grid))
+		self.assertIn("not placed by the search", result.unmet[0])
+		self.assertNotIn("unsatisfiable", result.unmet[0].lower())
+
+	def test_backtracking_finds_what_greedy_placement_misses(self):
+		# T2 can only teach section S1 in period 1, but the first session (same section, cheapest option: period 1) takes it.
+		grid = make_grid(days=["Monday"], periods={1: False, 2: False}, unavailable={("T2", "Monday", 2)}, strengths={})
+		problem = Problem(grid=grid, sessions=[session(1, offering="O1", section="S1", faculty="T1"), session(2, offering="O2", section="S1", faculty="T2")])
+		search = backtracking.Search(problem)
+		order = search.order(problem.sessions)
+		self.assertEqual(len(search.depth_first(order)), 2)
+		search.reset()
+		for s in order:  # pure greedy: cheapest option each, no backtracking
+			choice = search.best(s)
+			if choice:
+				search.place(s, choice)
+		self.assertEqual(len(search.placements), 1)
+
+	def test_every_free_room_of_a_slot_is_an_option(self):
+		problem = small_problem([session(1)], strengths={})
+		search = backtracking.Search(problem)
+		rooms = {choice[2] for _cost, _order, choice in search.options(problem.sessions[0]) if choice[:2] == ("Monday", 1)}
+		self.assertEqual(rooms, {"C1", "C2"})
+
 	def test_result_is_repeatable(self):
 		sessions = [session(i, offering=f"O{i % 3}", faculty=f"T{i % 2}") for i in range(6)]
-		first, second = solver.solve(small_problem(sessions)), solver.solve(small_problem(sessions))
+		first, second = backtracking.solve(small_problem(sessions)), backtracking.solve(small_problem(sessions))
 		self.assertEqual(first.entries, second.entries)
 
 
@@ -180,8 +224,47 @@ class TestDemoScale(UnitTestCase):
 	def test_demo_scale_is_clash_free_well_inside_five_minutes(self):
 		problem = demo_scale_problem()
 		started = time.monotonic()
-		result = solver.solve(problem)
+		result = backtracking.solve(problem)
 		self.assertLess(time.monotonic() - started, 300)
 		self.assertEqual(result.unmet, [])
 		self.assertEqual(len(result.entries), 16 * 28)
+		self.assertEqual(rules.violations(result.entries, problem.grid), [])
+
+
+@unittest.skipUnless(solver.ortools_available(), "OR-Tools is not installed")
+class TestCpSat(UnitTestCase):
+	def test_solve_uses_cpsat_when_ortools_imports(self):
+		result = solver.solve(small_problem([session(1), session(2, offering="DS-B", section="CSE-3-B", faculty="T2")]))
+		self.assertEqual((result.backend, result.status), ("cpsat", "optimal"))
+		self.assertEqual(rules.violations(result.entries, make_grid()), [])
+
+	def test_demo_instance_is_clash_free(self):
+		problem = demo_scale_problem()
+		problem.time_limit = 30
+		result = cpsat.solve(problem)
+		self.assertEqual(result.unmet, [])
+		self.assertIn(result.status, ("optimal", "feasible"))
+		self.assertEqual(len(result.entries), 16 * 28)
+		self.assertEqual(rules.violations(result.entries, problem.grid), [])
+
+	def test_an_instance_with_no_solution_is_reported_infeasible(self):
+		# one teacher, two sections, a single usable period: only one of the two classes can ever be placed
+		grid = make_grid(days=["Monday"], periods={1: False}, strengths={})
+		sessions = [session(1, offering="O1", section="S1"), session(2, offering="O2", section="S2")]
+		result = cpsat.solve(Problem(grid=grid, sessions=sessions))
+		self.assertEqual(result.status, "infeasible")
+		self.assertEqual(len(result.entries), 1)
+		self.assertEqual(len(result.unmet), 2)  # the proof line and the class left out
+		self.assertIn("no timetable can place every class", result.unmet[0])
+
+	def test_a_class_no_room_can_hold_makes_the_instance_infeasible(self):
+		result = cpsat.solve(small_problem([session(1, kind="Practical", length=2, strength=500, offering="LAB-A", faculty="T3")]))
+		self.assertEqual(result.status, "infeasible")
+		self.assertEqual(result.entries, [])
+
+	def test_a_time_limit_returns_the_best_found_not_an_infeasibility_claim(self):
+		problem = demo_scale_problem()
+		problem.time_limit = 1
+		result = cpsat.solve(problem)
+		self.assertNotEqual(result.status, "infeasible")
 		self.assertEqual(rules.violations(result.entries, problem.grid), [])

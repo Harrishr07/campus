@@ -18,8 +18,19 @@ class Timetable(Document):
 		self.check_template()
 		context.complete_entries(self)
 		self.check_hard_constraints()
+		self.mark_changed_since_publish()
 		if not self.flags.from_generation:
 			self.warn_soft_issues()
+
+	def mark_changed_since_publish(self):
+		"""A published grid or unavailability list that is edited or regenerated no longer matches its Course Schedules."""
+		before = self.get_doc_before_save()
+		if self.status == "Published" and before and self.content() != before.content():
+			self.status = "Changed since publish"
+
+	def content(self):
+		grid = sorted((e.offering, e.kind, e.faculty, e.room, e.day, int(e.period or 0)) for e in self.entries)
+		return grid, sorted((u.faculty, u.day, int(u.period or 0)) for u in self.unavailability)
 
 	def check_template(self):
 		company = frappe.db.get_value("Timetable Slot Template", self.slot_template, "company")

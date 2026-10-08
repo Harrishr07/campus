@@ -19,6 +19,8 @@ from campus.faculty.timetable.rules import PRACTICAL, Entry
 from campus.faculty.timetable.solver import Result
 
 TRIES_PER_SESSION = 6
+ROOM_TRIES = 3  # free rooms offered per slot, smallest first
+ROOM_RANK_COST = 0.01  # a bigger room is only used when the search backs up
 NODE_BUDGET = 4000
 ATTEMPTS = 100
 REPEAT_COST, OVERLOAD_COST, BALANCE_COST, LATE_COST = 10, 20, 1, 0.1
@@ -41,7 +43,8 @@ def solve(problem):
 	failed, placements = best
 	search.restore(placements)  # so the unmet reasons describe the timetable that is returned
 	entries = sorted(search.entries(), key=lambda e: (e.section, e.day, e.period, e.offering))
-	return Result(entries, unmet + [search.explain(s) for s in failed], len(rules.soft_issues(entries, problem.grid)))
+	choices = {sid: choice for sid, (_session, choice) in search.placements.items()}
+	return Result(entries, unmet + [search.explain(s) for s in failed], len(rules.soft_issues(entries, problem.grid)), placements=choices, unplaced=len(search.hopeless) + len(failed))
 
 
 class Search:
@@ -95,7 +98,8 @@ class Search:
 				self.hopeless.add(session.id)
 		return unmet
 
-	def order(self, sessions, bumped=()):
+	def order(self, sessions, bumped=None):
+		bumped = bumped or {}
 		"""Sessions that failed before first, then most constrained first: longer blocks, busier teachers, fewer start slots."""
 		load = Counter()
 		for s in sessions:
@@ -177,9 +181,9 @@ class Search:
 			return "section"  # the day already has this course's practical block
 		return None
 
-	def free_room(self, session, day, start, rooms):
+	def free_rooms(self, session, day, start, rooms):
 		slots = self.slots(session, day, start)
-		return next((r for r in rooms if not any((r, *slot) in self.room_busy for slot in slots)), None)
+		return [r for r in rooms if not any((r, *slot) in self.room_busy for slot in slots)]
 
 	def cost(self, session, day, start):
 		maximum = self.grid.max_faculty_periods_per_day
@@ -199,9 +203,9 @@ class Search:
 			for start in self.starts(session.length):
 				if self.blocker(session, day, start):
 					continue
-				room = self.free_room(session, day, start, rooms)
-				if room:
-					found.append((self.cost(session, day, start), d * 1000 + start, (day, start, room)))
+				cost = self.cost(session, day, start)
+				for r, room in enumerate(self.free_rooms(session, day, start, rooms)[:ROOM_TRIES]):
+					found.append((cost + r * ROOM_RANK_COST, d * 1000 + start, (day, start, room)))
 		return sorted(found)
 
 	def best(self, session):
@@ -216,11 +220,11 @@ class Search:
 		for day in self.grid.days:
 			for start in self.starts(session.length):
 				total += 1
-				reason = self.blocker(session, day, start) or ("room" if not self.free_room(session, day, start, rooms) else None)
+				reason = self.blocker(session, day, start) or ("room" if not self.free_rooms(session, day, start, rooms) else None)
 				closed[reason] += 1
 		return _(
-			"{0} {1} ({2}): no free slot among {3}: {4} closed because the teacher is unavailable, {5} because the teacher teaches "
-			"elsewhere, {6} because the section has another class, {7} because no suitable room is free."
+			"{0} {1} ({2}): not placed by the search. Of {3} possible slots, {4} are closed because the teacher is unavailable, {5} because "
+			"the teacher teaches elsewhere, {6} because the section has another class, {7} because no suitable room is free."
 		).format(session.offering, _(session.kind), session.faculty, total, closed["unavailable"], closed["faculty"], closed["section"], closed["room"])  # fmt: skip
 
 	# --- search --------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ frappe.ui.form.on("Timetable", {
 			frappe.confirm(__("Generate replaces the grid, including manual edits. Continue?"), () => {
 				frappe.call({
 					method: "campus.faculty.timetable.generation.start_generation",
-					args: { timetable: frm.doc.name },
+					args: { timetable: frm.doc.name, replace_existing: 1 },
 					callback: (r) => {
 						frappe.show_alert({ message: __("Generation queued: {0}", [r.message]), indicator: "green" });
 						frappe.set_route("Form", "Timetable Generation Run", r.message);
@@ -13,6 +13,7 @@ frappe.ui.form.on("Timetable", {
 				});
 			});
 		}, __("Actions"));
+		if (frm.doc.publish_state === "Failed") frm.dashboard.set_headline(__("Last publish failed: {0}", [frm.doc.publish_error]), "red");
 		frm.add_custom_button(__("Check Clashes"), () => {
 			frappe.set_route("query-report", "Timetable Clash Checker", { company: frm.doc.company, timetable: frm.doc.name });
 		}, __("Actions"));

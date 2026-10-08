@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "owner": "Administrator",
@@ -20,6 +20,8 @@
   "department",
   "status",
   "published_on",
+  "publish_state",
+  "publish_error",
   "section_entries",
   "entries",
   "section_unavailability",
@@ -76,7 +78,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Draft\nPublished",
+   "options": "Draft\nPublished\nChanged since publish",
    "default": "Draft",
    "read_only": 1,
    "in_list_view": 1,
@@ -89,6 +91,22 @@
    "label": "Last Published",
    "read_only": 1,
    "no_copy": 1
+  },
+  {
+   "fieldname": "publish_state",
+   "fieldtype": "Select",
+   "label": "Publish Job",
+   "options": "\nQueued\nPublishing\nFailed",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "publish_error",
+   "fieldtype": "Small Text",
+   "label": "Publish Error",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.publish_error"
   },
   {
    "fieldname": "section_entries",

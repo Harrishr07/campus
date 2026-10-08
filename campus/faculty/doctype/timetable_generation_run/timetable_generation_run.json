@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "owner": "Administrator",
@@ -23,6 +23,7 @@
   "sessions_total",
   "sessions_placed",
   "soft_issues",
+  "solver_status",
   "unmet",
   "error"
  ],
@@ -50,7 +51,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Queued\nRunning\nCompleted\nCompleted with unmet constraints\nFailed",
+   "options": "Queued\nRunning\nCompleted\nCompleted with unmet constraints\nFailed\nCancelled",
    "default": "Queued",
    "read_only": 1,
    "in_list_view": 1,
@@ -102,6 +103,13 @@
    "fieldtype": "Int",
    "label": "Soft-Constraint Issues",
    "read_only": 1
+  },
+  {
+   "fieldname": "solver_status",
+   "fieldtype": "Data",
+   "label": "Solver",
+   "read_only": 1,
+   "description": "Backend and verdict, e.g. cpsat optimal / infeasible."
   },
   {
    "fieldname": "unmet",

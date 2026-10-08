@@ -13,7 +13,7 @@ import calendar
 from unittest import mock
 
 import frappe
-from frappe.utils import add_days, getdate, to_timedelta
+from frappe.utils import add_days, getdate, now_datetime, to_timedelta
 
 from campus.faculty.report.timetable_clash_checker import timetable_clash_checker as checker
 from campus.faculty.timetable import context, generation, publish, rules
@@ -131,7 +131,7 @@ class TimetableFixture(CampusTestCase):
 class TestSlotTemplate(TimetableFixture):
 	def new_template(self, **extra):
 		values = {
-			"doctype": "Timetable Slot Template", "template_name": "TT Bad Template", "company": demo.ENGINEERING,
+			"doctype": "Timetable Slot Template", "template_name": "TT Bad Template", "company": demo.ENGINEERING, "lab_block_periods": 1,
 			"days": [{"day": "Monday"}], "periods": [{"period": 1, "from_time": "09:00:00", "to_time": "09:50:00"}],
 		}  # fmt: skip
 		return frappe.get_doc({**values, **extra})
@@ -151,6 +151,14 @@ class TestSlotTemplate(TimetableFixture):
 			with self.assertRaises(frappe.ValidationError, msg=text) as caught:
 				self.new_template(periods=periods).insert()
 			self.assertIn(text, str(caught.exception))
+
+	def test_the_practical_block_must_fit_a_run_of_teaching_periods(self):
+		slot = lambda p, a, b, **kw: {"period": p, "from_time": a, "to_time": b, **kw}  # noqa: E731
+		periods = [slot(1, "09:00:00", "09:50:00"), slot(2, "10:00:00", "10:50:00", is_break=1), slot(3, "11:00:00", "11:50:00")]
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.new_template(periods=periods, lab_block_periods=2).insert()  # no two consecutive teaching periods
+		self.assertIn("consecutive", str(caught.exception))
+		self.assertTrue(self.new_template(periods=periods, lab_block_periods=1).insert().name)
 
 	def test_days_and_block_rules(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -220,10 +228,67 @@ class TestGeneration(TimetableFixture):
 
 	def test_regenerating_replaces_the_grid(self):
 		doc, _run = self.generated()
-		generation.start_generation(doc.name)
+		generation.start_generation(doc.name, replace_existing=1)
 		doc.reload()
 		self.assertEqual(len(doc.entries), 26)
 		self.assertEqual(frappe.db.count("Timetable Generation Run", {"timetable": doc.name, "status": "Completed"}), 2)
+
+	def test_a_filled_grid_is_replaced_only_when_asked(self):
+		doc, _run = self.generated()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			generation.start_generation(doc.name)
+		self.assertIn("replace", str(caught.exception).lower())
+		self.assertEqual(len(frappe.get_doc("Timetable", doc.name).entries), 26)
+
+	def test_the_time_limit_is_capped(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc("Timetable Generation Run", generation.start_generation(doc.name, time_limit=99999))
+		self.assertEqual(run.time_limit, generation.MAX_TIME_LIMIT)
+		self.assertEqual(generation.MAX_TIME_LIMIT, 300)
+
+	def test_the_solver_used_is_recorded(self):
+		_doc, run = self.generated()
+		self.assertTrue(run.solver_status.startswith(("cpsat", "search")), run.solver_status)
+
+	def test_a_run_older_than_the_job_timeout_is_marked_dead_and_no_longer_blocks(self):
+		doc = self.new_timetable()
+		stale = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Running"}).insert(ignore_permissions=True)
+		frappe.db.set_value("Timetable Generation Run", stale.name, "modified", add_days(now_datetime(), -1), update_modified=False)
+		fresh = generation.start_generation(doc.name)
+		self.assertNotEqual(fresh, stale.name)
+		stale.reload()
+		self.assertEqual(stale.status, "Failed")
+		self.assertIn("did not finish", stale.error)
+
+	def test_a_recent_live_run_still_blocks(self):
+		doc = self.new_timetable()
+		frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Queued"}).insert(ignore_permissions=True)
+		with self.assertRaises(frappe.ValidationError):
+			generation.start_generation(doc.name)
+
+	def test_a_live_run_can_be_cancelled_and_its_result_is_not_applied(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Queued"}).insert(ignore_permissions=True)
+		generation.cancel_run(run.name)
+		self.assertEqual(frappe.db.get_value("Timetable Generation Run", run.name, "status"), "Cancelled")
+		generation.execute_run(run.name)  # the worker finds it cancelled and does nothing
+		self.assertEqual(frappe.db.get_value("Timetable Generation Run", run.name, "status"), "Cancelled")
+		self.assertEqual(len(frappe.get_doc("Timetable", doc.name).entries), 0)
+		self.assertTrue(generation.start_generation(doc.name))  # a cancelled run does not block
+
+	def test_a_running_run_cancelled_during_the_solve_leaves_the_grid_alone(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Running"}).insert(ignore_permissions=True)
+		generation.cancel_run(run.name)
+		self.assertIsNone(generation.generate(frappe.get_doc("Timetable Generation Run", run.name)))
+		self.assertEqual(len(frappe.get_doc("Timetable", doc.name).entries), 0)
+
+	def test_cancel_needs_an_academic_role(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Queued"}).insert(ignore_permissions=True)
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.PermissionError):
+			generation.cancel_run(run.name)
 
 	def test_only_one_live_run_per_timetable(self):
 		doc = self.new_timetable()
@@ -416,6 +481,67 @@ class TestPublish(TimetableFixture):
 		).insert(ignore_permissions=True)  # fmt: skip
 		publish.publish_now(doc.name, as_of=self.SECOND)
 		self.assertTrue(frappe.db.exists("Course Schedule", other.name))
+
+	def test_editing_a_published_timetable_marks_it_changed_until_republished(self):
+		doc = self.published()
+		self.assertEqual(doc.status, "Published")
+		row = next(e for e in doc.entries if e.kind == "Lecture")
+		busy = {(e.day, e.period) for e in doc.entries if e.section == row.section or e.faculty == row.faculty}
+		row.day, row.period = next((d, p) for d in DAYS for p in (1, 2, 3, 5, 6) if (d, p) not in busy)
+		doc.save()
+		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Changed since publish")
+		publish.publish_now(doc.name, as_of=self.SECOND)
+		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Published")
+
+	def test_saving_a_published_timetable_without_changes_keeps_it_published(self):
+		doc = self.published()
+		doc.save()
+		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Published")
+
+	def test_regenerating_a_published_timetable_marks_it_changed(self):
+		doc = self.published()
+		generation.start_generation(doc.name, replace_existing=1)
+		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Changed since publish")
+
+	def test_a_failed_publish_records_the_error_and_leaves_old_schedules_intact(self):
+		doc = self.published()
+		before = self.schedules(doc)
+		teacher = employee("faculty_3")
+		instructor = frappe.db.get_value("Instructor", {"employee": teacher})
+		frappe.db.set_value("Instructor", instructor, "employee", None)
+		publish.publish_job(doc.name, as_of=self.SECOND)  # the job entry point records the failure instead of raising
+		self.assertEqual(self.schedules(doc), before)
+		doc.reload()
+		self.assertEqual(doc.publish_state, "Failed")
+		self.assertIn(teacher, doc.publish_error)
+		self.assertIn("Instructor", doc.publish_error)
+
+	def test_preflight_refuses_a_missing_instructor_before_deleting_anything(self):
+		doc, _run = self.generated()
+		frappe.db.set_value("Instructor", frappe.db.get_value("Instructor", {"employee": employee("faculty_3")}), "employee", None)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			publish.preflight(doc)
+		self.assertIn("Instructor", str(caught.exception))
+
+	def test_a_clash_with_another_published_timetable_of_the_term_is_refused(self):
+		first = self.published()
+		second = self.new_timetable()
+		entry = first.entries[0]
+		second.append("entries", {k: entry.get(k) for k in ("offering", "kind", "faculty", "room", "day", "period")})
+		second.save()  # same teacher, room and slot as the first timetable's class
+		with self.assertRaises(frappe.ValidationError) as caught:
+			publish.preflight(second)
+		self.assertIn(first.name, str(caught.exception))
+		publish.publish_job(second.name, as_of=self.SECOND)
+		self.assertEqual(frappe.db.get_value("Timetable", second.name, "publish_state"), "Failed")
+		self.assertEqual(frappe.db.count("Course Schedule", {"oc_timetable": second.name}), 0)
+
+	def test_a_successful_publish_clears_an_earlier_error(self):
+		doc, _run = self.generated()
+		frappe.db.set_value("Timetable", doc.name, {"publish_state": "Failed", "publish_error": "old"})
+		publish.publish_job(doc.name, as_of=self.FIRST)
+		doc.reload()
+		self.assertEqual((doc.status, doc.publish_state or "", doc.publish_error or ""), ("Published", "", ""))
 
 	def test_publish_runs_through_the_background_job_entry_point(self):
 		doc, _run = self.generated()

@@ -1,11 +1,9 @@
 """M07-03 Timetable solver interface: `solve(problem) -> Result`.
 
-The default backend is the pure-Python search in `backtracking` (greedy placement with limited backtracking for the
-hard constraints, a cost function for the soft ones). OR-Tools is not a dependency: when it is installed and
-`campus.faculty.timetable.cpsat` exists, that CP-SAT backend (same `solve(problem)` signature) is used instead.
+OR-Tools CP-SAT (`cpsat`) is used when it imports; otherwise the pure-Python search in `backtracking` (greedy placement
+with limited backtracking for the hard constraints, a cost function for the soft ones). Both return a `Result`.
 """
 
-import importlib
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
@@ -34,25 +32,28 @@ class Problem:
 @dataclass
 class Result:
 	entries: list = field(default_factory=list)
-	unmet: list = field(default_factory=list)  # one readable line per constraint the solver could not satisfy
+	unmet: list = field(default_factory=list)  # one readable line per class the solver did not place
 	soft_issues: int = 0
+	status: str = "heuristic"  # optimal / feasible / infeasible (CP-SAT, proven) or heuristic (the search)
+	backend: str = "search"
+	unplaced: int = 0  # classes (sessions) left out
+	placements: dict = field(default_factory=dict)  # session id -> (day, start period, room)
 
 
 def solve(problem):
-	backend = cpsat_backend()
-	if backend:
-		return backend.solve(problem)
+	"""CP-SAT when OR-Tools imports, else the pure-Python search. A CP-SAT backend that errors falls back to the search."""
+	if ortools_available():
+		from campus.faculty.timetable import cpsat
+
+		return cpsat.solve(problem)
 	from campus.faculty.timetable import backtracking
 
 	return backtracking.solve(problem)
 
 
-def cpsat_backend():
+def ortools_available():
 	try:
 		import ortools  # noqa: F401
 	except ImportError:
-		return None
-	try:
-		return importlib.import_module("campus.faculty.timetable.cpsat")
-	except ImportError:
-		return None
+		return False
+	return True

@@ -75,7 +75,7 @@ def violations(entries, grid):
 	valid = [e for e in entries if not is_invalid(e, grid)]
 	found += clashes(valid)
 	found += [v for e in valid for v in entry_breaches(e, grid)]
-	found += lab_block_breaches(valid)
+	found += lab_block_breaches(valid, grid.lab_block)
 	return found
 
 
@@ -126,8 +126,8 @@ def entry_breaches(entry, grid):
 	return found
 
 
-def lab_block_breaches(entries):
-	"""Practical periods of one course and teacher on a day must be consecutive and in one room."""
+def lab_block_breaches(entries, block):
+	"""Practical periods of one course and teacher on a day must be consecutive, in one room and at most `block` long."""
 	groups = defaultdict(list)
 	for e in entries:
 		if e.kind == PRACTICAL:
@@ -136,9 +136,9 @@ def lab_block_breaches(entries):
 	for (offering, _faculty, day), items in groups.items():
 		periods = sorted(e.period for e in items)
 		consecutive = periods == list(range(periods[0], periods[0] + len(periods)))
-		if not consecutive or len({e.room for e in items}) > 1:
+		if not consecutive or len({e.room for e in items}) > 1 or len(periods) > block:
 			found.append(Violation(LAB_BLOCK, day, periods[0], offering,
-				_("{0}: practical periods on {1} must be consecutive and in one lab (periods {2}).").format(offering, day, ", ".join(map(str, periods)))))  # fmt: skip
+				_("{0}: practical periods on {1} must be consecutive, in one lab and at most {3} long (periods {2}).").format(offering, day, ", ".join(map(str, periods)), block)))  # fmt: skip
 	return found
 
 

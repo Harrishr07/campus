@@ -13,8 +13,18 @@ class TimetableSlotTemplate(Document):
 		self.check_periods()
 		if cint(self.lab_block_periods) < 1:
 			frappe.throw(_("A practical block is at least 1 period."))
+		if cint(self.lab_block_periods) > self.longest_teaching_run():
+			frappe.throw(_("A practical block of {0} periods needs {0} consecutive teaching periods; the longest run without a break is {1}.").format(cint(self.lab_block_periods), self.longest_teaching_run()))
 		if cint(self.max_faculty_periods_per_day) < 0:
 			frappe.throw(_("Max Periods per Teacher per Day cannot be negative."))
+
+	def longest_teaching_run(self):
+		longest = run = 0
+		previous = None
+		for p in self.periods:
+			run = 0 if p.is_break else (run + 1 if previous is not None and not previous.is_break and p.period == previous.period + 1 else 1)
+			longest, previous = max(longest, run), p
+		return longest
 
 	def check_days(self):
 		days = [d.day for d in self.days]
