@@ -11,7 +11,11 @@
   "absent_counts_as_attempt",
   "column_break_attempts",
   "max_attempts",
-  "internal_only_min_pct"
+  "internal_only_min_pct",
+  "valuation_section",
+  "third_valuation_diff_pct",
+  "column_break_valuation",
+  "final_valuation_method"
  ],
  "fields": [
   {
@@ -66,11 +70,36 @@
    "fieldtype": "Percent",
    "label": "Internal Only Pass %",
    "description": "Pass mark, as % of the CIA maximum, of an Internal Only course."
+  },
+  {
+   "fieldname": "valuation_section",
+   "fieldtype": "Section Break",
+   "label": "Valuation"
+  },
+  {
+   "fieldname": "third_valuation_diff_pct",
+   "fieldtype": "Percent",
+   "label": "Third Valuation Above %",
+   "default": "15",
+   "non_negative": 1,
+   "description": "A third valuation is allocated when the first two differ by more than this % of the ESE maximum."
+  },
+  {
+   "fieldname": "column_break_valuation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "final_valuation_method",
+   "fieldtype": "Select",
+   "label": "Final ESE Mark",
+   "options": "Average of Closest Two\nAverage of Third and Nearer",
+   "default": "Average of Closest Two",
+   "description": "With two valuations their average; with three, this rule. Rounded half up to a whole mark."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-08 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",

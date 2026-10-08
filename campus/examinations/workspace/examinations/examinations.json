@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 14,
+   "link_count": 18,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -250,6 +250,50 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Dummy Number Map",
+   "link_count": 0,
+   "link_to": "Dummy Number Map",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Answer Script Bundle",
+   "link_count": 0,
+   "link_to": "Answer Script Bundle",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Valuation Allocation",
+   "link_count": 0,
+   "link_to": "Valuation Allocation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Valuation Entry",
+   "link_count": 0,
+   "link_to": "Valuation Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
@@ -310,7 +354,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 22:30:00.000000",
+ "modified": "2026-10-08 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

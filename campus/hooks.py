@@ -436,6 +436,14 @@ has_permission = {
 has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
 # Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
 doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
+# P2-T18 valuation: the dummy-number map is Exam Confidential only; examiners reach only their own allocations.
+_valuation = "campus.examinations.valuation_access"
+permission_query_conditions["Dummy Number Map"] = f"{_valuation}.map_query"
+has_permission["Dummy Number Map"] = f"{_valuation}.map_has_permission"
+for _dt in ("Valuation Allocation", "Valuation Entry"):
+	permission_query_conditions[_dt] = f"{_valuation}.examiner_query"
+	has_permission[_dt] = f"{_valuation}.examiner_has_permission"
+doc_events["DocShare"]["validate"] = [doc_events["DocShare"]["validate"], f"{_valuation}.block_map_share"]
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.

@@ -9,7 +9,8 @@
   "absent",
   "cia",
   "cia_attendance",
-  "ese"
+  "ese",
+  "ese_from_valuation"
  ],
  "fields": [
   {
@@ -52,11 +53,18 @@
    "fieldtype": "Float",
    "label": "ESE",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "ese_from_valuation",
+   "fieldtype": "Check",
+   "label": "ESE from Valuation",
+   "read_only": 1,
+   "description": "The ESE is the final mark of the script's valuations and cannot be edited here."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-08 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Mark Sheet Entry Row",

@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "company",
+  "course",
+  "column_break_packet",
+  "packet_no",
+  "expected_count",
+  "status",
+  "section_scripts",
+  "scripts",
+  "section_questions",
+  "questions",
+  "section_movements",
+  "movements"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "exam_session.company"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_packet",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "packet_no",
+   "fieldtype": "Data",
+   "label": "Packet No",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expected_count",
+   "fieldtype": "Int",
+   "label": "Expected Scripts",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nComplete",
+   "default": "Open",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_scripts",
+   "fieldtype": "Section Break",
+   "label": "Scripts"
+  },
+  {
+   "fieldname": "scripts",
+   "fieldtype": "Table",
+   "label": "Scripts",
+   "options": "Answer Script Bundle Script"
+  },
+  {
+   "fieldname": "section_questions",
+   "fieldtype": "Section Break",
+   "label": "Question Pattern"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "Answer Script Bundle Question"
+  },
+  {
+   "fieldname": "section_movements",
+   "fieldtype": "Section Break",
+   "label": "Movement Log"
+  },
+  {
+   "fieldname": "movements",
+   "fieldtype": "Table",
+   "label": "Movements",
+   "options": "Answer Script Movement"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Answer Script Bundle",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "ASB-.#####",
+ "title_field": "packet_no",
+ "track_changes": 1,
+ "naming_rule": "Expression (old style)"
+}

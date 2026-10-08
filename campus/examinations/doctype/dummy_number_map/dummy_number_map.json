@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "company",
+  "course",
+  "column_break_student",
+  "student",
+  "dummy_number",
+  "section_final",
+  "finalised",
+  "final_ese",
+  "ese_written"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "exam_session.company"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_student",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "dummy_number",
+   "fieldtype": "Data",
+   "label": "Dummy Number",
+   "reqd": 1,
+   "read_only": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_final",
+   "fieldtype": "Section Break",
+   "label": "Final ESE Mark"
+  },
+  {
+   "fieldname": "finalised",
+   "fieldtype": "Check",
+   "label": "Finalised",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_ese",
+   "fieldtype": "Float",
+   "label": "Final ESE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ese_written",
+   "fieldtype": "Check",
+   "label": "Written to Mark Sheet",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Dummy Number Map",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "hash",
+ "title_field": "dummy_number",
+ "track_changes": 0,
+ "search_fields": "",
+ "naming_rule": "Random"
+}

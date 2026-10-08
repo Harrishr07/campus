@@ -1,0 +1,40 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<link rel="stylesheet" href="/assets/campus/css/campus_portal.css">
+<div class="cp">
+	<h2>{{ _("Valuation") }}</h2>
+	{% if not allocations %}<p class="cp-empty">{{ _("No bundles are allocated to you.") }}</p>{% endif %}
+	{% for a in allocations %}
+	<section class="cp-card">
+		<h3>{{ a.course|e }} &middot; {{ _("Packet") }} {{ a.packet_no|e }} &middot; {{ _("Round") }} {{ a.valuation_round|e }}</h3>
+		<p>{{ a.exam_session|e }}{% if a.deadline %} &middot; {{ _("Due") }} {{ frappe.utils.formatdate(a.deadline) }}{% endif %}
+			<span class="cp-badge">{{ _(a.status) }}</span></p>
+		<ul class="cp-list">
+			{% for s in a.scripts %}
+			<li>
+				<strong>{{ s.dummy_number|e }}</strong>
+				{% if s.valued %}
+				<span class="cp-badge">{{ _("Valued") }}: {{ s.total }}</span>
+				{% else %}
+				<form class="cp-form" data-method="campus.examinations.valuation.submit_marks">
+					<input type="hidden" name="allocation" value="{{ a.name|e }}">
+					<input type="hidden" name="dummy_number" value="{{ s.dummy_number|e }}">
+					{% for q in a.questions %}
+					<label for="cp-{{ s.dummy_number|e }}-{{ loop.index }}">{{ q.question|e }} (/{{ q.max_marks }})</label>
+					<input id="cp-{{ s.dummy_number|e }}-{{ loop.index }}" name="q_{{ loop.index }}" type="number"
+						min="0" max="{{ q.max_marks }}" step="0.5" required>
+					{% endfor %}
+					<button class="cp-btn" type="submit">{{ _("Submit marks") }}</button>
+					<p class="cp-message" role="alert"></p>
+				</form>
+				{% endif %}
+			</li>
+			{% endfor %}
+		</ul>
+	</section>
+	{% endfor %}
+</div>
+<script>document.body.dataset.cpError = {{ _("Network error. Please try again.")|tojson }};</script>
+<script src="/assets/campus/js/campus_portal.js"></script>
+{% endblock %}

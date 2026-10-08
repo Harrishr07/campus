@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_location",
+  "to_location",
+  "handed_to",
+  "moved_on",
+  "moved_by",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "from_location",
+   "fieldtype": "Data",
+   "label": "From",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_location",
+   "fieldtype": "Data",
+   "label": "To",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "handed_to",
+   "fieldtype": "Data",
+   "label": "Handed To",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "moved_on",
+   "fieldtype": "Datetime",
+   "label": "Moved On",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "moved_by",
+   "fieldtype": "Link",
+   "label": "Moved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Answer Script Movement",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

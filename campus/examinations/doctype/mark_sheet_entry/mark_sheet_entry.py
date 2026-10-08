@@ -4,6 +4,9 @@ Refused once the session is Published. ESE marks and the ESE absent flag change 
 Marks Entry; CIA may be entered while it is still Draft. When the offering has a CIA Schedule, the CIA column
 is consolidated from the question-wise marks (campus.examinations.cia) and locks at the schedule's entry
 deadline unless a CIA Unlock Request is approved. Who may edit: campus.examinations.access.
+
+M06-04: a row whose ESE came from the script's valuations (campus.examinations.valuation) keeps it; only the
+valuation write-back may change it.
 """
 
 import frappe
@@ -41,6 +44,7 @@ class MarkSheetEntry(Document):
 			frappe.throw(_("Internal Only courses are not graded by the Result Run."))
 		if session.status != MARKS_ENTRY:
 			self.check_ese_unchanged()
+		self.keep_valued_ese()
 		self.apply_cia()
 		self.validate_marks(course)
 
@@ -62,6 +66,20 @@ class MarkSheetEntry(Document):
 			old = before.get(row.student)
 			if (row.ese or 0, row.absent or 0) != ((old.ese or 0, old.absent or 0) if old else (0, 0)):
 				frappe.throw(_("ESE marks can only be entered while the Exam Session is in Marks Entry."))
+
+	def keep_valued_ese(self):
+		if self.flags.valuation_write_back:
+			return
+		before = {} if self.is_new() else {r.student: r for r in self.get_doc_before_save().marks}
+		for row in self.marks:
+			old = before.get(row.student)
+			row.ese_from_valuation = old.ese_from_valuation if old else 0
+			if row.ese_from_valuation and (flt(row.ese), row.absent or 0) != (flt(old.ese), old.absent or 0):
+				frappe.throw(
+					_("Row {0}: the ESE of {1} is the final mark of its valuations and cannot be edited.").format(
+						row.idx, row.student
+					)
+				)
 
 	def apply_cia(self):
 		"""Consolidate CIA from the question marks while open; refuse CIA changes while locked."""

@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "allocation",
+  "dummy_number",
+  "valuation_round",
+  "column_break_alloc",
+  "exam_session",
+  "course",
+  "bundle",
+  "examiner",
+  "section_marks",
+  "marks",
+  "total",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "allocation",
+   "fieldtype": "Link",
+   "label": "Valuation Allocation",
+   "options": "Valuation Allocation",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "dummy_number",
+   "fieldtype": "Data",
+   "label": "Dummy Number",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "valuation_round",
+   "fieldtype": "Select",
+   "label": "Valuation Round",
+   "options": "1\n2\n3",
+   "read_only": 1,
+   "fetch_from": "allocation.valuation_round",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_alloc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "read_only": 1,
+   "fetch_from": "allocation.exam_session"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "fetch_from": "allocation.course",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bundle",
+   "fieldtype": "Link",
+   "label": "Answer Script Bundle",
+   "options": "Answer Script Bundle",
+   "read_only": 1,
+   "fetch_from": "allocation.bundle"
+  },
+  {
+   "fieldname": "examiner",
+   "fieldtype": "Link",
+   "label": "Examiner (User)",
+   "options": "User",
+   "read_only": 1,
+   "fetch_from": "allocation.examiner"
+  },
+  {
+   "fieldname": "section_marks",
+   "fieldtype": "Section Break",
+   "label": "Marks"
+  },
+  {
+   "fieldname": "marks",
+   "fieldtype": "Table",
+   "label": "Question Marks",
+   "options": "Valuation Entry Mark"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Float",
+   "label": "Total",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Valuation Entry",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Valuation Entry",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Examiner",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "VE-.#####",
+ "title_field": "dummy_number",
+ "track_changes": 1,
+ "is_submittable": 1,
+ "naming_rule": "Expression (old style)"
+}
