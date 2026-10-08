@@ -1,7 +1,8 @@
 """M07-07 Salary Structure Assignment by funding mode.
 
 An employee gets the submitted, active Salary Structure of their own company whose Funding Mode matches the employee's
-(Employee.oc_funding_mode). One assignment per employee and From Date: asking again returns the existing one unchanged.
+(Employee.oc_funding_mode). One assignment per employee and From Date: asking again returns the existing submitted one
+unchanged; an existing draft, or one on a structure of another funding mode, is refused for HR to sort out.
 An increment or promotion is an HRMS Employee Promotion plus a new assignment from the promotion date with the new pay.
 """
 
@@ -14,7 +15,10 @@ def assign(employee, from_date, base, variable=0):
 
 	Runs with the caller's permissions (HR creates and submits Salary Structure Assignments).
 	"""
-	frappe.db.get_value("Employee", employee, "name", for_update=True)  # serialise assignments of one employee
+	if not frappe.db.get_value("Employee", employee, "name", for_update=True):  # also serialises one employee's assignments
+		frappe.throw(_("Employee {0} not found.").format(employee), frappe.DoesNotExistError)
+	if not base or base <= 0:
+		frappe.throw(_("Base pay must be more than zero."))
 	existing = existing_assignment(employee, from_date)
 	if existing:
 		return existing
@@ -31,10 +35,25 @@ def assign(employee, from_date, base, variable=0):
 
 
 def existing_assignment(employee, from_date):
-	"""Locking read: it runs after the Employee lock, so it must not see the transaction's older snapshot."""
-	return frappe.db.get_value(
-		"Salary Structure Assignment", {"employee": employee, "from_date": from_date, "docstatus": ["<", 2]}, "name", for_update=True
-	)
+	"""The submitted assignment from `from_date` on the employee's funding mode, or None; refuses a draft or another mode.
+
+	Locking read: it runs after the Employee lock, so it must not see the transaction's older snapshot."""
+	row = frappe.db.get_value(
+		"Salary Structure Assignment", {"employee": employee, "from_date": from_date, "docstatus": ["<", 2]},
+		["name", "docstatus", "salary_structure"], as_dict=True, for_update=True,
+	)  # fmt: skip
+	if not row:
+		return None
+	if row.docstatus == 0:
+		frappe.throw(_("Draft Salary Structure Assignment {0} exists for this date: submit or delete it first.").format(row.name))
+	structure_mode = frappe.db.get_value("Salary Structure", row.salary_structure, "oc_funding_mode")
+	if structure_mode != frappe.db.get_value("Employee", employee, "oc_funding_mode"):
+		frappe.throw(
+			_("Salary Structure Assignment {0} for this date uses {1}, which is not for the employee's funding mode: cancel it first.").format(
+				row.name, row.salary_structure
+			)
+		)
+	return row.name
 
 
 def structure_for(company, funding_mode):

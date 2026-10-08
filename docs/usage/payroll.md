@@ -6,31 +6,47 @@ seeds components and two draft structures, and provides one helper that assigns 
 Funding Mode (Employee > Faculty tab > Funding Mode: Aided or Self-financing).
 
 ## What migrate seeds (once; your edits are never overwritten)
-- **Salary Components**: Basic (B), Dearness Allowance (DA), House Rent Allowance (HRA), Academic Grade Pay (AGP).
-  A component that already exists (HRMS seeds Basic and HRA on Indian sites) is left as it is.
-- **Statutory components**: HRMS's Provident Fund and Professional Tax get their Component Type (Provident Fund,
-  Professional Tax) if it is blank, so the HRMS reports Provident Fund Deductions and Professional Tax Deductions
-  find them.
-- **Two draft Salary Structures per college** (each non-group company with an Institution Profile), named
-  "Aided Staff - ABBR" and "Self-financing Staff - ABBR", with Funding Mode set. They are drafts: review
-  the rates, then submit. A structure is not seeded again while one with the same name or the same company and
-  Funding Mode exists.
+- **Salary Components**: Basic (B), Dearness Allowance (DA), House Rent Allowance (HRA), Academic Grade Pay (AGP),
+  when missing. A component that already exists (HRMS seeds Basic and HRA on Indian sites) is left as it is.
+- **Statutory wiring, once per site** (a site flag; later changes are yours to make): HRMS's Provident Fund and
+  Professional Tax get their Component Type if blank, so the HRMS Provident Fund Deductions and Professional Tax
+  Deductions reports find them; Provident Fund is set **not** to depend on payment days (it is computed on the
+  already-prorated wage, see below); DA, AGP and Provident Fund round to the nearest rupee. Basic and HRA (HRMS's
+  records) are not changed: they keep paise unless you tick Round to the Nearest Integer on them.
+- **Two draft Salary Structures per college, once** (each non-group company with an Institution Profile; the hidden
+  Company flag Payroll Templates Seeded records it), named "Aided Staff - ABBR" and "Self-financing Staff - ABBR",
+  with Funding Mode set and the Review Note "PLACEHOLDER RATES - review every rate before submitting". If you delete
+  one, it is not seeded again.
 
-Default rows (all rates are in the structure record; change them there):
+**All rates below are PLACEHOLDERS.** Check each against your pay commission, state orders and EPF registration
+before submitting the structures.
 
 | Row | Aided | Self-financing |
 | --- | --- | --- |
-| Basic | `base` (pay in the pay band / level) | `base` |
-| Academic Grade Pay | `variable` (0 for 7th CPC pay levels; the slip then shows AGP 0) | - |
-| Dearness Allowance | `(base + variable) * 0.50` | `base * 0.10` |
-| House Rent Allowance | `(base + variable) * 0.10` | `base * 0.10` |
-| Provident Fund | `(base + variable) * (1 + 0.50) * 0.12` (12% of Basic + AGP + DA) | `min(base * (1 + 0.10), 15000) * 0.12` (EPF, 12% of Basic + DA up to the 15,000 wage ceiling) |
-| Professional Tax | 208 a month | 208 a month |
+| Basic | `base` (pay band pay, or 7th CPC pay-matrix cell) | `base` |
+| Academic Grade Pay | `variable` (0 by default) | - |
+| Dearness Allowance | `(base + variable) * 0.50` (PLACEHOLDER) | `base * 0.10` (PLACEHOLDER) |
+| House Rent Allowance | `(base + variable) * 0.10` (PLACEHOLDER, Z-class city) | `base * 0.10` (PLACEHOLDER) |
+| Provident Fund | `min(B + AGP + DA, 15000) * 0.12` | `min(B + DA, 15000) * 0.12` |
+| Professional Tax | disabled: amount 0, Condition `0 and "TODO ..."` | same |
 
-`base` and `variable` are the Base and Variable of the Salary Structure Assignment. Formulas use them rather than
-component abbreviations because HRMS's Basic and HRA already depend on payment days, and HRMS refuses a
-payment-days formula that also reads another payment-days component. Each row is prorated once for leave without pay.
-If you change a rate in one row (for example DA), change the rows built on it too (Provident Fund repeats the DA rate).
+`base` and `variable` are the Base and Variable of the Salary Structure Assignment. Earnings use them rather than
+component abbreviations because HRMS's Basic and HRA depend on payment days, and HRMS refuses a payment-days
+formula that also reads another payment-days component. Each earning is prorated once for leave without pay.
+Provident Fund does not depend on payment days and reads the prorated Basic, AGP and DA, so the 15,000 ceiling applies
+to the wage actually earned (15 of 30 days on base 30,000: PF on 16,500 capped at 15,000 = 1,800, not 900).
+
+**DA and AGP (6th vs 7th CPC).** Under the 7th CPC pay matrix there is no AGP: put the matrix pay in Base, leave
+Variable 0, and set DA to the current central/state rate on Basic. Under the 6th CPC (pay band + AGP), put the band
+pay in Base and the AGP in Variable; DA and HRA are then on band pay + AGP. Choose one per structure.
+
+**HRA.** 7th CPC HRA is 30% / 20% / 10% of Basic for X / Y / Z class cities once DA reaches 50% (24/16/8% below 25% DA, 27/18/9% from 25%). The
+seed uses 10% (Z class); set your city's rate. Self-financing colleges set their own policy.
+
+**PF ceiling and GPF.** PF is capped at 12% of a 15,000 wage by default, the statutory EPF minimum. To deduct on the
+full wage (voluntary higher contribution), change the formula to `(B + AGP + DA) * 0.12`. Aided teachers on GPF
+(state GPF/CPS instead of EPF): replace the Provident Fund row with your GPF/CPS component and its rate (CPS
+is usually 10% of Basic + DA), and keep EPF only for staff who are covered by it.
 
 ## Steps for a college
 1. **Accounts**: on the Company, Default Payroll Payable Account must be an account of type **Payable** (open
@@ -45,8 +61,10 @@ If you change a rate in one row (for example DA), change the rows built on it to
 5. **Assign** with `campus.faculty.api.assign_salary_structure(employee, from_date, base, variable=0)` (POST; needs
    permission to create Salary Structure Assignments). It picks the submitted, active structure of the employee's
    own company for their Funding Mode, then creates and submits the assignment. Calling it again for the same
-   employee and From Date returns the existing assignment unchanged. It refuses an employee without a Funding
-   Mode, a mode without a submitted structure, and a mode with two active structures.
+   employee and From Date returns the existing submitted assignment unchanged. It refuses: an unknown employee, a
+   Base of zero or less, an employee without a Funding Mode, a mode without a submitted structure, a mode with two
+   active structures, an existing draft assignment for that date (submit or delete it), and an existing assignment
+   for that date on a structure of another funding mode (cancel it).
 6. **Run payroll**: Payroll Entry (company, month, payroll payable account), Get Employees, Submit (creates the
    draft slips), check, then Submit Salary Slips.
 
@@ -64,11 +82,13 @@ india_compliance has no payroll features; HRMS provides the components and two r
   the Component Type is set (done by migrate). Not provided: the employer's share (EPF 3.67% / EPS 8.33%) and the
   EPFO ECR file. Add an Employer Contribution component and row if you need the employer share on the slip. Aided
   colleges whose teachers subscribe to GPF can rename or replace the row.
-- **Professional Tax**: wired as a fixed 208 a month (Tamil Nadu's top half-yearly slab, 1,250, spread monthly).
-  Not provided: state slab tables or half-yearly deduction. Use a Condition on the row (for example
-  `base > 12500`), or several PT rows with conditions, for your state's slabs. HRMS's Professional Tax component
-  depends on payment days, so PT is prorated in a month with leave without pay; clear "Depends on Payment Days" on
-  the component if your state deducts it in full.
+- **Professional Tax**: seeded **disabled**: the row has amount 0 and the Condition
+  `0 and "TODO: enter your state Professional Tax slab ..."`, so no PT is deducted until you configure it. PT is a
+  state tax with half-yearly slabs (for example Tamil Nadu, half-yearly income above 75,000: 1,250, about 208 a
+  month). Replace the Condition with your slab test on the earned wage (for example `B + DA + HRA > 12500`) and set
+  the amount, or add one PT row per slab. Not provided: slab tables or half-yearly deduction. HRMS's Professional Tax
+  component depends on payment days, so PT is prorated in a month with leave without pay; clear "Depends on Payment
+  Days" on the component if your state deducts it in full.
 - **ESI**: not provided by HRMS or india_compliance (no component, no report). For staff earning up to 21,000 a month,
   add an "Employee State Insurance" deduction (0.75%, Condition on gross) and an employer contribution (3.25%) to
   the structure.
@@ -76,7 +96,11 @@ india_compliance has no payroll features; HRMS provides the components and two r
   component as usual.
 
 ## Demo and tests
-`campus/tests/test_faculty_payroll.py` builds September 2026 payroll for Demo College of Engineering: faculty_1
-(Aided, base 40,000, AGP 9,000) gets gross 78,400, deductions 9,028, net 69,372; faculty_2 (Self-financing, base
-30,000) gets gross 36,000, deductions 2,008, net 33,992. After an Employee Promotion with a new assignment from
-2026-08-01 at base 41,200, faculty_1's September slip is gross 80,320, net 71,076.
+`campus/tests/test_faculty_payroll.py` builds September 2026 payroll for Demo College of Engineering (no PT
+configured):
+- faculty_1 (Aided, base 40,000, AGP 9,000): gross 78,400, PF 1,800, net 76,600.
+- faculty_2 (Self-financing, base 30,000): gross 36,000, PF 1,800, net 34,200. With 15 days' leave without pay:
+  gross 18,000, PF 1,800, net 16,200.
+- faculty_3 (Self-financing, base 12,346): DA 1,235 (rounded), HRA 1,234.6, PF 1,630 (rounded from 1,629.72).
+- After an Employee Promotion with a new assignment from 2026-08-01 at base 41,200: faculty_1's September slip is
+  gross 80,320, net 78,520; the July slip keeps 78,400 / 76,600.
