@@ -1,6 +1,6 @@
-"""M15-01 Data points of the thin slice.
+"""M01-02 / M17-06 Data points, all (company, academic_year, department=None); `department` narrows by Program.department.
 
-students_admitted: submitted Program Enrollments of the company in the academic year.
+Thin slice: students_admitted: submitted Program Enrollments of the company in the academic year.
 final_year_appeared / final_year_passed: Student Results of the company's Exam Sessions flagged `is_final_year`
 whose term belongs to the academic year. A student appeared when at least one course was sat (Pass or Fail;
 SA and AB rows are not sittings) and passed when, in addition, every course of the result is Pass.
@@ -8,14 +8,15 @@ Counts are per Student Result, i.e. per student per final-year session.
 scholarship_govt_students / scholarship_inst_students (AQAR 5.1.1 / 5.1.2): distinct students with a sanctioned
 Scholarship Application of a government / institutional scheme of the company in the academic year.
 
-Phase 1 data points, all (company, academic_year, department=None); `department` narrows by Program.department:
-reserved_seats_filled / seats_earmarked_reserved: filled (submitted Program Enrollments) / sanctioned (Seat Matrix
+Phase 1: reserved_seats_filled / seats_earmarked_reserved: filled (submitted Program Enrollments) / sanctioned (Seat Matrix
 rows) of the matrix-counted quotas in categories flagged Student Category.oc_is_reserved, as the Live Seat Matrix
 report. total_students: distinct students with a submitted Program Enrollment in the year. outgoing_students:
-students whose date_of_leaving falls in the year. programmes_offered: Programs with a Seat Matrix in the year.
-courses_offered: Courses with a course Student Group (offering) in the year. mentor_ratio: students of the year
-with a mentor (Student.oc_mentor) per distinct mentor. scholarship_beneficiaries_govt / _institution are the
-AQAR 5.1.1 / 5.1.2 functions above under the names the plan uses.
+students who left with a transfer certificate (leaving_certificate_number) dated (date_of_leaving) in the year, less
+those with a submitted Admission Cancellation. programmes_offered: Programs with a Seat Matrix in the year.
+courses_offered: Courses with a course Student Group (offering) in the year. mentor_ratio (NAAC 2.3.3): students of the year
+per distinct active Employee who mentors (Student.oc_mentor) one of them; the records are all the students.
+scholarship_beneficiaries_govt / _institution are the AQAR 5.1.1 / 5.1.2 functions above under the names the plan
+uses; a department keeps the students with a submitted Program Enrollment in one of its programs.
 """
 
 import frappe
@@ -30,30 +31,26 @@ def refs(doctype, names):
 
 
 @campus_metric("students_admitted")
-def students_admitted(company, academic_year):
-	names = frappe.get_all(
-		"Program Enrollment",
-		{"oc_company": company, "academic_year": academic_year, "docstatus": 1},
-		pluck="name",
-		order_by="name",
-	)
+def students_admitted(company, academic_year, department=None):
+	filters = {"oc_company": company, "academic_year": academic_year, "docstatus": 1}
+	names = frappe.get_all("Program Enrollment", program_filter(filters, department), pluck="name", order_by="name")
 	return {"value": len(names), "records": refs("Program Enrollment", names)}
 
 
 @campus_metric("final_year_appeared")
-def final_year_appeared(company, academic_year):
-	names = sorted(appeared_results(company, academic_year))
+def final_year_appeared(company, academic_year, department=None):
+	names = sorted(appeared_results(company, academic_year, department))
 	return {"value": len(names), "records": refs("Student Result", names)}
 
 
 @campus_metric("final_year_passed")
-def final_year_passed(company, academic_year):
-	outcomes = appeared_results(company, academic_year)
+def final_year_passed(company, academic_year, department=None):
+	outcomes = appeared_results(company, academic_year, department)
 	names = sorted(name for name, results in outcomes.items() if set(results) == {"Pass"})
 	return {"value": len(names), "records": refs("Student Result", names)}
 
 
-def appeared_results(company, academic_year):
+def appeared_results(company, academic_year, department=None):
 	"""{Student Result: [course results]} of the final-year results in which at least one course was sat."""
 	terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
 	sessions = frappe.get_all(
@@ -63,7 +60,7 @@ def appeared_results(company, academic_year):
 	)
 	if not sessions:
 		return {}
-	results = frappe.get_all("Student Result", {"exam_session": ["in", sessions]}, pluck="name")
+	results = frappe.get_all("Student Result", program_filter({"exam_session": ["in", sessions]}, department), pluck="name")
 	rows = frappe.get_all(
 		"Student Result Course",
 		{"parenttype": "Student Result", "parent": ["in", results or [""]]},
@@ -75,21 +72,24 @@ def appeared_results(company, academic_year):
 	return {name: outcomes for name, outcomes in by_result.items() if {"Pass", "Fail"} & set(outcomes)}
 
 
-def scholarship_students(company, academic_year, scheme_type):
+def scholarship_students(company, academic_year, scheme_type, department=None):
 	rows = scholarship_beneficiaries(company, academic_year, scheme_type)
+	if department:
+		enrolled = department_students([r.student for r in rows], department)
+		rows = [r for r in rows if r.student in enrolled]
 	return {"value": len({r.student for r in rows}), "records": refs("Scholarship Application", sorted(r.name for r in rows))}
 
 
 @campus_metric("scholarship_govt_students")
 @campus_metric("scholarship_beneficiaries_govt")
 def scholarship_govt_students(company, academic_year, department=None):
-	return scholarship_students(company, academic_year, "Government")
+	return scholarship_students(company, academic_year, "Government", department)
 
 
 @campus_metric("scholarship_inst_students")
 @campus_metric("scholarship_beneficiaries_institution")
 def scholarship_inst_students(company, academic_year, department=None):
-	return scholarship_students(company, academic_year, "Institutional")
+	return scholarship_students(company, academic_year, "Institutional", department)
 
 
 def department_programs(department):
@@ -102,6 +102,12 @@ def program_filter(filters, department, fieldname="program"):
 	if programs is not None:
 		filters[fieldname] = ["in", programs or [""]]
 	return filters
+
+
+def department_students(students, department):
+	"""Those of `students` with a submitted Program Enrollment in a program of `department`."""
+	filters = program_filter({"student": ["in", students or [""]], "docstatus": 1}, department)
+	return set(frappe.get_all("Program Enrollment", filters, pluck="student"))
 
 
 def reserved_categories():
@@ -152,16 +158,11 @@ def total_students(company, academic_year, department=None):
 @campus_metric("outgoing_students")
 def outgoing_students(company, academic_year, department=None):
 	start, end = frappe.db.get_value("Academic Year", academic_year, ["year_start_date", "year_end_date"])
-	leavers = frappe.get_all(
-		"Student", {"oc_company": company, "date_of_leaving": ["between", [getdate(start), getdate(end)]]}, pluck="name"
-	)
+	leavers = set(frappe.get_all("Student", {"oc_company": company, "leaving_certificate_number": ["is", "set"],
+		"date_of_leaving": ["between", [getdate(start), getdate(end)]]}, pluck="name"))  # fmt: skip
+	leavers -= set(frappe.get_all("Admission Cancellation", {"student": ["in", list(leavers) or [""]], "docstatus": 1}, pluck="student"))
 	if department:
-		enrolled = frappe.get_all(
-			"Program Enrollment",
-			program_filter({"student": ["in", leavers or [""]], "docstatus": 1}, department),
-			pluck="student",
-		)
-		leavers = [s for s in leavers if s in set(enrolled)]
+		leavers &= department_students(list(leavers), department)
 	return {"value": len(leavers), "records": refs("Student", sorted(leavers))}
 
 
@@ -184,9 +185,7 @@ def courses_offered(company, academic_year, department=None):
 @campus_metric("mentor_ratio")
 def mentor_ratio(company, academic_year, department=None):
 	students = year_students(company, academic_year, department)
-	rows = frappe.get_all(
-		"Student", {"name": ["in", students or [""]], "oc_mentor": ["is", "set"]}, ["name", "oc_mentor"], order_by="name"
-	)
-	mentors = {r.oc_mentor for r in rows}
-	value = round(len(rows) / len(mentors), 2) if mentors else 0
-	return {"value": value, "records": refs("Student", [r.name for r in rows])}
+	assigned = frappe.get_all("Student", {"name": ["in", students or [""]], "oc_mentor": ["is", "set"]}, pluck="oc_mentor")
+	mentors = frappe.get_all("Employee", {"name": ["in", list(set(assigned)) or [""]], "status": "Active"}, pluck="name")
+	value = round(len(students) / len(mentors), 2) if mentors else 0
+	return {"value": value, "records": refs("Student", students)}

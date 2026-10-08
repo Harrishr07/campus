@@ -63,6 +63,7 @@ REGULATIONS = [
 # interleaved so even the first 10 students of a small batch carry four categories.
 CATEGORY_CYCLE = [*["OC", "BC", "MBC", "SC"] * 4, "OC", "BC", "OC", "ST"]
 CATEGORIES = sorted(set(CATEGORY_CYCLE))
+RESERVED_CATEGORIES = {"BC", "MBC", "SC", "ST"}  # Student Category.oc_is_reserved: counted as reserved by the IQAC data points
 
 ALL_COMPANIES = [name for name, _abbr, _parent in COMPANIES]
 # username -> (roles, companies the user is limited to); Academics User is the general staff role
@@ -449,7 +450,10 @@ def make_position_holders():
 
 def make_categories():
 	for category in CATEGORIES:
-		get_or_insert("Student Category", {"category": category}, {})
+		reserved = int(category in RESERVED_CATEGORIES)
+		name = get_or_insert("Student Category", {"category": category}, {"oc_is_reserved": reserved})
+		if frappe.db.get_value("Student Category", name, "oc_is_reserved") != reserved:
+			frappe.db.set_value("Student Category", name, "oc_is_reserved", reserved)
 
 
 def student_email(slug, batch, number):

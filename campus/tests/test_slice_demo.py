@@ -6,6 +6,8 @@ from unittest.mock import patch
 import frappe
 
 from campus.admissions.api import admit
+from campus.admissions.report.live_seat_matrix import live_seat_matrix
+from campus.iqac.registry import data_point
 from campus.iqac.setup import FRAMEWORK
 from campus.student_services import portal
 from campus.student_services.api import attendance_summary, student_offerings
@@ -131,6 +133,15 @@ class TestSliceDemo(CampusTestCase):
 			admitted.value,
 			frappe.db.count("Program Enrollment", {"oc_company": demo.ENGINEERING, "academic_year": demo_slice.YEAR, "docstatus": 1}),
 		)
+
+	def test_reserved_seat_data_points_are_filled_from_the_flagged_demo_categories(self):
+		filled = data_point("reserved_seats_filled", demo.ENGINEERING, demo_slice.YEAR)
+		earmarked = data_point("seats_earmarked_reserved", demo.ENGINEERING, demo_slice.YEAR)
+		self.assertEqual(filled["value"], 3)  # the BC, MBC and SC government-quota students; OC is open
+		self.assertEqual(earmarked["value"], 50)  # 10 seats each: government BC, MBC, SC, ST and management BC
+		report = live_seat_matrix.data(frappe._dict(company=demo.ENGINEERING, program=demo_slice.PROGRAM, academic_year=demo_slice.YEAR))
+		reserved = [r for r in report if r["category"] in demo.RESERVED_CATEGORIES and not r["supernumerary"]]
+		self.assertEqual((filled["value"], earmarked["value"]), (sum(r["filled"] for r in reserved), sum(r["sanctioned"] for r in reserved)))
 
 	def test_portal_shows_student_1_only_their_own_data(self):
 		frappe.set_user(demo.email("student_1"))

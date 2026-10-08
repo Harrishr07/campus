@@ -1,7 +1,6 @@
 """M01-02 Data point registry: `@campus_metric("key")` registers a function that returns {value, records}.
 
-A data point function takes (company, period, department=None) (period is the academic year; thin-slice functions
-take no department) and returns {"value": number, "records": [{"doctype", "name"}]}.
+A data point function takes (company, period, department=None) (period is the academic year) and returns {"value": number, "records": [{"doctype", "name"}]}.
 The registry is the only namespace a Framework Node formula may use.
 """
 
@@ -26,7 +25,7 @@ def data_point_keys():
 	return set(REGISTRY)
 
 
-def data_point(key, company, academic_year):
+def data_point(key, company, academic_year, department=None):
 	"""Evaluate one registered data point: {"value", "records"}."""
 	data_point_keys()
-	return REGISTRY[key](company, academic_year)
+	return REGISTRY[key](company, academic_year, department)

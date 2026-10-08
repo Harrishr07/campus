@@ -35,6 +35,10 @@ class TestDemoData(CampusTestCase):
 		self.assertEqual(counts["Student"], 30)  # 10 per engineering program, 2026-27 batch
 		self.assertEqual(frappe.db.count("Institution Profile", {"name": ["in", demo.ALL_COMPANIES]}), 3)
 
+	def test_reserved_categories_are_flagged(self):
+		flagged = set(frappe.get_all("Student Category", {"name": ["in", demo.CATEGORIES], "oc_is_reserved": 1}, pluck="name"))
+		self.assertEqual(flagged, {"BC", "MBC", "SC", "ST"})
+
 	def test_cse_r2022_curriculum_is_a_draft_with_derived_credits(self):
 		self.assertEqual(demo.counts()["Curriculum"], 1)
 		curriculum = frappe.get_doc("Curriculum", {"program": "B.E. CSE"})
