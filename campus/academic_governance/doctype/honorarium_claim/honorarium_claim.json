@@ -144,7 +144,8 @@
    "mandatory_depends_on": "ta_actuals",
    "fieldname": "ta_bill",
    "fieldtype": "Attach",
-   "label": "Travel Bill"
+   "label": "Travel Bill",
+   "description": "Save the claim, attach the bill to it, then select the attachment here."
   },
   {
    "fieldname": "daily_allowance",
@@ -185,7 +186,8 @@
    "options": "Purchase Invoice",
    "read_only": 1,
    "no_copy": 1,
-   "description": "Drafted on approval; Accounts reviews and submits it."
+   "description": "Drafted on approval; Accounts reviews and submits it.",
+   "search_index": 1
   },
   {
    "fieldname": "tds_amount",
@@ -217,7 +219,7 @@
  "is_submittable": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-11 10:00:00.000000",
+ "modified": "2026-10-12 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Honorarium Claim",

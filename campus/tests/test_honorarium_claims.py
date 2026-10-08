@@ -120,8 +120,19 @@ class TestHonorariumClaim(CampusTestCase):
 		frappe.set_user("Administrator")
 		return frappe.get_doc("Honorarium Claim", claim.name)
 
-	def bill(self):
-		return frappe.get_doc({"doctype": "File", "file_name": f"ta-{frappe.generate_hash(length=6)}.txt", "content": "train fare"}).insert().file_url
+	def bill(self, claim=None, doctype="Honorarium Claim"):
+		"""A bill file, attached to `claim` when given; owned by the session user."""
+		return frappe.get_doc(
+			{
+				"doctype": "File", "file_name": f"ta-{frappe.generate_hash(length=6)}.txt", "content": "train fare",
+				"attached_to_doctype": doctype if claim else None, "attached_to_name": claim,
+			}
+		).insert().file_url  # fmt: skip
+
+	def at_actuals(self, claim, bill):
+		claim = frappe.get_doc("Honorarium Claim", claim.name)
+		claim.update({"ta_actuals": 1, "ta_bill": bill})
+		return claim.save()
 
 	@staticmethod
 	def withheld(invoice):
@@ -148,7 +159,8 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertEqual((claim.tds_amount, claim.net_payable), (6500, 58500))
 
 	def test_ta_at_actuals_with_a_bill_is_left_out_of_tds_but_da_is_not(self):
-		claim = self.approved(self.claim(honorarium=60000, travel_allowance=3000, daily_allowance=2000, ta_actuals=1, ta_bill=self.bill()))
+		claim = self.claim(honorarium=60000, travel_allowance=3000, daily_allowance=2000)
+		claim = self.approved(self.at_actuals(claim, self.bill(claim.name)))
 		self.assertEqual(self.withheld(frappe.get_doc("Purchase Invoice", claim.purchase_invoice)), 6200)
 
 	def test_ta_at_actuals_needs_the_bill(self):
@@ -157,6 +169,28 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertIn("bill", str(caught.exception))
 		with self.assertRaises(frappe.ValidationError):
 			self.claim(ta_actuals=1, ta_bill="/files/no-such-bill.pdf")
+		with self.assertRaises(frappe.ValidationError):
+			self.claim(ta_actuals=1, ta_bill=self.bill())  # a new claim has nothing attached yet
+
+	def test_the_ta_bill_must_be_attached_to_this_claim(self):
+		claim = self.claim()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.at_actuals(claim, self.bill())  # unattached
+		self.assertIn("attach", str(caught.exception).lower())
+		with self.assertRaises(frappe.ValidationError):
+			self.at_actuals(claim, self.bill(self.meeting, doctype="Body Meeting"))
+
+	def test_the_ta_bill_must_be_uploaded_by_the_claimant_or_accounts(self):
+		claim = self.claim()
+		frappe.set_user(CLERK)  # neither the claim's owner nor Accounts
+		bill = self.bill(claim.name)
+		frappe.set_user("Administrator")
+		with self.assertRaises(frappe.ValidationError):
+			self.at_actuals(claim, bill)
+		frappe.set_user(APPROVER)  # Accounts
+		bill = self.bill(claim.name)
+		frappe.set_user("Administrator")
+		self.assertEqual(self.at_actuals(claim, bill).ta_actuals, 1)
 
 	def test_the_cumulative_threshold_counts_earlier_submitted_invoices(self):
 		first = self.approved(self.claim(honorarium=30000, travel_allowance=0, daily_allowance=0))
@@ -302,3 +336,16 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertIn("&lt;b&gt;Dr. Bold&lt;/b&gt;", html)
 		self.assertNotIn("<b>Dr. Bold</b>", html)
 		self.assertIn("30,000", html)
+
+	def test_the_voucher_of_a_cancelled_invoice_shows_no_payable_figures(self):
+		claim = self.approved(self.claim(honorarium=60000, travel_allowance=0, daily_allowance=0))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.submit()
+		invoice.cancel()
+		html = frappe.get_print("Honorarium Claim", claim.name, "Honorarium Voucher")
+		self.assertIn("Invoice cancelled", html)
+		self.assertNotIn("54,000", html)
+		self.assertNotIn("6,000", html)
+
+	def test_the_invoice_link_is_indexed(self):
+		self.assertTrue(frappe.get_meta("Honorarium Claim").get_field("purchase_invoice").search_index)

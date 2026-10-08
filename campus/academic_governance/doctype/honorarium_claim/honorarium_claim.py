@@ -18,6 +18,8 @@ from frappe.utils import flt, getdate, today
 from campus.academic_governance import honorarium
 from campus.campus_platform.api import ApprovableDocument
 
+ACCOUNTS_ROLES = ("Accounts User", "Accounts Manager")
+
 
 class HonorariumClaim(ApprovableDocument, Document):
 	def validate(self):
@@ -47,10 +49,12 @@ class HonorariumClaim(ApprovableDocument, Document):
 			frappe.delete_doc("Purchase Invoice", invoice, ignore_permissions=True)
 
 	def live_figures(self):
-		"""TDS and net payable from the linked invoice as it stands now (for the voucher); the stored ones otherwise."""
-		if self.purchase_invoice and frappe.db.exists("Purchase Invoice", self.purchase_invoice):
-			return frappe._dict(honorarium.payable_figures(frappe.get_doc("Purchase Invoice", self.purchase_invoice)))
-		return frappe._dict(tds_amount=self.tds_amount, net_payable=self.net_payable)
+		"""TDS and net payable for the voucher: from the linked invoice as it stands now while it is draft or submitted;
+		the stored figures (zeroed when Accounts cancelled it) otherwise, with `cancelled` set."""
+		status = self.purchase_invoice and frappe.db.get_value("Purchase Invoice", self.purchase_invoice, "docstatus")
+		if status is not None and status < 2 and self.purchase_invoice:
+			return frappe._dict(honorarium.payable_figures(frappe.get_doc("Purchase Invoice", self.purchase_invoice)), cancelled=False)
+		return frappe._dict(tds_amount=self.tds_amount, net_payable=self.net_payable, cancelled=status == 2)
 
 	def check_meeting_access(self):
 		"""The creator (or whoever moves the claim to another meeting) must be able to read that meeting."""
@@ -75,10 +79,16 @@ class HonorariumClaim(ApprovableDocument, Document):
 			frappe.throw(_("Ask Accounts to set the TDS category on Supplier {0}.").format(self.supplier))
 
 	def check_ta_bill(self):
+		"""TA at actuals needs the bill as a File attached to this claim, uploaded by the claim's owner or by Accounts."""
 		if not self.ta_actuals:
 			return
-		if not self.ta_bill or not frappe.db.exists("File", {"file_url": self.ta_bill}):
-			frappe.throw(_("Attach the travel bill to claim TA at actuals."))
+		owner = self.ta_bill and frappe.db.get_value(
+			"File", {"file_url": self.ta_bill, "attached_to_doctype": self.doctype, "attached_to_name": self.name}, "owner"
+		)
+		if not owner:
+			frappe.throw(_("Attach the travel bill to this claim (save it first), then tick TA at Actuals."))
+		if owner != self.owner and not set(ACCOUNTS_ROLES) & set(frappe.get_roles(owner)):
+			frappe.throw(_("The travel bill must be uploaded by {0} or by Accounts.").format(self.owner))
 
 	def ta_exempt(self):
 		"""TA is left out of TDS only at actuals with the bill attached."""
