@@ -231,6 +231,8 @@ doc_events["Journal Entry"] = {
 	"validate": "campus.campus_finance.scholarships.block_amend",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
 }
+doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee"}
+doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
 
 # Scheduled Tasks
 # ---------------

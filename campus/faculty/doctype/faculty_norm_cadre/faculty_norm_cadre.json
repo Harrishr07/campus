@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cadre",
+  "ratio_share",
+  "minimum_qualification",
+  "requires_phd",
+  "requires_net_set_or_phd",
+  "minimum_experience_years"
+ ],
+ "fields": [
+  {
+   "fieldname": "cadre",
+   "fieldtype": "Select",
+   "label": "Cadre",
+   "options": "Professor\nAssociate Professor\nAssistant Professor",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ratio_share",
+   "fieldtype": "Int",
+   "label": "Cadre Ratio Share",
+   "reqd": 1,
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "This cadre's part of the cadre ratio, e.g. 1, 2 and 6 for 1:2:6."
+  },
+  {
+   "fieldname": "minimum_qualification",
+   "fieldtype": "Select",
+   "label": "Minimum Qualification",
+   "options": "\nDiploma\nGraduate\nPost Graduate\nDoctorate",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "requires_phd",
+   "fieldtype": "Check",
+   "label": "PhD Required",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "requires_net_set_or_phd",
+   "fieldtype": "Check",
+   "label": "NET / SET / SLET or PhD Required"
+  },
+  {
+   "fieldname": "minimum_experience_years",
+   "fieldtype": "Float",
+   "label": "Minimum Teaching Experience (Years)",
+   "non_negative": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "Faculty Norm Cadre",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1,
+ "permissions": []
+}

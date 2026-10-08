@@ -17,12 +17,16 @@ courses_offered: Courses with a course Student Group (offering) in the year. men
 per distinct active Employee who mentors (Student.oc_mentor) one of them; the records are all the students.
 scholarship_beneficiaries_govt / _institution are the AQAR 5.1.1 / 5.1.2 functions above under the names the plan
 uses; a department keeps the students with a submitted Program Enrollment in one of its programs.
+
+Phase 2 (P2-T05): full_time_teachers, sanctioned_posts, phd_teachers, teacher_experience_years and student_teacher_ratio
+come from campus.faculty.api (see campus/faculty/staffing.py for the counting rules); `department` is Employee.department.
 """
 
 import frappe
 from frappe.utils import getdate
 
 from campus.campus_finance.api import scholarship_beneficiaries
+from campus.faculty import api as faculty
 from campus.iqac.registry import campus_metric
 
 
@@ -189,3 +193,29 @@ def mentor_ratio(company, academic_year, department=None):
 	mentors = frappe.get_all("Employee", {"name": ["in", list(set(assigned)) or [""]], "status": "Active"}, pluck="name")
 	value = round(len(students) / len(mentors), 2) if mentors else 0
 	return {"value": value, "records": refs("Student", students)}
+
+
+# P2-T05 faculty data points (NAAC 2.2.2, 2.4.1-2.4.3), computed by the Faculty module.
+@campus_metric("full_time_teachers")
+def full_time_teachers(company, academic_year, department=None):
+	return faculty.full_time_teachers(company, academic_year, department)
+
+
+@campus_metric("sanctioned_posts")
+def sanctioned_posts(company, academic_year, department=None):
+	return faculty.sanctioned_posts(company, academic_year, department)
+
+
+@campus_metric("phd_teachers")
+def phd_teachers(company, academic_year, department=None):
+	return faculty.phd_teachers(company, academic_year, department)
+
+
+@campus_metric("teacher_experience_years")
+def teacher_experience_years(company, academic_year, department=None):
+	return faculty.teacher_experience_years(company, academic_year, department)
+
+
+@campus_metric("student_teacher_ratio")
+def student_teacher_ratio(company, academic_year, department=None):
+	return faculty.student_teacher_ratio(company, academic_year, department)

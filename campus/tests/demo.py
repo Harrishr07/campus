@@ -141,12 +141,19 @@ def build_base(scale):
 	make_institution_profiles()
 	make_service_agreements()
 	make_position_holders()
+	make_faculty()
 	make_certificate_policy()
 	make_categories()
 	batches = FULL_BATCHES if scale == "full" else SMALL_BATCHES
 	make_students(batches, STUDENTS_PER_BATCH[scale])
 	make_student_users()
 	assign_missing_regulations()
+
+
+def make_faculty():
+	from campus.tests.demo_faculty import make_faculty as build  # demo_faculty imports this module
+
+	build()
 
 
 def make_certificate_policy():

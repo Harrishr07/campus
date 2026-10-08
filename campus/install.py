@@ -10,6 +10,7 @@ from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regu
 from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.setup import setup_curriculum
 from campus.examinations.setup import ensure_coe_role
+from campus.faculty.setup import setup_faculty
 from campus.iqac.setup import ensure_iqac_role, seed_framework
 from campus.student_services.setup import ensure_grievance_role, setup_student_services
 
@@ -41,6 +42,7 @@ def after_install():
 	setup_messaging()
 	setup_finance()
 	setup_student_services()
+	setup_faculty()
 	seed_framework()
 
 
@@ -57,4 +59,5 @@ def after_migrate():
 	setup_messaging()
 	setup_finance()
 	setup_student_services()
+	setup_faculty()
 	seed_framework()
