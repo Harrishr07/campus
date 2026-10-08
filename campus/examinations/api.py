@@ -66,6 +66,31 @@ def reraise_exam_fee_invoices(exam_session):
 	return exam_fee.reraise_invoices(exam_session)
 
 
+@frappe.whitelist(methods=["POST"])
+def generate_seating(seating_plan):
+	"""Seat the plan's students in its Exam Halls (COE only); returns the number seated. Refused once attendance
+	is marked."""
+	from campus.examinations import seating
+
+	return seating.generate(seating_plan)
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_exam_absent(seating_plan, students, value=1):
+	"""Mark (1) or clear (0) students absent on a Seating Plan (COE only); the Result Run grades them AB."""
+	from campus.examinations import seating
+
+	return seating.mark_absent(seating_plan, students, value)
+
+
+@frappe.whitelist(methods=["POST"])
+def generate_invigilation(roster):
+	"""Build the Invigilation Roster's duties from the session's Seating Plans (COE only); returns the count."""
+	from campus.examinations import invigilation
+
+	return invigilation.generate(roster)
+
+
 def exam_dues_block(student, exam_session):
 	"""{blocked, amount}: the hall ticket gate. Unpaid Exam-head dues in the session's company block a hall ticket
 	(never the registration itself)."""

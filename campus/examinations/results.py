@@ -1,7 +1,8 @@
 """M12-02 Result Run: Student Results (course grades, SGPA, CGPA) from Mark Sheet Entries.
 
 Per student and course of the session's term, the first applicable outcome wins:
-SA when attendance eligibility (Student Services) is Shortage; AB when the mark row says absent;
+SA when attendance eligibility (Student Services) is Shortage; AB when the student is marked absent in a Seating
+Plan of the session (exam attendance, M06-02) or the mark row says absent;
 else pass or fail by the student's Exam Rule Set and a grade from the student's Grading Scheme
 (a fail is grade U, grade point 0). SGPA counts passed courses only (credits from the curriculum row of
 the offering); CGPA is cumulative over the student's Student Results up to this session's term.
@@ -12,7 +13,7 @@ import frappe
 from frappe import _
 
 from campus.campus_platform.api import get_regulation, get_rule
-from campus.examinations import rules
+from campus.examinations import rules, seating
 from campus.examinations.access import COE_ROLE
 from campus.examinations.courses import offering_course, student_limits
 from campus.student_services.api import eligibility_status, student_offerings
@@ -103,6 +104,8 @@ def course_result(student, exam_session, offering, scheme, shortage):
 		"credits": course["credits"], "cia": 0, "ese": 0, "total": 0, "grade_point": 0}  # fmt: skip
 	if shortage:
 		return {**row, "grade": SA, "result": SA}
+	if seating.absent(student, exam_session, course["course"]):
+		return {**row, "grade": AB, "result": AB}
 	marks = marks_of(student, exam_session, offering)
 	if marks.absent:
 		return {**row, "grade": AB, "result": AB}

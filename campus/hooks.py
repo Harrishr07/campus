@@ -233,6 +233,7 @@ doc_events["Journal Entry"] = {
 }
 doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee"}
 doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
+doc_events["Room"]["validate"] = "campus.examinations.exam_halls.validate_room"
 doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
 doc_events["Purchase Invoice"] = {e: "campus.academic_governance.honorarium.refresh_claim" for e in ("on_submit", "on_cancel")}
 

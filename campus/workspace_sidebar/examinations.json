@@ -189,6 +189,39 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Seating Plan",
+   "link_to": "Seating Plan",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Invigilation Roster",
+   "link_to": "Invigilation Roster",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Malpractice Report",
+   "link_to": "Malpractice Report",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Withheld Hall Tickets",
    "link_to": "Hall Ticket",
    "link_type": "DocType",
@@ -230,7 +263,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 19:00:00.000000",
+ "modified": "2026-10-08 20:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

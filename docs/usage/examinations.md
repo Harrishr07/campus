@@ -74,3 +74,24 @@ The withheld list is in Examinations > Transactions > **Withheld Hall Tickets**.
 
 ## Download (student)
 On /campus-portal, the exam registration card shows the hall ticket. A withheld student sees the reason. An issued ticket can be downloaded (PDF) once the release time has passed. Students and guardians can open only their own (or their ward's) issued, released tickets.
+
+# Examinations: halls, seating, invigilation, exam attendance, malpractice (P2-T16)
+
+## Exam Halls
+An Exam Hall is a **Room** with Room Type "Exam Hall". Set **Seat Rows**, **Seat Columns** and any **Blocked Seats** (pillar, broken bench). Seating Capacity becomes rows × columns minus the blocked seats. Seats are labelled R1C1 (row 1 is the front).
+
+## Seating Plan (COE)
+1. Generate the hall tickets first: only students with an **Issued** hall ticket listing a course on that date and slot get a seat.
+2. New **Seating Plan**: Exam Session, date, slot (FN/AN) and the Exam Halls to use. Save, then press **Generate Seating**.
+3. Courses are interleaved so that no two row or column neighbours write the same course when the mix allows it. "Neighbours with the Same Course" shows 0 unless the mix leaves no other way. Blocked seats stay empty. If the students outnumber the seats, generation is refused: add a hall.
+4. The result is the same every time for the same input. Changing the halls clears the seats until you generate again.
+5. Prints: **Seating Chart** (the grid per hall) and **Hall Attendance Sheet** (one page per hall with signature and answer-script columns).
+
+## Exam attendance
+On the Seating Plan, tick **Absent** on a seat, or call `campus.examinations.api.mark_exam_absent`. The Result Run then grades that course **AB**, even if marks were entered. Once attendance is marked, the plan cannot be re-seated.
+
+## Invigilation Roster (COE)
+One per Exam Session. Optionally list the faculty pool; left empty, every active teacher of the college is used. Press **Generate Roster**: each hall used in the session's seating plans gets its invigilators (Invigilators per Hall). Duties are balanced within one per teacher for each session type (FN, AN). Nobody invigilates a hall where a course they teach this term is written, and nobody on approved leave that day is used. A hall nobody can take stops the roster with its name. Print: **Invigilation Order**.
+
+## Malpractice Report
+Record the student, course, category, description and evidence. Evidence files must be attached as private. Add the committee decision and **Request Approval** (seeded policy: the COE of the college). When a **Debarment** is approved, the student's Exam Registration of that session is debarred and every course becomes "Not eligible (Debarred)". Generate the hall tickets again to withdraw the ticket. Cancelling the report lifts that debarment.

@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Invigilation Roster",
+ "field_order": [
+  "exam_session",
+  "company",
+  "column_break_1",
+  "invigilators_per_hall",
+  "section_faculty",
+  "faculty",
+  "section_duties",
+  "duties"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invigilators_per_hall",
+   "fieldtype": "Int",
+   "label": "Invigilators Per Hall",
+   "default": "1",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_faculty",
+   "fieldtype": "Section Break",
+   "label": "Faculty Pool"
+  },
+  {
+   "fieldname": "faculty",
+   "fieldtype": "Table",
+   "label": "Faculty",
+   "options": "Invigilation Roster Faculty",
+   "description": "Left empty, the roster takes every active teacher of the company."
+  },
+  {
+   "fieldname": "section_duties",
+   "fieldtype": "Section Break",
+   "label": "Duties"
+  },
+  {
+   "fieldname": "duties",
+   "fieldtype": "Table",
+   "label": "Duties",
+   "options": "Invigilation Duty"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "track_changes": 1,
+ "default_print_format": "Invigilation Order"
+}

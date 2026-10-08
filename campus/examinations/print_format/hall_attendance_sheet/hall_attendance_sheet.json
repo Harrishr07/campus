@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Hall Attendance Sheet",
+ "doc_type": "Seating Plan",
+ "module": "Examinations",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 12,
+ "creation": "2026-10-08 18:00:00.000000",
+ "modified": "2026-10-08 18:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Hall Attendance Sheet\") }}</h3>\n<p style=\"text-align:center\">{{ (doc.company or \"\")|e }} &middot; {{ doc.exam_session|e }} &middot; {{ frappe.utils.formatdate(doc.exam_date)|e }} {{ (doc.slot or \"\")|e }}</p>\n{% for hall in doc.halls %}\n<div style=\"page-break-after:always\">\n<h4>{{ hall.room|e }}</h4>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Seat\") }}</th><th>{{ _(\"Student\") }}</th><th>{{ _(\"Name\") }}</th><th>{{ _(\"Course\") }}</th><th>{{ _(\"Answer Script No.\") }}</th><th>{{ _(\"Signature\") }}</th></tr></thead>\n  <tbody>\n  {% for seat in doc.seats if seat.room == hall.room %}\n    <tr><td>{{ (seat.seat_label or \"\")|e }}</td><td>{{ seat.student|e }}</td><td>{{ (seat.student_name or \"\")|e }}</td><td>{{ seat.course|e }}</td><td></td><td>{% if seat.absent %}<strong>{{ _(\"ABSENT\") }}</strong>{% endif %}</td></tr>\n  {% endfor %}\n  </tbody>\n</table>\n<p>{{ _(\"Present\") }}: ______ &nbsp; {{ _(\"Absent\") }}: ______ &nbsp; {{ _(\"Invigilator\") }}: ____________ &nbsp; {{ _(\"Chief Superintendent\") }}: ____________</p>\n</div>\n{% endfor %}\n"
+}
