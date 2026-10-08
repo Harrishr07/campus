@@ -56,6 +56,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "API Score Rule",
+   "link_to": "API Score Rule",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Timetable Slot Template",
    "link_to": "Timetable Slot Template",
    "link_type": "DocType",
@@ -135,6 +146,39 @@
    "keep_closed": 0,
    "label": "Substitution",
    "link_to": "Substitution",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Faculty Achievement",
+   "link_to": "Faculty Achievement",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Appraisal",
+   "link_to": "Appraisal",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Appraisal Review",
+   "link_to": "Appraisal Review",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -221,6 +265,28 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "FDP Participation",
+   "link_to": "FDP Participation",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Conference Financial Support",
+   "link_to": "Conference Financial Support",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Timetable Clash Checker",
    "link_to": "Timetable Clash Checker",
    "link_type": "Report",
@@ -228,7 +294,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 15:00:00.000000",
+ "modified": "2026-10-09 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",

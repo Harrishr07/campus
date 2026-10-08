@@ -21,6 +21,10 @@ uses; a department keeps the students with a submitted Program Enrollment in one
 Phase 2 (P2-T05): full_time_teachers, sanctioned_posts, phd_teachers, teacher_experience_years and student_teacher_ratio
 come from campus.faculty.api (see campus/faculty/staffing.py for the counting rules); `department` is Employee.department.
 
+Phase 2 (P2-T09): fdp_teachers (NAAC 6.3.4: distinct teachers present at an FDP Training Event started in the year) and
+teachers_financially_supported (NAAC 6.3.2: distinct teachers with a verified Conference / Membership achievement in the year
+that has a financial support amount), see campus/faculty/development.py.
+
 Phase 2 (P2-T03): syllabus_revised_programmes (AQAR 1.1.2: distinct programmes whose curriculum an approved Syllabus Revision
 proposal changed) and new_courses_introduced (AQAR 1.2.1: distinct courses named on approved New Course proposals), both
 finally approved within the academic year (`department` is the proposal's department); see
@@ -225,6 +229,17 @@ def teacher_experience_years(company, academic_year, department=None):
 @campus_metric("student_teacher_ratio")
 def student_teacher_ratio(company, academic_year, department=None):
 	return faculty.student_teacher_ratio(company, academic_year, department)
+
+
+# P2-T09 faculty development data points (NAAC 6.3.4 FDPs, 6.3.2 conference support).
+@campus_metric("fdp_teachers")
+def fdp_teachers(company, academic_year, department=None):
+	return faculty.fdp_teachers(company, academic_year, department)
+
+
+@campus_metric("teachers_financially_supported")
+def teachers_financially_supported(company, academic_year, department=None):
+	return faculty.teachers_financially_supported(company, academic_year, department)
 
 
 @campus_metric("syllabus_revised_programmes")

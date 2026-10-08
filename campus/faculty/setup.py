@@ -19,9 +19,13 @@ def options(values):
 
 
 def setup_faculty():
-	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
+	create_custom_fields(
+		{"Employee": employee_fields(), "Job Applicant": applicant_fields(), "Training Event": training_event_fields(), "Appraisal": appraisal_fields()},
+		update=True,
+	)
 	setup_timetable()
 	seed_substitution_template()
+	seed_appraisal_review_policy()
 
 
 SUBSTITUTION_EVENT = "substitution.assigned"
@@ -71,6 +75,40 @@ def seed_course_allocation_policy():
 			"levels": [{"approver_type": "Position", "approver": "HOD", "scope_field": "department", "title": "HOD", "limit_to_company": 1}],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
+
+
+APPRAISAL_REVIEW_POLICY = "Appraisal Review - HOD"
+
+
+def seed_appraisal_review_policy():
+	"""Appraisals made from a self-appraisal are reviewed by the HOD of the appraisee's department, unless the college has its own policy."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Appraisal Review"}) or not frappe.db.exists("Position", "HOD"):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": APPRAISAL_REVIEW_POLICY, "document_type": "Appraisal Review",
+			"levels": [{"approver_type": "Position", "approver": "HOD", "scope_field": "department", "title": "HOD", "limit_to_company": 1}],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
+
+
+def training_event_fields():
+	return [
+		field(
+			"oc_is_fdp", "Check", "Faculty Development Programme", "type",
+			description="Counted as an FDP in a teacher's self-appraisal and in NAAC 6.3.4.",
+		),
+	]  # fmt: skip
+
+
+def appraisal_fields():
+	"""The API (self-appraisal) result on an HRMS Appraisal; written only by campus.faculty.self_appraisal."""
+	return [
+		field("oc_api_section", "Section Break", "API Self-Appraisal", "company", collapsible=1),
+		field("oc_api_rule", "Link", "API Score Rule", "oc_api_section", options="API Score Rule", read_only=1, no_copy=1),
+		field("oc_api_total", "Float", "API Points", "oc_api_rule", read_only=1, no_copy=1),
+		field("oc_api_breakdown", "Small Text", "API Breakdown", "oc_api_total", read_only=1, no_copy=1),
+	]  # fmt: skip
 
 
 def employee_fields():

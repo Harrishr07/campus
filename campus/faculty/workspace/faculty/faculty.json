@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -47,6 +47,17 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "API Score Rule",
+   "link_count": 0,
+   "link_to": "API Score Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Timetable Slot Template",
    "link_count": 0,
    "link_to": "Timetable Slot Template",
@@ -58,7 +69,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 6,
+   "link_count": 9,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -129,10 +140,43 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Achievement",
+   "link_count": 0,
+   "link_to": "Faculty Achievement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Appraisal",
+   "link_count": 0,
+   "link_to": "Appraisal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Appraisal Review",
+   "link_count": 0,
+   "link_to": "Appraisal Review",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 7,
+   "link_count": 9,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -206,6 +250,28 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 1,
+   "label": "FDP Participation",
+   "link_count": 0,
+   "link_to": "FDP Participation",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Conference Financial Support",
+   "link_count": 0,
+   "link_to": "Conference Financial Support",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
    "label": "Timetable Clash Checker",
    "link_count": 0,
    "link_to": "Timetable Clash Checker",
@@ -214,7 +280,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 15:00:00.000000",
+ "modified": "2026-10-09 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",

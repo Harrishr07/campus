@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "activity",
+  "points",
+  "annual_cap",
+  "kra"
+ ],
+ "fields": [
+  {
+   "fieldname": "activity",
+   "fieldtype": "Select",
+   "label": "Activity",
+   "options": "FDP Attended\nConference\nResource Person\nAward\nMembership\nCertification\nTeaching Workload\nPublication\nStudent Feedback",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "points",
+   "fieldtype": "Float",
+   "label": "Points per Unit",
+   "reqd": 1,
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Per item; per weekly hour of teaching workload in a term."
+  },
+  {
+   "fieldname": "annual_cap",
+   "fieldtype": "Float",
+   "label": "Annual Cap (Points)",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Most points this activity can earn in one academic year. 0 means no cap."
+  },
+  {
+   "fieldname": "kra",
+   "fieldtype": "Link",
+   "label": "KRA",
+   "options": "KRA",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "API Score Rule Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

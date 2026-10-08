@@ -235,6 +235,10 @@ doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_emp
 doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
 doc_events["Room"]["validate"] = "campus.examinations.exam_halls.validate_room"
 doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
+doc_events["Appraisal"] = {
+	"before_validate": "campus.faculty.self_appraisal.before_validate",
+	"before_submit": "campus.faculty.self_appraisal.before_submit",
+}
 doc_events["Purchase Invoice"] = {e: "campus.academic_governance.honorarium.refresh_claim" for e in ("on_submit", "on_cancel")}
 
 # Scheduled Tasks
@@ -393,6 +397,8 @@ doctype_js = {
 	"Student Result": "public/js/student_result.js",
 }
 
+doctype_js["Employee"] = "public/js/employee_faculty.js"  # P2-T09 self-appraisal button
+doctype_js["Appraisal"] = "public/js/appraisal_review.js"  # P2-T09 request HOD review
 doctype_list_js = {"Student": "public/js/student_list.js"}
 
 PORTAL_SCOPED = list(PORTAL_SCOPES)  # Student/Guardian roles are scoped to their own / linked students
@@ -424,6 +430,7 @@ has_permission = {
 	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("Question Bank Item", "QP Setter Nomination", "QP Access Log")},
 	"File": "campus.examinations.question_papers.file_has_permission",
 }
+has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
 # Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
 doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
 
@@ -436,6 +443,7 @@ jinja = {
 		"campus.campus_platform.verification.oc_qr_block",
 		"campus.curriculum.structure.curriculum_structure",
 		"campus.campus_finance.challan.challan_details",
+		"campus.faculty.cv.faculty_cv_sections",
 	]
 }
 

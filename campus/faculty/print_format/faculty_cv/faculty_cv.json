@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Faculty CV",
+ "doc_type": "Employee",
+ "module": "Faculty",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "{% set cv = faculty_cv_sections(doc.name) %}\n<h2 style=\"text-align:center\">{{ doc.employee_name | e }}</h2>\n<p style=\"text-align:center\">{{ (doc.designation or \"\") | e }}{% if doc.oc_cadre %} &middot; {{ doc.oc_cadre | e }}{% endif %}{% if doc.department %} &middot; {{ doc.department | e }}{% endif %}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Employee ID\") }}</th><td>{{ doc.name | e }}</td><th>{{ _(\"Date of Joining\") }}</th><td>{{ frappe.format(doc.date_of_joining, {\"fieldtype\": \"Date\"}) }}</td></tr>\n  <tr><th>{{ _(\"Highest Qualification\") }}</th><td>{{ (doc.oc_highest_qualification or \"\") | e }}</td><th>{{ _(\"PhD Status\") }}</th><td>{{ (doc.oc_phd_status or \"\") | e }}{% if doc.oc_phd_awarded_on %} ({{ frappe.format(doc.oc_phd_awarded_on, {\"fieldtype\": \"Date\"}) }}){% endif %}</td></tr>\n  <tr><th>{{ _(\"NET / SET / SLET\") }}</th><td>{{ (doc.oc_net_set or \"\") | e }}</td><th>{{ _(\"Specialisation\") }}</th><td>{{ (doc.oc_specialisation or \"\") | e }}</td></tr>\n  <tr><th>{{ _(\"Teaching Experience Before Joining (Years)\") }}</th><td>{{ doc.oc_prior_teaching_experience or 0 }}</td><th>{{ _(\"Recognised Research Guide\") }}</th><td>{{ _(\"Yes\") if doc.oc_research_guide else _(\"No\") }}</td></tr>\n  <tr><th>ORCID</th><td>{{ (doc.oc_orcid or \"\") | e }}</td><th>{{ _(\"Scopus Author ID\") }}</th><td>{{ (doc.oc_scopus_id or \"\") | e }}</td></tr>\n  <tr><th>{{ _(\"Vidwan / IRINS\") }}</th><td colspan=\"3\">{{ (doc.oc_vidwan_irins_url or \"\") | e }}</td></tr>\n</table>\n<h4>{{ _(\"Faculty Development Programmes Attended\") }}</h4>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Programme\") }}</th><th>{{ _(\"Date\") }}</th></tr>\n  {% for row in cv.fdps %}<tr><td>{{ row.event_name | e }}</td><td>{{ frappe.format(row.start_time, {\"fieldtype\": \"Date\"}) }}</td></tr>\n  {% else %}<tr><td colspan=\"2\">{{ _(\"None recorded\") }}</td></tr>{% endfor %}\n</table>\n<h4>{{ _(\"Achievements\") }}</h4>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Type\") }}</th><th>{{ _(\"Title\") }}</th><th>{{ _(\"Date\") }}</th></tr>\n  {% for row in cv.achievements %}<tr><td>{{ _(row.achievement_type) }}</td><td>{{ row.title | e }}</td><td>{{ frappe.format(row.achievement_date, {\"fieldtype\": \"Date\"}) }}</td></tr>\n  {% else %}<tr><td colspan=\"3\">{{ _(\"None recorded\") }}</td></tr>{% endfor %}\n</table>\n",
+ "creation": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 01:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}
