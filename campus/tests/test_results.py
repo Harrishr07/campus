@@ -73,6 +73,8 @@ def make_login(email, role):
 
 
 def make_instructor(email):
+	if not frappe.db.exists("Gender", "Female"):  # a fresh site has no Gender records
+		frappe.get_doc({"doctype": "Gender", "gender": "Female"}).insert()
 	employee = frappe.get_doc(
 		{
 			"doctype": "Employee", "naming_series": "HR-EMP-", "first_name": email.split("@")[0], "gender": "Female",
