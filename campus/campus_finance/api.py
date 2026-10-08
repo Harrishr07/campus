@@ -2,7 +2,17 @@
 
 import frappe
 
-from campus.campus_finance import bank_import, fee_heads, fines, gateways, invoices, ledger, numbering, refunds, scholarships
+from campus.campus_finance import (
+	bank_import,
+	fee_heads,
+	fines,
+	gateways,
+	invoices,
+	ledger,
+	numbering,
+	refunds,
+	scholarships,
+)
 
 
 def fee_structure_for(program, academic_year, quota, category, company):
@@ -30,6 +40,8 @@ set_item_default = fee_heads.set_item_default
 daily_fine_run = fines.daily_fine_run
 import_bank_collections = bank_import.start_import
 has_dues = ledger.has_dues
+head_types = ledger.head_types
+CAUTION_DEPOSIT = fee_heads.CAUTION_DEPOSIT
 student_invoices = ledger.student_invoices
 raise_fee_invoice = invoices.raise_fee_invoice
 next_number = numbering.next_number
@@ -37,6 +49,8 @@ validate_number_prefix = numbering.validate_prefix
 scholarship_beneficiaries = scholarships.scholarship_beneficiaries
 disburse_scholarship = scholarships.disburse
 make_credit_note = refunds.make_credit_note
+paid_by_student = refunds.paid_by_student
+scholarship_vouchers = refunds.scholarship_vouchers
 make_refund_payment = refunds.make_refund_payment
 fee_payment_link = gateways.fee_payment_link
 

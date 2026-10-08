@@ -13,6 +13,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from campus.campus_finance.invoices import is_opening
+
 OPEN, APPLIED = "Open", "Applied"
 PERCENT = "Percent"
 CENT = 0.005
@@ -66,11 +68,11 @@ def strip_stale_tags(doc):
 def apply_to_invoice(doc, method=None):
 	"""Doc event (Sales Invoice before_validate): discount the fee line of each open concession of the student.
 
-	One concession discounts one line (ERPNext's own line discount, so the invoice shows price list rate, discount
+	Credit notes and opening balances (legacy dues brought forward) take none. One concession discounts one line (ERPNext's own line discount, so the invoice shows price list rate, discount
 	and rate); a concession with no untouched line of its category waits for the next invoice. Lines tagged with a
 	concession that is no longer usable (cancelled, used by another invoice, another student's) are cleaned first."""
-	if doc.is_return or not doc.get("student") or doc.docstatus > 1:
-		return
+	if doc.is_return or is_opening(doc) or not doc.get("student") or doc.docstatus > 1:
+		return  # a credit note or an opening balance brought forward is not a fee invoice
 	if not doc.is_new() and frappe.db.get_value(doc.doctype, doc.name, "docstatus") != 0:
 		return  # an invoice already submitted is not touched (this event also runs while submitting a draft)
 	strip_stale_tags(doc)

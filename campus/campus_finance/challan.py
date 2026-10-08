@@ -6,6 +6,7 @@ Both come from the college's Challan Format. A college without one gets neither 
 import frappe
 
 from campus.campus_finance import numbering
+from campus.campus_finance.invoices import is_opening
 
 
 def challan_format(company):
@@ -13,8 +14,8 @@ def challan_format(company):
 
 
 def assign_challan_no(doc, method=None):
-	"""Give a student's invoice its challan number on submit."""
-	if not doc.get("student") or doc.get("oc_challan_no"):
+	"""Give a student's invoice its challan number on submit; a credit note or an opening balance is not paid by challan."""
+	if not doc.get("student") or doc.get("oc_challan_no") or doc.get("is_return") or is_opening(doc):
 		return
 	fmt = challan_format(doc.company)
 	if fmt:

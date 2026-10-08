@@ -8,7 +8,7 @@ from frappe.tests import UnitTestCase
 from frappe.utils import add_days, add_to_date, now_datetime, today
 
 from campus.campus_finance import api as finance
-from campus.campus_finance import concessions, scholarships
+from campus.campus_finance import concessions, invoices, scholarships
 from campus.campus_finance.fee_heads import category_for_type
 from campus.campus_finance.report.concession_register import concession_register
 from campus.campus_finance.report.scholarship_beneficiaries import scholarship_beneficiaries as beneficiaries_report
@@ -75,6 +75,10 @@ class TestRules(UnitTestCase):
 		self.assertEqual(concessions.concession_discount(10000, "Amount", 0, 25000), 10000)
 		self.assertEqual(concessions.concession_discount(0, "Percent", 10, 0), 0)
 
+	def test_an_opening_invoice_is_recognised_in_any_case(self):
+		for value, expected in (("Yes", True), ("yes", True), (" YES ", True), ("No", False), ("", False), (None, False)):
+			self.assertEqual(invoices.is_opening(frappe._dict(is_opening=value)), expected, value)
+
 	def test_outstanding_arrears_latest_outcome_wins(self):
 		self.assertEqual(outstanding_arrears([("C1", "Fail"), ("C2", "Pass")]), ["C1"])
 		self.assertEqual(outstanding_arrears([("C1", "Fail"), ("C2", "Pass"), ("C1", "Pass")]), [])
@@ -126,6 +130,28 @@ class ScholarshipFixture(CampusTestCase):
 
 	def owe(self, student, company, amount=80000, head="Tuition"):
 		return finance.raise_fee_invoice(student, head, amount, company, "Scholarship test dues")
+
+
+def opening_invoice(student, amount):
+	"""An opening fee balance as the legacy import books it: is_opening, into the Temporary Opening account."""
+	invoice = frappe.get_doc(
+		{
+			"doctype": "Sales Invoice", "company": COLLEGE, "customer": frappe.db.get_value("Student", student, "customer"),
+			"student": student, "is_opening": "Yes", "posting_date": today(), "set_posting_time": 1, "due_date": today(),
+			"debit_to": frappe.db.get_value("Company", COLLEGE, "default_receivable_account"),
+			"items": [{"item_code": category_for_type("Tuition"), "qty": 1, "rate": amount, "income_account": "Temporary Opening - SCHC"}],
+		}
+	)  # fmt: skip
+	invoice.flags.ignore_permissions = True
+	return invoice.insert().submit()
+
+
+class TestChallanNumbers(ScholarshipFixture):
+	def test_an_opening_balance_and_a_credit_note_get_no_challan_number(self):
+		self.assertTrue(self.owe(self.a, COLLEGE, 1000).oc_challan_no)  # a fee invoice does
+		self.assertFalse(opening_invoice(self.a, 10000).oc_challan_no)
+		invoice = self.owe(self.b, COLLEGE, 1000)
+		self.assertFalse(finance.make_credit_note(frappe.get_doc("Sales Invoice", invoice.name), 400).oc_challan_no)
 
 
 class TestDisbursement(ScholarshipFixture):
@@ -462,6 +488,13 @@ class TestConcession(ScholarshipFixture):
 		self.assertEqual(self.owe(self.b, COLLEGE, 10000).grand_total, 10000)
 		frappe.db.set_value("Academic Year", YEAR, {"year_start_date": add_days(today(), 400), "year_end_date": add_days(today(), 700)})
 		self.assertEqual(self.owe(self.a, COLLEGE, 10000).grand_total, 10000)
+
+	def test_an_opening_balance_takes_no_concession(self):
+		concession = self.approved()
+		opening = opening_invoice(self.a, 10000)
+		self.assertEqual((opening.grand_total, opening.items[0].discount_amount, opening.items[0].oc_fee_concession), (10000, 0, None))
+		self.assertEqual(concession.reload().status, "Open")
+		self.assertEqual(self.owe(self.a, COLLEGE, 10000).grand_total, 9000)  # the next real fee invoice takes it
 
 	def test_cancelling_the_invoice_releases_the_concession(self):
 		concession = self.approved()

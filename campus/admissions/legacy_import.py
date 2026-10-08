@@ -25,8 +25,8 @@ checked company only (or with no company), names compare case-insensitively, and
 only the other-company issue. Child-table cells (a guardian, a curriculum course, an invoice line) are required
 on every child line.
 
-Opening Fee Balances also checks that every row is Is Opening = Yes, that a student appears once in the file and
-has no opening invoice (not cancelled) in the company yet, that the customer is the student's own, that each
+Opening Fee Balances also checks that every row is Is Opening = Yes, that no line is a Caution Deposit (a liability,
+not dues), that a student appears once in the file and has no opening invoice (not cancelled) in the company yet, that the customer is the student's own, that each
 line's income account is a Temporary account and the Debit To (when given) a Receivable account, both of the
 company.
 
@@ -51,6 +51,7 @@ from frappe.utils.csvutils import read_csv_content
 from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file
 
 from campus.admissions.aadhaar import AADHAAR_FIELD, is_valid_aadhaar, mask
+from campus.campus_finance import api as finance
 from campus.campus_platform.company_scope import permitted_companies
 
 REGISTER_FIELD = "oc_register_no"
@@ -486,12 +487,13 @@ class OpeningBalanceChecks(RowChecks):
 		self.account_types = dict(frappe.get_all("Account", {"name": ["in", list(accounts) or [""]], "company": company},
 			["name", "account_type"], as_list=True))  # fmt: skip
 		self.student_rows = {}
+		self.head_types = finance.head_types()
 
 	def run(self, record):
 		found = super().run(record)
 		if record["row"] in self.other_rows:
 			return found
-		return found + self.opening(record) + self.student(record) + self.accounts(record)
+		return found + self.opening(record) + self.student(record) + self.accounts(record) + self.deposits(record)
 
 	def opening(self, record):
 		return [
@@ -517,6 +519,17 @@ class OpeningBalanceChecks(RowChecks):
 				found.append(issue(record["row"], self.label("customer"), "customer_mismatch",
 					_("The customer of Student {0} is {1}.").format(student, customer or _("not set"))))  # fmt: skip
 		return found
+
+	def deposits(self, record):
+		"""A caution deposit held is a liability, not fee dues: an opening invoice line would book it to income and
+		make it refundable as a deposit the invoice never received."""
+		return [
+			issue(line["row"], self.label("item_code"), "caution_deposit",
+				_("{0} is a caution deposit; bring deposits held forward by Journal Entry to the deposit account, not as opening dues.").format(
+					line["values"]["item_code"]))
+			for line in record["lines"]
+			if self.head_types.get(line["values"].get("item_code")) == finance.CAUTION_DEPOSIT
+		]  # fmt: skip
 
 	def accounts(self, record):
 		"""Each line's income account is a Temporary account and the debit-to a Receivable, both of this company

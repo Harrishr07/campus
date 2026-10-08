@@ -1,4 +1,4 @@
-"""M09-01 One-off fee invoices: a submitted Sales Invoice for a student under one fee head (e.g. Condonation)."""
+"""M09-01 One-off fee invoices: a submitted Sales Invoice for a student under one fee head (e.g. Condonation); opening entries."""
 
 import frappe
 from frappe import _
@@ -7,6 +7,11 @@ from frappe.utils import add_days, flt, nowdate
 from campus.campus_finance.fee_heads import category_for_type
 
 DUE_DAYS = 15
+
+
+def is_opening(doc):
+	"""Whether `doc` is an opening entry (a balance brought forward), whatever the case of its is_opening value."""
+	return (doc.get("is_opening") or "").strip().casefold() == "yes"
 
 
 def raise_fee_invoice(student, head_type, amount, company, remarks):

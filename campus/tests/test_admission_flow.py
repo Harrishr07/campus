@@ -13,7 +13,7 @@ from campus.admissions.api import admit, check_seat_available
 from campus.admissions.report.admissions_by_quota_and_category import admissions_by_quota_and_category as quota_report
 from campus.admissions.report.refund_register import refund_register
 from campus.tests.factories import make_company, make_user
-from campus.tests.finance_factories import make_finance_company, make_fee_structure
+from campus.tests.finance_factories import make_account, make_finance_company, make_fee_structure
 from campus.tests.test_admissions import VALID, delete_log_rows, log_rows, own_connection
 from campus.tests.utils import CampusTestCase
 
@@ -454,6 +454,46 @@ class TestCancellation(AdmitTestCase):
 		)  # fmt: skip
 		doc.insert()
 		doc.submit()
+
+	def award(self, student, scheme_type, amount):
+		"""Disburse `amount` of a Government (Payment Entry) or Institutional (Journal Entry) scholarship; returns the voucher."""
+		from campus.campus_finance import scholarships
+
+		frappe.flags.in_import = False  # defaults apply (setUp restores the flag)
+		if not frappe.db.exists("Party Type", "Customer"):  # the bare test site lacks ERPNext's party types
+			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+		account = self.accounts["bank"] if scheme_type == "Government" else make_account(
+			COLLEGE, ABBR, "Scholarship Expense", "Indirect Expenses", root_type="Expense"
+		)
+		scheme = frappe.get_doc(
+			{"doctype": "Scholarship Scheme", "scheme_name": f"AF {scheme_type} Scheme", "company": COLLEGE,
+			 "scheme_type": scheme_type, "account": account, "amount_type": "Fixed", "amount": amount}
+		).insert()  # fmt: skip
+		application = frappe.get_doc(
+			{"doctype": "Scholarship Application", "student": student, "scheme": scheme.name, "academic_year": YEAR}
+		).insert().submit()  # fmt: skip
+		row = scholarships.disburse(application.name, amount, "SCH-UTR")
+		return frappe.get_doc(row["voucher_type"], row["voucher"])
+
+	def test_a_cancellation_never_pays_out_a_scholarship(self):
+		for scheme_type in ("Government", "Institutional"):
+			admission = self.admitted()
+			voucher = self.award(admission.student, scheme_type, 20000)
+			self.pay_in_full(admission.invoice)  # the student pays the other 32000
+			with self.assertRaisesRegex(frappe.ValidationError, f"scholarship.*{voucher.name}"):
+				self.cancel(admission, 20, submit=False)
+			voucher.cancel()  # Accounts reverses the scholarship first
+			doc = self.cancel(admission, 20)
+			self.assertEqual((flt(doc.amount_paid), flt(doc.deduction), flt(doc.cash_refund)), (32000, 10400, 21600), scheme_type)
+			self.assertEqual(flt(frappe.db.get_value("Payment Entry", doc.payment_entry, "paid_amount")), 21600)
+
+	def test_only_money_received_counts_as_paid(self):
+		admission = self.admitted()
+		from campus.campus_finance import api as finance
+
+		finance.make_credit_note(frappe.get_doc("Sales Invoice", admission.invoice), 2000)  # accounts credited it by hand
+		doc = self.cancel(admission, 10, submit=False)  # deduction 1000
+		self.assertEqual((flt(doc.amount_paid), flt(doc.cash_refund)), (0, 0))
 
 	def test_refund_register_and_admission_report(self):
 		admission = self.admitted()

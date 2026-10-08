@@ -1,17 +1,21 @@
 """M04-04 Admission Cancellation: refund by Refund Rule slab, Credit Note, draft Payment Entry, seat freed.
 
 On submit, in the submit's transaction: a Credit Note against the admission fee invoice for the refundable
-portion (invoice total less the slab deduction), a draft Payment Entry (Pay) for the cash actually paid in
-excess of the deduction (accounts approves and submits it), cancellation of the Program Enrollment (the Seat
+portion (invoice total less the slab deduction), a draft Payment Entry (Pay) for the money the student paid
+(Payment Entries received, not scholarships or credit notes) in excess of the deduction (accounts approves and
+submits it), cancellation of the Program Enrollment (the Seat
 Matrix hook frees the seat), and the student's and applicant's statuses. The applicant becomes "Rejected":
 Education's Student Applicant status has no cancelled value and this app does not change upstream options.
 A cancellation is final: cancel the Credit Note and Payment Entry in Accounts if it was made in error.
+While a scholarship disbursement settles the invoice the cancellation is refused: the credit note would turn the
+scholarship into the student's credit, so Accounts cancels the disbursement voucher first. Submit takes the invoice's
+row lock and reads what was paid with locking reads.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate, today
+from frappe.utils import getdate, today
 
 from campus.admissions import refund
 from campus.admissions.admit import check_company_access
@@ -57,11 +61,15 @@ class AdmissionCancellation(Document):
 			"Program Enrollment", self.program_enrollment, ["oc_company", "academic_year"], as_dict=True
 		)
 		invoice = admission_invoice(self.program_enrollment)
+		locking = self.docstatus == 1
+		if locking:  # submitting: lock the invoice, then read what was paid with locking reads
+			frappe.db.get_value("Sales Invoice", invoice.name, "name", for_update=True)
+		check_no_scholarship(invoice.name, locking)
 		rule = refund.find_refund_rule(enrollment.oc_company, enrollment.academic_year)
 		start = frappe.db.get_value("Academic Year", enrollment.academic_year, "year_start_date")
 		days = refund.days_since_start(start, self.cancellation_date)
 		result = refund.refund_for(rule.slabs, days, invoice.grand_total)
-		paid = flt(invoice.grand_total) - flt(invoice.outstanding_amount)
+		paid = finance.paid_by_student(invoice.name, locking=locking)
 		self.update(
 			{
 				"fee_invoice": invoice.name, "refund_rule": rule.name, "admission_start": start, "days_since_start": days,
@@ -88,6 +96,16 @@ def admission_invoice(program_enrollment):
 	if not name:
 		frappe.throw(_("No submitted fee invoice was raised for Program Enrollment {0}.").format(program_enrollment))
 	return frappe.get_doc("Sales Invoice", name)
+
+
+def check_no_scholarship(invoice, locking):
+	vouchers = finance.scholarship_vouchers(invoice, locking=locking)
+	if vouchers:
+		frappe.throw(
+			_("{0} is settled in part by scholarship disbursement {1}. Cancel it in Accounts first, so the scholarship is not refunded.").format(
+				invoice, ", ".join(vouchers)
+			)
+		)
 
 
 def make_credit_note(cancellation):

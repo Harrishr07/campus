@@ -2,7 +2,7 @@
 
 A refund is credited against one fully paid invoice and one fee head (a credit note first reduces what is unpaid, so
 a part-paid invoice gives no money back). The most it can be is what the invoice was paid for that head (the
-payments received against it, in the ledger's pro-rata head shares) less what has already gone back: every credit note
+money the student paid on it, scholarships aside, in the ledger's pro-rata head shares) less what has already gone back: every credit note
 against the invoice and every damages deduction of an earlier Fee Refund. A head of an invoice is refunded once: ERPNext lets a line be
 returned only up to its quantity, so a second credit note on the line is refused (accounts issue any further credit by hand). A Caution Deposit refund is the deposit
 less the damages, and the part of it that meets the student's dues in the same company settles those dues
@@ -17,8 +17,8 @@ from frappe import _
 from frappe.utils import flt, today
 
 from campus.campus_finance.ledger import has_dues, head_shares
+from campus.campus_finance.refunds import paid_by_student
 from campus.campus_finance.scholarships import allocate, open_invoices, receivable_of, student_customer
-
 
 CENT = 0.005
 
@@ -57,15 +57,11 @@ def head_share(invoice, head):
 def balance(invoice, head, exclude_refund=None, locking=False):
 	"""{paid, credit_notes, deductions, available, outstanding, refunded_before} for `head` on `invoice`; every row read FOR UPDATE when `locking`.
 
-	Money paid is the Payment Entries (Receive) allocated to the invoice: a scholarship waiver or write-off settles
-	an invoice but is no money to give back."""
+	Money paid is what the student paid (refunds.paid_by_student): a scholarship (a Government scheme's Payment Entry or
+	an Institutional waiver), a set-off or a write-off settles an invoice but is no money to give back."""
 	lock = " for update" if locking else ""
 	outstanding = frappe.db.get_value("Sales Invoice", invoice, "outstanding_amount", for_update=locking)
-	receipts = frappe.db.sql_list(
-		"select ref.allocated_amount from `tabPayment Entry Reference` ref join `tabPayment Entry` pe on pe.name = ref.parent"
-		" where ref.reference_doctype = 'Sales Invoice' and ref.reference_name = %s and pe.docstatus = 1 and pe.payment_type = 'Receive'" + lock,
-		invoice,
-	)
+	receipts = paid_by_student(invoice, locking=locking)
 	notes = frappe.db.sql(
 		"select name, grand_total from `tabSales Invoice` where return_against = %s and is_return = 1 and docstatus = 1" + lock,
 		invoice,
@@ -77,7 +73,7 @@ def balance(invoice, head, exclude_refund=None, locking=False):
 		as_dict=True,
 	)
 	notes_total, deducted = credited_to_head(notes, head), flt(sum(row.deduction for row in earlier), 2)
-	paid = paid_for_head(sum(receipts), head_share(invoice, head))
+	paid = paid_for_head(receipts, head_share(invoice, head))
 	return frappe._dict(
 		paid=paid, credit_notes=-notes_total, deductions=deducted, outstanding=flt(outstanding, 2),
 		refunded_before=bool(earlier),

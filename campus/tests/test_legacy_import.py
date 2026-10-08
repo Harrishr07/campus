@@ -410,6 +410,11 @@ class TestOpeningBalances(LegacyFixture):
 	def test_a_row_must_be_an_opening_entry(self):
 		self.assertEqual(checks(self.validate(self.row(self.a, is_opening="No"))), [(2, "not_opening")])
 
+	def test_a_caution_deposit_is_not_an_opening_fee_balance(self):
+		deposit = {"item_code": category_for_type("Caution Deposit"), "qty": "1", "rate": "5000", "income_account": "Temporary Opening - LIC"}
+		issues = self.validate(self.row(self.a), deposit, self.row(self.b, item_code=category_for_type("Caution Deposit")))
+		self.assertEqual(checks(issues), [(3, "caution_deposit"), (4, "caution_deposit")])
+
 	def test_a_student_already_given_an_opening_balance(self):
 		opened = finance.raise_fee_invoice(self.a, "Tuition", 1000, COLLEGE, "Legacy opening")
 		frappe.db.set_value("Sales Invoice", opened.name, "is_opening", "Yes")

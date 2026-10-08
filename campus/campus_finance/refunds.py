@@ -1,4 +1,5 @@
-"""M09-01 Refund builders shared by Admission Cancellation and Fee Refund: the Credit Note and the draft refund Payment Entry.
+"""M09-01 Refund builders shared by Admission Cancellation and Fee Refund: what the student paid, the Credit Note and the
+draft refund Payment Entry.
 
 Both are built here rather than with ERPNext's make_return_doc / get_payment_entry, which check the officer's own
 rights on documents (the invoice, Payment Entry) the officer does not hold. Callers resolve every input on the server.
@@ -9,6 +10,38 @@ from frappe import _
 from frappe.utils import flt, today
 
 TAX_FIELDS = ("charge_type", "account_head", "rate", "description", "cost_center", "row_id", "included_in_print_rate")
+DISBURSED = "select 1 from `tabScholarship Disbursement` sd where sd.voucher_type = %s and sd.voucher = {0}.name"
+
+
+def paid_by_student(invoice, locking=False):
+	"""The money the student paid on `invoice`: submitted Payment Entries (Receive) allocated to it, except those that
+	are scholarship disbursements (a Government scheme's money from the awarding body). Institutional waivers, set-offs,
+	write-offs and credit notes are Journal Entries or returns, so they never count. Read FOR UPDATE when `locking`."""
+	rows = frappe.db.sql_list(
+		"select ref.allocated_amount from `tabPayment Entry Reference` ref join `tabPayment Entry` pe on pe.name = ref.parent"
+		" where ref.reference_doctype = 'Sales Invoice' and ref.reference_name = %s and pe.docstatus = 1 and pe.payment_type = 'Receive'"
+		f" and not exists ({DISBURSED.format('pe')})" + (" for update" if locking else ""),
+		(invoice, "Payment Entry"),
+	)
+	return flt(sum(rows), 2)
+
+
+def scholarship_vouchers(invoice, locking=False):
+	"""Names of the live scholarship disbursement vouchers (Payment Entries and Journal Entries) that settle `invoice`."""
+	lock = " for update" if locking else ""
+	payments = frappe.db.sql_list(
+		"select distinct pe.name from `tabPayment Entry Reference` ref join `tabPayment Entry` pe on pe.name = ref.parent"
+		" where ref.reference_doctype = 'Sales Invoice' and ref.reference_name = %s and pe.docstatus = 1"
+		f" and exists ({DISBURSED.format('pe')}){lock}",
+		(invoice, "Payment Entry"),
+	)
+	entries = frappe.db.sql_list(
+		"select distinct je.name from `tabJournal Entry Account` acc join `tabJournal Entry` je on je.name = acc.parent"
+		" where acc.reference_type = 'Sales Invoice' and acc.reference_name = %s and je.docstatus = 1"
+		f" and exists ({DISBURSED.format('je')}){lock}",
+		(invoice, "Journal Entry"),
+	)
+	return sorted(payments + entries)
 
 
 def make_credit_note(invoice, amount, item_codes=None):

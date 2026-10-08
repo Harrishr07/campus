@@ -10,12 +10,17 @@ from frappe.tests import UnitTestCase
 from frappe.utils import flt, today
 
 from campus.campus_finance import api as finance
-from campus.campus_finance import fee_refunds, refunds
+from campus.campus_finance import fee_refunds, refunds, scholarships
 from campus.campus_finance.fee_heads import category_for_type
 from campus.campus_platform.approvals import approve, request_approval
 from campus.tests.approval_fixtures import level
 from campus.tests.factories import make_user
-from campus.tests.finance_factories import make_enrolled_students, make_finance_company, make_year_and_program
+from campus.tests.finance_factories import (
+	make_account,
+	make_enrolled_students,
+	make_finance_company,
+	make_year_and_program,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE, TRUST = "Refund Test College", "Refund Test Trust"
@@ -484,3 +489,60 @@ class TestCautionDeposit(RefundFixture):
 		invoice = self.deposit(self.a)
 		finance.raise_fee_invoice(self.b, "Tuition", 3000, COLLEGE, "Dues")
 		self.assertEqual(flt(self.approved(self.caution(invoice)).dues_netted), 0)
+
+
+class TestScholarshipMoneyIsNotRefunded(RefundFixture):
+	"""A scholarship settles fees; it is not money the student paid, so a refund never pays it out."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.expense = make_account(COLLEGE, "RFDC", "Scholarship Expense", "Indirect Expenses", root_type="Expense")
+
+	def award(self, student, scheme_type, amount):
+		"""Sanction and disburse `amount` of a Government (Payment Entry) or Institutional (Journal Entry) scheme."""
+		name = f"RFD Test {scheme_type} Scheme"
+		if not frappe.db.exists("Scholarship Scheme", name):
+			account = self.college["bank"] if scheme_type == "Government" else self.expense
+			frappe.get_doc(
+				{"doctype": "Scholarship Scheme", "scheme_name": name, "company": COLLEGE, "scheme_type": scheme_type,
+				 "account": account, "amount_type": "Fixed", "amount": amount}
+			).insert()  # fmt: skip
+		application = frappe.get_doc(
+			{"doctype": "Scholarship Application", "student": student, "scheme": name, "academic_year": YEAR}
+		).insert().submit()  # fmt: skip
+		return scholarships.disburse(application.name, amount, "SCH-UTR")
+
+	def test_paid_by_the_student_leaves_out_both_kinds_of_scholarship(self):
+		for scheme_type, student in (("Government", self.a), ("Institutional", self.b)):
+			invoice = self.invoice(student, "Tuition", 10000, paid=False)
+			self.award(student, scheme_type, 6000)
+			self.pay(invoice.name)
+			self.assertEqual(self.outstanding(invoice.name), 0)
+			self.assertEqual(refunds.paid_by_student(invoice.name), 4000, scheme_type)
+
+	def test_a_fee_refund_returns_only_what_the_student_paid(self):
+		for scheme_type, student in (("Government", self.a), ("Institutional", self.b)):
+			invoice = self.invoice(student, "Tuition", 10000, paid=False)
+			self.award(student, scheme_type, 6000)
+			self.pay(invoice.name)
+			self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 4000, scheme_type)
+			with self.assertRaisesRegex(frappe.ValidationError, "4000.0 of the Tuition"):
+				self.refund(invoice, student, amount=4001)
+			doc = self.approved(self.refund(invoice, student, amount=4000))
+			self.assertEqual((doc.docstatus, flt(doc.cash_refund)), (1, 4000), scheme_type)
+
+	def test_an_invoice_settled_by_a_scholarship_alone_has_nothing_to_refund(self):
+		for scheme_type, student in (("Government", self.a), ("Institutional", self.b)):
+			invoice = self.invoice(student, "Tuition", 6000, paid=False)
+			self.award(student, scheme_type, 6000)
+			self.assertEqual(self.outstanding(invoice.name), 0)
+			with self.assertRaisesRegex(frappe.ValidationError, "nothing to refund"):
+				self.refund(invoice, student)
+
+	def test_a_caution_deposit_refund_holds_back_the_scholarship_share(self):
+		invoice = self.invoice(self.a, "Caution Deposit", 5000, paid=False)
+		self.award(self.a, "Government", 2000)
+		self.pay(invoice.name)
+		doc = self.approved(self.refund(invoice, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, reason="Done"))
+		self.assertEqual((flt(doc.amount), flt(doc.cash_refund)), (3000, 3000))
