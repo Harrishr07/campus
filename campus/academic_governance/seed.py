@@ -26,6 +26,36 @@ NON_STATUTORY = [
 ]
 
 
+MESSAGE_TEMPLATES = [
+	(
+		"body_meeting.notice",
+		"Notice: {{ doc.body }} meeting on {{ frappe.format(doc.meeting_date, {'fieldtype': 'Date'}) }}",
+		"A meeting of {{ doc.body }} is called on {{ frappe.format(doc.meeting_date, {'fieldtype': 'Date'}) }} at {{ doc.venue or doc.online_link or '' }}. The agenda is on the portal.",
+	),
+	(
+		"meeting_action.overdue",
+		"Action overdue: {{ doc.action }}",
+		"Your action \"{{ doc.action }}\" from the {{ doc.body }} meeting was due on {{ frappe.format(doc.due_date, {'fieldtype': 'Date'}) }}. Please complete it and record the action taken.",
+	),
+]
+
+
+def seed_message_templates():
+	"""Notice and reminder templates for the messaging bus; an existing (possibly edited) template is left alone."""
+	for event_key, subject, body in MESSAGE_TEMPLATES:
+		if frappe.db.exists("Message Template", event_key):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Message Template",
+				"event_key": event_key,
+				"purpose": "transactional",
+				"channels": [{"channel": "email"}, {"channel": "whatsapp"}, {"channel": "sms"}],
+				"bodies": [{"language": "en", "subject": subject, "body": body}],
+			}
+		).insert(ignore_permissions=True)
+
+
 def seed_body_types():
 	for name, term_years, meetings, quorum, rules in STATUTORY:
 		make_body_type(name, 1, term_years=term_years, min_meetings_per_year=meetings, quorum_percent=quorum, rules=rules)

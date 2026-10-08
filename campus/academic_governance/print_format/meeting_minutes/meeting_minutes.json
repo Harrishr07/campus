@@ -1,0 +1,22 @@
+{
+ "absolute_value": 0,
+ "align_labels_right": 0,
+ "creation": "2026-10-08 18:00:00.000000",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "Body Meeting",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "html": "<h3 style=\"text-align:center\">{{ doc.company }}</h3><h4 style=\"text-align:center\">{{ _(\"Minutes of the Meeting\") }}</h4><p>{{ doc.body }}<br>{{ frappe.format(doc.meeting_date, {\"fieldtype\": \"Date\"}) }}{% if doc.start_time %}, {{ doc.start_time }}{% endif %}{% if doc.venue %}<br>{{ _(\"Venue\") }}: {{ doc.venue }}{% endif %}{% if doc.online_link %}<br>{{ _(\"Online\") }}: {{ doc.online_link }}{% endif %}</p><h5>{{ _(\"Attendance\") }}</h5><table class=\"table table-bordered\"><tr><th>{{ _(\"Member\") }}</th><th>{{ _(\"Category\") }}</th><th>{{ _(\"Present\") }}</th></tr>{% for a in doc.attendance %}<tr><td>{{ a.member_name }}</td><td>{{ _(a.category) }}</td><td>{{ \"&#10003;\" if a.present else \"\" }}</td></tr>{% endfor %}</table><p>{{ _(\"Quorum\") }}: {{ _(doc.quorum_status or \"\") }} ({{ doc.present_count }}/{{ doc.in_office_count }})</p><div>{{ doc.minutes or \"\" }}</div><h5>{{ _(\"Resolutions\") }}</h5><table class=\"table table-bordered\"><tr><th>{{ _(\"No\") }}</th><th>{{ _(\"Resolution\") }}</th><th>{{ _(\"Decision\") }}</th></tr>{% for r in doc.resolutions %}<tr><td>{{ r.resolution_no }}</td><td>{{ r.resolution_text }}</td><td>{{ _(r.decision) }}</td></tr>{% endfor %}</table>",
+ "idx": 0,
+ "line_breaks": 0,
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Meeting Minutes",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "raw_printing": 0,
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

@@ -22,3 +22,9 @@ def composition_shortfalls(body, on_date=None):
 def quorum_mandatory_categories(body_type):
 	"""Member categories that must be represented among the attendees for a meeting to be quorate."""
 	return composition.mandatory_quorum_categories(frappe.get_cached_doc("Body Type", body_type).composition)
+
+
+def quorum_rule(body_type):
+	"""(quorum percentage, mandatory categories) of a Body Type."""
+	percent = frappe.get_cached_value("Body Type", body_type, "quorum_percent")
+	return percent or 0, quorum_mandatory_categories(body_type)

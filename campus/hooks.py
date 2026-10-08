@@ -366,6 +366,9 @@ scheduler_events = {
 		"campus.admissions.allotment_import.reconcile_finished_imports",
 		"campus.examinations.cia.lock_due_schedules",
 	],
+	"weekly": [
+		"campus.academic_governance.actions.notify_overdue",
+	],
 	"cron": {
 		"*/15 * * * *": [
 			"campus.campus_messaging.delivery.dispatch_due",
