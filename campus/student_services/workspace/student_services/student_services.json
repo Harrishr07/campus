@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 10,
+   "link_count": 13,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -206,6 +206,39 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Exam Withdrawal Application",
+   "link_count": 0,
+   "link_to": "Exam Withdrawal Application",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Break of Study",
+   "link_count": 0,
+   "link_to": "Break of Study",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Rejoin Application",
+   "link_count": 0,
+   "link_to": "Rejoin Application",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
@@ -258,7 +291,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-07 18:05:19.000000",
+ "modified": "2026-10-08 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",

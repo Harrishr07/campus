@@ -75,7 +75,7 @@ class TestStudentFields(AdmitTestCase):
 			self.assertTrue(meta.has_field(fieldname), fieldname)
 		self.assertEqual(
 			meta.get_field("oc_academic_status").options.split("\n"),
-			["Active", "Detained", "Discontinued", "Completed", "Long Absent"],
+			["Active", "Detained", "Discontinued", "Completed", "Long Absent", "Break of Study"],
 		)
 
 	def test_admit_sets_quota_and_lateral_entry(self):

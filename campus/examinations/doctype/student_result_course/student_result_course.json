@@ -83,7 +83,7 @@
    "fieldname": "result",
    "fieldtype": "Select",
    "label": "Result",
-   "options": "Pass\nFail\nSA\nAB",
+   "options": "Pass\nFail\nSA\nAB\nWD",
    "read_only": 1,
    "in_list_view": 1
   }

@@ -7,6 +7,7 @@ from frappe.utils import get_datetime, now_datetime
 from campus.examinations import results
 from campus.examinations.access import students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses  # noqa: F401  (public API)
+from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
 
 # Exam registration and its fee are imported where used: they import campus_finance.api, which imports this module.
 
@@ -111,3 +112,10 @@ def student_registrations(student):
 	from campus.examinations import registration
 
 	return registration.student_registrations(student)
+
+
+def refresh_student_result(student, exam_session):
+	"""Recompute the student's Student Result of the session when the Result Run has made one (an approved or
+	cancelled exam withdrawal changes a course's code). Refused once the session is Published."""
+	if frappe.db.exists(results.RESULT, {"student": student, "exam_session": exam_session}):
+		results.compute_student_result(student, exam_session)

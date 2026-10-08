@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "break_of_study",
+  "student",
+  "student_name",
+  "rejoin_date",
+  "academic_year",
+  "column_break_1",
+  "company",
+  "program",
+  "department",
+  "from_regulation",
+  "to_regulation",
+  "section_bridge",
+  "bridge_courses",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "break_of_study",
+   "fieldtype": "Link",
+   "label": "Break of Study",
+   "options": "Break of Study",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "fetch_from": "break_of_study.student"
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "break_of_study.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "rejoin_date",
+   "fieldtype": "Date",
+   "label": "Rejoin Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1,
+   "description": "The year of rejoining: the regulation in force for it applies."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1,
+   "description": "The HOD of this department recommends."
+  },
+  {
+   "fieldname": "from_regulation",
+   "fieldtype": "Link",
+   "label": "From Regulation",
+   "options": "Regulation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_regulation",
+   "fieldtype": "Link",
+   "label": "To Regulation",
+   "options": "Regulation",
+   "read_only": 1,
+   "description": "The regulation in force for the programme in the rejoin year."
+  },
+  {
+   "fieldname": "section_bridge",
+   "fieldtype": "Section Break",
+   "label": "Bridge Courses"
+  },
+  {
+   "fieldname": "bridge_courses",
+   "fieldtype": "Table",
+   "label": "Bridge Courses",
+   "options": "Rejoin Bridge Course",
+   "description": "Added to the student's next exam registration until sat."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Rejoin Application",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Rejoin Application",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "RJN-.#####",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "title_field": "student_name"
+}

@@ -9,13 +9,14 @@ from frappe.permissions import add_permission
 from campus.examinations.access import COMMITTEE_ROLE, MENTOR_ROLE
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
 from campus.student_services.onboarding import ensure_default_templates
+from campus.student_services.student_records_setup import setup_student_records
 
 MODULE = "Student Services"
 LEAVE_KINDS = ["Leave", MEDICAL, ON_DUTY]
 EVIDENCE_KINDS = (MEDICAL, ON_DUTY)
 
 
-ACADEMIC_STATUSES = ["Active", "Detained", "Discontinued", "Completed", "Long Absent"]
+ACADEMIC_STATUSES = ["Active", "Detained", "Discontinued", "Completed", "Long Absent", "Break of Study"]
 
 # name, print format, number prefix, needs approval, transfer certificate
 CERTIFICATE_TYPES = [
@@ -37,6 +38,7 @@ def setup_student_services():
 	ensure_default_templates()
 	setup_leave_fields()
 	setup_grievances()
+	setup_student_records()
 
 
 GRIEVANCE_POLICY = "Student Grievance Escalation"

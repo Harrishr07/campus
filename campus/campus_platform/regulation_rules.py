@@ -109,10 +109,18 @@ def validate_regulation_change(doc, method=None):
 def change_regulation(student, to_regulation, reason, bridge_courses=None):
 	"""Move `student` to `to_regulation` (e.g. rejoin after a break) and log it. Dean Academics only."""
 	frappe.only_for(DEAN_ROLE)
+	frappe.has_permission("Student", "read", doc=student, throw=True)
+	return apply_regulation_change(student, to_regulation, reason, bridge_courses)
+
+
+def apply_regulation_change(student, to_regulation, reason, bridge_courses=None):
+	"""Move `student` to `to_regulation` and log it in the regulation history; returns the new regulation.
+
+	No role check: for service code with its own authorisation (an approved Rejoin Application, M05-03).
+	"""
 	if not (reason or "").strip():
 		frappe.throw(_("A reason is required to change the regulation."))
 	doc = frappe.get_doc("Student", student)
-	frappe.has_permission("Student", "read", doc=doc, throw=True)
 	regulation = frappe.db.get_value("Regulation", to_regulation, ["company", "status"], as_dict=True)
 	if not regulation or regulation.status != "Effective":
 		frappe.throw(_("Regulation {0} is not Effective.").format(frappe.bold(to_regulation)))

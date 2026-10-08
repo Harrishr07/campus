@@ -5,11 +5,12 @@ Eligibility of one registered course, first match wins:
 - shortage of attendance (SA) bars the courses attended this term (current and dropped re-registered),
   while an arrear stays registrable (R2022 cl. 15.1);
 - detention bars the term's courses the same way;
+- a bridge course of a rejoining student (P2-T21) is not a course of the term: like an arrear it stays registrable;
 - otherwise the course is eligible.
 """
 
-CURRENT, ARREAR, DROPPED = "Current", "Arrear", "Dropped"
-KINDS = (CURRENT, ARREAR, DROPPED)
+CURRENT, ARREAR, DROPPED, BRIDGE = "Current", "Arrear", "Dropped", "Bridge"
+KINDS = (CURRENT, ARREAR, DROPPED, BRIDGE)
 TERM_KINDS = (CURRENT, DROPPED)  # courses attended in the session's term
 
 ELIGIBLE = "Eligible"

@@ -5,7 +5,9 @@ Courses of a student in a session (registrable_courses):
   student's submitted Course Registration of the term lists the course so, else Current. Offerings of
   Internal Only courses (no end-semester exam) are left out;
 - arrears: courses whose latest published outcome is U, AB or WD (arrears.reappearance_courses) and that the
-  student does not take this term. They carry no offering.
+  student does not take this term. They carry no offering;
+- bridge courses still owed after an approved Rejoin Application (student_services.api.pending_bridge_courses),
+  kind Bridge, with no offering either.
 Attendance comes from the locked Attendance Eligibility Run (student_services.api.attendance_snapshot). A
 student with courses of the term but no snapshot row fails (the bulk run records the error) instead of passing.
 
@@ -25,8 +27,8 @@ from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import REAPPEAR, reappearance_courses
 from campus.examinations.courses import offering_course
 from campus.examinations.doctype.exam_registration.exam_registration import registration_name
-from campus.examinations.registration_rules import ARREAR, CURRENT, DROPPED, TERM_KINDS
-from campus.student_services.api import attendance_snapshot, student_offerings
+from campus.examinations.registration_rules import ARREAR, BRIDGE, CURRENT, DROPPED, TERM_KINDS
+from campus.student_services.api import attendance_snapshot, pending_bridge_courses, student_offerings
 
 DOCTYPE, SESSION = "Exam Registration", "Exam Session"
 RUN_TYPE = "Exam Registration"
@@ -130,7 +132,9 @@ def registrable_courses(student, academic_term):
 		kind = REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
 		rows.append({"course": offering.course, "course_offering": offering.name, "kind": kind})
 	taken = {row["course"] for row in rows}
-	return rows + [{"course": c, "kind": ARREAR} for c in reappearance_courses(student) if c not in taken]
+	rows += [{"course": c, "kind": ARREAR} for c in reappearance_courses(student) if c not in taken]
+	taken |= {row["course"] for row in rows}
+	return rows + [{"course": c, "kind": BRIDGE} for c in pending_bridge_courses(student) if c not in taken]
 
 
 def registered_kinds(student, academic_term):

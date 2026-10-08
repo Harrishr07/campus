@@ -30,7 +30,7 @@
    "fieldname": "kind",
    "fieldtype": "Select",
    "label": "Kind",
-   "options": "Current\nArrear\nDropped",
+   "options": "Current\nArrear\nDropped\nBridge",
    "reqd": 1,
    "in_list_view": 1
   },
