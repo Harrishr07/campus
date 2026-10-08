@@ -440,6 +440,15 @@ class TestFinalReviewFixes(GrievanceFixture):
 		with self.assertRaises(frappe.PermissionError):
 			frappe.get_doc("Student Grievance", grievance.name).check_permission("read")
 
+	def test_a_hod_with_no_department_lists_no_grievance_stored_with_an_empty_department(self):
+		grievance = self.raise_for()
+		frappe.db.set_value("Student Grievance", grievance.name, "department", "")
+		make_user(BLANK_HOD, [COLLEGE])
+		hold("HOD", make_department("Grievance Test MECH", COLLEGE), BLANK_HOD)
+		frappe.db.set_value("Position Holder", {"user": BLANK_HOD, "position": "HOD"}, "scope_value", None)
+		frappe.set_user(BLANK_HOD)
+		self.assertNotIn(grievance.name, frappe.get_list("Student Grievance", pluck="name"))
+
 	def test_an_unroutable_level_is_logged_plainly_and_shows_the_student_nothing(self):
 		self.seat_ended("HOD", self.department)
 		frappe.local.message_log = []

@@ -90,8 +90,7 @@ def notify_unrouted(grievance):
 	if not users:
 		users = [] if grievance.is_confidential else resolve_approvers("Position", PRINCIPAL_POSITION, grievance, "company")
 		users = users or resolve_approvers("Role", "System Manager", grievance, limit_to_company=True)
-		message = _("No approver could be found for the escalation levels and nobody holds the Grievance Committee role. "
-			"Give the role to the committee members (or fill the vacant positions) so the grievance can be handled.")  # fmt: skip
+		message = _("No approver could be found for the escalation levels and nobody holds the Grievance Committee role. Give the role to the committee members (or fill the vacant positions) so the grievance can be handled.")  # fmt: skip
 	notify(users, _("Unrouted grievance: {0}").format(grievance.name), message, grievance)
 
 

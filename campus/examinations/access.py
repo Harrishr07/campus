@@ -161,8 +161,9 @@ def confidential_clause(user, doctype):
 	clause = f"ifnull(`tab{doctype}`.`{field}`, 0) = 0"
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return clause
-	departments = ", ".join(frappe.db.escape(d) for d in held_scopes(user, HANDLER_POSITION)) or "''"
-	return f"{clause} and (`tab{doctype}`.name in ({handled_grievances_sql(user)}) or `tab{doctype}`.department in ({departments}))"
+	departments = ", ".join(frappe.db.escape(d) for d in held_scopes(user, HANDLER_POSITION))
+	own = f" or `tab{doctype}`.department in ({departments})" if departments else ""  # no seat: never match a blank department
+	return f"{clause} and (`tab{doctype}`.name in ({handled_grievances_sql(user)}){own})"
 
 
 def may_see_confidential(doc, user):
