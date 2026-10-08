@@ -245,8 +245,10 @@ class TestPositions(CampusTestCase):
 				raise RuntimeError("boom")
 			return real(user, *args, **kwargs)
 
-		with patch.object(positions, "sync_user_roles", flaky), patch.object(frappe, "log_error") as log:
+		# the job rolls a failed user back; a real rollback would also drop this class's users and department
+		with patch.object(positions, "sync_user_roles", flaky), patch.object(frappe, "log_error") as log, patch.object(frappe.db, "rollback") as rollback:
 			sync_all_roles()
+		rollback.assert_called_once_with()
 		self.assertTrue(log.called)
 		self.assertNotIn("HOD", roles_of(ALICE))
 
