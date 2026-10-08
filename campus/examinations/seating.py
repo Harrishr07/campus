@@ -2,8 +2,8 @@
 
 A Seating Plan seats, for one date and slot of an Exam Session, every student holding an Issued Hall Ticket
 with a course on that date and slot, in the plan's Exam Halls (seating_rules: courses interleaved, blocked seats
-skipped, capacity never exceeded, deterministic). Exam attendance is the seat's `absent` mark; the Result Run
-reads it (`absent`) and grades the course AB.
+skipped, capacity never exceeded, deterministic). A debarred registration is left out even before its ticket is
+withdrawn. Exam attendance is the seat's `absent` mark; the Result Run reads it (`absent`) and grades the course AB.
 """
 
 import frappe
@@ -85,15 +85,18 @@ def hall_seats(plan):
 
 
 def candidates_of(exam_session, exam_date, slot):
-	"""Students with an Issued Hall Ticket listing a course on that date and slot: [{student, student_name, course}]."""
+	"""Students with an Issued Hall Ticket listing a course on that date and slot, and not debarred since the ticket
+	was issued: [{student, student_name, course}]."""
 	ticket, course = frappe.qb.DocType("Hall Ticket"), frappe.qb.DocType("Hall Ticket Course")
+	registration = frappe.qb.DocType("Exam Registration")
 	return (
 		frappe.qb.from_(course)
 		.join(ticket).on(ticket.name == course.parent)
+		.join(registration).on(registration.name == ticket.exam_registration)
 		.select(ticket.student, ticket.student_name, course.course)
 		.where(
 			(course.parenttype == "Hall Ticket") & (ticket.exam_session == exam_session) & (ticket.status == "Issued")
-			& (course.exam_date == exam_date) & (course.slot == slot)
+			& (course.exam_date == exam_date) & (course.slot == slot) & (registration.debarred == 0)
 		)
 		.orderby(ticket.student).orderby(course.course)
 		.run(as_dict=True)

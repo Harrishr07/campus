@@ -124,6 +124,11 @@ class TestSeatingPlan(SeatingFixture):
 			self.assertLessEqual(hall.seated, hall.capacity)
 		self.assertEqual({s.course for s in plan.seats}, {course("C1"), course("C2")})
 
+	def test_a_debarred_student_is_not_seated(self):
+		frappe.db.set_value("Exam Registration", f"EXR-{self.session}-{self.students[0]}", {"debarred": 1, "debarment_reason": "Malpractice"})
+		plan = self.generated()
+		self.assertEqual(sorted(s.student for s in plan.seats), sorted(self.students[1:12]))
+
 	def test_more_students_than_seats_is_refused_and_nothing_is_seated(self):  # AC1: capacity
 		plan = make_plan(self.session, DAY1, "FN", [self.rooms["Seat Hall B"]])  # 6 seats for 12
 		with self.assertRaisesRegex(frappe.ValidationError, "12 students"):

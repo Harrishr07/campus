@@ -4,7 +4,7 @@ The faculty pool is the roster's table, or every active teacher (Employee with a
 company when it is empty. invigilation_rules balances duties per session type (FN / AN) within one and keeps
 out a teacher of a course written in the hall (an instructor of that course's offering in the session's term)
 and anyone on approved leave that day (the faculty service's leave check, as Substitutions use). A hall nobody
-may take refuses the roster.
+may take refuses the roster. The largest per-type gap is stored (duty_spread) and a gap above one is warned.
 """
 
 import frappe
@@ -40,8 +40,16 @@ def generate(roster):
 		"duties",
 		[{"exam_date": h.date, "slot": h.slot, "room": h.room, "employee": e, "employee_name": people.get(e)} for h, e in duties],
 	)
+	gaps = invigilation_rules.spread(duties, faculty)
+	doc.duty_spread = max(gaps.values(), default=0)
 	doc.flags.generating = True
 	doc.save()
+	for slot, gap in gaps.items():
+		if gap > 1:
+			frappe.msgprint(
+				_("{0} duties differ by {1} between faculty: leave or own-course exclusions leave no fairer roster. Widen the pool.").format(slot, gap),
+				indicator="orange", alert=True,
+			)
 	return len(doc.duties)
 
 

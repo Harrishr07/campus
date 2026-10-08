@@ -6,6 +6,7 @@ faculty_1 teaches SEAT C1 (written on day 1 FN); faculty_2 is on approved leave 
 """
 
 from collections import Counter
+from unittest.mock import patch
 
 import frappe
 
@@ -59,6 +60,15 @@ class TestRoster(RosterFixture):
 			counts = Counter(d.employee for d in roster.duties if d.slot == slot)
 			loads = [counts[e] for e in self.teachers.values()]
 			self.assertLessEqual(max(loads) - min(loads), 1, (slot, loads))
+
+	def test_the_roster_stores_its_largest_duty_gap_and_warns_above_one(self):
+		roster = self.roster()
+		self.assertLessEqual(roster.duty_spread, 1)
+		frappe.clear_messages()
+		with patch.object(invigilation.invigilation_rules, "spread", lambda duties, faculty: {"FN": 2, "AN": 0}):
+			invigilation.generate(roster.name)
+		self.assertEqual(roster.reload().duty_spread, 2)
+		self.assertIn("differ by 2", str(frappe.message_log))
 
 	def test_nobody_invigilates_a_hall_writing_their_own_course(self):
 		roster = self.roster()
