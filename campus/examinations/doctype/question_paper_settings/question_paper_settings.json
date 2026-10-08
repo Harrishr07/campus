@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "download_lead_minutes",
+  "slot_minutes",
+  "column_break_slots",
+  "forenoon_starts_at",
+  "afternoon_starts_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "download_lead_minutes",
+   "fieldtype": "Int",
+   "label": "Download Opens (minutes before release)",
+   "reqd": 1,
+   "default": "30",
+   "description": "The paper can be downloaded from this many minutes before its release time until the slot ends."
+  },
+  {
+   "fieldname": "slot_minutes",
+   "fieldtype": "Int",
+   "label": "Slot Length (minutes)",
+   "reqd": 1,
+   "default": "180"
+  },
+  {
+   "fieldname": "column_break_slots",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "forenoon_starts_at",
+   "fieldtype": "Time",
+   "label": "FN Slot Starts At",
+   "reqd": 1,
+   "default": "10:00:00"
+  },
+  {
+   "fieldname": "afternoon_starts_at",
+   "fieldtype": "Time",
+   "label": "AN Slot Starts At",
+   "reqd": 1,
+   "default": "14:00:00"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Question Paper Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1,
+ "track_changes": 1
+}

@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "company",
+  "course",
+  "total_marks",
+  "column_break_release",
+  "release_at",
+  "moderation_status",
+  "section_pattern",
+  "blueprint",
+  "blueprint_issues",
+  "section_questions",
+  "questions",
+  "section_papers",
+  "set_a_file",
+  "column_break_files",
+  "set_b_file"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "exam_session.company"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "total_marks",
+   "fieldtype": "Float",
+   "label": "Total Marks",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_release",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "release_at",
+   "fieldtype": "Datetime",
+   "label": "Release At",
+   "in_list_view": 1,
+   "description": "The slot start. Empty: taken from the session's schedule and the slot times in Question Paper Settings. Downloads open the lead time set there before it and close when the slot ends."
+  },
+  {
+   "fieldname": "moderation_status",
+   "fieldtype": "Select",
+   "label": "Moderation Status",
+   "options": "Draft\nUnder Moderation\nApproved",
+   "default": "Draft",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Approved seals the paper: nobody, System Manager included, can open it until its download window."
+  },
+  {
+   "fieldname": "section_pattern",
+   "fieldtype": "Section Break",
+   "label": "Pattern"
+  },
+  {
+   "fieldname": "blueprint",
+   "fieldtype": "Table",
+   "label": "Blueprint",
+   "options": "Question Paper Blueprint"
+  },
+  {
+   "fieldname": "blueprint_issues",
+   "fieldtype": "Small Text",
+   "label": "Blueprint Issues",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_questions",
+   "fieldtype": "Section Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "Question Paper Question"
+  },
+  {
+   "fieldname": "section_papers",
+   "fieldtype": "Section Break",
+   "label": "Paper Files",
+   "description": "PDFs. Encrypted when saved; download them only with the Download button inside the window (watermarked)."
+  },
+  {
+   "fieldname": "set_a_file",
+   "fieldtype": "Attach",
+   "label": "Set A (PDF)"
+  },
+  {
+   "fieldname": "column_break_files",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "set_b_file",
+   "fieldtype": "Attach",
+   "label": "Set B (PDF)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Question Paper",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "QP-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1,
+ "max_attachments": 4
+}

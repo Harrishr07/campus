@@ -407,6 +407,8 @@ permission_query_conditions = {
 	**{dt: "campus.academic_governance.access.permission_query" for dt in ("Body Meeting", "Meeting Action Item")},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
 	"Substitution": "campus.faculty.substitution_access.permission_query",
+	"Question Paper": "campus.examinations.question_papers.permission_query",
+	**{dt: "campus.examinations.question_papers.confidential_query" for dt in ("Question Bank Item", "QP Setter Nomination", "QP Access Log")},
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
@@ -418,7 +420,12 @@ has_permission = {
 	**{dt: "campus.academic_governance.access.has_permission" for dt in ("Body Meeting", "Meeting Action Item")},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
 	"Substitution": "campus.faculty.substitution_access.has_permission",
+	"Question Paper": "campus.examinations.question_papers.has_permission",
+	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("Question Bank Item", "QP Setter Nomination", "QP Access Log")},
+	"File": "campus.examinations.question_papers.file_has_permission",
 }
+# Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
+doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.
