@@ -26,6 +26,31 @@
 		<span class="cp-value">{{ pending_circulars }}</span>
 	</a>
 </div>
+{% if exam_registrations %}
+<h2>{{ _("Exam registration") }}</h2>
+{% for r in exam_registrations %}
+<div class="cp-card">
+	<strong>{{ r.exam_session|e }}</strong> ({{ r.academic_term|e }})
+	<span class="cp-badge">{{ _("Confirmed") if r.confirmed else _("Not confirmed") }}</span>
+	<ul class="cp-list">
+		{% for c in r.courses %}
+		<li>{{ c.course|e }} <small>{{ _(c.kind) }}</small> <span class="cp-badge">{{ _(c.eligibility) }}</span></li>
+		{% endfor %}
+	</ul>
+	{% if r.confirmed %}
+	<p>{{ _("Exam fee") }}: {{ frappe.utils.fmt_money(r.fee_total, currency="INR") }}{% if r.late_fee %} ({{ _("includes late fee") }} {{ frappe.utils.fmt_money(r.late_fee, currency="INR") }}){% endif %}</p>
+	{% elif r.can_confirm %}
+	<form class="cp-form" data-method="campus.student_services.portal.confirm_exam_registration">
+		<input type="hidden" name="student" value="{{ student|e }}">
+		<input type="hidden" name="registration" value="{{ r.name|e }}">
+		<p>{{ _("Only eligible courses are charged. A late fee applies after the closing date.") }}</p>
+		<button class="cp-btn" type="submit">{{ _("Confirm registration") }}</button>
+		<p class="cp-message" role="alert"></p>
+	</form>
+	{% endif %}
+</div>
+{% endfor %}
+{% endif %}
 {% if onboarding %}
 <h2>{{ _("Onboarding") }} ({{ onboarding.completion or 0 }}%)</h2>
 <ul class="cp-list">

@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "program",
+  "fee_per_course",
+  "section_late",
+  "late_fee_slabs"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Leave blank for the company's rate for every program."
+  },
+  {
+   "fieldname": "fee_per_course",
+   "fieldtype": "Currency",
+   "label": "Fee per Course",
+   "reqd": 1,
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_late",
+   "fieldtype": "Section Break",
+   "label": "Late Fee"
+  },
+  {
+   "fieldname": "late_fee_slabs",
+   "fieldtype": "Table",
+   "label": "Late Fee Slabs",
+   "options": "Exam Late Fee Slab",
+   "description": "Registration later than the Exam Session's closing date pays the slab of its days late; past every slab it is closed."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Exam Fee Rate",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "EFR-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

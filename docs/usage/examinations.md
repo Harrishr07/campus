@@ -37,3 +37,24 @@ COE reads and edits everything. Every change is versioned.
 - **CIA Status by Offering**: the deadline, Open / Locked / Unlocked, students, absentees and average CIA.
 - **CIA Marks Audit Trail**: every CIA question-mark and CIA change (who, when, old to new), plus each unlock
   request and the decision on it.
+
+# Examinations: exam registration and exam fee (P2-T14)
+
+## Set up (COE)
+1. **Exam Session**: set Registration Opens, Registration Closes (the last day without a late fee), Exams Start / End and the Exam Schedule (one row per course: date, FN/AN).
+2. **Exam Fee Rate** (Examinations > Masters): fee per course for the company (or one program), and late fee slabs in days after the closing date, e.g. 1-7 days ₹100, 8-15 days ₹250. Past the last slab, registration is closed.
+3. Lock the term's **Attendance Eligibility Run** (Student Services). Registration reads only locked runs.
+
+## Create registrations
+On the Exam Session, **Create Exam Registrations** (optionally for one program) queues a bulk run. Each student gets one Exam Registration with:
+- the term's courses they attend (Current; Dropped when their Course Registration says so), without Internal Only courses;
+- arrears: courses last published as U, AB or WD (no offering).
+
+Running it again adds only missing courses; confirmed registrations are not touched.
+
+Eligibility per course: SA (from the locked run; an approved condonation counts) bars the term's courses, while arrears stay registrable (R2022 cl. 15.1). **Detained** (with a reason) bars the term's courses. **Debarred (Malpractice)** bars every course.
+
+## Confirm (student)
+On /campus-portal the student sees the courses and their eligibility, and presses **Confirm registration**. The fee is the rate × eligible courses, plus the late fee slab of the days after the closing date. A background job raises the Sales Invoice under the Exam fee head. Guardians can see the registration, but only the student can confirm it.
+
+Exam dues do not stop registration. They block hall tickets (`campus.examinations.api.exam_dues_block`).

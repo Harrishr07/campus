@@ -8,7 +8,15 @@
   "academic_term",
   "is_final_year",
   "status",
-  "publish_at"
+  "publish_at",
+  "section_registration",
+  "registration_opens",
+  "registration_closes",
+  "column_break_dates",
+  "exam_start",
+  "exam_end",
+  "section_schedule",
+  "schedule"
  ],
  "fields": [
   {
@@ -53,11 +61,52 @@
    "label": "Publish At",
    "mandatory_depends_on": "eval:doc.status=='Published'",
    "description": "Students and guardians see results only from this time."
+  },
+  {
+   "fieldname": "section_registration",
+   "fieldtype": "Section Break",
+   "label": "Registration and Exam Dates"
+  },
+  {
+   "fieldname": "registration_opens",
+   "fieldtype": "Date",
+   "label": "Registration Opens"
+  },
+  {
+   "fieldname": "registration_closes",
+   "fieldtype": "Date",
+   "label": "Registration Closes",
+   "description": "Last day without a late fee; later confirmations pay the Exam Fee Rate's late fee slab."
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "exam_start",
+   "fieldtype": "Date",
+   "label": "Exams Start"
+  },
+  {
+   "fieldname": "exam_end",
+   "fieldtype": "Date",
+   "label": "Exams End"
+  },
+  {
+   "fieldname": "section_schedule",
+   "fieldtype": "Section Break",
+   "label": "Exam Schedule"
+  },
+  {
+   "fieldname": "schedule",
+   "fieldtype": "Table",
+   "label": "Schedule",
+   "options": "Exam Schedule"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Session",

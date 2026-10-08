@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_day",
+  "to_day",
+  "late_fee"
+ ],
+ "fields": [
+  {
+   "fieldname": "from_day",
+   "fieldtype": "Int",
+   "label": "From Day",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1,
+   "description": "Days after the registration closing date, inclusive."
+  },
+  {
+   "fieldname": "to_day",
+   "fieldtype": "Int",
+   "label": "To Day",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1,
+   "description": "Inclusive."
+  },
+  {
+   "fieldname": "late_fee",
+   "fieldtype": "Currency",
+   "label": "Late Fee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Exam Late Fee Slab",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}

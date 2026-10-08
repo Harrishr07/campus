@@ -8,6 +8,8 @@ from campus.examinations import results
 from campus.examinations.access import students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses  # noqa: F401  (public API)
 
+# Exam registration and its fee are imported where used: they import campus_finance.api, which imports this module.
+
 
 @frappe.whitelist(methods=["POST"])
 def run_results(exam_session, program):
@@ -31,3 +33,36 @@ def issue_grade_sheet(student_result):
 	if status != "Published" or not publish_at or get_datetime(publish_at) > now_datetime():
 		frappe.throw(_("A Grade Sheet is issued only for a published Exam Session whose publication time has passed."))
 	return issue(doc, "Grade Sheet").name
+
+
+@frappe.whitelist(methods=["POST"])
+def start_registration(exam_session, program=None):
+	"""Queue the bulk Exam Registration of the session (COE only); returns the Bulk Run name.
+
+	Idempotent: a re-run adds only the missing courses of unconfirmed registrations.
+	"""
+	from campus.examinations import registration
+
+	return registration.start(exam_session, program or None)
+
+
+def exam_dues_block(student, exam_session):
+	"""{blocked, amount}: the hall ticket gate. Unpaid Exam-head dues in the session's company block a hall ticket
+	(never the registration itself)."""
+	from campus.examinations import exam_fee
+
+	return exam_fee.exam_dues_block(student, exam_session)
+
+
+def confirm_registration(registration_name):
+	"""Confirm an Exam Registration (the caller checks who may): fixes the fee and queues the invoice; returns it."""
+	from campus.examinations import registration
+
+	return registration.confirm(registration_name)
+
+
+def student_registrations(student):
+	"""The student's Exam Registrations of unpublished sessions as plain dicts (the caller resolves the student)."""
+	from campus.examinations import registration
+
+	return registration.student_registrations(student)

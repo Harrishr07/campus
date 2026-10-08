@@ -52,6 +52,35 @@ def eligibility_status(student, academic_term):
 	return summarise(student, academic_term, term_window(academic_term), {})["status"]
 
 
+def attendance_snapshot(student, academic_term, company):
+	"""Eligible / Shortage of `student` in the term from the frozen Attendance Eligibility Run, or None.
+
+	Only locked runs of the company count (the latest locked one holding the student). "Detained (SA)" is a
+	Shortage; "Condonation" (medical band) is Eligible only once a Condonation Request of the student for the
+	term is approved (submitted), else a Shortage. None when no locked run has a row for the student.
+	No read check on the Student: for service code with its own authorisation (exam registration).
+	"""
+	run, row = frappe.qb.DocType("Attendance Eligibility Run"), frappe.qb.DocType("Attendance Eligibility Row")
+	rows = (
+		frappe.qb.from_(run)
+		.join(row)
+		.on((row.parent == run.name) & (row.parenttype == "Attendance Eligibility Run"))
+		.select(row.status)
+		.where((run.company == company) & (run.academic_term == academic_term) & (run.locked == 1))
+		.where(row.student == student)
+		.orderby(run.locked_on, order=frappe.qb.desc)
+		.orderby(run.name, order=frappe.qb.desc)
+		.limit(1)
+		.run()
+	)
+	if not rows:
+		return None
+	status = rows[0][0]
+	if status == "Eligible" or (status == "Condonation" and has_condonation(student, academic_term)):
+		return ELIGIBLE
+	return "Shortage"
+
+
 def attendance_marks(student, offering):
 	"""CIA attendance marks of `student` in the course offering (Student Group), by the regulation's mark bands.
 

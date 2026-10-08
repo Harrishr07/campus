@@ -15,6 +15,7 @@ from frappe.utils.html_utils import sanitize_html
 
 from campus.campus_finance.api import can_pay_online, fee_payment_link, has_dues, student_invoices
 from campus.campus_platform.api import find_policy, latest_request, start_request
+from campus.examinations.api import confirm_registration, student_registrations
 from campus.student_services import grievances
 from campus.student_services.api import student_terms, summarise, term_window
 
@@ -367,3 +368,31 @@ def leave_row(leave):
 		"name": leave.name, "from_date": leave.from_date, "to_date": leave.to_date, "leave_kind": leave.oc_leave_kind,
 		"reason": leave.reason, "status": state, "total_leave_days": leave.total_leave_days,
 	}  # fmt: skip
+
+
+def is_the_student(student):
+	"""Whether the session user is the student themself (a guardian may view, only the student confirms)."""
+	return frappe.db.get_value("Student", student, "user") == frappe.session.user
+
+
+@frappe.whitelist()
+def my_exam_registrations(student=None):
+	"""The student's Exam Registrations of unpublished sessions: courses, eligibility, fee, whether they may confirm."""
+	student = resolve_student(student)
+	own = is_the_student(student)
+	registrations = student_registrations(student)
+	for row in registrations:
+		row["can_confirm"] = bool(own and not row["confirmed"] and row["has_eligible"])
+	return {"student": student, "registrations": registrations}
+
+
+@frappe.whitelist(methods=["POST"])
+def confirm_exam_registration(registration, student=None):
+	"""The student confirms their own Exam Registration; this fixes the fee and queues the exam fee invoice."""
+	student = resolve_student(student)
+	if not is_the_student(student):
+		frappe.throw(_("Only the student can confirm their exam registration."), frappe.PermissionError)
+	if frappe.db.get_value("Exam Registration", registration, "student") != student:
+		frappe.throw(_("You cannot confirm this exam registration."), frappe.PermissionError)
+	doc = confirm_registration(registration)
+	return {"registration": doc.name, "fee_total": doc.fee_total, "late_fee": doc.late_fee}

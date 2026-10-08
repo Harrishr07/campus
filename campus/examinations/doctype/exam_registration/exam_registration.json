@@ -1,0 +1,242 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "student",
+  "student_name",
+  "program",
+  "column_break_1",
+  "company",
+  "academic_term",
+  "attendance_status",
+  "section_flags",
+  "detained",
+  "detention_reason",
+  "column_break_2",
+  "debarred",
+  "debarment_reason",
+  "section_courses",
+  "courses",
+  "section_fee",
+  "confirmed",
+  "confirmed_on",
+  "late_days",
+  "column_break_3",
+  "exam_fee",
+  "late_fee",
+  "fee_total",
+  "fee_invoice"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attendance_status",
+   "fieldtype": "Select",
+   "label": "Attendance",
+   "options": "Eligible\nShortage",
+   "read_only": 1,
+   "description": "From the locked Attendance Eligibility Run of the term."
+  },
+  {
+   "fieldname": "section_flags",
+   "fieldtype": "Section Break",
+   "label": "Detention and Debarment"
+  },
+  {
+   "fieldname": "detained",
+   "fieldtype": "Check",
+   "label": "Detained",
+   "description": "Bars the courses of this term; arrears stay registrable."
+  },
+  {
+   "fieldname": "detention_reason",
+   "fieldtype": "Small Text",
+   "label": "Detention Reason",
+   "depends_on": "detained",
+   "mandatory_depends_on": "detained"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "debarred",
+   "fieldtype": "Check",
+   "label": "Debarred (Malpractice)",
+   "description": "Bars every course of the session."
+  },
+  {
+   "fieldname": "debarment_reason",
+   "fieldtype": "Small Text",
+   "label": "Debarment Reason",
+   "depends_on": "debarred",
+   "mandatory_depends_on": "debarred"
+  },
+  {
+   "fieldname": "section_courses",
+   "fieldtype": "Section Break",
+   "label": "Courses"
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Exam Registration Course"
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Confirmation and Fee"
+  },
+  {
+   "fieldname": "confirmed",
+   "fieldtype": "Check",
+   "label": "Confirmed",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "confirmed_on",
+   "fieldtype": "Datetime",
+   "label": "Confirmed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "late_days",
+   "fieldtype": "Int",
+   "label": "Days Late",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "exam_fee",
+   "fieldtype": "Currency",
+   "label": "Exam Fee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "late_fee",
+   "fieldtype": "Currency",
+   "label": "Late Fee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fee_total",
+   "fieldtype": "Currency",
+   "label": "Fee Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fee_invoice",
+   "fieldtype": "Link",
+   "label": "Fee Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Exam Registration",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "student_name",
+ "show_title_field_in_link": 0,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

@@ -11,5 +11,15 @@ frappe.ui.form.on("Exam Session", {
 				__("Run Results")
 			);
 		});
+		frm.add_custom_button(__("Create Exam Registrations"), () => {
+			frappe.prompt(
+				{ fieldname: "program", fieldtype: "Link", options: "Program", label: __("Program (blank: all)") },
+				({ program }) =>
+					frappe
+						.xcall("campus.examinations.api.start_registration", { exam_session: frm.doc.name, program })
+						.then(() => frappe.show_alert({ message: __("Exam registration queued"), indicator: "green" })),
+				__("Create Exam Registrations")
+			);
+		});
 	},
 });
