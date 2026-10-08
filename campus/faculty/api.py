@@ -59,15 +59,20 @@ def can_mark_substituted_attendance(user, course_schedule):
 	return substitute_attendance.can_mark(user, course_schedule)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark_substituted_attendance(substitution, present=None, absent=None):
 	"""The confirmed substitute marks the substituted period (lists of Student names, or JSON); returns the attendance names."""
 	return substitute_attendance.mark(substitution, present, absent)
 
 
-@frappe.whitelist()
+def on_leave(employee, date):
+	"""True when the employee has approved leave covering `date` (the check Substitutions use)."""
+	return substitutions.on_leave(employee, date)
+
+
+@frappe.whitelist(methods=["POST"])
 def suggest_substitutes(course_schedule):
 	"""Free teachers of the absent teacher's department for a period, for the Substitution form."""
-	if not frappe.has_permission("Substitution", "write"):
+	if not (frappe.has_permission("Substitution", "write") and frappe.has_permission("Course Schedule", "read", course_schedule)):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	return substitutions.free_faculty(course_schedule)

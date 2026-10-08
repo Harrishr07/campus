@@ -27,25 +27,35 @@ def setup_faculty():
 SUBSTITUTION_EVENT = "substitution.assigned"
 
 
+SUBSTITUTION_TEMPLATES = [
+	(
+		SUBSTITUTION_EVENT,
+		"Substitution: {{ doc.student_group }} on {{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}",
+		"You are the substitute for {{ doc.absent_faculty_name }} in {{ doc.student_group }} ({{ doc.course }}) on "
+		"{{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}, {{ doc.from_time }} to {{ doc.to_time }}, room {{ doc.room or '-' }}. "
+		"You can mark attendance for this period from the substitution.",
+	),
+	(
+		"substitution.cancelled",
+		"Substitution cancelled: {{ doc.student_group }} on {{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}",
+		"The substitution for {{ doc.absent_faculty_name }} in {{ doc.student_group }} on "
+		"{{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}, {{ doc.from_time }} to {{ doc.to_time }}, is cancelled. You need not take this class.",
+	),
+]
+
+
 def seed_substitution_template():
-	"""The notice a substitute gets when a Substitution is confirmed; an existing (possibly edited) template is left alone."""
-	if frappe.db.exists("Message Template", SUBSTITUTION_EVENT):
-		return
-	frappe.get_doc(
-		{
-			"doctype": "Message Template", "event_key": SUBSTITUTION_EVENT, "purpose": "transactional",
-			"channels": [{"channel": "email"}, {"channel": "whatsapp"}, {"channel": "sms"}],
-			"bodies": [
-				{
-					"language": "en",
-					"subject": "Substitution: {{ doc.student_group }} on {{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}",
-					"body": "You are the substitute for {{ doc.absent_faculty_name }} in {{ doc.student_group }} ({{ doc.course }}) on "
-					"{{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}, {{ doc.from_time }} to {{ doc.to_time }}, room {{ doc.room or '-' }}. "
-					"You can mark attendance for this period from the substitution.",
-				}
-			],
-		}
-	).insert(ignore_permissions=True)  # fmt: skip
+	"""The notices a substitute gets when a Substitution is confirmed or cancelled; an existing (possibly edited) template is left alone."""
+	for event_key, subject, body in SUBSTITUTION_TEMPLATES:
+		if frappe.db.exists("Message Template", event_key):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Message Template", "event_key": event_key, "purpose": "transactional",
+				"channels": [{"channel": "email"}, {"channel": "whatsapp"}, {"channel": "sms"}],
+				"bodies": [{"language": "en", "subject": subject, "body": body}],
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
 
 
 ALLOCATION_POLICY = "Course Allocation - HOD"

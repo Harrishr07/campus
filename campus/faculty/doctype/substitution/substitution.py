@@ -20,6 +20,8 @@ class Substitution(Document):
 		self.fill_substitute()
 
 	def fill_from_schedule(self):
+		if not frappe.db.exists("Course Schedule", self.course_schedule):
+			frappe.throw(_("Course Schedule {0} does not exist.").format(self.course_schedule))
 		schedule = frappe.db.get_value(
 			"Course Schedule", self.course_schedule, ["instructor", "schedule_date", "from_time", "to_time", "student_group", "course", "room"], as_dict=True
 		)
@@ -74,15 +76,15 @@ class Substitution(Document):
 		if self.status == "Confirmed" and (not before or before.status != "Confirmed" or before.substitute != self.substitute):
 			self.notify_substitute()
 
-	def notify_substitute(self):
+	def notify_substitute(self, event=EVENT, token=None):
 		"""Best effort: a messaging problem must not stop the confirmation."""
-		if not frappe.db.exists("Message Template", {"event_key": EVENT, "enabled": 1}):
+		if not frappe.db.exists("Message Template", {"event_key": event, "enabled": 1}):
 			return
 		from campus.campus_messaging.api import send
 
 		frappe.db.savepoint(SAVEPOINT)
 		try:
-			send(EVENT, self, [f"Employee:{self.substitute}"], context={"dedupe_token": self.substitute})
+			send(event, self, [f"Employee:{self.substitute}"], context={"dedupe_token": token or self.substitute})
 		except Exception:
 			frappe.db.rollback(save_point=SAVEPOINT)
 			frappe.log_error(title=f"Substitution notice failed for {self.name}")

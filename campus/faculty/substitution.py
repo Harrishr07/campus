@@ -12,6 +12,7 @@ from frappe.utils import getdate, to_timedelta
 from campus.faculty.timetable import rules
 
 LIVE = ("Proposed", "Confirmed")
+CANCEL_EVENT = "substitution.cancelled"
 
 
 def seconds(value):
@@ -58,7 +59,10 @@ def busy_periods(employee, date, ignore=None):
 
 
 def clashes_with(employee, schedule, ignore=None):
-	"""True when the employee already has a class overlapping `schedule` (a row with schedule_date, from_time, to_time)."""
+	"""True when the employee already has a class overlapping `schedule` (a row with schedule_date, from_time, to_time).
+
+	T07's validator compares whole periods, so each of the employee's classes that overlaps `schedule` is given the
+	schedule's start as its period (a clash for rules.clashes); non-overlapping ones keep their own start."""
 	start, end = seconds(schedule.from_time), seconds(schedule.to_time)
 	day = str(getdate(schedule.schedule_date))
 	entries = [rules.Entry(schedule.name, schedule.name, employee, "", day, start, "Lecture")]
@@ -112,7 +116,8 @@ def propose_for_leave(leave):
 	nobody free is still listed, with the substitute blank for the HOD to fill."""
 	schedules = affected_schedules(leave.employee, leave.from_date, leave.to_date)
 	created = []
-	for schedule in [s for s in schedules if s not in covered(schedules)]:
+	done = covered(schedules)
+	for schedule in [s for s in schedules if s not in done]:
 		free = free_faculty(schedule)
 		reason = _("{0} on leave ({1} to {2})").format(leave.employee_name or leave.employee, leave.from_date, leave.to_date)
 		doc = frappe.get_doc(
@@ -139,4 +144,7 @@ def on_leave_submit(doc, method=None):
 def on_leave_cancel(doc, method=None):
 	"""A cancelled leave withdraws the substitutions it produced."""
 	for name in frappe.get_all("Substitution", {"leave_application": doc.name, "status": ["in", LIVE]}, pluck="name"):
+		confirmed = frappe.db.get_value("Substitution", name, "status") == "Confirmed"
 		frappe.db.set_value("Substitution", name, "status", "Cancelled")
+		if confirmed:  # the substitute was told they were covering: tell them they no longer are
+			frappe.get_doc("Substitution", name).notify_substitute(CANCEL_EVENT, "cancelled")

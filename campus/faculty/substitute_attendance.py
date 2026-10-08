@@ -8,6 +8,7 @@ attendance as before.
 
 import frappe
 from frappe import _
+from frappe.utils import getdate, today
 
 LIVE_GRANT = "Confirmed"
 
@@ -28,6 +29,8 @@ def mark(substitution, present=None, absent=None):
 	if not course_schedule or granting_substitution(frappe.session.user, course_schedule) != substitution:
 		frappe.throw(_("You are not the confirmed substitute for this period."), frappe.PermissionError)
 	schedule = frappe.db.get_value("Course Schedule", course_schedule, ["student_group", "schedule_date"], as_dict=True)
+	if getdate(schedule.schedule_date) > getdate(today()):
+		frappe.throw(_("Attendance cannot be marked for a period that has not happened yet."))
 	roll = dict(frappe.get_all("Student Group Student", {"parent": schedule.student_group, "active": 1}, ["student", "student_name"], as_list=True))
 	chosen = [*present, *absent]
 	if len(set(chosen)) != len(chosen):
@@ -39,6 +42,15 @@ def mark(substitution, present=None, absent=None):
 
 
 def record(student, student_name, status, course_schedule, schedule):
+	"""Create the attendance, or correct an existing submitted one of this student and period: a different status
+	cancels it and writes a new record (same grant, same checks); the same status changes nothing."""
+	existing = frappe.db.get_value("Student Attendance", {"student": student, "course_schedule": course_schedule, "docstatus": 1}, ["name", "status"], as_dict=True)
+	if existing and existing.status == status:
+		return existing.name
+	if existing:
+		old = frappe.get_doc("Student Attendance", existing.name)
+		old.flags.ignore_permissions = True
+		old.cancel()
 	doc = frappe.get_doc(
 		{
 			"doctype": "Student Attendance", "student": student, "student_name": student_name, "status": status,
@@ -53,4 +65,7 @@ def record(student, student_name, status, course_schedule, schedule):
 
 def as_list(value):
 	value = frappe.parse_json(value) if isinstance(value, str) else value
-	return list(value or [])
+	students = list(value or [])
+	if not all(isinstance(s, str) for s in students):
+		frappe.throw(_("Give the students as a list of Student names."))
+	return students
