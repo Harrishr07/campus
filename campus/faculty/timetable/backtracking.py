@@ -237,7 +237,7 @@ class Search:
 		i = 0
 		while 0 <= i < n:
 			if len(frames) == i:
-				frames.append(iter(self.options(order[i])[:TRIES_PER_SESSION]))
+				frames.append(iter(self.options(order[i])[: TRIES_PER_SESSION * ROOM_TRIES]))
 			if len(chosen) > i:
 				self.unplace(order[i], chosen.pop())
 			nodes += 1

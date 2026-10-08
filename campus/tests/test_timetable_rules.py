@@ -264,7 +264,18 @@ class TestCpSat(UnitTestCase):
 
 	def test_a_time_limit_returns_the_best_found_not_an_infeasibility_claim(self):
 		problem = demo_scale_problem()
-		problem.time_limit = 1
+		problem.time_limit = 20
+		started = time.monotonic()
 		result = cpsat.solve(problem)
+		self.assertLess(time.monotonic() - started, 20 + 4)  # one budget for the warm start and CP-SAT, plus model building
+		self.assertEqual(result.status, "feasible")
+		self.assertEqual(rules.violations(result.entries, problem.grid), [])
+
+	def test_a_tiny_budget_returns_the_warm_start_without_a_second_search(self):
+		problem = demo_scale_problem()
+		problem.time_limit = 1
+		started = time.monotonic()
+		result = cpsat.solve(problem)
+		self.assertLess(time.monotonic() - started, 1 + 6)
 		self.assertNotEqual(result.status, "infeasible")
 		self.assertEqual(rules.violations(result.entries, problem.grid), [])

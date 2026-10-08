@@ -16,7 +16,7 @@ import frappe
 from frappe.utils import add_days, getdate, now_datetime, to_timedelta
 
 from campus.faculty.report.timetable_clash_checker import timetable_clash_checker as checker
-from campus.faculty.timetable import context, generation, publish, rules
+from campus.faculty.timetable import context, generation, publish, rules, solver
 from campus.tests import demo
 from campus.tests.utils import CampusTestCase
 
@@ -252,13 +252,54 @@ class TestGeneration(TimetableFixture):
 
 	def test_a_run_older_than_the_job_timeout_is_marked_dead_and_no_longer_blocks(self):
 		doc = self.new_timetable()
-		stale = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Running"}).insert(ignore_permissions=True)
-		frappe.db.set_value("Timetable Generation Run", stale.name, "modified", add_days(now_datetime(), -1), update_modified=False)
+		stale = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Running", "started_at": add_days(now_datetime(), -1)}).insert(
+			ignore_permissions=True
+		)
 		fresh = generation.start_generation(doc.name)
 		self.assertNotEqual(fresh, stale.name)
 		stale.reload()
 		self.assertEqual(stale.status, "Failed")
 		self.assertIn("did not finish", stale.error)
+
+	def test_a_run_that_merely_waited_in_the_queue_is_not_stale_while_running(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Running", "started_at": now_datetime()}).insert(ignore_permissions=True)
+		frappe.db.set_value("Timetable Generation Run", run.name, "modified", add_days(now_datetime(), -1), update_modified=False)  # old row, fresh start
+		with self.assertRaises(frappe.ValidationError):
+			generation.start_generation(doc.name)
+
+	def test_a_cancel_during_the_solve_wins_and_the_result_is_not_written(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Queued", "time_limit": 5}).insert(ignore_permissions=True)
+		real = solver.solve
+
+		def solve_and_get_cancelled(problem):
+			generation.cancel_run(run.name)  # another user cancels while the solver is working
+			return real(problem)
+
+		with mock.patch.object(solver, "solve", solve_and_get_cancelled):
+			generation.execute_run(run.name)
+		self.assertEqual(frappe.db.get_value("Timetable Generation Run", run.name, "status"), "Cancelled")
+		self.assertEqual(len(frappe.get_doc("Timetable", doc.name).entries), 0)
+
+	def test_a_failure_after_a_cancel_does_not_overwrite_the_cancel(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Queued"}).insert(ignore_permissions=True)
+
+		def cancelled_then_broken(problem):
+			generation.cancel_run(run.name)
+			raise RuntimeError("solver blew up")
+
+		with mock.patch.object(solver, "solve", cancelled_then_broken):
+			generation.execute_run(run.name)
+		self.assertEqual(frappe.db.get_value("Timetable Generation Run", run.name, "status"), "Cancelled")
+
+	def test_only_a_live_run_can_be_cancelled(self):
+		doc = self.new_timetable()
+		run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": doc.name, "status": "Failed"}).insert(ignore_permissions=True)
+		with self.assertRaises(frappe.ValidationError):
+			generation.cancel_run(run.name)
+		self.assertEqual(frappe.db.get_value("Timetable Generation Run", run.name, "status"), "Failed")
 
 	def test_a_recent_live_run_still_blocks(self):
 		doc = self.new_timetable()
@@ -321,7 +362,7 @@ class TestManualEdits(TimetableFixture):
 		return {(e.day, e.period) for e in self.doc.entries if all(getattr(e, k) == v for k, v in match.items())}
 
 	def free_slot_for(self, row):
-		busy = self.occupied(section=row.section) | self.occupied(faculty=row.faculty)
+		busy = self.occupied(section=row.section) | self.occupied(faculty=row.faculty) | self.occupied(room=row.room)
 		return next((d, p) for d in DAYS for p in (1, 2, 3, 5, 6) if (d, p) not in busy)
 
 	def test_moving_a_class_to_a_free_slot_saves(self):
@@ -448,7 +489,7 @@ class TestPublish(TimetableFixture):
 		unchanged = next(e for e in doc.entries if e.kind == "Lecture" and e.name != moved.name)
 		marked_same = next(s for s in future if s.student_group == unchanged.offering and calendar.day_name[getdate(s.schedule_date).weekday()] == unchanged.day)
 		attendance = [self.mark(marked_moved), self.mark(marked_same), self.mark(past[0])]
-		busy = {(e.day, e.period) for e in doc.entries if e.section == moved.section or e.faculty == moved.faculty}
+		busy = {(e.day, e.period) for e in doc.entries if e.section == moved.section or e.faculty == moved.faculty or e.room == moved.room}
 		moved.day, moved.period = next((d, p) for d in DAYS for p in (1, 2, 3, 5, 6) if (d, p) not in busy)
 		doc.save()
 		result = publish.publish_now(doc.name, as_of=self.SECOND)
@@ -486,7 +527,7 @@ class TestPublish(TimetableFixture):
 		doc = self.published()
 		self.assertEqual(doc.status, "Published")
 		row = next(e for e in doc.entries if e.kind == "Lecture")
-		busy = {(e.day, e.period) for e in doc.entries if e.section == row.section or e.faculty == row.faculty}
+		busy = {(e.day, e.period) for e in doc.entries if e.section == row.section or e.faculty == row.faculty or e.room == row.room}
 		row.day, row.period = next((d, p) for d in DAYS for p in (1, 2, 3, 5, 6) if (d, p) not in busy)
 		doc.save()
 		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Changed since publish")
@@ -515,6 +556,12 @@ class TestPublish(TimetableFixture):
 		self.assertEqual(doc.publish_state, "Failed")
 		self.assertIn(teacher, doc.publish_error)
 		self.assertIn("Instructor", doc.publish_error)
+
+	def test_preflight_looks_up_each_teacher_once(self):
+		doc, _run = self.generated()
+		with mock.patch.object(publish, "instructor_of", wraps=publish.instructor_of) as lookup:
+			publish.preflight(doc)
+		self.assertEqual(lookup.call_count, len({e.faculty for e in doc.entries}))
 
 	def test_preflight_refuses_a_missing_instructor_before_deleting_anything(self):
 		doc, _run = self.generated()

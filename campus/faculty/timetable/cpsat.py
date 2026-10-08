@@ -9,7 +9,9 @@ Honest reporting: when the optimum places fewer sessions than asked, no complete
 "infeasible" (proven); when the time limit stops the search first the best timetable found is returned as "feasible".
 """
 
+import time
 from collections import defaultdict
+from dataclasses import replace
 
 from frappe import _
 from ortools.sat.python import cp_model
@@ -18,22 +20,31 @@ from campus.faculty.timetable import backtracking, rules
 from campus.faculty.timetable.rules import PRACTICAL, Entry
 from campus.faculty.timetable.solver import Result
 
-PLACED_WEIGHT = 1_000_000
+PRESOLVE_LIMIT = 50_000
+WARM_START_SHARE, WARM_START_CAP, MIN_SOLVE_SECONDS = 0.1, 15, 0.5
 REPEAT_COST, OVERLOAD_COST, LATE_COST = 100, 200, 1
 
 
 def solve(problem):
+	"""One time budget (`problem.time_limit`): the warm-start search gets a tenth of it (at most WARM_START_CAP seconds),
+	model building and CP-SAT use the rest. If CP-SAT has no time left or finds nothing, the warm start is the answer."""
+	started = time.monotonic()
+	warm = backtracking.solve(replace(problem, time_limit=min(WARM_START_CAP, problem.time_limit * WARM_START_SHARE)))
 	search = backtracking.Search(problem)
 	unmet = search.pre_check()
 	sessions = [s for s in problem.sessions if s.id not in search.hopeless]
 	model, variables = build_model(problem, search, sessions)
-	hint(model, variables, backtracking.solve(problem))  # start from the search's timetable: CP-SAT never returns less
+	remaining = problem.time_limit - (time.monotonic() - started)
+	if remaining < MIN_SOLVE_SECONDS:
+		return warm
+	hint(model, variables, warm)  # CP-SAT never returns less than the search found
 	solver = cp_model.CpSolver()
-	solver.parameters.max_time_in_seconds = problem.time_limit
+	solver.parameters.max_time_in_seconds = remaining
 	solver.parameters.num_workers = 8
+	solver.parameters.cp_model_presolve = len(variables) < PRESOLVE_LIMIT  # on a big model presolve alone can eat the budget
 	status = solver.Solve(model)
 	if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-		return backtracking.solve(problem)  # unknown: no answer from CP-SAT, use the search
+		return warm
 	chosen = {sid: (day, start, room) for (sid, day, start, room), var in variables.items() if solver.BooleanValue(var)}
 	by_id = {s.id: s for s in sessions}
 	search.restore({sid: (by_id[sid], choice) for sid, choice in chosen.items()})
@@ -65,7 +76,7 @@ def build_model(problem, search, sessions):
 	variables = {}
 	faculty_slot, room_slot, section_slot = defaultdict(list), defaultdict(list), defaultdict(list)
 	course_day, practical_day, faculty_day = defaultdict(list), defaultdict(list), defaultdict(list)
-	late = []
+	late, worst = [], 0  # worst: the largest total soft cost any timetable can have
 	for s in sessions:
 		options = []
 		for day in grid.days:
@@ -85,6 +96,7 @@ def build_model(problem, search, sessions):
 					(practical_day if s.kind == PRACTICAL else course_day)[key].append(var)
 					faculty_day[(s.faculty, day)].append((s.length, var))
 					late.append(LATE_COST * start * var)
+		worst += LATE_COST * max(search.starts(s.length), default=0)
 		model.AddAtMostOne(options)
 	for group in (faculty_slot, room_slot, section_slot, practical_day):
 		for vars_ in group.values():
@@ -94,10 +106,12 @@ def build_model(problem, search, sessions):
 		repeat = model.NewIntVar(0, len(vars_), "repeat")
 		model.Add(repeat >= sum(vars_) - 1)
 		penalties.append(REPEAT_COST * repeat)
+		worst += REPEAT_COST * len(vars_)
 	maximum = grid.max_faculty_periods_per_day
 	for items in faculty_day.values() if maximum else []:
 		over = model.NewIntVar(0, sum(length for length, _v in items), "over")
 		model.Add(over >= sum(length * v for length, v in items) - maximum)
 		penalties.append(OVERLOAD_COST * over)
-	model.Maximize(PLACED_WEIGHT * sum(variables.values()) - sum(penalties))  # one true variable per placed session
+		worst += OVERLOAD_COST * sum(length for length, _v in items)
+	model.Maximize((1 + worst) * sum(variables.values()) - sum(penalties))  # one true variable per placed session; one more class always outweighs every soft cost, so a shortfall proven optimal is real
 	return model, variables

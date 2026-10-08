@@ -48,7 +48,7 @@ def publish_job(timetable, as_of=None):
 def preflight(doc):
 	"""Everything that would make a publish fail, checked up front. Raises with the reasons."""
 	doc.check_hard_constraints()
-	missing = sorted({e.faculty for e in doc.entries if not instructor_of(e.faculty)})
+	missing = sorted(t for t in {e.faculty for e in doc.entries} if not instructor_of(t))
 	if missing:
 		frappe.throw(_("No Instructor record for {0}, so their classes cannot be scheduled.").format(", ".join(missing)), title=_("Cannot Publish"))
 	clashes = cross_timetable_clashes(doc)

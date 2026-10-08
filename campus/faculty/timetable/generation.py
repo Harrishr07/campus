@@ -18,7 +18,7 @@ STALE_MARGIN = 600  # seconds past the job timeout before a live-looking run is 
 MAX_TIME_LIMIT = 300  # seconds a solve may be given
 SAVEPOINT = "timetable_generation"
 LIVE = ("Queued", "Running")
-CANCEL_ROLES = ("System Manager", "Dean Academics", "Academics User", "HOD")
+CANCEL_ROLES = ("System Manager", "Dean Academics", "Academics User")  # and write permission on the Timetable
 
 
 @frappe.whitelist()
@@ -44,12 +44,19 @@ def start_generation(timetable, time_limit=None, replace_existing=0):
 
 @frappe.whitelist()
 def cancel_run(run):
-	"""Cancel a queued or running run; a running solve finishes but its result is discarded."""
+	"""Cancel a queued or running run. Compare-and-set, so it never waits for the worker: the solve finishes, the worker
+	sees the run is no longer Running and discards its result."""
 	frappe.only_for(CANCEL_ROLES)
-	status = frappe.db.get_value("Timetable Generation Run", run, "status", for_update=True)
-	if status not in LIVE:
-		frappe.throw(_("Run {0} is {1}; only a queued or running run can be cancelled.").format(run, _(status)))
-	frappe.db.set_value("Timetable Generation Run", run, {"status": "Cancelled", "finished_at": now_datetime()})
+	timetable = frappe.db.get_value("Timetable Generation Run", run, "timetable")
+	if not timetable:
+		frappe.throw(_("Run {0} does not exist.").format(run))
+	frappe.get_doc("Timetable", timetable).check_permission("write")
+	frappe.db.sql(
+		"update `tabTimetable Generation Run` set status = 'Cancelled', finished_at = %s where name = %s and status in ('Queued', 'Running')",
+		(now_datetime(), run),
+	)
+	if not frappe.db.sql("select row_count()")[0][0]:
+		frappe.throw(_("Run {0} is {1}; only a queued or running run can be cancelled.").format(run, _(frappe.db.get_value("Timetable Generation Run", run, "status"))))
 
 
 def live_runs(timetable):
@@ -59,34 +66,39 @@ def live_runs(timetable):
 
 
 def expire_dead_runs(timetable):
-	"""A queued or running run untouched for longer than the job timeout plus a margin lost its worker: mark it Failed."""
+	"""A queued or running run that began (or, if never started, was created) longer ago than the job timeout plus a margin
+	lost its worker: mark it Failed."""
 	cutoff = add_to_date(now_datetime(), seconds=-(JOB_TIMEOUT + STALE_MARGIN))
-	dead = frappe.get_all("Timetable Generation Run", {"timetable": timetable, "status": ["in", LIVE], "modified": ["<", cutoff]}, pluck="name")
-	for name in dead:
-		frappe.db.set_value(
-			"Timetable Generation Run", name,
-			{"status": "Failed", "error": _("The run did not finish: its worker was lost or timed out."), "finished_at": now_datetime()},
-			update_modified=False,
-		)  # fmt: skip
+	for run in frappe.get_all("Timetable Generation Run", {"timetable": timetable, "status": ["in", LIVE]}, ["name", "started_at", "creation"]):
+		if (run.started_at or run.creation) < cutoff:
+			frappe.db.set_value(
+				"Timetable Generation Run", run.name,
+				{"status": "Failed", "error": _("The run did not finish: its worker was lost or timed out."), "finished_at": now_datetime()},
+				update_modified=False,
+			)  # fmt: skip
 
 
 def execute_run(run):
-	"""The job: solve and store. A failure is recorded on the run (message only: the frames hold no secrets, but none are needed)."""
+	"""The job: solve and store. Failures are recorded on the run (message only); a run cancelled meanwhile stays cancelled."""
 	if frappe.db.get_value("Timetable Generation Run", run, "status", for_update=True) != "Queued":
 		return
 	frappe.db.set_value("Timetable Generation Run", run, {"status": "Running", "started_at": now_datetime()}, update_modified=False)
-	commit()
+	commit()  # releases the lock: cancel_run and other readers are never blocked by the solve
 	doc = frappe.get_doc("Timetable Generation Run", run)
-	frappe.db.savepoint(SAVEPOINT)
 	try:
 		outcome = generate(doc)
 	except Exception as error:
-		frappe.db.rollback(save_point=SAVEPOINT)  # undo the half-written grid, keep the run row
-		doc.db_set({"status": "Failed", "error": str(error)[:1000], "finished_at": now_datetime()}, update_modified=False)
+		finish(run, {"status": "Failed", "error": str(error)[:1000]})
 	else:
 		if outcome:
-			doc.db_set({**outcome, "finished_at": now_datetime()}, update_modified=False)
+			finish(run, outcome)
 	commit()
+
+
+def finish(run, values):
+	"""Record the outcome only while the run is still Running (a cancel in between wins)."""
+	if frappe.db.get_value("Timetable Generation Run", run, "status", for_update=True) == "Running":
+		frappe.db.set_value("Timetable Generation Run", run, {**values, "finished_at": now_datetime()}, update_modified=False)
 
 
 def commit():
@@ -94,22 +106,33 @@ def commit():
 		frappe.db.commit()  # nosemgrep: the worker publishes progress between steps; tests run in one rolled-back transaction
 
 
-def cancelled(run):
-	return frappe.db.get_value("Timetable Generation Run", run.name, "status", for_update=True) == "Cancelled"
+def write_grid(timetable, rows):
+	"""Replace the grid under the Timetable lock; a failed save is undone and leaves the run row alone."""
+	timetable = frappe.get_doc("Timetable", timetable, for_update=True)
+	frappe.db.savepoint(SAVEPOINT)
+	try:
+		timetable.set("entries", rows)
+		timetable.flags.from_generation = True
+		timetable.save(ignore_permissions=True)
+	except Exception:
+		frappe.db.rollback(save_point=SAVEPOINT)
+		raise
+
+
+def still_running(run):
+	"""Latest committed status, read with a lock held only until the write that follows commits."""
+	return frappe.db.get_value("Timetable Generation Run", run.name, "status", for_update=True) == "Running"
 
 
 def generate(run):
-	"""Solve and write the grid; None when the run was cancelled (before or during the solve)."""
-	if cancelled(run):
-		return None
-	timetable = frappe.get_doc("Timetable", run.timetable, for_update=True)
+	"""Solve (holding no locks), then write the grid under short locks; None when the run was cancelled meanwhile."""
+	timetable = frappe.get_doc("Timetable", run.timetable)
 	problem, template = context.build_problem(timetable, run.time_limit)
+	commit()  # end the read transaction: the solve holds no snapshot and no locks
 	result = solver.solve(problem)
-	if cancelled(run):
+	if not still_running(run):
 		return None
-	timetable.set("entries", context.as_rows(result.entries, template))
-	timetable.flags.from_generation = True
-	timetable.save(ignore_permissions=True)
+	write_grid(run.timetable, context.as_rows(result.entries, template))
 	return {
 		"status": "Completed" if not result.unmet else "Completed with unmet constraints",
 		"sessions_total": len(problem.sessions), "sessions_placed": len(problem.sessions) - result.unplaced,
