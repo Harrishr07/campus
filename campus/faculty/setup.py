@@ -4,6 +4,7 @@ qualification fields on Job Applicant. HRMS Employee is the faculty profile; no 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from campus.faculty.payroll_setup import FUNDING_MODES, setup_payroll
 from campus.faculty.timetable.setup import setup_timetable
 
 MODULE = "Faculty"
@@ -26,6 +27,7 @@ def setup_faculty():
 	setup_timetable()
 	seed_substitution_template()
 	seed_appraisal_review_policy()
+	setup_payroll()
 
 
 SUBSTITUTION_EVENT = "substitution.assigned"
@@ -120,7 +122,7 @@ def faculty_profile_fields():
 		field("oc_faculty_tab", "Tab Break", "Faculty", "old_parent"),
 		field("oc_staff_type", "Select", "Staff Type", "oc_faculty_tab", options=options(["Teaching", "Non-teaching", "Project"]), in_standard_filter=1),
 		field("oc_cadre", "Select", "Cadre", "oc_staff_type", options=options(CADRES), depends_on=TEACHING, mandatory_depends_on=TEACHING, in_standard_filter=1),
-		field("oc_funding_mode", "Select", "Funding Mode", "oc_cadre", options=options(["Aided", "Self-financing"])),
+		field("oc_funding_mode", "Select", "Funding Mode", "oc_cadre", options=options(FUNDING_MODES)),
 		field("oc_pay_scale", "Data", "Pay Scale", "oc_funding_mode"),
 		field("oc_aicte_faculty_id", "Data", "AICTE Faculty ID", "oc_pay_scale"),
 		field("oc_faculty_column", "Column Break", None, "oc_aicte_faculty_id"),

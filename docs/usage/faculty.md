@@ -74,3 +74,6 @@ Not yet: electives of a group in parallel, cross-timetable clash checks (educati
 4. The confirmed substitute opens the Substitution and uses Mark Attendance. The Confirmed Substitution is the permission: it covers that Course Schedule only, for students of its Student Group, and the user's roles do not change. The Instructor role alone sees only their own substitutions, read-only.
 
 Not yet: feeding approved leave into Timetable faculty unavailability (that table is per Timetable, by weekday), half-day leave (the whole day's periods are proposed), holidays.
+
+## Payroll (M07-07)
+Aided and self-financing payroll on HRMS: see [payroll.md](payroll.md).

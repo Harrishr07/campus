@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from campus.faculty import development, self_appraisal, staffing, substitute_attendance
+from campus.faculty import development, payroll, self_appraisal, staffing, substitute_attendance
 from campus.faculty import substitution as substitutions
 
 
@@ -114,3 +114,14 @@ def create_self_appraisal(employee, appraisal_cycle):
 def request_appraisal_review(appraisal):
 	"""Send the draft Appraisal to the HOD; returns the Appraisal Review name."""
 	return self_appraisal.request_review(appraisal)
+
+
+# ---- M07-07 payroll ----------------------------------------------------------------------------
+
+
+@frappe.whitelist(methods=["POST"])
+def assign_salary_structure(employee, from_date, base, variable=0):
+	"""Assign the employee's funding-mode Salary Structure (of their company) from `from_date`; returns the Salary
+	Structure Assignment name. Idempotent per employee and From Date."""
+	frappe.has_permission("Salary Structure Assignment", "create", throw=True)
+	return payroll.assign(employee, from_date, flt(base), flt(variable))
