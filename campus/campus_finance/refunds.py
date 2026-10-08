@@ -21,6 +21,7 @@ def make_credit_note(invoice, amount, item_codes=None):
 	rows = [row for row in invoice.items if item_codes is None or row.item_code in item_codes]
 	if not rows:
 		frappe.throw(_("{0} has no line to credit.").format(invoice.name))
+	check_uniform_tax(invoice, item_codes)
 	note = frappe.new_doc("Sales Invoice")
 	note.update(
 		{
@@ -47,6 +48,15 @@ def make_credit_note(invoice, amount, item_codes=None):
 	trim_to_amount(note, flt(amount))
 	note.insert()
 	return note.submit()
+
+
+def check_uniform_tax(invoice, item_codes):
+	"""A part of the invoice is credited with the invoice's taxes copied, which is right only when every line is taxed alike."""
+	if item_codes is None or not invoice.taxes or {row.item_code for row in invoice.items} <= set(item_codes):
+		return
+	treatments = {(row.item_tax_template, row.item_tax_rate) for row in invoice.items}
+	if len(treatments) > 1:
+		frappe.throw(_("The invoice has lines with different taxes; credit the whole invoice in Accounts instead."))
 
 
 def credited_gross(invoice, rows):

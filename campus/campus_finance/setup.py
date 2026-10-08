@@ -47,7 +47,7 @@ def seed_refund_policy():
 	frappe.get_doc(
 		{
 			"doctype": "Approval Policy", "policy_name": REFUND_POLICY, "document_type": "Fee Refund",
-			"levels": [{"approver_type": "Role", "approver": "Accounts Manager", "title": "Accounts", "sla_hours": 72}],
+			"levels": [{"approver_type": "Role", "approver": "Accounts Manager", "limit_to_company": 1, "title": "Accounts", "sla_hours": 72}],
 		}
 	).insert(ignore_permissions=True)
 
@@ -76,6 +76,10 @@ def setup_finance_fields():
 			"Sales Invoice Item": [
 				field("oc_fee_concession", "Link", "Fee Concession", "description", options="Fee Concession", read_only=1,
 					no_copy=1, description="Set on the discount line a Fee Concession adds."),
+			],
+			"Company": [
+				field("oc_damages_income_account", "Link", "Damages Income Account", "default_receivable_account", options="Account",
+					description="Income account that damages kept from a caution deposit are moved to."),
 			],
 			"Payment Entry": [
 				field("oc_student", "Link", "Student", "party_name", options="Student", read_only=1, no_copy=1,

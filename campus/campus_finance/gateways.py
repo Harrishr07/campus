@@ -29,12 +29,17 @@ OPEN_STATUSES = ("Requested", "Initiated")
 JOB = "campus.campus_finance.gateways.settle_payment"
 
 
+class BadPayload(frappe.ValidationError):
+	http_status_code = 400
+
+
 class PaymentEvent(NamedTuple):
 	"""What a gateway reports: the Payment Request it was for, the gateway's payment id, and the amount captured."""
 
 	payment_request: str
 	gateway_payment_id: str
 	amount: float
+	currency: str = ""
 
 
 class GatewayAdapter:
@@ -63,11 +68,11 @@ class RazorpayAdapter(GatewayAdapter):
 	def parse_event(self, payload):
 		if payload.get("event") != "payment.captured":
 			return None
-		entity = (payload.get("payload") or {}).get("payment", {}).get("entity", {})
+		entity = ((payload.get("payload") or {}).get("payment") or {}).get("entity") or {}
 		request = (entity.get("notes") or {}).get("payment_request")
 		if not request or not entity.get("id"):
 			return None
-		return PaymentEvent(request, entity["id"], flt(entity.get("amount")) / 100)
+		return PaymentEvent(request, entity["id"], flt(entity.get("amount")) / 100, entity.get("currency") or "")
 
 
 ADAPTERS = {"Razorpay": RazorpayAdapter()}
@@ -88,7 +93,7 @@ def gateway_account(company):
 	account = frappe.db.get_value(
 		"Payment Gateway Account", {"company": company, "is_default": 1}, ["name", "payment_gateway", "payment_account", "payment_channel", "message"], as_dict=True
 	)
-	if not account:
+	if not account or account.payment_channel == "Phone":  # a phone request is paid on the payer's phone, not by a link
 		frappe.throw(_("{0} has no payment gateway set up.").format(company))
 	adapter_for(account.payment_gateway)
 	return account
@@ -166,12 +171,15 @@ def webhook(gateway_account):
 	body = frappe.request.get_data()
 	account, adapter = verified_account(gateway_account, body)
 	try:
-		event = adapter.parse_event(json.loads(body))
-	except ValueError:
-		frappe.throw(_("Invalid payment notification."))
+		payload = json.loads(body)
+		if not isinstance(payload, dict):
+			raise ValueError
+		event = adapter.parse_event(payload)
+	except (ValueError, AttributeError, TypeError):
+		frappe.throw(_("Invalid payment notification."), BadPayload)
 	if not event:
 		return {"status": "ignored"}
-	frappe.enqueue(JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, account=account, request=event.payment_request, amount=event.amount)
+	frappe.enqueue(JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, account=account, request=event.payment_request, amount=event.amount, currency=event.currency, payment_id=event.gateway_payment_id)
 	return {"status": "accepted"}
 
 
@@ -188,7 +196,7 @@ def verified_account(gateway_account, body):
 	return account.name, adapter
 
 
-def settle_payment(account, request, amount):
+def settle_payment(account, request, amount, currency="", payment_id=""):
 	"""Worker entry point: mark the Payment Request paid, once, as Administrator (a worker may; the web session is never touched).
 
 	Needed because ERPNext's Payment Entry code checks the session user's rights on the invoice and accounts, and a gateway
@@ -196,24 +204,48 @@ def settle_payment(account, request, amount):
 	caller = frappe.session.user
 	frappe.set_user("Administrator")
 	try:
-		return settle(account, PaymentEvent(request, "", flt(amount)))
+		return settle(account, PaymentEvent(request, payment_id, flt(amount), currency))
 	finally:
 		frappe.set_user(caller)
 
 
 def settle(account, event):
-	"""Mark the event's Payment Request paid, once. Under the request's row lock a repeated delivery sees it Paid."""
+	"""Mark the event's Payment Request paid, once. Under the request's row lock a repeated delivery sees it Paid.
+
+	A capture that cannot be settled (unknown or cancelled request, another account's, a second distinct payment) is
+	money taken that no invoice shows: it goes to the Error Log, with a plain message, for accounts to resolve."""
 	found = frappe.db.get_value(
-		"Payment Request", event.payment_request, ["payment_gateway_account", "docstatus", "status", "grand_total"], for_update=True, as_dict=True
+		"Payment Request", event.payment_request, ["payment_gateway_account", "docstatus", "status", "grand_total", "currency"], for_update=True, as_dict=True
 	)  # the lock: a repeated delivery waits here and then sees Paid
 	if not found or found.docstatus != 1 or found.payment_gateway_account != account:
-		return {"status": "ignored"}
-	if found.status == "Paid" or frappe.db.exists("Payment Entry", {"reference_no": event.payment_request, "docstatus": 1}):
-		return {"status": "duplicate"}
+		return unsettled(event, _("no open Payment Request for this account"))
+	if found.status == "Paid":
+		if frappe.db.exists("Comment", settled_comment(event)):
+			return {"status": "duplicate"}
+		return unsettled(event, _("the Payment Request is already paid by another payment"))
+	if event.currency and event.currency != found.currency:
+		unsettled(event, _("paid in {0}, asked in {1}").format(event.currency, found.currency))
+		frappe.throw(_("The currency paid does not match the payment request."))
 	if abs(flt(found.grand_total) - event.amount) > 0.005:
-		frappe.log_error(title="Payment amount mismatch", message=f"Payment Request {event.payment_request}: {event.amount} paid, {found.grand_total} asked.")
+		unsettled(event, _("paid {0}, asked {1}").format(event.amount, found.grand_total))
 		frappe.throw(_("The amount paid does not match the payment request."))
 	request = frappe.get_doc("Payment Request", event.payment_request)
 	request.flags.ignore_permissions = True
 	request.set_as_paid()
+	request.add_comment("Info", settled_comment(event)["content"])
 	return {"status": "paid"}
+
+
+def settled_comment(event):
+	return {
+		"reference_doctype": "Payment Request", "reference_name": event.payment_request, "comment_type": "Info",
+		"content": f"Gateway payment {event.gateway_payment_id} settled",
+	}
+
+
+def unsettled(event, reason):
+	frappe.log_error(
+		title="Payment not settled",
+		message=f"Gateway payment {event.gateway_payment_id} of {event.amount} {event.currency} for Payment Request {event.payment_request}: {reason}",
+	)
+	return {"status": "ignored"}

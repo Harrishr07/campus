@@ -27,7 +27,8 @@
   "section_vouchers",
   "credit_note",
   "payment_entry",
-  "adjustment_entry"
+  "adjustment_entry",
+  "damages_entry"
  ],
  "fields": [
   {
@@ -202,12 +203,20 @@
    "options": "Journal Entry",
    "read_only": 1,
    "no_copy": 1
+  },
+  {
+   "fieldname": "damages_entry",
+   "fieldtype": "Link",
+   "label": "Damages Entry",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-07 00:00:00.000000",
+ "modified": "2026-10-08 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Finance",
  "name": "Fee Refund",
@@ -222,7 +231,8 @@
    "create": 1,
    "submit": 1,
    "delete": 1,
-   "export": 1
+   "export": 1,
+   "cancel": 1
   },
   {
    "role": "Accounts Manager",
@@ -232,7 +242,8 @@
    "write": 1,
    "create": 1,
    "submit": 1,
-   "export": 1
+   "export": 1,
+   "cancel": 1
   },
   {
    "role": "Accounts User",

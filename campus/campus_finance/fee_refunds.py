@@ -72,15 +72,15 @@ def balance(invoice, head, exclude_refund=None, locking=False):
 		as_dict=True,
 	)
 	earlier = frappe.db.sql(
-		"select fee_head, deduction from `tabFee Refund` where fee_invoice = %s and docstatus = 1 and name != %s" + lock,
-		(invoice, exclude_refund or ""),
+		"select fee_head, deduction from `tabFee Refund` where fee_invoice = %s and fee_head = %s and docstatus = 1 and name != %s" + lock,
+		(invoice, head, exclude_refund or ""),
 		as_dict=True,
 	)
 	notes_total, deducted = credited_to_head(notes, head), flt(sum(row.deduction for row in earlier), 2)
 	paid = paid_for_head(sum(receipts), head_share(invoice, head))
 	return frappe._dict(
 		paid=paid, credit_notes=-notes_total, deductions=deducted, outstanding=flt(outstanding, 2),
-		refunded_before=any(row.fee_head == head for row in earlier),
+		refunded_before=bool(earlier),
 		available=available_to_refund(paid, notes_total, deducted),
 	)
 
@@ -128,3 +128,40 @@ def make_dues_adjustment(refund, credit_note, parts):
 	entry.flags.ignore_permissions = True
 	entry.insert()
 	return entry.submit().name
+
+
+def make_damages_entry(refund, deposit_account):
+	"""Journal Entry moving the damages kept from a deposit from its liability account to the company's damages income account."""
+	income = frappe.db.get_value("Company", refund.company, "oc_damages_income_account")
+	entry = frappe.get_doc(
+		{
+			"doctype": "Journal Entry", "voucher_type": "Journal Entry", "company": refund.company, "posting_date": today(),
+			"user_remark": _("Damages kept from caution deposit refund {0}").format(refund.name),
+			"accounts": [
+				{"account": deposit_account, "debit_in_account_currency": refund.deduction},
+				{"account": income, "credit_in_account_currency": refund.deduction},
+			],
+		}
+	)  # fmt: skip
+	entry.flags.ignore_permissions = True
+	entry.insert()
+	return entry.submit().name
+
+
+def reverse_vouchers(refund):
+	"""Cancel what a Fee Refund made, last made first: the payment (deleted while still a draft), the set-off and damages
+	entries, then the credit note."""
+	if refund.payment_entry:
+		payment = frappe.get_doc("Payment Entry", refund.payment_entry)
+		if payment.docstatus == 0:
+			frappe.delete_doc("Payment Entry", payment.name, force=True, ignore_permissions=True)
+		else:
+			payment.ignore_linked_doctypes = ("Fee Refund",)
+			payment.flags.ignore_permissions = True
+			payment.cancel()
+	for doctype, name in (("Journal Entry", refund.damages_entry), ("Journal Entry", refund.adjustment_entry), ("Sales Invoice", refund.credit_note)):
+		if name:
+			voucher = frappe.get_doc(doctype, name)
+			voucher.ignore_linked_doctypes = ("Fee Refund",)
+			voucher.flags.ignore_permissions = True
+			voucher.cancel()

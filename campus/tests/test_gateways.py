@@ -43,9 +43,9 @@ def signed(body, secret):
 	return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
-def captured(payment_request, amount, payment_id="pay_1"):
+def captured(payment_request, amount, payment_id="pay_1", currency="INR"):
 	return json.dumps(
-		{"event": "payment.captured", "payload": {"payment": {"entity": {"id": payment_id, "amount": int(amount * 100), "notes": {"payment_request": payment_request}}}}}
+		{"event": "payment.captured", "payload": {"payment": {"entity": {"id": payment_id, "amount": int(amount * 100), "currency": currency, "notes": {"payment_request": payment_request}}}}}
 	).encode()
 
 
@@ -140,6 +140,12 @@ class TestPayNow(GatewayFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "no payment gateway"):
 			self.link(invoice)
 
+	def test_a_phone_channel_account_gives_no_link(self):
+		frappe.db.set_value("Payment Gateway Account", self.college_account, "payment_channel", "Phone")
+		with self.assertRaisesRegex(frappe.ValidationError, "no payment gateway"):
+			self.link(self.invoice(self.a, COLLEGE))
+		self.assertFalse(finance.can_pay_online(COLLEGE))
+
 	def test_a_gateway_without_an_adapter_is_refused(self):
 		frappe.db.set_value("Payment Gateway Account", self.college_account, "payment_gateway", "PayU")
 		with self.assertRaisesRegex(frappe.ValidationError, "PayU is not supported"):
@@ -170,6 +176,10 @@ class TestWebhook(GatewayFixture):
 		patcher = patch.dict(frappe.conf, {"campus_gateway_secrets": SECRETS})
 		patcher.start()
 		self.addCleanup(patcher.stop)
+		self.logs = []  # Error Log rows are not written: the log is captured
+		logger = patch.object(frappe, "log_error", lambda **kwargs: self.logs.append(kwargs))
+		logger.start()
+		self.addCleanup(logger.stop)
 
 	def pay_request(self, company=COLLEGE, student=None, amount=5000):
 		invoice = self.invoice(student or self.a, company, amount)
@@ -209,7 +219,7 @@ class TestWebhook(GatewayFixture):
 		self.deliver(request.payment_gateway_account, body)
 		self.deliver(request.payment_gateway_account, body)  # the gateway retries the same delivery
 		self.deliver(request.payment_gateway_account, captured(request.name, 5000, "pay_retry"))
-		self.assertEqual(gateways.settle_payment(request.payment_gateway_account, request.name, 5000), {"status": "duplicate"})
+		self.assertEqual(gateways.settle_payment(request.payment_gateway_account, request.name, 5000, "INR", "pay_1"), {"status": "duplicate"})
 		self.assertEqual(len(self.payment_entries(invoice)), 1)
 		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount")), 0)
 
@@ -267,6 +277,50 @@ class TestWebhook(GatewayFixture):
 		enqueue.assert_called_once()
 		self.assertEqual((enqueue.call_args.args[0], enqueue.call_args.kwargs["enqueue_after_commit"]), (gateways.JOB, True))
 		self.assertFalse(self.payment_entries(invoice))
+
+	def not_settled_logs(self):
+		return [SimpleNamespace(error=log["message"]) for log in self.logs if log["title"] == "Payment not settled"]
+
+	def test_a_payment_in_another_currency_is_not_settled(self):
+		invoice, request = self.pay_request()
+		with self.assertRaisesRegex(frappe.ValidationError, "currency"):
+			self.deliver(request.payment_gateway_account, captured(request.name, 5000, currency="USD"))
+		self.assertFalse(self.payment_entries(invoice))
+		self.assertEqual(len(self.not_settled_logs()), 1)
+
+	def test_a_capture_for_a_cancelled_or_unknown_request_is_logged_not_lost(self):
+		invoice, request = self.pay_request()
+		frappe.get_doc("Payment Request", request.name).cancel()
+		self.deliver(request.payment_gateway_account, captured(request.name, 5000, "pay_cancelled"))
+		self.deliver(request.payment_gateway_account, captured("ACC-PRQ-NOPE", 5000, "pay_unknown"))
+		logs = [row.error for row in self.not_settled_logs()]
+		self.assertEqual(len(logs), 2)
+		self.assertTrue(any("pay_cancelled" in text for text in logs) and any("pay_unknown" in text for text in logs))
+		self.assertFalse(self.payment_entries(invoice))
+
+	def test_a_second_distinct_capture_on_a_paid_request_is_logged_and_a_repeat_is_not(self):
+		invoice, request = self.pay_request()
+		account = request.payment_gateway_account
+		self.deliver(account, captured(request.name, 5000, "pay_first"))
+		self.deliver(account, captured(request.name, 5000, "pay_first"))
+		self.assertFalse(self.not_settled_logs())
+		self.deliver(account, captured(request.name, 5000, "pay_second"))
+		(log,) = self.not_settled_logs()
+		self.assertIn("pay_second", log.error)
+		self.assertEqual(len(self.payment_entries(invoice)), 1)
+
+	def test_the_log_carries_no_secret_or_traceback(self):
+		invoice, request = self.pay_request()
+		self.deliver(request.payment_gateway_account, captured("ACC-PRQ-NOPE", 5000, "pay_unknown"))
+		for row in self.not_settled_logs():
+			self.assertNotIn("secret", row.error.lower())
+			self.assertNotIn("Traceback", row.error)
+
+	def test_a_non_object_body_is_a_bad_request(self):
+		for body in (b"[1, 2]", b'"text"', b'{"event": "payment.captured", "payload": "x"}'):
+			with self.assertRaises(gateways.BadPayload):
+				self.deliver(self.college_account, body)
+		self.assertEqual(gateways.BadPayload.http_status_code, 400)
 
 	def test_the_adapter_interface_is_abstract(self):
 		with self.assertRaises(NotImplementedError):
