@@ -43,8 +43,8 @@ def head_types():
 	return heads
 
 
-def head_shares(invoices):
-	"""{invoice: [(head, share)]} with the shares of an invoice adding up to 1."""
+def line_amounts(invoices):
+	"""{invoice: {head: net amount of its lines}}."""
 	lines = frappe.get_all(
 		"Sales Invoice Item", {"parent": ["in", invoices or [""]], "parenttype": "Sales Invoice"},
 		["parent", "item_code", "net_amount"], order_by="parent, idx", limit=0,
@@ -54,7 +54,12 @@ def head_shares(invoices):
 		by_head = amounts.setdefault(line.parent, {})
 		head = heads.get(line.item_code, OTHER)
 		by_head[head] = by_head.get(head, 0) + flt(line.net_amount)
-	shares = {}
+	return amounts
+
+
+def head_shares(invoices):
+	"""{invoice: [(head, share)]} with the shares of an invoice adding up to 1."""
+	amounts, shares = line_amounts(invoices), {}
 	for invoice in invoices:
 		by_head = amounts.get(invoice) or {OTHER: 0}
 		total = sum(by_head.values())

@@ -2,7 +2,7 @@
 
 A refund is credited against one fully paid invoice and one fee head (a credit note first reduces what is unpaid, so
 a part-paid invoice gives no money back). The most it can be is what the invoice was paid for that head (the
-money the student paid on it, scholarships aside, in the ledger's pro-rata head shares) less what has already gone back: every credit note
+money the student paid on it, scholarships aside: the Caution Deposit first, the other heads pro rata in what is left) less what has already gone back: every credit note
 against the invoice and every damages deduction of an earlier Fee Refund. A head of an invoice is refunded once: ERPNext lets a line be
 returned only up to its quantity, so a second credit note on the line is refused (accounts issue any further credit by hand). A Caution Deposit refund is the deposit
 less the damages, and the part of it that meets the student's dues in the same company settles those dues
@@ -16,7 +16,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
-from campus.campus_finance.ledger import has_dues, head_shares
+from campus.campus_finance.fee_heads import CAUTION_DEPOSIT
+from campus.campus_finance.ledger import has_dues, head_shares, line_amounts, split
 from campus.campus_finance.refunds import paid_by_student
 from campus.campus_finance.scholarships import allocate, open_invoices, receivable_of, student_customer
 
@@ -26,9 +27,20 @@ CENT = 0.005
 # ---- Rules (no database) -------------------------------------------------------------------
 
 
-def paid_for_head(receipts, head_share):
-	"""What the invoice was paid for the head: the money received against it, in the head's share of the invoice."""
-	return flt(flt(receipts) * flt(head_share), 2)
+def paid_for_head(receipts, head, amounts):
+	"""What the student's `receipts` paid of `head` on an invoice of the head `amounts` {head: net of its lines}.
+
+	The student's money pays the Caution Deposit first, up to its lines: a deposit is the student's own money, held to
+	be returned. The other heads share the rest pro rata; the parts never add up to more than `receipts`."""
+	deposit = flt(min(max(flt(amounts.get(CAUTION_DEPOSIT)), 0), max(flt(receipts), 0)), 2)
+	if head == CAUTION_DEPOSIT:
+		return deposit
+	others = [(name, flt(amount)) for name, amount in amounts.items() if name != CAUTION_DEPOSIT]
+	total = sum(amount for _name, amount in others)
+	if head not in dict(others):
+		return 0
+	shares = [(name, amount / total if total else 1 / len(others)) for name, amount in others]
+	return dict(split(max(flt(receipts) - deposit, 0), shares))[head]
 
 
 def available_to_refund(paid, credit_notes_total, deductions):
@@ -73,7 +85,7 @@ def balance(invoice, head, exclude_refund=None, locking=False):
 		as_dict=True,
 	)
 	notes_total, deducted = credited_to_head(notes, head), flt(sum(row.deduction for row in earlier), 2)
-	paid = paid_for_head(receipts, head_share(invoice, head))
+	paid = paid_for_head(receipts, head, line_amounts([invoice]).get(invoice, {}))
 	return frappe._dict(
 		paid=paid, credit_notes=-notes_total, deductions=deducted, outstanding=flt(outstanding, 2),
 		refunded_before=bool(earlier),
