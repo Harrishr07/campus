@@ -20,7 +20,15 @@ Sheets and the order to load them
 anything and lists, per sheet row: masters (Link values) that do not exist, required cells that are empty
 (guardian, quota, category, regulation...), Aadhaar numbers failing the Verhoeff checksum, register numbers
 repeated in the file or already on a Student, and rows of another company. Aadhaar values are never
-echoed: messages carry only the masked number (last four digits).
+echoed: messages carry only the masked number (last four digits). Masters with a company are looked up in the
+checked company only (or with no company), names compare case-insensitively, and a row of another company gets
+only the other-company issue. Child-table cells (a guardian, a curriculum course, an invoice line) are required
+on every child line.
+
+Opening Fee Balances also checks that every row is Is Opening = Yes, that a student appears once in the file and
+has no opening invoice (not cancelled) in the company yet, that the customer is the student's own, that each
+line's income account is a Temporary account and the Debit To (when given) a Receivable account, both of the
+company.
 
 Data Import itself refuses a whole file whose Link cells name a missing master, so fix those first; a row
 failing on its own (bad Aadhaar, repeated register number) fails alone and the rest go in. Curriculum is the
@@ -280,28 +288,35 @@ def validate_rows(template, rows, company):
 				issue(1, fieldname, "missing_column", _("Required column {0} is absent.").format(fieldname))
 			)
 	records = group_records(rows[1:], header)
-	checks = RowChecks(template, company, records)
+	checks_class = OpeningBalanceChecks if template == OPENING_TEMPLATE else RowChecks
+	checks = checks_class(template, company, records, columns)
 	for record in records:
 		issues += checks.run(record)
 	return sorted(issues + checks.masters(), key=lambda i: (i["row"], i["column"]))
 
 
 def group_records(body, header):
-	"""[{row, values: {fieldname: [cell...]}}]: a row starts a record when any parent cell is filled."""
+	"""[{row, values, lines, link_cells}]: a row starts a record when any parent cell is filled.
+
+	`values` maps a fieldname to every filled cell of the record; `lines` holds the child-table cells of each
+	sheet row that has any ({row, values: {fieldname: cell}})."""
 	records = []
 	for offset, cells in enumerate(body, start=2):
-		starts = any(
-			cstr(c).strip() for c, col in zip(cells, header, strict=False) if col and not col["child"]
-		)
-		if starts or not records:
-			records.append({"row": offset, "values": {}, "link_cells": []})
+		filled = [
+			(col, cell_text(cell))
+			for cell, col in zip(cells, header, strict=False)
+			if col and cell_text(cell)
+		]
+		if any(not col["child"] for col, _text in filled) or not records:
+			records.append({"row": offset, "values": {}, "lines": [], "link_cells": []})
 		record = records[-1]
-		for cell, col in zip(cells, header, strict=False):
-			text = cell_text(cell)
-			if col and text:
-				record["values"].setdefault(col["fieldname"], []).append(text)
-				if col["link"]:
-					record["link_cells"].append((offset, col, text))
+		line = {col["fieldname"]: text for col, text in filled if col["child"]}
+		if line:
+			record["lines"].append({"row": offset, "values": line})
+		for col, text in filled:
+			record["values"].setdefault(col["fieldname"], []).append(text)
+			if col["link"]:
+				record["link_cells"].append((offset, col, text))
 	return records
 
 
@@ -316,37 +331,67 @@ def issue(row, column, check, message):
 	return {"row": row, "column": cstr(column), "check": check, "message": message}
 
 
+def company_field(doctype):
+	"""The company field of `doctype` (campus `oc_company` or the stock `company`), or None for shared masters."""
+	meta = frappe.get_meta(doctype)
+	return next((f for f in COMPANY_FIELDS if meta.has_field(f)), None)
+
+
 class RowChecks:
-	def __init__(self, template, company, records):
+	"""Per-row checks of one sheet. A row of another company gets only the other_company issue: nothing about
+	that company's records is looked up or reported."""
+
+	def __init__(self, template, company, records, columns):
 		self.spec = template_spec(template)
 		self.company = company
-		self.columns = {c["fieldname"]: c for c in template_columns(template)}
-		self.link_cells = [cell for record in records for cell in record["link_cells"]]
+		self.columns = {c["fieldname"]: c for c in columns}
+		self.records = records
+		self.other_rows = set()
 		self.register_rows = {}
 		self.stored_registers = self.stored_register_numbers(records)
 
 	def stored_register_numbers(self, records):
+		"""{register no: company of the Student holding it}."""
 		numbers = {v for r in records for v in r["values"].get(REGISTER_FIELD, [])}
 		if not numbers or self.spec["doctype"] != "Student":
-			return set()
-		return set(frappe.get_all("Student", {REGISTER_FIELD: ["in", list(numbers)]}, pluck=REGISTER_FIELD))
+			return {}
+		rows = frappe.get_all(
+			"Student", {REGISTER_FIELD: ["in", list(numbers)]}, [REGISTER_FIELD, "oc_company"]
+		)
+		return {r[REGISTER_FIELD]: r.oc_company for r in rows}
 
 	def run(self, record):
-		found = (
-			self.required(record) + self.aadhaar(record) + self.register(record) + self.other_company(record)
-		)
-		return found
+		other = self.other_company(record)
+		if other:
+			self.other_rows.add(record["row"])
+			return other
+		return self.required(record) + self.aadhaar(record) + self.register(record)
+
+	def label(self, fieldname):
+		return self.columns[fieldname]["label"]
 
 	def required(self, record):
-		return [
-			issue(record["row"], self.columns[f]["label"], "missing_value", _("{0} is required.").format(self.columns[f]["label"]))
-			for f in self.spec["required"]
-			if f in self.columns and f not in record["values"]
-		]  # fmt: skip
+		"""Parent cells once per record; child cells on every child line (a record without lines misses them on its row)."""
+		lines = record["lines"] or [{"row": record["row"], "values": {}}]
+		found = []
+		for fieldname in self.spec["required"]:
+			column = self.columns.get(fieldname)
+			if not column:
+				continue
+			rows = (
+				[line["row"] for line in lines if fieldname not in line["values"]]
+				if column["child"]
+				else ([record["row"]] if fieldname not in record["values"] else [])
+			)
+			found += [
+				issue(row, column["label"], "missing_value", _("{0} is required.").format(column["label"]))
+				for row in rows
+			]
+		return found
 
 	def aadhaar(self, record):
 		return [
-			issue(record["row"], self.columns[AADHAAR_FIELD]["label"], "bad_aadhaar",
+			issue(record["row"], self.label(AADHAAR_FIELD), "bad_aadhaar",
 				_("Aadhaar {0} fails the checksum or format.").format(mask(number)))
 			for number in record["values"].get(AADHAAR_FIELD, [])
 			if not is_valid_aadhaar(number)
@@ -355,15 +400,20 @@ class RowChecks:
 	def register(self, record):
 		found = []
 		for number in record["values"].get(REGISTER_FIELD, []):
-			label = self.columns[REGISTER_FIELD]["label"]
+			label = self.label(REGISTER_FIELD)
 			if number in self.register_rows:
 				found.append(issue(record["row"], label, "duplicate_in_file",
 					_("Register No {0} is also on row {1}.").format(number, self.register_rows[number])))  # fmt: skip
 			else:
 				self.register_rows[number] = record["row"]
-			if number in self.stored_registers:
+			if number not in self.stored_registers:
+				continue
+			if self.stored_registers[number] == self.company:
 				found.append(issue(record["row"], label, "already_imported",
 					_("Register No {0} already belongs to a Student; this row would fail and create no duplicate.").format(number)))  # fmt: skip
+			else:
+				found.append(issue(record["row"], label, "register_in_use",
+					_("Register No {0} is already in use; this row would fail.").format(number)))  # fmt: skip
 		return found
 
 	def other_company(self, record):
@@ -371,21 +421,114 @@ class RowChecks:
 		for fieldname in COMPANY_FIELDS:
 			for value in record["values"].get(fieldname, []):
 				if value != self.company and fieldname in self.columns:
-					found.append(issue(record["row"], self.columns[fieldname]["label"], "other_company",
+					found.append(issue(record["row"], self.label(fieldname), "other_company",
 						_("Row belongs to company {0}, not {1}.").format(value, self.company)))  # fmt: skip
 		return found
 
 	def masters(self):
-		"""One lookup per linked doctype for all values, then an issue per cell whose value is missing."""
+		"""One lookup per linked doctype (limited to this company's and shared records), then an issue per cell whose
+		value is missing. Names compare case-insensitively, as the database and Data Import's link check do."""
+		cells = [
+			cell
+			for record in self.records
+			if record["row"] not in self.other_rows
+			for cell in record["link_cells"]
+		]
 		values = {}
-		for _row, col, text in self.link_cells:
+		for _row, col, text in cells:
 			values.setdefault(col["link"], set()).add(text)
 		known = {
-			doctype: set(frappe.get_all(doctype, {"name": ["in", list(names)]}, pluck="name"))
+			doctype: {name.casefold() for name in self.company_names(doctype, names)}
 			for doctype, names in values.items()
 		}
 		return [
-			issue(row, col["label"], "missing_master", _("{0} {1} does not exist.").format(_(col["link"]), text))
-			for row, col, text in self.link_cells
-			if text not in known[col["link"]]
+			self.missing_master(row, col, text)
+			for row, col, text in cells
+			if text.casefold() not in known[col["link"]]
+		]
+
+	def missing_master(self, row, col, text):
+		if company_field(col["link"]):
+			message = _("{0} {1} does not exist in {2}.").format(_(col["link"]), text, self.company)
+		else:
+			message = _("{0} {1} does not exist.").format(_(col["link"]), text)
+		return issue(row, col["label"], "missing_master", message)
+
+	def company_names(self, doctype, names):
+		"""Those of `names` that exist as `doctype` records of this company or of no company."""
+		fieldname = company_field(doctype)
+		or_filters = [[fieldname, "=", self.company], [fieldname, "is", "not set"]] if fieldname else None
+		return frappe.get_all(doctype, {"name": ["in", list(names)]}, pluck="name", or_filters=or_filters)
+
+
+OPENING_TEMPLATE = "Opening Fee Balances"
+
+
+class OpeningBalanceChecks(RowChecks):
+	"""Opening Fee Balances: one opening invoice per student, booked to the company's Temporary and receivable accounts."""
+
+	def __init__(self, template, company, records, columns):
+		super().__init__(template, company, records, columns)
+		students = {v for r in records for v in r["values"].get("student", [])}
+		self.customers = dict(
+			frappe.get_all(
+				"Student",
+				{"name": ["in", list(students) or [""]], "oc_company": company},
+				["name", "customer"],
+				as_list=True,
+			)
+		)
+		self.opened = set(frappe.get_all("Sales Invoice", {"student": ["in", list(students) or [""]], "company": company,
+			"is_opening": "Yes", "docstatus": ["<", 2]}, pluck="student"))  # fmt: skip
+		accounts = {
+			v for r in records for f in ("income_account", "debit_to") for v in r["values"].get(f, [])
+		}
+		self.account_types = dict(frappe.get_all("Account", {"name": ["in", list(accounts) or [""]], "company": company},
+			["name", "account_type"], as_list=True))  # fmt: skip
+		self.student_rows = {}
+
+	def run(self, record):
+		found = super().run(record)
+		if record["row"] in self.other_rows:
+			return found
+		return found + self.opening(record) + self.student(record) + self.accounts(record)
+
+	def opening(self, record):
+		return [
+			issue(record["row"], self.label("is_opening"), "not_opening", _("Is Opening Entry must be Yes, not {0}.").format(value))
+			for value in record["values"].get("is_opening", [])
+			if value != "Yes"
+		]  # fmt: skip
+
+	def student(self, record):
+		found = []
+		label = self.label("student")
+		for student in record["values"].get("student", []):
+			if student in self.student_rows:
+				found.append(issue(record["row"], label, "duplicate_in_file",
+					_("Student {0} is also on row {1}.").format(student, self.student_rows[student])))  # fmt: skip
+			else:
+				self.student_rows[student] = record["row"]
+			if student in self.opened:
+				found.append(issue(record["row"], label, "already_imported",
+					_("Student {0} already has an opening invoice in {1}.").format(student, self.company)))  # fmt: skip
+			customer, given = self.customers.get(student), record["values"].get("customer")
+			if student in self.customers and given and customer not in given:
+				found.append(issue(record["row"], self.label("customer"), "customer_mismatch",
+					_("The customer of Student {0} is {1}.").format(student, customer or _("not set"))))  # fmt: skip
+		return found
+
+	def accounts(self, record):
+		"""Each line's income account is a Temporary account and the debit-to a Receivable, both of this company
+		(an account of another company is reported as a missing master)."""
+		cells = [
+			(line["row"], "income_account", line["values"].get("income_account")) for line in record["lines"]
+		]
+		cells += [(record["row"], "debit_to", value) for value in record["values"].get("debit_to", [])]
+		wanted = {"income_account": "Temporary", "debit_to": "Receivable"}
+		return [
+			issue(row, self.label(fieldname), f"bad_{fieldname}",
+				_("{0} {1} is not a {2} account.").format(self.label(fieldname), account, wanted[fieldname]))
+			for row, fieldname, account in cells
+			if account in self.account_types and self.account_types[account] != wanted[fieldname]
 		]  # fmt: skip

@@ -11,7 +11,10 @@ from frappe.core.doctype.data_import.importer import Importer
 from campus.admissions import legacy_import
 from campus.admissions.aadhaar import verhoeff_valid
 from campus.admissions.legacy_import import TEMPLATES, template_columns, validate_rows
+from campus.campus_finance import api as finance
+from campus.campus_finance.fee_heads import category_for_type
 from campus.tests.factories import make_company, make_user
+from campus.tests.finance_factories import make_company_with_accounts, make_finance_company
 from campus.tests.test_regulation import make_program, make_regulation, make_year, regulation_name
 from campus.tests.utils import CampusTestCase
 
@@ -39,11 +42,6 @@ class LegacyFixture(CampusTestCase):
 	def setUp(self):
 		frappe.db.savepoint("legacy_import")
 		self.addCleanup(frappe.db.rollback, save_point="legacy_import")
-		was_importing, frappe.flags.in_import = (
-			frappe.flags.in_import,
-			True,
-		)  # skip the user-creation throttle
-		self.addCleanup(setattr, frappe.flags, "in_import", was_importing)
 
 	def guardian(self, guardian_name):
 		"""ID of the Guardian called `guardian_name` (Guardian is named by series)."""
@@ -142,13 +140,45 @@ class TestValidator(LegacyFixture):
 			[(2, "already_imported")],
 		)
 
-	def test_missing_guardian_regulation_and_other_company(self):
-		issues = self.validate(
-			self.student_row(
-				"LI001", **{"Guardian (Guardians)": "", "Regulation": "", "Company": OTHER_COLLEGE}
-			)
+	def test_missing_guardian_and_regulation(self):
+		issues = self.validate(self.student_row("LI001", **{"Guardian (Guardians)": "", "Regulation": ""}))
+		self.assertEqual(checks(issues), [(2, "missing_value"), (2, "missing_value")])
+
+	def test_an_other_company_row_gets_only_the_company_message(self):
+		bad = valid_aadhaar(3)[:-1] + str((int(valid_aadhaar(3)[-1]) + 1) % 10)
+		row = self.student_row(
+			"LI001", **{"Company": OTHER_COLLEGE, "Regulation": "No Such Regulation", "Aadhaar Number": bad}
 		)
-		self.assertEqual(checks(issues), [(2, "missing_value"), (2, "missing_value"), (2, "other_company")])
+		issues = self.validate(row, self.student_row("LI002"))
+		self.assertEqual(checks(issues), [(2, "other_company")])
+
+	def test_masters_of_another_company_count_as_missing(self):
+		other_program = make_program("Legacy Import Other BE", OTHER_COLLEGE)
+		outsider = self.stored_student("LI090", OTHER_COLLEGE)
+		row = {"Student": outsider, "Program": other_program, "Academic Year": "RT-2022", "Company": COLLEGE}
+		issues = validate_rows("Student Enrolments", sheet("Student Enrolments", row), COLLEGE)
+		self.assertEqual(
+			{i["column"] for i in issues if i["check"] == "missing_master"}, {"Student", "Program"}
+		)
+
+	def test_master_names_match_case_insensitively(self):
+		self.assertEqual(self.validate(self.student_row("LI001", Regulation=self.regulation.lower())), [])
+
+	def test_register_number_of_another_company_is_in_use_not_imported(self):
+		self.stored_student("LI009", OTHER_COLLEGE)
+		self.assertEqual(checks(self.validate(self.student_row("LI009"))), [(2, "register_in_use")])
+
+	def stored_student(self, register_no, company):
+		return frappe.get_doc({"doctype": "Student", "first_name": f"Stored{register_no}", "oc_company": company,
+			"student_email_id": f"stored-{register_no.lower()}@legacy.example.com", "oc_register_no": register_no}).insert().name  # fmt: skip
+
+	def test_child_required_values_are_checked_on_every_child_line(self):
+		course = {"Program": PROGRAM, "Regulation": self.regulation, "Status": "Draft", "Company": COLLEGE,
+			"Course (Courses)": "LI Course", "Sem (Courses)": "1", "Category (Courses)": "PCC"}  # fmt: skip
+		second = {"Course (Courses)": "LI Course 2", "Category (Courses)": "PCC"}  # no semester
+		issues = validate_rows("Curriculum Rows", sheet("Curriculum Rows", course, second), COLLEGE)
+		self.assertIn((3, "missing_value"), checks(issues))
+		self.assertEqual([i["column"] for i in issues if i["check"] == "missing_value"], ["Sem (Courses)"])
 
 	def test_enrolment_sheet_flags_missing_quota_and_category(self):
 		row = {"Student": "EDU-STU-1", "Program": PROGRAM, "Academic Year": "RT-2022", "Company": COLLEGE}
@@ -239,6 +269,14 @@ def remove_from_disk(path):
 
 class TestImportIdempotency(LegacyFixture):
 	"""The acceptance flow on a generated sheet: validate, import, fix the flagged rows, import again."""
+
+	def setUp(self):
+		super().setUp()
+		was_importing, frappe.flags.in_import = (
+			frappe.flags.in_import,
+			True,
+		)  # skip the user-creation throttle
+		self.addCleanup(setattr, frappe.flags, "in_import", was_importing)
 
 	ROWS = 50
 	BAD_AADHAAR, BAD_REGULATION, REPEATED = 11, 21, 31  # sheet rows (the header is row 1)
@@ -335,3 +373,90 @@ class TestImportIdempotency(LegacyFixture):
 		self.run_import(self.write_sheet(self.legacy_rows()[:1]))
 		stored = frappe.db.get_value("Student", {"oc_register_no": "LI001"}, "oc_aadhaar_masked")
 		self.assertEqual(stored, "XXXX-XXXX-" + valid_aadhaar(1)[-4:])
+
+
+class TestOpeningBalances(LegacyFixture):
+	"""Opening Fee Balances: opening invoices only, once per student, into the company's opening and receivable accounts."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_finance_company(COLLEGE, "LIC")
+		make_company_with_accounts(OTHER_COLLEGE, "LIO")
+
+	def setUp(self):
+		super().setUp()
+		self.a, self.b = (self.student(n) for n in ("A", "B"))
+
+	def student(self, suffix):
+		return frappe.get_doc({"doctype": "Student", "first_name": f"Opening{suffix}", "oc_company": COLLEGE,
+			"student_email_id": f"opening-{suffix.lower()}-{frappe.generate_hash(length=6)}@legacy.example.com"}).insert().name  # fmt: skip
+
+	def row(self, student, **over):
+		"""An opening row keyed by fieldname; the sheet uses the template labels."""
+		values = {"customer": frappe.db.get_value("Student", student, "customer"), "student": student, "company": COLLEGE,
+			"posting_date": "2026-04-01", "is_opening": "Yes", "item_code": category_for_type("Tuition"), "qty": "1",
+			"rate": "25000", "income_account": "Temporary Opening - LIC"}  # fmt: skip
+		return {**values, **over}
+
+	def validate(self, *rows):
+		labels = {c["fieldname"]: c["label"] for c in template_columns("Opening Fee Balances")}
+		labelled = [{labels[f]: v for f, v in row.items()} for row in rows]
+		return validate_rows("Opening Fee Balances", sheet("Opening Fee Balances", *labelled), COLLEGE)
+
+	def test_a_clean_sheet_has_no_issues(self):
+		self.assertEqual(self.validate(self.row(self.a), self.row(self.b, debit_to="Debtors - LIC")), [])
+
+	def test_a_row_must_be_an_opening_entry(self):
+		self.assertEqual(checks(self.validate(self.row(self.a, is_opening="No"))), [(2, "not_opening")])
+
+	def test_a_student_already_given_an_opening_balance(self):
+		opened = finance.raise_fee_invoice(self.a, "Tuition", 1000, COLLEGE, "Legacy opening")
+		frappe.db.set_value("Sales Invoice", opened.name, "is_opening", "Yes")
+		cancelled = finance.raise_fee_invoice(self.b, "Tuition", 1000, COLLEGE, "Legacy opening")
+		frappe.db.set_value("Sales Invoice", cancelled.name, {"is_opening": "Yes", "docstatus": 2})
+		finance.raise_fee_invoice(self.b, "Tuition", 1000, COLLEGE, "A regular fee invoice")
+		self.assertEqual(checks(self.validate(self.row(self.a), self.row(self.b))), [(2, "already_imported")])
+
+	def test_a_student_repeated_in_the_file(self):
+		issues = self.validate(self.row(self.a), self.row(self.b), self.row(self.a))
+		self.assertEqual(checks(issues), [(4, "duplicate_in_file")])
+		self.assertIn("row 2", issues[0]["message"])
+
+	def test_income_account_must_be_a_temporary_account_of_the_company(self):
+		issues = self.validate(
+			self.row(self.a, income_account="Sales - LIC"),
+			self.row(self.b, income_account="Temporary Opening - LIO"),
+		)
+		self.assertEqual(
+			checks(issues), [(2, "bad_income_account"), (3, "missing_master")]
+		)  # LIO's account is not LIC's
+
+	def test_every_item_line_is_checked(self):
+		second_line = {
+			"item_code": category_for_type("Tuition"),
+			"qty": "1",
+			"income_account": "Sales - LIC",
+		}  # no rate
+		issues = self.validate(self.row(self.a), second_line)
+		self.assertEqual(checks(issues), [(3, "bad_income_account"), (3, "missing_value")])
+
+	def test_debit_to_must_be_a_receivable_of_the_company(self):
+		issues = self.validate(
+			self.row(self.a, debit_to="Sales - LIC"), self.row(self.b, debit_to="Debtors - LIO")
+		)
+		self.assertEqual(checks(issues), [(2, "bad_debit_to"), (3, "missing_master")])
+
+	def test_customer_must_be_the_students_customer(self):
+		other_customer = frappe.db.get_value("Student", self.b, "customer")
+		issues = self.validate(self.row(self.a, customer=other_customer))
+		self.assertEqual(checks(issues), [(2, "customer_mismatch")])
+
+	def test_a_student_of_another_company_is_a_missing_master_and_nothing_more(self):
+		outsider = frappe.get_doc({"doctype": "Student", "first_name": "OpeningOutsider", "oc_company": OTHER_COLLEGE,
+			"student_email_id": f"opening-out-{frappe.generate_hash(length=6)}@legacy.example.com"}).insert().name  # fmt: skip
+		issues = self.validate(
+			self.row(outsider, customer=frappe.db.get_value("Student", self.a, "customer"))
+		)
+		self.assertEqual(checks(issues), [(2, "missing_master")])
+		self.assertNotIn(frappe.db.get_value("Student", outsider, "customer"), repr(issues))
