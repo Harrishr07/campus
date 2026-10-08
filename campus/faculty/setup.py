@@ -21,6 +21,31 @@ def options(values):
 def setup_faculty():
 	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
 	setup_timetable()
+	seed_substitution_template()
+
+
+SUBSTITUTION_EVENT = "substitution.assigned"
+
+
+def seed_substitution_template():
+	"""The notice a substitute gets when a Substitution is confirmed; an existing (possibly edited) template is left alone."""
+	if frappe.db.exists("Message Template", SUBSTITUTION_EVENT):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Message Template", "event_key": SUBSTITUTION_EVENT, "purpose": "transactional",
+			"channels": [{"channel": "email"}, {"channel": "whatsapp"}, {"channel": "sms"}],
+			"bodies": [
+				{
+					"language": "en",
+					"subject": "Substitution: {{ doc.student_group }} on {{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}",
+					"body": "You are the substitute for {{ doc.absent_faculty_name }} in {{ doc.student_group }} ({{ doc.course }}) on "
+					"{{ frappe.format(doc.schedule_date, {'fieldtype': 'Date'}) }}, {{ doc.from_time }} to {{ doc.to_time }}, room {{ doc.room or '-' }}. "
+					"You can mark attendance for this period from the substitution.",
+				}
+			],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
 
 
 ALLOCATION_POLICY = "Course Allocation - HOD"

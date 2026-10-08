@@ -65,3 +65,12 @@ and the four demo instructors as CSE Professor, Associate Professor and two Assi
 5. Actions > Publish creates Course Schedules for each matching weekday to term end. Publishing again replaces only this timetable's Course Schedules from today on; past schedules and any schedule with Student Attendance are kept.
 
 Not yet: electives of a group in parallel, cross-timetable clash checks (education's own Course Schedule overlap check is the safety net at publish), holidays, class/faculty/room print formats, OR-Tools CP-SAT backend (the pure-Python solver sits behind `solver.solve`).
+
+## Leave and substitution (M07-03)
+
+1. When a Leave Application is approved (submitted as Approved), a Substitution is proposed for every published Course Schedule of that teacher in the leave dates. The proposed substitute is a free teacher of the same department (no class or other substitution at that time, not on approved leave), the one covering least so far. If nobody is free the substitute is left blank.
+2. Open the Substitution (Faculty > Substitution): Suggest Substitutes lists the free teachers; set the Substitute and change Status to Confirmed. Confirming sends the substitute the `substitution.assigned` message. A manual choice is checked for clashes and leave. A Cancelled substitution stays cancelled; cancelling the leave cancels its substitutions.
+3. Print format Substitution Order gives the order for the period.
+4. The confirmed substitute opens the Substitution and uses Mark Attendance. The Confirmed Substitution is the permission: it covers that Course Schedule only, for students of its Student Group, and the user's roles do not change. The Instructor role alone sees only their own substitutions, read-only.
+
+Not yet: feeding approved leave into Timetable faculty unavailability (that table is per Timetable, by weekday), half-day leave (the whole day's periods are proposed), holidays.

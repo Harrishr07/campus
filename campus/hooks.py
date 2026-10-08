@@ -233,6 +233,7 @@ doc_events["Journal Entry"] = {
 }
 doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee"}
 doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
+doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
 
 # Scheduled Tasks
 # ---------------
@@ -403,6 +404,7 @@ permission_query_conditions = {
 	"Student Result": "campus.examinations.access.result_permission_query",
 	**{dt: "campus.academic_governance.access.permission_query" for dt in ("Body Meeting", "Meeting Action Item")},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
+	"Substitution": "campus.faculty.substitution_access.permission_query",
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
@@ -413,6 +415,7 @@ has_permission = {
 	"Student Result": "campus.examinations.access.result_has_permission",
 	**{dt: "campus.academic_governance.access.has_permission" for dt in ("Body Meeting", "Meeting Action Item")},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
+	"Substitution": "campus.faculty.substitution_access.has_permission",
 }
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).

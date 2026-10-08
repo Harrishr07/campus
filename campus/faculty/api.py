@@ -4,9 +4,12 @@ The data point functions return {"value", "records"} for the IQAC registry (camp
 (company, academic_year, department=None).
 """
 
+import frappe
+from frappe import _
 from frappe.utils import flt
 
-from campus.faculty import staffing
+from campus.faculty import staffing, substitute_attendance
+from campus.faculty import substitution as substitutions
 
 
 def full_time_teachers(company, academic_year, department=None):
@@ -46,3 +49,25 @@ def result(teachers):
 
 def refs(doctype, names):
 	return [{"doctype": doctype, "name": name} for name in sorted(names)]
+
+
+# ---- M07-03 substitution ---------------------------------------------------------------------
+
+
+def can_mark_substituted_attendance(user, course_schedule):
+	"""True when a Confirmed Substitution makes `user` the substitute for exactly this Course Schedule."""
+	return substitute_attendance.can_mark(user, course_schedule)
+
+
+@frappe.whitelist()
+def mark_substituted_attendance(substitution, present=None, absent=None):
+	"""The confirmed substitute marks the substituted period (lists of Student names, or JSON); returns the attendance names."""
+	return substitute_attendance.mark(substitution, present, absent)
+
+
+@frappe.whitelist()
+def suggest_substitutes(course_schedule):
+	"""Free teachers of the absent teacher's department for a period, for the Substitution form."""
+	if not frappe.has_permission("Substitution", "write"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	return substitutions.free_faculty(course_schedule)
