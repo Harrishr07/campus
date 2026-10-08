@@ -366,6 +366,7 @@ scheduler_events = {
 		"campus.campus_finance.fines.daily_fine_run",
 		"campus.admissions.documents.send_daily_reminders",
 		"campus.admissions.enquiry_followup.create_due_todos",
+		"campus.examinations.question_paper_files.sweep_plaintext",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
@@ -414,7 +415,8 @@ permission_query_conditions = {
 	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
 	"Substitution": "campus.faculty.substitution_access.permission_query",
 	"Question Paper": "campus.examinations.question_papers.permission_query",
-	**{dt: "campus.examinations.question_papers.confidential_query" for dt in ("Question Bank Item", "QP Setter Nomination", "QP Access Log")},
+	**{dt: "campus.examinations.question_papers.confidential_query" for dt in ("QP Setter Nomination", "QP Access Log")},
+	"Question Bank Item": "campus.examinations.question_papers.bank_item_query",
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
@@ -427,7 +429,8 @@ has_permission = {
 	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
 	"Substitution": "campus.faculty.substitution_access.has_permission",
 	"Question Paper": "campus.examinations.question_papers.has_permission",
-	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("Question Bank Item", "QP Setter Nomination", "QP Access Log")},
+	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("QP Setter Nomination", "QP Access Log")},
+	"Question Bank Item": "campus.examinations.question_papers.bank_item_has_permission",
 	"File": "campus.examinations.question_papers.file_has_permission",
 }
 has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"

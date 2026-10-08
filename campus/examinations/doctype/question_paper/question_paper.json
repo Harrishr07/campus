@@ -11,6 +11,8 @@
   "column_break_release",
   "release_at",
   "moderation_status",
+  "download_opens_at",
+  "download_closes_at",
   "section_pattern",
   "blueprint",
   "blueprint_issues",
@@ -19,7 +21,8 @@
   "section_papers",
   "set_a_file",
   "column_break_files",
-  "set_b_file"
+  "set_b_file",
+  "amended_from"
  ],
  "fields": [
   {
@@ -63,18 +66,33 @@
    "fieldtype": "Datetime",
    "label": "Release At",
    "in_list_view": 1,
-   "description": "The slot start. Empty: taken from the session's schedule and the slot times in Question Paper Settings. Downloads open the lead time set there before it and close when the slot ends."
+   "description": "The slot start. Empty: taken from the session's schedule and the slot times in Question Paper Settings. The download window is fixed on approval."
   },
   {
    "fieldname": "moderation_status",
    "fieldtype": "Select",
    "label": "Moderation Status",
-   "options": "Draft\nUnder Moderation\nApproved",
+   "options": "Draft\nUnder Moderation\nApproved\nWithdrawn",
    "default": "Draft",
-   "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "description": "Approved seals the paper: nobody, System Manager included, can open it until its download window."
+   "description": "Request Approval sends the paper to a moderator (Exam Confidential of the college; never its setter). Approval seals it: nobody, System Manager included, can open it until its download window. Withdraw retires it for good.",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "download_opens_at",
+   "fieldtype": "Datetime",
+   "label": "Downloads Open At",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "download_closes_at",
+   "fieldtype": "Datetime",
+   "label": "Downloads Close At",
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "section_pattern",
@@ -91,7 +109,8 @@
    "fieldname": "blueprint_issues",
    "fieldtype": "Small Text",
    "label": "Blueprint Issues",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "section_questions",
@@ -113,7 +132,8 @@
   {
    "fieldname": "set_a_file",
    "fieldtype": "Attach",
-   "label": "Set A (PDF)"
+   "label": "Set A (PDF)",
+   "no_copy": 1
   },
   {
    "fieldname": "column_break_files",
@@ -122,12 +142,22 @@
   {
    "fieldname": "set_b_file",
    "fieldtype": "Attach",
-   "label": "Set B (PDF)"
+   "label": "Set B (PDF)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Question Paper",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 20:00:00.000000",
+ "modified": "2026-10-08 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Question Paper",
@@ -140,7 +170,9 @@
    "create": 1,
    "delete": 1,
    "report": 1,
-   "print": 1
+   "print": 1,
+   "submit": 1,
+   "cancel": 1
   }
  ],
  "sort_field": "creation",
@@ -148,6 +180,7 @@
  "states": [],
  "autoname": "QP-.#####",
  "naming_rule": "Expression (old style)",
- "track_changes": 1,
- "max_attachments": 4
+ "track_changes": 0,
+ "max_attachments": 8,
+ "is_submittable": 1
 }

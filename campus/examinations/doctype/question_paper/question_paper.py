@@ -1,50 +1,109 @@
 """M06-03 Question Paper: the pattern (blueprint), sets A/B of bank questions, moderation and the encrypted PDFs.
 
-Access, the release window and the access log live in campus.examinations.question_papers. Approving runs the
-blueprint check (CO coverage, Bloom distribution: question_paper_rules) and seals the paper: a sealed paper cannot
-be changed. Release At defaults to the slot start of the course in the session's schedule.
+Access, the release window and the access log live in campus.examinations.question_papers. Moderation goes through
+the Phase-1 approval engine (policy "Question Paper Moderation": Exam Confidential of the college; the engine never
+lets the setter or the requester approve). A request is refused unless the paper could be sealed: blueprint check
+(CO coverage, Bloom distribution: question_paper_rules), release time, Set A and every attached set sealed for this
+paper. The final approval submits the paper: that seals it, snapshots its download window from the settings, and
+allows one approved paper per exam session and course. Withdrawn is one-way. Release At defaults to the slot start
+of the course in the session's schedule.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from campus.examinations.question_paper_files import seal_attachments
+from campus.campus_platform import approval_rules
+from campus.campus_platform.approval_engine import find_policy, latest_request
+from campus.campus_platform.approvals import ApprovableDocument
+from campus.examinations.question_paper_files import PAPER_FILE_FIELDS, bound_file, seal_attachments
 from campus.examinations.question_paper_rules import blueprint_issues
-from campus.examinations.question_papers import SEALED, slot_start
+from campus.examinations.question_papers import APPROVED, WITHDRAWN, log_once, slot_start, window_for
+
+UNDER_MODERATION = "Under Moderation"
 
 
-class QuestionPaper(Document):
+class QuestionPaper(ApprovableDocument, Document):
 	def validate(self):
-		self.refuse_change_once_sealed()
+		super().validate()
+		self.refuse_change_once_withdrawn()
 		self.company = frappe.db.get_value("Exam Session", self.exam_session, "company")
 		self.release_at = self.release_at or slot_start(self.exam_session, self.course)
 		self.validate_questions()
-		self.blueprint_issues = "\n".join(self.check_blueprint()) or None
-		if self.moderation_status == SEALED:
-			self.validate_approval()
 		seal_attachments(self)
+		self.blueprint_issues = "\n".join(self.check_blueprint()) or None
+		if self.docstatus == 0 and self.moderation_status != WITHDRAWN:
+			pending = (latest_request(self) or {}).get("status") == approval_rules.PENDING
+			self.moderation_status = UNDER_MODERATION if pending else "Draft"
 
-	def refuse_change_once_sealed(self):
+	def onload(self):
+		super().onload()
+		log_once(self, "View", True, "", frappe.session.user)  # the desk form, Administrator included
+		if self.docstatus == 1:
+			self.set("questions", [])  # a sealed paper's questions never reach a browser
+
+	def before_approval_request(self):
+		if self.moderation_status == WITHDRAWN:
+			frappe.throw(_("A withdrawn paper cannot be sent for approval."))
+		if not find_policy(self):
+			frappe.throw(_("Set up an Approval Policy for Question Paper first: a paper is sealed only by moderation."))
+		self.validate_sealable()
+		self.db_set("moderation_status", UNDER_MODERATION)
+
+	def before_submit(self):
+		super().before_submit()
+		latest = latest_request(self)
+		if not latest or latest.status != approval_rules.APPROVED:
+			frappe.throw(_("A question paper is sealed only by its moderation approval."))
+		self.validate_sealable()
+		self.refuse_second_approved_paper()
+		self.download_opens_at, self.download_closes_at = window_for(self.release_at)
+		self.moderation_status = APPROVED
+
+	def on_cancel(self):
+		self.db_set("moderation_status", WITHDRAWN)
+
+	def refuse_change_once_withdrawn(self):
 		before = self.get_doc_before_save()
-		if before and before.moderation_status == SEALED:
-			frappe.throw(_("Question Paper {0} is approved and sealed; it cannot be changed.").format(self.name))
+		if before and before.moderation_status == WITHDRAWN:
+			frappe.throw(_("Question Paper {0} is withdrawn; it cannot be changed.").format(self.name))
 
 	def validate_questions(self):
+		seen = set()
 		for row in self.questions:
-			course, company = frappe.db.get_value("Question Bank Item", row.question_item, ["course", "company"])
+			course, company, disabled = frappe.db.get_value("Question Bank Item", row.question_item, ["course", "company", "disabled"])
 			if course != self.course or company != self.company:
 				frappe.throw(_("Row {0}: {1} is not a question of {2} in {3}.").format(row.idx, row.question_item, self.course, self.company))
+			if disabled:
+				frappe.throw(_("Row {0}: {1} is disabled.").format(row.idx, row.question_item))
+			if (row.paper_set, row.question_item) in seen:
+				frappe.throw(_("Row {0}: {1} is already in Set {2}.").format(row.idx, row.question_item, row.paper_set))
+			seen.add((row.paper_set, row.question_item))
 
 	def check_blueprint(self):
 		questions = [{"paper_set": q.paper_set, "course_outcome": q.course_outcome, "bloom_level": q.bloom_level,
 			"marks": q.marks} for q in self.questions]  # fmt: skip
-		return blueprint_issues(questions, [r.as_dict() for r in self.blueprint], self.total_marks)
+		with_files = [s for s, field in PAPER_FILE_FIELDS.items() if self.get(field)]
+		return blueprint_issues(questions, [r.as_dict() for r in self.blueprint], self.total_marks, with_files)
 
-	def validate_approval(self):
+	def validate_sealable(self):
 		if not self.release_at:
 			frappe.throw(_("Set Release At before approving the paper."))
 		if not self.set_a_file:
 			frappe.throw(_("Attach the Set A paper before approving."))
-		if self.blueprint_issues:
-			frappe.throw(_("The paper does not match its blueprint:") + "<br>" + self.blueprint_issues.replace("\n", "<br>"))
+		for field in PAPER_FILE_FIELDS.values():
+			if self.get(field) and not bound_file(self, field):
+				frappe.throw(_("{0} is not a sealed file of this paper.").format(self.meta.get_label(field)))
+		issues = "\n".join(self.check_blueprint())
+		if issues:
+			frappe.throw(_("The paper does not match its blueprint:") + "<br>" + issues.replace("\n", "<br>"))
+
+	def refuse_second_approved_paper(self):
+		frappe.db.get_value("Exam Session", self.exam_session, "name", for_update=True)  # one approval at a time
+		other = frappe.db.get_value(
+			"Question Paper",
+			{"exam_session": self.exam_session, "course": self.course, "docstatus": 1, "name": ["!=", self.name]},
+			"name", for_update=True,
+		)  # fmt: skip
+		if other:
+			frappe.throw(_("{0} is already the approved paper of {1} in this session.").format(other, self.course))

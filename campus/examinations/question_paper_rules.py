@@ -1,7 +1,7 @@
 """M06-03 Question paper rules (pure): the download window around the release time and the blueprint check.
 
-The window opens `lead_minutes` before release (the slot start) and closes when the slot ends. The blueprint
-check runs per set: the set's marks add up to the paper total, and each pattern row (a course outcome or a
+The window opens `lead_minutes` before release (the slot start) and closes when the slot ends. The pattern needs at
+least one CO row and one Bloom row, each with min <= max. The blueprint check then runs per set: the set's marks add up to the paper total, and each pattern row (a course outcome or a
 Bloom level with a min-max share of the marks) holds; a question whose CO or Bloom level the pattern does not
 list is reported when the pattern lists that criterion at all.
 """
@@ -24,17 +24,30 @@ def in_window(now, opens, closes):
 	return opens <= now <= closes
 
 
-def blueprint_issues(questions, blueprint, total_marks):
-	"""Issue messages of the paper against its pattern; [] when every set matches."""
+def blueprint_issues(questions, blueprint, total_marks, sets_with_files=()):
+	"""Issue messages of the paper against its pattern; [] when every set matches. `sets_with_files`: the sets
+	that have a paper file attached, each of which needs questions."""
+	issues = pattern_issues(blueprint)
 	if not questions:
-		return [_("The paper has no questions.")]
+		return [*issues, _("The paper has no questions.")]
 	by_set = defaultdict(list)
 	for question in questions:
 		by_set[question["paper_set"]].append(question)
-	issues = []
+	issues += [_("Set {0} has a paper file but no questions.").format(s) for s in sets_with_files if s not in by_set]
 	for paper_set in sorted(by_set):
 		prefix = _("Set {0}").format(paper_set) + ": "
 		issues += [prefix + issue for issue in set_issues(by_set[paper_set], blueprint, flt(total_marks))]
+	return issues
+
+
+def pattern_issues(blueprint):
+	"""The pattern itself: at least one row per criterion, and min <= max on every row."""
+	issues = [_("The pattern needs at least one {0} row.").format(_(criterion)) for criterion in CRITERIA
+		if not any(r["criterion"] == criterion for r in blueprint)]  # fmt: skip
+	for row in blueprint:
+		if flt(row["min_percent"]) > flt(row["max_percent"]):
+			issues.append(_("{0}: the minimum share ({1}%) is above the maximum ({2}%).").format(
+				row["value"], fmt(row["min_percent"]), fmt(row["max_percent"])))  # fmt: skip
 	return issues
 
 

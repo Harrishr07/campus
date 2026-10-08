@@ -24,26 +24,30 @@
    "label": "Question Paper",
    "options": "Question Paper",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only": 1
   },
   {
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "read_only": 1
   },
   {
    "fieldname": "paper_set",
    "fieldtype": "Data",
-   "label": "Set"
+   "label": "Set",
+   "read_only": 1
   },
   {
    "fieldname": "action",
    "fieldtype": "Select",
    "label": "Action",
-   "options": "View\nPrint View\nDownload\nPrint",
+   "options": "View\nPrint View\nList\nDownload\nPrint\nWithdraw",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only": 1
   },
   {
    "fieldname": "result",
@@ -51,12 +55,14 @@
    "label": "Result",
    "options": "Allowed\nDenied",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only": 1
   },
   {
    "fieldname": "reason",
    "fieldtype": "Small Text",
-   "label": "Reason"
+   "label": "Reason",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_who",
@@ -68,34 +74,39 @@
    "label": "User",
    "options": "User",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only": 1
   },
   {
    "fieldname": "accessed_at",
    "fieldtype": "Datetime",
    "label": "Accessed At",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "read_only": 1
   },
   {
    "fieldname": "ip_address",
    "fieldtype": "Data",
-   "label": "IP Address"
+   "label": "IP Address",
+   "read_only": 1
   },
   {
    "fieldname": "room",
    "fieldtype": "Link",
    "label": "Hall",
-   "options": "Room"
+   "options": "Room",
+   "read_only": 1
   },
   {
    "fieldname": "copies",
    "fieldtype": "Int",
-   "label": "Copies"
+   "label": "Copies",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 20:00:00.000000",
+ "modified": "2026-10-08 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "QP Access Log",
