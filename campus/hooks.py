@@ -1,4 +1,4 @@
-from campus.examinations.access import PORTAL_SCOPES
+from campus.examinations.access import OFFERING_SCOPED, PORTAL_SCOPES
 
 app_name = "campus"
 app_title = "OneBook Campus"
@@ -364,6 +364,7 @@ scheduler_events = {
 		"campus.campus_platform.approval_escalation.escalate_overdue",
 		"campus.student_services.grievances.escalate_overdue",
 		"campus.admissions.allotment_import.reconcile_finished_imports",
+		"campus.examinations.cia.lock_due_schedules",
 	],
 	"cron": {
 		"*/15 * * * *": [
@@ -395,7 +396,7 @@ permission_query_conditions = {
 	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
 	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
 	**{dt: "campus.examinations.access.portal_permission_query" for dt in PORTAL_SCOPED},
-	"Mark Sheet Entry": "campus.examinations.access.marks_permission_query",
+	**{dt: "campus.examinations.access.offering_permission_query" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_permission_query",
 }
 has_permission = {
@@ -403,7 +404,7 @@ has_permission = {
 	"Approval Request": "campus.campus_platform.approval_access.has_permission",
 	"Lead": "campus.admissions.enquiry.has_permission",
 	**{dt: "campus.examinations.access.portal_has_permission" for dt in PORTAL_SCOPED},
-	"Mark Sheet Entry": "campus.examinations.access.marks_has_permission",
+	**{dt: "campus.examinations.access.offering_has_permission" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_has_permission",
 }
 

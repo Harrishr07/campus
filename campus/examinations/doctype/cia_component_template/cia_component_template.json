@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regulation",
+  "course_type",
+  "column_break_main",
+  "cia_max",
+  "round_to_integer",
+  "includes_attendance_marks",
+  "attendance_max",
+  "section_components",
+  "components"
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "course_type",
+   "fieldtype": "Select",
+   "label": "Course Type",
+   "options": "Theory\nTheory with Lab\nLab\nProject",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cia_max",
+   "fieldtype": "Float",
+   "label": "Converted CIA Maximum",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Equals the CIA maximum of the course type in the regulation's Exam Rule Set."
+  },
+  {
+   "fieldname": "round_to_integer",
+   "fieldtype": "Check",
+   "label": "Round to Nearest Integer",
+   "default": "1",
+   "description": "The weighted assessments are rounded half up to a whole mark before attendance marks are added."
+  },
+  {
+   "fieldname": "includes_attendance_marks",
+   "fieldtype": "Check",
+   "label": "Includes Attendance Marks",
+   "description": "Adds the marks of the regulation's Attendance Rule bands (R2026)."
+  },
+  {
+   "fieldname": "attendance_max",
+   "fieldtype": "Float",
+   "label": "Attendance Marks Maximum",
+   "depends_on": "includes_attendance_marks",
+   "mandatory_depends_on": "includes_attendance_marks"
+  },
+  {
+   "fieldname": "section_components",
+   "fieldtype": "Section Break",
+   "label": "Components",
+   "description": "Converted CIA = sum of (marks / entered out of x weight); the weights plus the attendance maximum equal the converted CIA maximum."
+  },
+  {
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "CIA Template Component",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "CIA Component Template",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1
+  }
+ ],
+ "autoname": "format:CIAT-{regulation}-{course_type}",
+ "naming_rule": "Expression",
+ "title_field": "regulation",
+ "track_changes": 1
+}

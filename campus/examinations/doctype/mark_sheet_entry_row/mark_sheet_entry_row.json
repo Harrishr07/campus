@@ -8,6 +8,7 @@
   "student_name",
   "absent",
   "cia",
+  "cia_attendance",
   "ese"
  ],
  "fields": [
@@ -40,6 +41,13 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "cia_attendance",
+   "fieldtype": "Float",
+   "label": "CIA Attendance Marks",
+   "read_only": 1,
+   "description": "Part of CIA from the attendance mark bands (R2026)."
+  },
+  {
    "fieldname": "ese",
    "fieldtype": "Float",
    "label": "ESE",
@@ -48,7 +56,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Mark Sheet Entry Row",

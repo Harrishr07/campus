@@ -1,5 +1,5 @@
-"""M12-02, M06-05, M05-03 Seed values: Grading Scheme, Exam Rule Set and Classification Rule of the
-Anna University R2021 (affiliated) and the autonomous R2022 / R2026 regulations.
+"""M12-02, M06-05, M05-03, M06-08 Seed values: Grading Scheme, Exam Rule Set, Classification Rule and CIA
+Component Templates of the Anna University R2021 (affiliated) and the autonomous R2022 / R2026 regulations.
 
 Source: docs/research/anna-university-autonomous-rules.md, section 3. Keyed by regulation code.
 Where the note is silent the seed says so next to the value (see the P2-T12 report).
@@ -95,6 +95,23 @@ CLASSES = {
 }  # fmt: skip
 
 
+# M06-08 CIA templates: course type -> (converted CIA max, attendance marks max, [(component, out of, weight)]).
+# R2022 theory: two assessments of 100 (40 assignment + 60 test) -> 40; lab: 75 observation/record + 25 test -> 60.
+# R2026 theory: the note gives 40 with up to 5 attendance marks; the assessment split is taken from R2022 (35 left).
+# Theory with Lab (split by L-T-P), projects and the R2021 / R2026 labs are not seeded: the note gives no split.
+TWO_ASSESSMENTS = [("Assignment 1", 40), ("Test 1", 60), ("Assignment 2", 40), ("Test 2", 60)]
+CIA_TEMPLATES = {
+	"AU-R2021": {},
+	"R2022": {
+		"Theory": (40, 0, [(c, out_of, out_of * 40 / 200) for c, out_of in TWO_ASSESSMENTS]),
+		"Lab": (60, 0, [("Observation and Record", 75, 45), ("Test", 25, 15)]),
+	},
+	"R2026": {
+		"Theory": (40, 5, [(c, out_of, out_of * 35 / 200) for c, out_of in TWO_ASSESSMENTS]),
+	},
+}
+
+
 def rows(fields, values):
 	return [dict(zip(fields, row, strict=True)) for row in values]
 
@@ -128,6 +145,16 @@ def classification_rule(regulation, code):
 	}
 
 
+def cia_templates(regulation, code):
+	for course_type, (cia_max, attendance_max, components) in CIA_TEMPLATES[code].items():
+		yield {
+			"doctype": "CIA Component Template", "regulation": regulation, "course_type": course_type,
+			"cia_max": cia_max, "round_to_integer": 1, "includes_attendance_marks": int(bool(attendance_max)),
+			"attendance_max": attendance_max,
+			"components": rows(("component", "max_marks", "weight"), components),
+		}  # fmt: skip
+
+
 def seed_regulation(regulation, code):
 	"""Create the Grading Scheme, Exam Rule Set and Classification Rule of `regulation` (a Regulation name)
 	from the values of regulation `code` when absent. Existing records are never changed (they lock once
@@ -139,3 +166,6 @@ def seed_regulation(regulation, code):
 	):
 		if not frappe.db.exists(doctype, {"regulation": regulation}):
 			frappe.get_doc(values(regulation, code)).insert(ignore_permissions=True)
+	for template in cia_templates(regulation, code):
+		if not frappe.db.exists("CIA Component Template", {"regulation": regulation, "course_type": template["course_type"]}):
+			frappe.get_doc(template).insert(ignore_permissions=True)

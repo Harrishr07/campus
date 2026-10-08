@@ -1,8 +1,9 @@
 """M12-02 Who may enter marks and who may read results.
 
-Marks: COE and System Manager, and the instructors of the offering (Student Group instructor ->
-Instructor.employee -> Employee.user_id), only while the Exam Session is in Marks Entry (the status
-rule is the controller's). Results: staff roles, else the student and guardians linked to the student,
+Marks (and the offering's CIA Schedule and CIA Unlock Requests): COE and System Manager, and the
+instructors of the offering (Student Group instructor -> Instructor.employee -> Employee.user_id); other
+staff roles read all, an HOD reads the offerings of the department's programmes. The session status and
+CIA lock rules are the controllers'. Results: staff roles, else the student and guardians linked to the student,
 and only once the session is Published and now >= publish_at.
 """
 
@@ -13,6 +14,7 @@ COE_ROLE = "COE"
 MARKS_ROLES = (COE_ROLE, "System Manager")
 STAFF_ROLES = (COE_ROLE, "System Manager", "Dean Academics", "Academics User")
 READ_TYPES = ("read", "print", "email", "export", "report", "select")
+OFFERING_SCOPED = ("Mark Sheet Entry", "CIA Schedule", "CIA Unlock Request")
 
 
 def has_any_role(user, roles):
@@ -38,21 +40,42 @@ def employees_of(user):
 	return frappe.get_all("Employee", {"user_id": user}, pluck="name") or [""]
 
 
-def marks_permission_query(user=None):
+def hod_offerings(user):
+	"""Course offerings of programmes whose department the user holds the HOD seat of."""
+	departments = held_scopes(user, HOD_POSITION)
+	if not departments:
+		return []
+	programs = frappe.get_all("Program", {"department": ["in", departments]}, pluck="name") or [""]
+	return frappe.get_all("Student Group", {"group_based_on": "Course", "program": ["in", programs]}, pluck="name")
+
+
+def offering_permission_query(user=None, doctype="Mark Sheet Entry"):
+	"""Lists of OFFERING_SCOPED doctypes: staff see all; instructors their offerings, HODs their department's."""
 	user = user or frappe.session.user
 	if has_any_role(user, STAFF_ROLES):
 		return ""
-	offerings = ", ".join(frappe.db.escape(o) for o in instructed_offerings(user))
-	return f"`tabMark Sheet Entry`.course_offering in ({offerings})"
+	offerings = ", ".join(frappe.db.escape(o) for o in {*instructed_offerings(user), *hod_offerings(user)})
+	return f"`tab{doctype}`.course_offering in ({offerings})"
 
 
-def marks_has_permission(doc, ptype=None, user=None):
+def offering_has_permission(doc, ptype=None, user=None):
+	"""COE edits all; other staff read all; instructors edit their own offerings; an HOD reads the department's."""
 	user = user or frappe.session.user
 	if has_any_role(user, MARKS_ROLES):
 		return True
 	if ptype in READ_TYPES and has_any_role(user, STAFF_ROLES):
 		return True
-	return user in instructor_users(doc.course_offering)
+	offering = offering_of(doc)
+	if offering and user in instructor_users(offering):
+		return True
+	return ptype in READ_TYPES and offering in hod_offerings(user)
+
+
+def offering_of(doc):
+	"""The doc's course offering; a new CIA Unlock Request has only its schedule until its links are fetched."""
+	if doc.get("course_offering") or not doc.get("cia_schedule"):
+		return doc.get("course_offering")
+	return frappe.db.get_value("CIA Schedule", doc.cia_schedule, "course_offering")
 
 
 # ---- Student-linked records ---------------------------------------------------------------
@@ -128,7 +151,7 @@ COMMITTEE_ROLES = (COMMITTEE_ROLE, "System Manager")
 CONFIDENTIAL_FIELDS = {"Student Grievance": "is_confidential"}
 # Handlers other than these see a Student Grievance only for their own department or one they handled.
 COMPANY_WIDE_HANDLERS = ("Principal", "Dean Student Affairs")
-HANDLER_POSITION = "HOD"
+HANDLER_POSITION = HOD_POSITION = "HOD"
 
 
 def held_scopes(user, position):

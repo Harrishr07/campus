@@ -1,6 +1,6 @@
-"""M06-05 (D6) Rule records (Exam Rule Set, Grading Scheme, Classification Rule) are immutable once their
-regulation is Effective: they can be created for it but not edited, moved or deleted. A change is made on
-a new regulation version (Regulation "Amend as New Version") with its own rule records."""
+"""M06-05 (D6) Rule records (Exam Rule Set, Grading Scheme, Classification Rule, CIA Component Template) are
+immutable once their regulation is Effective: they can be created for it but not edited, moved or deleted.
+A change is made on a new regulation version (Regulation "Amend as New Version") with its own rule records."""
 
 import frappe
 from frappe import _
