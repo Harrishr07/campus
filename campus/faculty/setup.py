@@ -3,14 +3,12 @@ qualification fields on Job Applicant. HRMS Employee is the faculty profile; no 
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.permissions import add_permission, update_permission_property
 
 MODULE = "Faculty"
 CADRES = ["Professor", "Associate Professor", "Assistant Professor"]
 QUALIFICATIONS = ["Diploma", "Graduate", "Post Graduate", "Doctorate"]  # lowest first; the rank order of qualification.py
 PHD_STATUSES = ["Not Pursuing", "Pursuing", "Submitted", "Awarded"]
 NET_SET = ["NET", "SET", "SLET"]
-SENSITIVE_ROLES = ("HR Manager", "HR User", "Principal")
 TEACHING = 'eval:doc.oc_staff_type=="Teaching"'
 
 
@@ -20,7 +18,6 @@ def options(values):
 
 def setup_faculty():
 	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
-	grant_sensitive_fields()
 
 
 ALLOCATION_POLICY = "Course Allocation - HOD"
@@ -38,21 +35,8 @@ def seed_course_allocation_policy():
 	).insert(ignore_permissions=True)  # fmt: skip
 
 
-def grant_sensitive_fields():
-	"""Qualification, PhD, AICTE ID and override fields of Employee are permlevel 1: HR and the Principal only."""
-	for role in SENSITIVE_ROLES:
-		add_permission("Employee", role, 1)
-		update_permission_property("Employee", role, 1, "write", 1)
-
-
-PERMLEVEL_ONE = (
-	"oc_aicte_faculty_id", "oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set",
-	"oc_prior_teaching_experience", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by",
-)  # fmt: skip
-
-
 def employee_fields():
-	return [{**f, "permlevel": 1} if f["fieldname"] in PERMLEVEL_ONE else f for f in faculty_profile_fields()]
+	return faculty_profile_fields()
 
 
 def faculty_profile_fields():
@@ -100,4 +84,41 @@ def qualification_fields(insert_after):
 
 
 def field(fieldname, fieldtype, label, insert_after, **kwargs):
-	return {"fieldname": fieldname, "fieldtype": fieldtype, "label": label, "insert_after": insert_after, "module": MODULE, **kwargs}
+	return {"fieldname": fieldname, "fieldtype": fieldtype, "label": label, "insert_after": insert_after, "module": MODULE, "permlevel": 0, **kwargs}
+
+
+PERM_FLAGS = ("read", "write", "create", "delete", "submit", "cancel", "amend", "report", "export", "import", "share", "print", "email", "select", "if_owner")
+PROFILE_FIELDS_ONCE_AT_PERMLEVEL_ONE = (
+	"oc_aicte_faculty_id", "oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set",
+	"oc_prior_teaching_experience", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by",
+)  # fmt: skip
+
+
+def undo_permlevel_one():
+	"""Undo fix round 1 of P2-T05 on a site that ran it: the profile fields go back to permlevel 0 and the Employee
+	Custom DocPerm rows that move created go away. Idempotent and DML only.
+
+	`add_permission` copies every standard Employee permission into Custom DocPerm the first time it is used, which
+	freezes the standard permissions. So: if Employee's permlevel-0 Custom DocPerm rows are exactly the standard
+	DocPerm rows (same roles and flags), nobody customised Employee and all rows are removed so the standard
+	permissions apply again. Otherwise only the permlevel-1 rows of HR Manager, HR User and Principal are removed.
+	"""
+	for fieldname in PROFILE_FIELDS_ONCE_AT_PERMLEVEL_ONE:
+		frappe.db.set_value("Custom Field", {"dt": "Employee", "fieldname": fieldname}, "permlevel", 0)
+	custom = frappe.get_all("Custom DocPerm", {"parent": "Employee"}, ["name", "role", "permlevel", *PERM_FLAGS])
+	if not custom:
+		return
+	if copies_standard_permissions(custom):
+		frappe.db.delete("Custom DocPerm", {"parent": "Employee"})
+	else:
+		frappe.db.delete("Custom DocPerm", {"parent": "Employee", "permlevel": 1, "role": ["in", ["HR Manager", "HR User", "Principal"]]})
+	frappe.clear_cache(doctype="Employee")
+
+
+def copies_standard_permissions(custom):
+	"""True when the permlevel 0 and 1 Custom DocPerm rows are the standard rows plus only HR Manager, HR User and Principal at permlevel 1."""
+	standard = frappe.get_all("DocPerm", {"parent": "Employee"}, ["role", "permlevel", *PERM_FLAGS])
+	ours = {(r.role, r.permlevel) for r in custom if r.permlevel == 1 and r.role in ("HR Manager", "HR User", "Principal")}
+	rest = [r for r in custom if (r.role, r.permlevel) not in ours]
+	key = lambda r: tuple(sorted((k, v or 0) for k, v in r.items() if k != "name"))  # noqa: E731
+	return sorted(map(key, rest)) == sorted(map(key, standard))

@@ -14,4 +14,5 @@ campus.patches.backfill_leave_kind
 campus.patches.remove_wip_onboarding_checklists
 campus.patches.link_governance_workspace
 campus.patches.move_external_member_pan_to_supplier
+campus.patches.reset_employee_profile_permlevel
 campus.patches.mark_confidential_body_types

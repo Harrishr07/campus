@@ -110,6 +110,15 @@ class TestFacultyFixRound1(CampusTestCase):
 	demo_scale = "small"
 	LEFT_FIELDS = ("status", "relieving_date")
 
+	def setUp(self):
+		super().setUp()
+		frappe.db.savepoint("fix_round_test")  # tests change employees
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.rollback(save_point="fix_round_test")
+		super().tearDown()
+
 	def leave(self, username, relieving_date):
 		frappe.db.set_value("Employee", demo.employee_of(username), {"status": "Left", "relieving_date": relieving_date})
 
@@ -152,13 +161,55 @@ class TestFacultyFixRound1(CampusTestCase):
 			frappe.db.rollback(save_point="cse_only_user")
 		self.assertEqual(names, {demo.employee_of(u) for u in ("hod_cse", "faculty_1", "faculty_2")})
 
-	def test_sensitive_fields_are_permlevel_one_for_hr_and_the_principal(self):
+	def test_profile_fields_are_at_permlevel_zero_and_campus_adds_no_employee_permissions(self):
 		meta = frappe.get_meta("Employee")
 		for fieldname in ("oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set", "oc_prior_teaching_experience",
 			"oc_aicte_faculty_id", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by"):  # fmt: skip
-			self.assertEqual(meta.get_field(fieldname).permlevel, 1, fieldname)
+			self.assertEqual(meta.get_field(fieldname).permlevel, 0, fieldname)
+		# HRMS adds its own Employee Self Service row (and so copies the standard rows) on every site; campus adds none
+		self.assertEqual(frappe.get_all("Custom DocPerm", {"parent": "Employee", "permlevel": ["!=", 0]}), [])
+		self.assertEqual({r.role for r in frappe.get_all("Custom DocPerm", {"parent": "Employee"}, ["role"])} - {r.role for r in frappe.get_all("DocPerm", {"parent": "Employee"}, ["role"])}, {"Employee Self Service"})
+
+	def test_phd_count_is_right_for_a_user_who_reads_employees_at_permlevel_zero(self):
+		user = "p2t05-iqac@example.com"
+		frappe.db.savepoint("iqac_user")
+		was_importing, frappe.flags.in_import = frappe.flags.in_import, True
+		try:
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "iqac", "send_welcome_email": 0, "enabled": 1,
+				"roles": [{"role": "IQAC Coordinator"}, {"role": "HR User"}]}).insert()  # fmt: skip
+			frappe.flags.in_import = was_importing
+			frappe.set_user(user)
+			self.assertEqual(point("phd_teachers")["value"], 2)
+			self.assertEqual(point("full_time_teachers")["value"], 4)
+		finally:
+			frappe.flags.in_import = was_importing
+			frappe.set_user("Administrator")
+			frappe.db.rollback(save_point="iqac_user")
+
+	def test_undoing_permlevel_one_removes_only_the_copies_this_code_made(self):
+		from campus.faculty.setup import undo_permlevel_one
+
+		standard = frappe.get_all("DocPerm", {"parent": "Employee"}, ["*"])
+		frappe.db.savepoint("undo_permlevel")
+		try:
+			self.copy_standard_and_add_permlevel_one(standard)
+			undo_permlevel_one()
+			self.assertEqual(frappe.db.count("Custom DocPerm", {"parent": "Employee"}), 0)
+			self.copy_standard_and_add_permlevel_one(standard)
+			frappe.get_doc({"doctype": "Custom DocPerm", "parent": "Employee", "role": "Accounts User", "permlevel": 0, "read": 1}).insert()  # someone else's
+			undo_permlevel_one()
+			self.assertEqual(frappe.get_all("Custom DocPerm", {"parent": "Employee", "permlevel": 1}), [])
+			self.assertTrue(frappe.db.exists("Custom DocPerm", {"parent": "Employee", "role": "Accounts User"}))
+			self.assertEqual(frappe.db.count("Custom DocPerm", {"parent": "Employee"}), len(standard) + 1)  # their customisation stays
+		finally:
+			frappe.db.rollback(save_point="undo_permlevel")
+
+	def copy_standard_and_add_permlevel_one(self, standard):
+		frappe.db.delete("Custom DocPerm", {"parent": "Employee"})
+		for row in standard:
+			frappe.get_doc({"doctype": "Custom DocPerm", **{k: v for k, v in row.items() if k not in ("name", "creation", "modified", "owner", "modified_by", "docstatus", "idx")}}).insert()
 		for role in ("HR Manager", "HR User", "Principal"):
-			self.assertTrue(frappe.db.exists("Custom DocPerm", {"parent": "Employee", "role": role, "permlevel": 1, "read": 1, "write": 1}), role)
+			frappe.get_doc({"doctype": "Custom DocPerm", "parent": "Employee", "role": role, "permlevel": 1, "read": 1, "write": 1}).insert()
 
 	def test_cadre_is_mandatory_for_teaching_staff(self):
 		self.assertEqual(frappe.get_meta("Employee").get_field("oc_cadre").mandatory_depends_on, 'eval:doc.oc_staff_type=="Teaching"')
