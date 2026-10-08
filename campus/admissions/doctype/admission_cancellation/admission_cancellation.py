@@ -3,8 +3,7 @@
 On submit, in the submit's transaction: a Credit Note against the admission fee invoice for the refundable
 portion (invoice total less the slab deduction), a draft Payment Entry (Pay) for the money the student paid
 (Payment Entries received, not scholarships or credit notes) in excess of the deduction (accounts approves and
-submits it), cancellation of the Program Enrollment (the Seat
-Matrix hook frees the seat), and the student's and applicant's statuses. The applicant becomes "Rejected":
+submits it), cancellation of the Program Enrollment (the Seat Matrix hook frees the seat), and the student's and applicant's statuses. The applicant becomes "Rejected":
 Education's Student Applicant status has no cancelled value and this app does not change upstream options.
 A cancellation is final: cancel the Credit Note and Payment Entry in Accounts if it was made in error.
 While a scholarship disbursement settles the invoice the cancellation is refused: the credit note would turn the
@@ -102,7 +101,7 @@ def check_no_scholarship(invoice, locking):
 	vouchers = finance.scholarship_vouchers(invoice, locking=locking)
 	if vouchers:
 		frappe.throw(
-			_("{0} is settled in part by scholarship disbursement {1}. Cancel it in Accounts first, so the scholarship is not refunded.").format(
+			_("{0} is settled by scholarship disbursement {1}. Cancel it in Accounts first, so the scholarship is not refunded.").format(
 				invoice, ", ".join(vouchers)
 			)
 		)

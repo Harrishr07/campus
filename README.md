@@ -82,9 +82,9 @@ One app, one Frappe module per BRD area:
 | Campus Platform | M17 | Institution Profile, Module Packs, Shared Service Agreement, Regulation, Positions, Approval engine, Verifiable Documents (QR + `/verify/<code>`), Bulk Run |
 | Campus Messaging | M16 | Message Templates (en/ta), consent, send API with channel fallback (WhatsApp → SMS → email), broadcasts, circulars |
 | Curriculum | M03 | Course Category, Curriculum (versions, L-T-P-C), Elective Group, Curriculum/Registration Rules, course offerings, Course Registration |
-| Admissions | M04 | Quotas, counselling authorities, document and eligibility rules, refund rules, encrypted Aadhaar |
-| Student Services | M05 | Onboarding, attendance eligibility and condonation, certificates and TC, grievances, scholarships |
-| Campus Finance | M09 | Fee heads, fine rules, challans, bank collection import, receipts, cross-company student ledger |
+| Admissions | M04 | Quotas, counselling authorities, document and eligibility rules, Admit and Admission Cancellation with refund rules, encrypted Aadhaar, legacy data import templates and the Import Check report |
+| Student Services | M05 | Onboarding, attendance eligibility and condonation, certificates and TC, grievances |
+| Campus Finance | M09 | Fee heads, fine rules, challans, bank collection import, receipts, cross-company student ledger, scholarships, fee concessions, fee refunds and caution deposit refunds, no-dues clearance, online payment gateways |
 | Examinations | M06 | Exam sessions, CIA, hall tickets, seating, question papers, valuation, results, revaluation |
 | Academic Governance | M02 | Bodies, meetings, resolutions, academic proposals |
 | Faculty | M07 | Workload, timetable solver, achievements, appraisal |
@@ -98,7 +98,7 @@ One app, one Frappe module per BRD area:
 |---|---|
 | [AGENTS.md](AGENTS.md) | Product intent, principles, glossary, rules for contributors and AI agents |
 | [docs/Frappe_Higher_Education_Layer_BRD.md](docs/Frappe_Higher_Education_Layer_BRD.md) | Business requirements (M01–M17, requirement IDs) |
-| [docs/blueprint.md](docs/blueprint.md) | Solution blueprint: decisions D1–D14, masters, transactions, settings, prints, reports, integrations per module |
+| [docs/blueprint.md](docs/blueprint.md) | Solution blueprint: decisions D1–D15, masters, transactions, settings, prints, reports, integrations per module |
 | [docs/phases/](docs/phases/) | Phase task docs with acceptance criteria and test logic (`README.md` = conventions) |
 | [docs/research/](docs/research/) | NAAC AQAR/SSR structure notes; Anna University and UGC autonomous-college rules (R2021/R2022/R2026) |
 
