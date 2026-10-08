@@ -22,10 +22,11 @@ def columns():
 
 def rows(filters):
 	conditions = {"company": filters.company, "action": "Print", "result": "Allowed"}
-	if filters.question_paper:
-		conditions["question_paper"] = filters.question_paper
-	if filters.exam_session:
-		papers = frappe.get_list("Question Paper", {"exam_session": filters.exam_session}, pluck="name")
+	if filters.question_paper or filters.exam_session:
+		paper_filters = {k: filters[k] for k in ("exam_session",) if filters.get(k)}
+		if filters.question_paper:
+			paper_filters["name"] = filters.question_paper
+		papers = frappe.get_all("Question Paper", paper_filters, pluck="name")
 		conditions["question_paper"] = ["in", papers or [""]]
 	return frappe.get_list(
 		"QP Access Log", filters=conditions,

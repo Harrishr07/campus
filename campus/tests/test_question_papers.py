@@ -602,6 +602,15 @@ class TestPrintLog(QuestionPaperFixture):
 			[(paper, "A", hall_1, 40), (paper, "B", hall_2, 25)],
 		)
 
+	def test_paper_and_session_filters_combine(self):
+		paper = self.paper(release_in_minutes=10).name
+		frappe.set_user(EC_USER)
+		question_papers.print_copies(paper, "A", self.rooms[0], 30)
+		_columns, mismatch = print_log({"company": COLLEGE, "exam_session": self.session_2.name, "question_paper": paper})
+		_columns, match = print_log({"company": COLLEGE, "exam_session": self.session.name, "question_paper": paper})
+		frappe.set_user("Administrator")
+		self.assertEqual((mismatch, [r["copies"] for r in match]), ([], [30]))
+
 	def test_copies_must_be_positive(self):
 		paper = self.paper(release_in_minutes=10).name
 		frappe.set_user(EC_USER)
