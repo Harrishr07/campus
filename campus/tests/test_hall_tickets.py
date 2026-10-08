@@ -64,6 +64,7 @@ class TestBulkGeneration(HallTicketFixture):
 		names = sorted(frappe.get_all("Exam Registration", {"exam_session": self.session.name}, pluck="name"))
 		self.assertEqual((frappe.parse_json(run.items), run.handler), (names, hall_tickets.HANDLER))
 		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.generate_hall_tickets], ["POST"])
+		frappe.db.set_value("Bulk Run", name, "status", "Completed")  # the queued run has finished
 		self.generate()  # the handler runs as the COE who queued it
 		self.assertEqual((self.ticket(self.ok).status, len(self.documents(self.ok, "Valid"))), ("Issued", 1))
 
@@ -131,7 +132,37 @@ class TestWithheld(HallTicketFixture):
 		self.assertEqual((ticket.status, ticket.withheld_reasons), ("Withheld", "Detained: Disciplinary committee order"))
 		(document,) = self.documents(self.ok)
 		self.assertEqual(document.status, "Revoked")
-		self.assertIn("Detained", document.revocation_reason)
+		self.assertEqual(document.revocation_reason, "Hall ticket withdrawn")  # the public record never says why
+
+	def test_a_photo_outside_the_files_folders_is_dropped(self):
+		frappe.db.set_value("Student", self.ok, "image", "https://evil.example/x.png")
+		frappe.db.set_value("Student", self.sa, "image", "/private/files/exr-sa.png")
+		self.generate()
+		self.assertIsNone(self.ticket(self.ok).photo)
+		self.assertEqual(self.ticket(self.sa).photo, "/private/files/exr-sa.png")
+
+
+class TestLocking(HallTicketFixture):
+	def test_a_stale_snapshot_refreshes_the_existing_ticket_and_keeps_its_qr(self):
+		self.generate()
+		before = self.documents(self.ok)
+		real_exists = frappe.db.exists
+
+		def stale_exists(doctype, *args, **kwargs):  # what a plain read of a snapshot older than the rows sees
+			return None if doctype in ("Hall Ticket", VD) else real_exists(doctype, *args, **kwargs)
+
+		with patch.object(frappe.db, "exists", side_effect=stale_exists):
+			hall_tickets.generate(self.reg(self.ok).name)
+		self.assertEqual(self.documents(self.ok), before)
+
+	def test_start_refuses_while_a_hall_ticket_run_of_the_session_is_live(self):
+		frappe.set_user(COE_USER)
+		with patch.object(bulk, "enqueue_run"):
+			first = api.generate_hall_tickets(self.session.name)
+			with self.assertRaisesRegex(frappe.ValidationError, first):
+				api.generate_hall_tickets(self.session.name)
+			frappe.db.set_value("Bulk Run", first, "status", "Completed with errors")
+			self.assertNotEqual(api.generate_hall_tickets(self.session.name), first)
 
 
 class TestRegeneration(HallTicketFixture):
@@ -152,10 +183,15 @@ class TestRegeneration(HallTicketFixture):
 		self.assertEqual(str(self.ticket(self.ok).courses[1].exam_date), add_days(today(), 23))
 
 	def test_paying_the_dues_releases_the_ticket(self):
+		from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
 		self.generate()
 		self.assertEqual(self.ticket(self.dues).status, "Withheld")
-		with patch.object(exam_fee, "exam_dues_block", return_value=frappe._dict(blocked=False, amount=0)):
-			self.generate()
+		for invoice in frappe.get_all("Sales Invoice", {"student": self.dues, "docstatus": 1, "outstanding_amount": [">", 0]}, pluck="name"):
+			payment = get_payment_entry("Sales Invoice", invoice)
+			payment.reference_no, payment.reference_date = f"HT-{invoice}", today()
+			payment.insert().submit()
+		self.generate()
 		self.assertEqual(self.ticket(self.dues).status, "Issued")
 		self.assertEqual([d.status for d in self.documents(self.dues)], ["Valid"])
 
@@ -186,6 +222,38 @@ class TestVerification(HallTicketFixture):
 		body = get_response(f"verify/{document.code}").get_data(as_text=True)
 		self.assertIn(self.session.name, body)
 		self.assertIn("Confirmed", body)
+
+	def guest_page(self, ip, code):
+		from frappe.website.serve import get_response
+
+		frappe.set_user("Guest")
+		request_as(ip, f"/verify/{code}")
+		frappe.local.form_dict = frappe._dict()
+		frappe.local.response = frappe._dict()
+		body = get_response(f"verify/{code}").get_data(as_text=True)
+		frappe.set_user("Administrator")
+		return body
+
+	def test_a_withheld_ticket_shows_the_public_no_reason_and_revocation_text_is_escaped(self):
+		self.generate()
+		doc = self.reg(self.ok)
+		doc.detained, doc.detention_reason = 1, "Disciplinary committee order"
+		doc.save()
+		self.generate()
+		(document,) = self.documents(self.ok)
+		found = verification.public_lookup(document.code)
+		self.assertEqual((found.status, found.details), ("Revoked", []))
+		body = self.guest_page("10.0.0.31", document.code)
+		self.assertIn("Hall ticket withdrawn", body)
+		for secret in ("Disciplinary", "Detained", self.session.name):
+			self.assertNotIn(secret, body)
+		(issued,) = self.documents(self.sa)
+		verification.revoke(issued.code, "Staff note")
+		# a save sanitises the reason; plant the raw text as legacy or imported rows may hold it
+		frappe.db.set_value(VD, {"code": issued.code}, "revocation_reason", "<script>alert(9)</script>")
+		body = self.guest_page("10.0.0.32", issued.code)
+		self.assertNotIn("<script>alert(9)</script>", body)
+		self.assertIn("&lt;script&gt;alert(9)&lt;/script&gt;", body)
 
 	def test_a_document_without_details_shows_none(self):
 		self.assertEqual(verification.reference_details(frappe._dict(reference_doctype="Exam Session", reference_name=self.session.name)), [])

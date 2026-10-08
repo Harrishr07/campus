@@ -9,7 +9,7 @@
 	<div class="alert alert-danger" role="status">
 		<strong>{{ _("Revoked") }}</strong>
 		{{ _("Revoked on {0}").format(revoked_on) }}.
-		{{ _("Reason") }}: {{ record.revocation_reason }}
+		{{ _("Reason") }}: {{ (record.revocation_reason or "")|e }}
 	</div>
 	{% endif %}
 	<table class="table">

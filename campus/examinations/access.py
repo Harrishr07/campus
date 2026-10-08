@@ -8,7 +8,7 @@ and only once the session is Published and now >= publish_at.
 """
 
 import frappe
-from frappe.utils import getdate, now_datetime, today
+from frappe.utils import get_datetime, getdate, now_datetime, today
 
 COE_ROLE = "COE"
 MARKS_ROLES = (COE_ROLE, "System Manager")
@@ -299,4 +299,6 @@ def hall_ticket_has_permission(doc, ptype=None, user=None):
 		return True
 	if ptype and ptype not in READ_TYPES:
 		return False
-	return doc.status == "Issued" and doc.student in students_of(user) and doc.exam_session in released_sessions()
+	release_on = frappe.db.get_value("Exam Session", doc.exam_session, "hall_ticket_release_on")
+	released = bool(release_on) and get_datetime(release_on) <= now_datetime()
+	return doc.status == "Issued" and doc.student in students_of(user) and released

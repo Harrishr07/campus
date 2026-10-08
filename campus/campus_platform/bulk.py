@@ -40,6 +40,7 @@ TIMEOUT = 4 * 60 * 60
 KEY_LENGTH = 140
 RESUMABLE = ("Queued", "Running", "Failed")
 FINISHED = ("Completed", "Completed with errors")
+LIVE = ("Queued", "Running")
 SAVEPOINT = "bulk_item"
 
 
@@ -73,6 +74,27 @@ def run_bulk(run_type, items, handler, chunk=200, key=None, parameters=None):
 	run.insert(ignore_permissions=True)
 	enqueue_run(run.name)
 	return run.name
+
+
+def live_run(run_type, **parameters):
+	"""The Queued or Running Bulk Run of `run_type` whose parameters include `parameters`, or None.
+
+	A locking read: call it under the caller's own lock (e.g. the parent record's row) so two starts cannot both pass.
+	"""
+	run = frappe.qb.DocType("Bulk Run")
+	rows = (
+		frappe.qb.from_(run)
+		.select(run.name, run.parameters)
+		.where((run.run_type == run_type) & run.status.isin(LIVE))
+		.orderby(run.creation)
+		.for_update()
+		.run()
+	)
+	for name, stored in rows:
+		stored = json.loads(stored) if stored else {}
+		if all(stored.get(key) == value for key, value in parameters.items()):
+			return name
+	return None
 
 
 @frappe.whitelist()

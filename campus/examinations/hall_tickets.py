@@ -2,8 +2,9 @@
 
 Each registration gets one Hall Ticket. It is Issued with the eligible courses, their exam dates and the student's
 photo, and a Verifiable Document (QR) is issued for it; or it is Withheld with the reasons (hall_ticket_rules)
-and has no valid QR. The bulk handler is DB-only and idempotent: an unchanged ticket is left as it is (same code),
-a changed one is saved and its QR revoked and issued again; a ticket that becomes withheld has its QR revoked.
+and has no valid QR. Its QR is revoked with a neutral reason ("Hall ticket withdrawn"): the public /verify page must
+never show why (malpractice, detention, dues). One generation run of a session is live at a time. The bulk handler
+is DB-only and idempotent: an unchanged ticket is left as it is (same code), a changed one is saved and its QR revoked and issued again; a ticket that becomes withheld has its QR revoked.
 Students download from /campus-portal once the session's hall_ticket_release_on has passed (access.py).
 """
 
@@ -13,7 +14,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
-from campus.campus_platform.bulk import run_bulk
+from campus.campus_platform.bulk import live_run, run_bulk
 from campus.campus_platform.verification import issue, revoke_for
 from campus.examinations import exam_fee
 from campus.examinations.access import COE_ROLE
@@ -25,6 +26,7 @@ PRINT_FORMAT = "Hall Ticket"
 RUN_TYPE = "Hall Tickets"
 HANDLER = "campus.examinations.hall_tickets.generate_ticket"
 ISSUED, WITHHELD = "Issued", "Withheld"
+PHOTO_FOLDERS = ("/files/", "/private/files/")
 
 
 def start(exam_session):
@@ -34,6 +36,10 @@ def start(exam_session):
 	session.check_permission("write")
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session gets no hall tickets."))
+	frappe.db.get_value(SESSION, exam_session, "name", for_update=True)  # one start of a session at a time
+	running = live_run(RUN_TYPE, exam_session=exam_session)
+	if running:
+		frappe.throw(_("Hall ticket run {0} of this session is still running.").format(frappe.bold(running)))
 	registrations = frappe.get_all(REGISTRATION, {"exam_session": exam_session}, pluck="name", order_by="name")
 	return run_bulk(RUN_TYPE, registrations, HANDLER, parameters={"exam_session": exam_session})
 
@@ -48,7 +54,8 @@ def generate(registration):
 	reg = frappe.get_doc(REGISTRATION, registration, for_update=True)
 	values = ticket_values(reg)
 	name = ticket_name(reg.exam_session, reg.student)
-	exists = frappe.db.exists(DOCTYPE, name)
+	# locking reads: a plain one after the registration lock sees this transaction's older snapshot
+	exists = frappe.db.get_value(DOCTYPE, name, "name", for_update=True)
 	ticket = frappe.get_doc(DOCTYPE, name, for_update=True) if exists else frappe.new_doc(DOCTYPE)
 	changed = not exists or content(ticket) != content(frappe._dict(values))
 	if changed:
@@ -72,10 +79,15 @@ def ticket_values(reg):
 	return {
 		"exam_registration": reg.name, "exam_session": reg.exam_session, "student": reg.student,
 		"student_name": reg.student_name, "program": reg.program, "company": reg.company,
-		"academic_term": reg.academic_term, "photo": frappe.db.get_value("Student", reg.student, "image"),
+		"academic_term": reg.academic_term, "photo": file_url(frappe.db.get_value("Student", reg.student, "image")),
 		"status": WITHHELD if reasons else ISSUED, "withheld_reasons": "\n".join(reasons) or None,
 		"courses": [] if reasons else scheduled_courses(reg.exam_session, eligible),
 	}  # fmt: skip
+
+
+def file_url(url):
+	"""`url` when it points into the site's files folders, else None (a print never loads a foreign or script URL)."""
+	return url if url and url.startswith(PHOTO_FOLDERS) else None
 
 
 def scheduled_courses(exam_session, eligible):
@@ -101,9 +113,12 @@ def content(ticket):
 def refresh_qr(ticket, changed):
 	"""Withheld: revoke any valid QR. Issued: revoke and issue again when the ticket changed or has none valid."""
 	if ticket.status == WITHHELD:
-		revoke_for(ticket, _("Withheld: {0}").format(ticket.withheld_reasons))
+		revoke_for(ticket, _("Hall ticket withdrawn"))  # never the withheld reasons: the record is public
 		return
-	valid = frappe.db.exists("Verifiable Document", {"reference_doctype": DOCTYPE, "reference_name": ticket.name, "status": "Valid"})
+	valid = frappe.db.get_value(
+		"Verifiable Document", {"reference_doctype": DOCTYPE, "reference_name": ticket.name, "status": "Valid"}, "name",
+		for_update=True,
+	)  # fmt: skip
 	if valid and not changed:
 		return
 	revoke_for(ticket, _("Re-issued: the hall ticket changed"))

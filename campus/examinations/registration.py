@@ -19,7 +19,7 @@ from frappe import _
 from frappe.utils import getdate, now_datetime, today
 
 from campus.campus_platform.api import latest_enrollment
-from campus.campus_platform.bulk import run_bulk
+from campus.campus_platform.bulk import live_run, run_bulk
 from campus.examinations import exam_fee, hall_tickets
 from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import REAPPEAR, reappearance_courses
@@ -32,7 +32,6 @@ DOCTYPE, SESSION = "Exam Registration", "Exam Session"
 RUN_TYPE = "Exam Registration"
 HANDLER = "campus.examinations.registration.register_student"
 REGISTRATION_KINDS = {"Dropped": DROPPED, "Arrear": ARREAR}  # Course Registration Item type -> kind
-LIVE = ("Queued", "Running")
 
 
 def start(exam_session, program=None):
@@ -47,24 +46,11 @@ def start(exam_session, program=None):
 	if program and frappe.db.get_value("Program", program, "oc_company") != session.company:
 		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
 	frappe.db.get_value(SESSION, exam_session, "name", for_update=True)  # one start of a session at a time
-	running = live_run(exam_session)
+	running = live_run(RUN_TYPE, exam_session=exam_session)
 	if running:
 		frappe.throw(_("Exam registration run {0} of this session is still running.").format(frappe.bold(running)))
 	students = candidate_students(session, program)
 	return run_bulk(RUN_TYPE, students, HANDLER, parameters={"exam_session": exam_session})
-
-
-def live_run(exam_session):
-	"""The Queued or Running registration Bulk Run of the session, or None (a locking read: call under the session lock)."""
-	run = frappe.qb.DocType("Bulk Run")
-	rows = (
-		frappe.qb.from_(run)
-		.select(run.name, run.parameters)
-		.where((run.run_type == RUN_TYPE) & run.status.isin(LIVE))
-		.for_update()
-		.run()
-	)
-	return next((name for name, parameters in rows if frappe.parse_json(parameters or "{}").get("exam_session") == exam_session), None)
 
 
 def candidate_students(session, program=None):

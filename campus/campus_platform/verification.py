@@ -107,8 +107,17 @@ def revoke_for(doc, reason):
 
 	An internal path for controllers: no role check, as the caller is acting on its own document.
 	"""
-	for name in frappe.get_all(DOCTYPE, {"reference_doctype": doc.doctype, "reference_name": doc.name, "status": "Valid"}, pluck="name"):
-		record = frappe.get_doc(DOCTYPE, name)
+	record_table = frappe.qb.DocType(DOCTYPE)
+	names = (
+		frappe.qb.from_(record_table)
+		.select(record_table.name)
+		.where((record_table.reference_doctype == doc.doctype) & (record_table.reference_name == doc.name))
+		.where(record_table.status == "Valid")
+		.for_update()  # a locking read: the caller may hold a lock taken after this transaction's snapshot
+		.run(pluck=True)
+	)
+	for name in names:
+		record = frappe.get_doc(DOCTYPE, name, for_update=True)
 		record.status = "Revoked"
 		record.revoked_on = now_datetime()
 		record.revoked_by = frappe.session.user
@@ -185,6 +194,7 @@ def public_lookup(code):
 	"""Throttled per IP (30/min): raises RateLimitExceededError (HTTP 429) beyond that.
 
 	Returns the page data with the holder name masked and the document's `details`; None for an unknown code.
+	A revoked document shows no details: the referenced record may since hold what the public must not see.
 	"""
 	found = verify(code)
 	if found:
@@ -192,7 +202,7 @@ def public_lookup(code):
 		reference = frappe.db.get_value(
 			DOCTYPE, {"code": normalize_code(code)}, ["reference_doctype", "reference_name"], as_dict=True
 		)
-		found["details"] = reference_details(reference)
+		found["details"] = reference_details(reference) if found.status == "Valid" else []
 	return found
 
 
