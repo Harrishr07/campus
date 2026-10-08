@@ -56,3 +56,14 @@ def rule_text(rule):
 
 def mandatory_quorum_categories(rules):
 	return [rule.category for rule in rules if rule.mandatory_for_quorum]
+
+
+def shortfall_gap(shortfall):
+	"""How far the count is from the rule (members missing, or members over the maximum)."""
+	return shortfall.minimum - shortfall.actual if shortfall.actual < shortfall.minimum else shortfall.actual - shortfall.maximum
+
+
+def is_worse(new_shortfalls, old_shortfalls):
+	"""True when a rule is broken now that was not before, or is broken by more members than before."""
+	before = {s.category: shortfall_gap(s) for s in old_shortfalls}
+	return any(shortfall_gap(s) > before.get(s.category, 0) for s in new_shortfalls)

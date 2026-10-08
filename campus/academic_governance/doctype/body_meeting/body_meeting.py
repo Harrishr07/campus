@@ -84,8 +84,8 @@ class BodyMeeting(Document):
 		if late and not override_reason:
 			frappe.throw(_("The notice must go out at least {0} days before the meeting. Give a reason to send it late.").format(days))
 		self.db_set({"notice_sent_on": now_datetime(), "notice_override_reason": override_reason if late else None})
-		employees = [f"Employee:{row.employee}" for row in self.attendance if row.employee]
-		send(NOTICE_EVENT, self, employees)
+		members = [f"Employee:{row.employee}" if row.employee else f"External Member:{row.external_member}" for row in self.attendance]
+		send(NOTICE_EVENT, self, members)
 
 
 def last_serial(body, year):

@@ -56,7 +56,7 @@
    "fieldname": "payment_section",
    "fieldtype": "Section Break",
    "label": "Payment",
-   "description": "Honorarium is paid through the linked Supplier."
+   "description": "Honorarium is paid through the linked Supplier, which also holds the PAN and bank account."
   },
   {
    "fieldname": "supplier",
@@ -64,7 +64,8 @@
    "label": "Supplier",
    "options": "Supplier",
    "no_copy": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "unique": 1
   },
   {
    "fieldname": "column_break_payment",
@@ -75,22 +76,24 @@
    "fieldtype": "Data",
    "label": "PAN",
    "permlevel": 1,
-   "no_copy": 1,
-   "description": "Visible only to Accounts and the Principal. Never shown in logs or messages."
+   "description": "Read from the linked Supplier (Accounts keeps it there). Visible only to Accounts and the Principal.",
+   "is_virtual": 1,
+   "read_only": 1
   },
   {
    "fieldname": "bank_account",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Bank Account",
-   "options": "Bank Account",
    "permlevel": 1,
-   "no_copy": 1
+   "is_virtual": 1,
+   "read_only": 1,
+   "description": "The Supplier's default Bank Account."
   }
  ],
  "index_web_pages_for_search": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-10-08 14:00:00.000000",
+ "modified": "2026-10-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "External Member",

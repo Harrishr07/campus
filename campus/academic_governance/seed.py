@@ -3,13 +3,15 @@ Type is never touched, so a college's edited rules survive every migrate."""
 
 import frappe
 
-# (name, statutory, term years, minimum meetings a year, quorum %, [(category, min, max, mandatory for quorum)])
+# Only values sourced from UGC 2023 cl. 12 (docs/research/anna-university-autonomous-rules.md) are seeded; the rest
+# are for the college to set (see "Pending confirmation" in docs/rulings.md).
+# (name, term years, minimum meetings a year, quorum %, [(category, min, max, mandatory for quorum)])
 SIX_MONTHLY = 2
 STATUTORY = [
 	("Governing Body", 5, SIX_MONTHLY, 50, [("University Nominee", 1, 0, 1)]),
-	("Academic Council", 3, SIX_MONTHLY, 50, [("University Nominee", 3, 3, 0)]),
-	("Board of Studies", 3, SIX_MONTHLY, 50, [("External Expert", 1, 0, 0), ("Alumni", 1, 0, 0)]),
-	("Finance Committee", 3, SIX_MONTHLY, 50, []),
+	("Academic Council", 3, SIX_MONTHLY, 0, [("University Nominee", 3, 0, 0)]),
+	("Board of Studies", 0, 0, 0, []),
+	("Finance Committee", 0, 0, 0, []),
 ]
 NON_STATUTORY = [
 	"Planning and Evaluation Committee",
@@ -77,3 +79,26 @@ def make_body_type(name, statutory, rules=(), **values):
 			**values,
 		}
 	).insert(ignore_permissions=True)
+
+
+# Values the first version seeded without a source: name -> (term, meetings, quorum %, rules). Reverted by patch.
+UNSOURCED_FIRST_SEED = {
+	"Academic Council": (3, 2, 50, [("University Nominee", 3, 3, 0)]),
+	"Board of Studies": (3, 2, 50, [("External Expert", 1, 0, 0), ("Alumni", 1, 0, 0)]),
+	"Finance Committee": (3, 2, 50, []),
+}
+
+
+def revert_unsourced_values():
+	"""Bring Body Types still holding the first version's unsourced seed values to the sourced ones; edited types are left alone."""
+	sourced = {name: (term, meetings, quorum, rules) for name, term, meetings, quorum, rules in STATUTORY}
+	for name, old in UNSOURCED_FIRST_SEED.items():
+		if not frappe.db.exists("Body Type", name):
+			continue
+		doc = frappe.get_doc("Body Type", name)
+		current = (doc.term_years, doc.min_meetings_per_year, doc.quorum_percent, [(r.category, r.minimum_count, r.maximum_count, r.mandatory_for_quorum) for r in doc.composition])
+		if current != old:
+			continue
+		doc.term_years, doc.min_meetings_per_year, doc.quorum_percent, rules = sourced[name]
+		doc.set("composition", [{"category": c, "minimum_count": low, "maximum_count": high, "mandatory_for_quorum": must} for c, low, high, must in rules])
+		doc.save(ignore_permissions=True)

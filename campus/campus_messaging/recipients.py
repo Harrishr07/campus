@@ -1,7 +1,7 @@
 """M16-01 Recipient resolution.
 
 Recipient formats accepted by `api.send` (all resolve to the same dict):
-  {"doctype": "Guardian", "name": "GRD-0001"}   dict form (Student, Guardian, Employee, User)
+  {"doctype": "Guardian", "name": "GRD-0001"}   dict form (Student, Guardian, Employee, User, External Member)
   "Guardian:GRD-0001" / "User:a@b.com"           "<Doctype>:<name>" string
   "phone:+919876543210"                          bare number (no party, so no consent record, no language)
 """
@@ -17,6 +17,7 @@ SOURCES = {
 	"Guardian": (["email_address"], ["mobile_number"], "user", "oc_language", "guardian_name"),
 	"Employee": (["prefered_email", "company_email", "personal_email"], ["cell_number"], "user_id", "oc_language", "employee_name"),
 	"User": (["email"], ["mobile_no", "phone"], "name", "language", "full_name"),
+	"External Member": (["email"], ["mobile_no"], None, None, "member_name"),  # no user account or language
 }
 
 
@@ -38,7 +39,8 @@ def resolve(recipient):
 	if doctype not in SOURCES or not name:
 		frappe.throw(_("Unsupported recipient: {0}").format(recipient))
 	emails, mobiles, user_field, language_field, name_field = SOURCES[doctype]
-	row = frappe.db.get_value(doctype, name, [*emails, *mobiles, user_field, language_field, name_field], as_dict=True)
+	columns = [*emails, *mobiles, *(f for f in (user_field, language_field) if f), name_field]
+	row = frappe.db.get_value(doctype, name, columns, as_dict=True)
 	if not row:
 		frappe.throw(_("{0} {1} not found").format(_(doctype), name))
 	return _entry(
@@ -47,8 +49,8 @@ def resolve(recipient):
 		name,
 		next((row[f] for f in emails if row[f]), None),
 		next((row[f] for f in mobiles if row[f]), None),
-		row[user_field],
-		_language(row[language_field]),
+		row[user_field] if user_field else None,
+		_language(row[language_field] if language_field else None),
 		row[name_field] or name,
 	)
 

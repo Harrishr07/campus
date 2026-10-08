@@ -109,7 +109,7 @@ class TestBodyMeetings(CampusTestCase):
 		seed_body_types()
 		frappe.db.set_single_value("Governance Settings", "notice_days", 7)
 		self.employees = [self.employee() for _ in range(3)]
-		self.nominee = frappe.get_doc({"doctype": "External Member", "member_name": "Nominee N"}).insert().name
+		self.nominee = frappe.get_doc({"doctype": "External Member", "member_name": "Nominee N", "email": "nominee.n@example.com"}).insert().name
 		self.body = self.make_body("Test Governing Body")
 
 	def employee(self):
@@ -216,12 +216,12 @@ class TestBodyMeetings(CampusTestCase):
 	def notice_logs(self, meeting, event=NOTICE):
 		return frappe.get_all("Message Log", {"event_key": event, "reference_name": meeting.name}, ["recipient", "status"])
 
-	def test_notice_in_time_is_sent_to_the_employee_members(self):
+	def test_notice_in_time_is_sent_to_every_member(self):
 		meeting = self.meeting(10)
 		meeting.send_notice()
 		meeting.reload()
 		self.assertTrue(meeting.notice_sent_on)
-		self.assertEqual(len(self.notice_logs(meeting)), len(self.employees))
+		self.assertEqual(len(self.notice_logs(meeting)), len(self.employees) + 1)  # the external nominee too
 
 	def test_late_notice_needs_an_override_reason(self):
 		meeting = self.meeting(3)
@@ -250,6 +250,19 @@ class TestBodyMeetings(CampusTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			past.send_notice(override_reason="late")
 
+	def test_the_external_nominee_gets_the_notice_by_email_and_consent_is_respected(self):
+		meeting = self.meeting(10)
+		meeting.send_notice()
+		(log,) = [log for log in self.notice_logs(meeting) if log.recipient == f"External Member:{self.nominee}"]
+		self.assertNotEqual(log.status, "Skipped")
+		other = self.meeting(11, body=self.make_body("Second Body"))
+		frappe.get_doc(
+			{"doctype": "Communication Consent", "party_type": "External Member", "party": self.nominee, "channel": "email", "purpose": "transactional", "status": "Opted Out"}
+		).insert()  # fmt: skip
+		other.send_notice()
+		(skipped,) = [log for log in self.notice_logs(other) if log.recipient == f"External Member:{self.nominee}"]
+		self.assertEqual(skipped.status, "Skipped")
+
 	def test_consent_is_respected(self):
 		employee = self.employees[0]
 		frappe.get_doc(
@@ -258,7 +271,7 @@ class TestBodyMeetings(CampusTestCase):
 		meeting = self.meeting(10)
 		meeting.send_notice()
 		sent = [log for log in self.notice_logs(meeting) if log.status != "Skipped"]
-		self.assertEqual(len(sent), len(self.employees) - 1)
+		self.assertEqual(len(sent), len(self.employees))  # two employees and the nominee
 
 	# action items (AC4)
 	def action(self, meeting, due_in, status="Open", **values):

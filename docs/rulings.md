@@ -85,3 +85,13 @@
 | 12 | CIA conversion rounding (P2-T13) | weighted assessments rounded half up to a whole mark, then attendance marks added |
 | 13 | R2026 theory CIA split (P2-T13) | R2022's two assessments (40 assignment + 60 test each) scaled to 35, plus up to 5 attendance marks |
 | 14 | Theory with Lab / Project / R2021 and R2026 lab CIA templates (P2-T13) | not seeded |
+
+### Pending confirmation (unsourced Body Type values removed from the P2-T01 seed; fix round 1)
+UGC 2023 cl. 12 as summarised in docs/research/anna-university-autonomous-rules.md is silent on these. They were seeded first, then removed so no unsourced value blocks a save. Colleges set them on the Body Type.
+| # | Body Type | Removed value |
+|---|-----------|---------------|
+| 1 | Academic Council | quorum 50%; "exactly 3" University Nominees (now at least 3, no maximum) |
+| 2 | Board of Studies | term 3 years, 2 meetings a year, quorum 50%, at least 1 External Expert and 1 Alumni |
+| 3 | Finance Committee | term 3 years, 2 meetings a year, quorum 50% |
+| 4 | Non-statutory committees | no composition, term, meetings or quorum seeded |
+Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, at least 1 University Nominee (mandatory for quorum); Academic Council at least 3 University Nominees, 3-year term, 2 meetings a year.

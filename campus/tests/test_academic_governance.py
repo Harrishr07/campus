@@ -134,13 +134,59 @@ class TestBodies(CampusTestCase):
 	def test_disabled_body_is_not_checked(self):
 		self.assertTrue(self.body([self.internal()], enabled=0).insert().name)
 
-	def test_academic_council_needs_exactly_three_nominees(self):
+	def test_academic_council_needs_at_least_three_nominees(self):
 		with self.assertRaises(frappe.ValidationError) as caught:
 			self.body([self.nominee(), self.nominee()], "Academic Council").insert()
-		self.assertIn("exactly 3 University Nominee", str(caught.exception))
+		self.assertIn("at least 3 University Nominee", str(caught.exception))
 		self.body([self.nominee(), self.nominee(), self.nominee()], "Academic Council").insert()
+		self.body([self.nominee() for _ in range(4)], "Academic Council", body_name="Four Nominees").insert()  # no upper limit is sourced
+
+	# editing and drafting
+	def lapsed_body(self, **values):
+		"""A saved Governing Body that breaks its rule today (inserted disabled, then enabled)."""
+		doc = self.body([self.internal()], enabled=0, **values).insert()
+		doc.db_set("enabled", 1)
+		return frappe.get_doc("Body", doc.name)
+
+	def warnings(self):
+		return " ".join(str(m) for m in frappe.local.message_log).lower()
+
+	def test_editing_a_body_that_already_breaks_the_rule_saves_with_a_warning(self):
+		doc = self.lapsed_body()
+		frappe.clear_messages()
+		doc.append("members", self.internal())
+		doc.save()
+		self.assertIn("composition", self.warnings())
+
+	def test_an_edit_that_makes_a_breach_worse_is_refused(self):
+		doc = self.body([self.nominee(), self.internal()]).insert()
+		doc.members[0].to_date = add_days(today(), -1)
 		with self.assertRaises(frappe.ValidationError):
-			self.body([self.nominee()] * 4, "Academic Council", body_name="Four Nominees").insert()
+			doc.save()
+
+	def test_a_body_drafted_with_future_dated_terms_saves(self):
+		start = add_days(today(), 20)
+		rows = [{**self.nominee(), "from_date": start}, {**self.internal(), "from_date": start}]
+		self.assertTrue(self.body(rows).insert().name)
+
+	def test_an_empty_body_saves_as_a_draft_with_a_warning(self):
+		frappe.clear_messages()
+		self.assertTrue(self.body([]).insert().name)
+		self.assertIn("composition", self.warnings())
+
+	def test_row_without_from_date_is_a_mandatory_error_not_a_crash(self):
+		row = {"category": "University Nominee", "external_member": self.external()}
+		with self.assertRaises(frappe.MandatoryError):
+			self.body([row], enabled=0).insert()
+
+	def test_a_left_employee_cannot_be_a_current_member(self):
+		employee = self.employee()
+		frappe.db.set_value("Employee", employee, "status", "Left")
+		row = {"category": "Internal", "employee": employee, "from_date": add_days(today(), -30)}
+		with self.assertRaises(frappe.ValidationError):
+			self.body([row, self.nominee()]).insert()
+		ended = {**row, "to_date": add_days(today(), -1)}
+		self.body([ended, self.nominee()]).insert()  # a finished term in the past is history
 
 	# AC2
 	def test_member_is_excluded_from_the_count_after_the_end_date(self):
@@ -180,14 +226,37 @@ class TestBodies(CampusTestCase):
 		self.body([one, {**one, "from_date": "2026-07-01", "to_date": None}], enabled=0).insert()  # re-appointed after the term
 
 	# Body Type
-	def test_seeded_body_types(self):
+	def test_seeded_body_types_hold_only_sourced_rules(self):
 		governing = frappe.get_doc("Body Type", GOVERNING_BODY)
 		self.assertEqual((governing.statutory, governing.term_years, governing.min_meetings_per_year, governing.quorum_percent), (1, 5, 2, 50))
-		self.assertEqual([(r.category, r.minimum_count, r.mandatory_for_quorum) for r in governing.composition], [("University Nominee", 1, 1)])
+		self.assertEqual([(r.category, r.minimum_count, r.maximum_count, r.mandatory_for_quorum) for r in governing.composition], [("University Nominee", 1, 0, 1)])
+		council = frappe.get_doc("Body Type", "Academic Council")
+		self.assertEqual([(r.category, r.minimum_count, r.maximum_count) for r in council.composition], [("University Nominee", 3, 0)])
+		for name in ("Board of Studies", "Finance Committee", *NON_STATUTORY):
+			body_type = frappe.get_doc("Body Type", name)
+			self.assertEqual((body_type.composition, body_type.quorum_percent, body_type.min_meetings_per_year), ([], 0, 0), name)
 		for name, *_rest in STATUTORY:
 			self.assertEqual(frappe.db.get_value("Body Type", name, "statutory"), 1, name)
 		for name in NON_STATUTORY:
 			self.assertEqual(frappe.db.get_value("Body Type", name, "statutory"), 0, name)
+
+	def test_unsourced_seed_values_are_reverted_only_when_unedited(self):
+		from campus.academic_governance.seed import revert_unsourced_values
+
+		board = frappe.get_doc("Body Type", "Board of Studies")
+		board.quorum_percent = 50
+		board.min_meetings_per_year = 2
+		board.term_years = 3
+		board.append("composition", {"category": "External Expert", "minimum_count": 1})
+		board.append("composition", {"category": "Alumni", "minimum_count": 1})
+		board.save()
+		finance = frappe.get_doc("Body Type", "Finance Committee")
+		finance.quorum_percent = 40  # an edit: not the old seed
+		finance.save()
+		revert_unsourced_values()
+		board.reload()
+		self.assertEqual((board.composition, board.quorum_percent, board.min_meetings_per_year, board.term_years), ([], 0, 0, 0))
+		self.assertEqual(frappe.db.get_value("Body Type", "Finance Committee", "quorum_percent"), 40)
 
 	def test_seed_is_idempotent_and_keeps_edits(self):
 		frappe.db.set_value("Body Type", GOVERNING_BODY, "quorum_percent", 60)
@@ -212,16 +281,34 @@ class TestBodies(CampusTestCase):
 		self.assertEqual(options("Body Member"), options("Body Type Composition Rule"))
 
 	# External Member
-	def test_pan_is_normalised_and_never_echoed(self):
-		self.assertEqual(frappe.get_doc(self.member_doc(pan=" abcde1234f ")).insert().pan, "ABCDE1234F")
-		with self.assertRaises(frappe.ValidationError) as caught:
-			frappe.get_doc(self.member_doc(pan="12345")).insert()
-		self.assertNotIn("12345", str(caught.exception))
-
 	def member_doc(self, **values):
 		return {"doctype": "External Member", "member_name": "Pan Person", "organisation": "Anna University", "expertise": "Maths", **values}
 
-	def test_pan_and_bank_are_restricted_to_accounts_and_principal(self):
+	def supplier_member(self, name="Supplier Person", **supplier_values):
+		member = frappe.get_doc("External Member", self.external(name))
+		supplier = member.create_supplier()
+		if supplier_values:
+			frappe.db.set_value("Supplier", supplier, supplier_values)
+		return frappe.get_doc("External Member", member.name), supplier
+
+	def test_pan_and_bank_are_read_from_the_supplier_and_never_stored(self):
+		member, supplier = self.supplier_member(pan="ABCDE1234F")
+		self.assertEqual(member.pan, "ABCDE1234F")
+		self.assertFalse(member.bank_account)
+		if frappe.db.has_column("External Member", "pan"):
+			self.assertFalse(frappe.db.sql("select pan from `tabExternal Member` where name=%s", member.name)[0][0])
+		self.assertTrue(member.meta.get_field("pan").is_virtual)
+
+	def test_the_suppliers_default_bank_account_is_shown(self):
+		if not frappe.db.exists("Bank", "Governance Test Bank"):
+			frappe.get_doc({"doctype": "Bank", "bank_name": "Governance Test Bank"}).insert()
+		member, supplier = self.supplier_member("Bank Person")
+		account = frappe.get_doc(
+			{"doctype": "Bank Account", "account_name": "Bank Person", "bank": "Governance Test Bank", "party_type": "Supplier", "party": supplier, "is_default": 1}
+		).insert()
+		self.assertEqual(member.bank_account, account.name)
+
+	def test_pan_and_bank_fields_are_restricted_to_accounts_and_principal(self):
 		def readable(role):
 			user = f"gov-{role.replace(' ', '-').lower()}@example.com"
 			make_user(user, [COLLEGE])
@@ -234,36 +321,38 @@ class TestBodies(CampusTestCase):
 			fields = readable(role)
 			self.assertTrue({"member_name", "organisation", "expertise"} <= fields, role)
 			self.assertTrue(not {"pan", "bank_account"} & fields, role)
-		self.assertFalse(frappe.get_meta("External Member").track_changes)  # no Version rows carrying the PAN
+		self.assertFalse(frappe.get_meta("External Member").track_changes)
 
 	def test_create_supplier_links_without_copying_other_fields(self):
-		name = self.external("Supplier Person", pan="ABCDE1234F")
-		doc = frappe.get_doc("External Member", name)
-		supplier = doc.create_supplier()
-		self.assertEqual(frappe.db.get_value("External Member", name, "supplier"), supplier)
+		member, supplier = self.supplier_member()
+		self.assertEqual(member.supplier, supplier)
 		self.assertEqual(frappe.db.get_value("Supplier", supplier, "supplier_name"), "Supplier Person")
 		with self.assertRaises(frappe.ValidationError):
-			doc.create_supplier()
+			member.create_supplier()
 
-	def test_bank_account_must_belong_to_the_members_supplier(self):
-		if not frappe.db.exists("Bank", "Governance Test Bank"):
-			frappe.get_doc({"doctype": "Bank", "bank_name": "Governance Test Bank"}).insert()
-		supplier = frappe.get_doc("External Member", self.external("Bank Person")).create_supplier()
-		other = frappe.get_doc("External Member", self.external("Other Bank Person")).create_supplier()
-		account = frappe.get_doc(
-			{"doctype": "Bank Account", "account_name": "Other Person", "bank": "Governance Test Bank", "party_type": "Supplier", "party": other}
-		).insert()
-		doc = frappe.get_doc("External Member", {"supplier": supplier})
-		doc.bank_account = account.name
+	def test_a_supplier_belongs_to_one_external_member(self):
+		member, supplier = self.supplier_member()
+		other = frappe.get_doc("External Member", self.external("Other Person"))
+		other.supplier = supplier
 		with self.assertRaises(frappe.ValidationError):
-			doc.save()
-		doc.reload()
-		doc.supplier = other
-		doc.bank_account = account.name
-		doc.save()  # the Supplier's own account is accepted
-		unlinked = frappe.get_doc(self.member_doc(member_name="No Supplier", bank_account=account.name))
-		with self.assertRaises(frappe.ValidationError):
-			unlinked.insert()
+			other.save()
+
+	def test_existing_pan_moves_to_the_supplier_once(self):
+		from campus.academic_governance.external_member_pan import move_stored_pan_to_suppliers
+
+		linked, supplier = self.supplier_member("Linked Person")
+		blocked, other_supplier = self.supplier_member("Filled Person", pan="ZZZZZ9999Z")
+		unlinked = frappe.get_doc("External Member", self.external("Unlinked Person"))
+		for member, pan in ((linked, "ABCDE1234F"), (blocked, "ABCDE1234G"), (unlinked, "ABCDE1234H")):
+			frappe.db.sql("update `tabExternal Member` set pan=%s where name=%s", (pan, member.name))
+		move_stored_pan_to_suppliers()
+		self.assertEqual(frappe.db.get_value("Supplier", supplier, "pan"), "ABCDE1234F")
+		self.assertEqual(frappe.db.get_value("Supplier", other_supplier, "pan"), "ZZZZZ9999Z")  # never overwritten
+		unlinked.reload()
+		self.assertTrue(unlinked.supplier)
+		self.assertEqual(frappe.db.get_value("Supplier", unlinked.supplier, "pan"), "ABCDE1234H")
+		for member in (linked, blocked, unlinked):
+			self.assertFalse(frappe.db.sql("select pan from `tabExternal Member` where name=%s", member.name)[0][0])
 
 	# AC3
 	def violating_body(self, name, **values):
