@@ -18,12 +18,12 @@
 		<label for="cp-student">{{ _("Student") }}</label>
 		<select id="cp-student" name="student" onchange="this.form.submit()">
 			{% for s in students %}
-			<option value="{{ s.name }}" {% if s.name == student %}selected{% endif %}>{{ s.student_name }} ({{ s.name }})</option>
+			<option value="{{ s.name|e }}" {% if s.name == student %}selected{% endif %}>{{ s.student_name|e }} ({{ s.name|e }})</option>
 			{% endfor %}
 		</select>
 	</form>
 	{% elif student %}
-	<p class="cp-who">{{ student_name }} ({{ student }})</p>
+	<p class="cp-who">{{ student_name|e }} ({{ student|e }})</p>
 	{% endif %}
 	{% if not student %}
 	<p class="cp-empty">{{ _("No student is linked to your account. Please contact the college office.") }}</p>
@@ -31,5 +31,6 @@
 	{% block portal_body %}{% endblock %}
 	{% endif %}
 </div>
+<script>document.body.dataset.cpError = {{ _("Network error. Please try again.")|tojson }};</script>
 <script src="/assets/campus/js/campus_portal.js"></script>
 {% endblock %}

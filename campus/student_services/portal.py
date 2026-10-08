@@ -86,7 +86,10 @@ def get_fees(student=None):
 @frappe.whitelist(methods=["POST"])
 def pay_invoice(invoice, student=None):
 	"""The gateway URL to pay `invoice`. fee_payment_link checks the invoice is the caller's own or a ward's."""
-	resolve_student(student)  # a login with no linked student, or a student that is not theirs, is refused
+	student = resolve_student(student)  # a login with no linked student, or a student that is not theirs, is refused
+	owner = frappe.db.get_value("Sales Invoice", invoice, "student")
+	if owner and owner != student:  # the switcher's ward must be the invoice's student
+		frappe.throw(_("You cannot pay this invoice."), frappe.PermissionError)
 	return {"url": fee_payment_link(invoice)}
 
 

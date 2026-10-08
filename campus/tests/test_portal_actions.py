@@ -10,7 +10,10 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_days, today
 
+from campus.campus_platform.api import find_policy
 from campus.student_services import portal
+from campus.tests.broadcast_fixtures import make_guardian
+from campus.tests.test_results import make_login
 from campus.tests import demo
 from campus.tests.approval_fixtures import level
 from campus.tests.test_grievances import COLLEGE, EVALUATION, GUARDIAN, STUDENT_A, STUDENT_B, GrievanceFixture
@@ -24,6 +27,7 @@ from campus.www.campus_portal import (
 
 BONAFIDE = "Bonafide"
 POLICY = "Portal Action Certificate Policy"
+BOTH = "pa-both-guardian@example.com"
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
 
 
@@ -110,11 +114,23 @@ class TestCertificatesPage(PortalActionFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "must need approval"):
 			kind.save()
 
-	def test_the_demo_policy_is_seeded_once(self):
+	def test_the_demo_policy_is_seeded_once_enabled_and_company_limited_even_in_import_mode(self):
+		frappe.db.delete("Approval Level", {"parent": demo.CERTIFICATE_POLICY})
+		frappe.db.delete("Approval Policy", {"name": demo.CERTIFICATE_POLICY})
+		was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # as make_demo runs
+		self.addCleanup(setattr, frappe.flags, "in_import", was_importing)
 		demo.make_certificate_policy()
 		demo.make_certificate_policy()
+		self.assertEqual(frappe.flags.in_import, True)  # restored
 		names = frappe.get_all("Approval Policy", {"policy_name": demo.CERTIFICATE_POLICY, "document_type": "Certificate Request"})
 		self.assertEqual(len(names), 1)
+		policy = frappe.get_doc("Approval Policy", names[0].name)
+		self.assertEqual((policy.enabled, policy.levels[0].limit_to_company), (1, 1))
+		frappe.db.delete("Approval Level", {"parent": POLICY})
+		frappe.db.delete("Approval Policy", {"name": POLICY})
+		request = frappe.new_doc("Certificate Request")
+		request.update({"student": self.a, "certificate_type": BONAFIDE, "needs_approval": 1, "company": COLLEGE})
+		self.assertEqual(find_policy(request).name, policy.name)
 
 
 class TestGrievancesPage(PortalActionFixture):
@@ -255,6 +271,17 @@ class TestFeesAndOnboarding(PortalActionFixture):
 				frappe.set_user(user)
 				self.assertEqual(portal.pay_invoice("PA-INV-A"), {"url": "https://pay.example/x"})
 			new.assert_not_called()
+
+	def test_a_switched_ward_cannot_pay_the_other_wards_invoice(self):
+		make_login(BOTH, "Guardian")
+		make_guardian("Paboth", [self.a, self.b], user=BOTH)
+		frappe.set_user(BOTH)
+		with patch("campus.campus_finance.gateways.gateway_account"), patch(
+			"campus.campus_finance.gateways.open_request", return_value=SimpleNamespace(payment_url="https://pay.example/x")
+		):
+			self.assertEqual(portal.pay_invoice("PA-INV-B", self.b)["url"], "https://pay.example/x")
+			with self.assertRaises(frappe.PermissionError):
+				portal.pay_invoice("PA-INV-B", self.a)  # B's invoice while acting for A
 
 	def test_onboarding_is_own_or_ward_only(self):
 		frappe.set_user(STUDENT_A)

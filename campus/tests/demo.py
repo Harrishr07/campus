@@ -150,15 +150,20 @@ def build_base(scale):
 
 def make_certificate_policy():
 	"""Certificate Requests of a needs-approval type go to the Principal of the student's college, so the portal request works."""
-	get_or_insert(
-		"Approval Policy",
-		{"policy_name": CERTIFICATE_POLICY, "document_type": "Certificate Request"},
-		{
-			"condition": "doc.needs_approval",
-			"on_final_action": "Submit",  # import mode skips DocType defaults
-			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal"}],
-		},
-	)
+	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults (enabled, limit to company)
+	try:
+		get_or_insert(
+			"Approval Policy",
+			{"policy_name": CERTIFICATE_POLICY, "document_type": "Certificate Request"},
+			{
+				"enabled": 1, "condition": "doc.needs_approval", "on_final_action": "Submit",
+				"levels": [
+					{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "limit_to_company": 1}
+				],
+			},
+		)
+	finally:
+		frappe.flags.in_import = was_importing
 
 
 def get_or_insert(doctype, filters, values):
