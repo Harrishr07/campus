@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Hall Ticket",
+ "doc_type": "Hall Ticket",
+ "module": "Examinations",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Hall Ticket\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company|e }} &middot; {{ doc.exam_session|e }} &middot; {{ doc.academic_term|e }}</p>\n{% if doc.status != \"Issued\" %}\n<div style=\"border:2px solid #c00;padding:8px;text-align:center\"><strong>{{ _(\"Withheld\") }}</strong>: {{ (doc.withheld_reasons or \"\")|e }}</div>\n{% else %}\n<table class=\"table table-bordered table-condensed\">\n  <tr>\n    <th>{{ _(\"Student\") }}</th><td>{{ (doc.student_name or \"\")|e }} ({{ doc.student|e }})</td>\n    <td rowspan=\"2\" style=\"width:120px;text-align:center\">\n      {% if doc.photo %}<img src=\"{{ doc.photo|e }}\" alt=\"{{ _(\"Photo\") }}\" style=\"width:100px;height:120px;object-fit:cover\">\n      {% else %}{{ _(\"Photo not on file\") }}{% endif %}\n    </td>\n  </tr>\n  <tr><th>{{ _(\"Program\") }}</th><td>{{ (doc.program or \"\")|e }}</td></tr>\n</table>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Course\") }}</th><th>{{ _(\"Kind\") }}</th><th>{{ _(\"Exam date\") }}</th><th>{{ _(\"Slot\") }}</th></tr></thead>\n  <tbody>\n  {% for row in doc.courses %}\n    <tr><td>{{ row.course|e }}</td><td>{{ _(row.kind or \"\")|e }}</td><td>{{ frappe.utils.formatdate(row.exam_date)|e }}</td><td>{{ (row.slot or \"\")|e }}</td></tr>\n  {% endfor %}\n  </tbody>\n</table>\n<p>{{ _(\"Signature of the student\") }}: ____________ &nbsp; {{ _(\"Controller of Examinations\") }}: ____________</p>\n{{ oc_qr_block(doc) }}\n{% endif %}\n",
+ "creation": "2026-10-08 12:00:00.000000",
+ "modified": "2026-10-08 12:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

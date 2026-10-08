@@ -48,6 +48,14 @@
 		<p class="cp-message" role="alert"></p>
 	</form>
 	{% endif %}
+	{% set ht = r.hall_ticket %}
+	{% if ht %}
+	<p><strong>{{ _("Hall ticket") }}</strong>: <span class="cp-badge">{{ _(ht.status) }}</span>
+	{% if ht.status == "Withheld" %}<br>{{ _("Reason") }}: {{ (ht.reasons or "")|e }}
+	{% elif ht.download_url %}<a class="cp-btn" href="{{ ht.download_url|e }}">{{ _("Download hall ticket") }}</a>
+	{% elif ht.release_on %}{{ _("Available from {0}").format(frappe.utils.format_datetime(ht.release_on)) }}
+	{% else %}{{ _("Not released yet") }}{% endif %}</p>
+	{% endif %}
 </div>
 {% endfor %}
 {% endif %}

@@ -46,6 +46,17 @@ def start_registration(exam_session, program=None):
 	return registration.start(exam_session, program or None)
 
 
+@frappe.whitelist(methods=["POST"])
+def generate_hall_tickets(exam_session):
+	"""Queue the bulk Hall Ticket generation of the session (COE only); returns the Bulk Run name.
+
+	Idempotent: unchanged tickets keep their QR; changed ones are re-issued, newly withheld ones revoked.
+	"""
+	from campus.examinations import hall_tickets
+
+	return hall_tickets.start(exam_session)
+
+
 def exam_dues_block(student, exam_session):
 	"""{blocked, amount}: the hall ticket gate. Unpaid Exam-head dues in the session's company block a hall ticket
 	(never the registration itself)."""

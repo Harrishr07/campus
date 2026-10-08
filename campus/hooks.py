@@ -402,6 +402,7 @@ permission_query_conditions = {
 	**{dt: "campus.examinations.access.offering_permission_query" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_permission_query",
 	**{dt: "campus.academic_governance.access.permission_query" for dt in ("Body Meeting", "Meeting Action Item")},
+	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
 }
 has_permission = {
 	"Circular": "campus.campus_messaging.circulars.has_permission",
@@ -411,6 +412,7 @@ has_permission = {
 	**{dt: "campus.examinations.access.offering_has_permission" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_has_permission",
 	**{dt: "campus.academic_governance.access.has_permission" for dt in ("Body Meeting", "Meeting Action Item")},
+	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
 }
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).

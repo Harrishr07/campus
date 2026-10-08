@@ -21,5 +21,10 @@ frappe.ui.form.on("Exam Session", {
 				__("Create Exam Registrations")
 			);
 		});
+		frm.add_custom_button(__("Generate Hall Tickets"), () =>
+			frappe
+				.xcall("campus.examinations.api.generate_hall_tickets", { exam_session: frm.doc.name })
+				.then(() => frappe.show_alert({ message: __("Hall ticket generation queued"), indicator: "green" }))
+		);
 	},
 });

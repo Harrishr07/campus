@@ -15,6 +15,7 @@
   "column_break_dates",
   "exam_start",
   "exam_end",
+  "hall_ticket_release_on",
   "section_schedule",
   "schedule"
  ],
@@ -93,6 +94,12 @@
    "label": "Exams End"
   },
   {
+   "fieldname": "hall_ticket_release_on",
+   "fieldtype": "Datetime",
+   "label": "Hall Tickets Released On",
+   "description": "Students download their hall tickets from the portal from this time on."
+  },
+  {
    "fieldname": "section_schedule",
    "fieldtype": "Section Break",
    "label": "Exam Schedule"
@@ -106,7 +113,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Session",

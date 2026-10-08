@@ -184,12 +184,27 @@ def _company_of(doc):
 def public_lookup(code):
 	"""Throttled per IP (30/min): raises RateLimitExceededError (HTTP 429) beyond that.
 
-	Returns the page data with the holder name masked; None for an unknown code.
+	Returns the page data with the holder name masked and the document's `details`; None for an unknown code.
 	"""
 	found = verify(code)
 	if found:
 		found["holder_name"] = mask_name(found.holder_name)
+		reference = frappe.db.get_value(
+			DOCTYPE, {"code": normalize_code(code)}, ["reference_doctype", "reference_name"], as_dict=True
+		)
+		found["details"] = reference_details(reference)
 	return found
+
+
+def reference_details(reference):
+	"""[(label, value)] the referenced document offers the public page via a `verification_details()` method.
+
+	Documents without that method show none. It must never return personal data beyond the masked holder."""
+	if not frappe.db.exists(reference.reference_doctype, reference.reference_name):
+		return []
+	doc = frappe.get_doc(reference.reference_doctype, reference.reference_name)
+	details = getattr(doc, "verification_details", None)
+	return details() if details else []
 
 
 @frappe.whitelist(allow_guest=True)

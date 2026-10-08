@@ -19,7 +19,7 @@ from frappe.utils import getdate, now_datetime, today
 
 from campus.campus_platform.api import latest_enrollment
 from campus.campus_platform.bulk import run_bulk
-from campus.examinations import exam_fee
+from campus.examinations import exam_fee, hall_tickets
 from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import REAPPEAR, reappearance_courses
 from campus.examinations.courses import offering_course
@@ -196,6 +196,7 @@ def student_registrations(student):
 			{
 				**{f: doc.get(f) for f in ("name", "exam_session", "academic_term", "confirmed", "late_fee", "fee_total", "fee_invoice")},
 				"has_eligible": bool(doc.eligible_courses()),
+				"hall_ticket": hall_tickets.portal_row(doc.name),
 				"courses": [{f: c.get(f) for f in ("course", "kind", "eligibility")} for c in doc.courses],
 			}
 		)  # fmt: skip

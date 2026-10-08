@@ -270,3 +270,33 @@ def result_has_permission(doc, ptype=None, user=None):
 	if ptype and ptype not in READ_TYPES:
 		return False
 	return doc.student in students_of(user) and doc.exam_session in published_sessions()
+
+
+# ---- Hall Ticket --------------------------------------------------------------------------
+
+
+def released_sessions():
+	return frappe.get_all("Exam Session", {"hall_ticket_release_on": ["<=", now_datetime()]}, pluck="name")
+
+
+def hall_ticket_permission_query(user=None):
+	"""Staff see all tickets; a student or guardian only the issued, released tickets of their own students."""
+	user = user or frappe.session.user
+	if has_any_role(user, STAFF_ROLES):
+		return ""
+	students, sessions = students_of(user), released_sessions()
+	if not (students and sessions):
+		return "1=0"
+	return "`tabHall Ticket`.status = 'Issued' and `tabHall Ticket`.student in ({}) and `tabHall Ticket`.exam_session in ({})".format(
+		", ".join(frappe.db.escape(s) for s in students), ", ".join(frappe.db.escape(s) for s in sessions)
+	)
+
+
+def hall_ticket_has_permission(doc, ptype=None, user=None):
+	"""Deny-only: portal users read / print an issued ticket of their own students once it is released."""
+	user = user or frappe.session.user
+	if has_any_role(user, STAFF_ROLES):
+		return True
+	if ptype and ptype not in READ_TYPES:
+		return False
+	return doc.status == "Issued" and doc.student in students_of(user) and doc.exam_session in released_sessions()

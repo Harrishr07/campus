@@ -58,3 +58,19 @@ Eligibility per course: SA (from the locked run; an approved condonation counts)
 On /campus-portal the student sees the courses and their eligibility, and presses **Confirm registration**. The fee is the rate × eligible courses, plus the late fee slab of the days after the closing date. A background job raises the Sales Invoice under the Exam fee head. Guardians can see the registration, but only the student can confirm it.
 
 Exam dues do not stop registration. They block hall tickets (`campus.examinations.api.exam_dues_block`).
+
+# Examinations: hall tickets (P2-T15)
+
+## Generate (COE)
+1. On the Exam Session, schedule every course that will be sat (Exam Schedule) and set **Hall Tickets Released On**.
+2. Press **Generate Hall Tickets**. A bulk run gives each Exam Registration one Hall Ticket:
+   - **Issued**: the student's photo (Student image), the eligible courses with their date and slot, and a QR. The QR is a Verifiable Document, and /verify shows the exam session, academic term, registration status and ticket status.
+   - **Withheld**, with reasons: debarred; attendance shortage (SA) or detention when no eligible course is left (an SA student still sits eligible arrears); registration not confirmed; unpaid Exam-head dues (`exam_dues_block`). A withheld ticket has no valid QR.
+3. An eligible course with no exam date fails that student's item in the bulk run, so schedule it and run again.
+
+Running it again is safe. An unchanged ticket keeps its QR. A changed one (dates, courses, photo, status) has its QR revoked and a new one issued. A ticket that becomes withheld has its QR revoked.
+
+The withheld list is in Examinations > Transactions > **Withheld Hall Tickets**.
+
+## Download (student)
+On /campus-portal, the exam registration card shows the hall ticket. A withheld student sees the reason. An issued ticket can be downloaded (PDF) once the release time has passed. Students and guardians can open only their own (or their ward's) issued, released tickets.

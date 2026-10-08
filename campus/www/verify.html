@@ -18,6 +18,9 @@
 		<tr><th>{{ _("Holder") }}</th><td>{{ record.holder_name }}</td></tr>
 		<tr><th>{{ _("Issue date") }}</th><td>{{ issued_on }}</td></tr>
 		<tr><th>{{ _("Code") }}</th><td><code>{{ record.code }}</code></td></tr>
+		{% for label, value in record.details or [] %}
+		<tr><th>{{ label|e }}</th><td>{{ (value or "")|e }}</td></tr>
+		{% endfor %}
 	</table>
 </div>
 {% endblock %}
