@@ -11,7 +11,9 @@ from frappe.tests import UnitTestCase
 from frappe.utils import add_days, today
 
 from campus.campus_platform.approvals import approve, request_approval
+from campus.campus_platform.approval_engine import latest_request
 from campus.faculty import workload
+from campus.faculty.setup import seed_course_allocation_policy
 from campus.faculty.report.workload_balance.workload_balance import execute as balance_report
 from campus.faculty.report.workload_balance.workload_balance import status_of
 from campus.tests import demo
@@ -22,6 +24,7 @@ TERM = "WL Test Odd"
 CSE = f"{demo.CSE_DEPARTMENT} - DCE"  # demo.department_name, which needs the company to exist already
 ECE = f"{demo.ECE_DEPARTMENT} - DCE"
 DEAN = "wl-dean@example.com"
+ECE_HOD = "wl-hod-ece@example.com"
 HOD, PROFESSOR, ASSOCIATE, ASSISTANT_A, ASSISTANT_B = "hod_cse", "hod_cse", "faculty_1", "faculty_2", "faculty_3"
 # offering, teacher, lecture, tutorial, practical
 BASE = [
@@ -70,11 +73,15 @@ class AllocationFixture(CampusTestCase):
 		was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # skip the users-per-minute throttle
 		try:
 			make_user(DEAN, [demo.ENGINEERING])
+			make_user(ECE_HOD, [demo.ENGINEERING])
 		finally:
 			frappe.flags.in_import = was_importing
 		frappe.get_doc("User", DEAN).add_roles("Dean Academics")
 		cls.hold("DEAN-ACADEMICS", demo.ENGINEERING, DEAN)
-		cls.hold("HOD", ECE, demo.email(HOD))
+		for user in (DEAN, ECE_HOD):
+			frappe.db.set_value("User", user, "enabled", 1)  # import mode skipped the default
+		frappe.get_doc("User", ECE_HOD).add_roles("HOD")
+		cls.hold("HOD", ECE, ECE_HOD)
 		cls.make_norm()
 		cls.make_term_and_offerings()
 
@@ -143,7 +150,7 @@ class AllocationFixture(CampusTestCase):
 	def submit_through_hod(self, doc):
 		"""Request approval as the requester, then approve as the department's HOD."""
 		request = request_approval(doc.doctype, doc.name)
-		frappe.set_user(demo.email(HOD))
+		frappe.set_user(ECE_HOD if doc.department == ECE else demo.email(HOD))
 		try:
 			approve(request)
 		finally:
@@ -276,7 +283,8 @@ class TestSubmission(AllocationFixture):
 
 	def test_instructors_follow_the_allocation_and_cancel_takes_them_off(self):
 		group = frappe.get_doc("Student Group", self.offerings["O2"])
-		group.append("instructors", {"instructor": self.instructor_of(ASSISTANT_A)})  # already on O2 before the allocation
+		for username in (ASSISTANT_A, ASSOCIATE):  # on O2 before the allocation; the Associate is allocated there too
+			group.append("instructors", {"instructor": self.instructor_of(username)})
 		group.save()
 		doc = self.allocation().insert()
 		self.submit_through_hod(doc)
@@ -286,7 +294,7 @@ class TestSubmission(AllocationFixture):
 		self.assertEqual(self.instructors("O3"), {ins(ASSISTANT_A), ins(ASSISTANT_B)})
 		self.assertEqual(self.instructors("O4"), {ins(ASSISTANT_B)})
 		doc.cancel()
-		self.assertEqual([self.instructors(k) for k in ("O1", "O2", "O3", "O4")], [set(), {ins(ASSISTANT_A)}, set(), set()])
+		self.assertEqual([self.instructors(k) for k in ("O1", "O2", "O3", "O4")], [set(), {ins(ASSISTANT_A), ins(ASSOCIATE)}, set(), set()])
 
 	def test_row_checks(self):
 		duplicate_pair = BASE + [("O1", PROFESSOR, 1, 0, 0)]
@@ -347,3 +355,74 @@ class TestWorkloadBalanceReport(AllocationFixture):
 			self.assertEqual(self.run_report(company=demo.ARTS)[1], [])
 		finally:
 			frappe.set_user("Administrator")
+
+
+class TestFixRound1(AllocationFixture):
+	def test_request_is_refused_while_offerings_have_no_faculty(self):
+		doc = self.allocation([r for r in BASE if r[0] != "O4"]).insert()
+		with self.assertRaises(frappe.ValidationError):
+			request_approval(doc.doctype, doc.name)
+		self.assertIsNone(latest_request(doc))
+
+	def test_request_is_refused_past_the_block_margin_without_a_dean_override(self):
+		frappe.set_user(DEAN)
+		try:
+			doc = self.allocation(over_limit_rows(), dean_override_reason="Visiting faculty left").insert()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertTrue(request_approval(doc.doctype, doc.name))  # the Dean's override carries into the request
+		frappe.db.set_value("Course Allocation", doc.name, "dean_override_by", None)
+		frappe.db.delete("Approval Request", {"reference_name": doc.name})
+		with self.assertRaises(frappe.PermissionError):
+			request_approval(doc.doctype, doc.name)
+
+	def test_policy_is_seeded_idempotently_and_only_the_departments_hod_approves(self):
+		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": "Course Allocation - HOD"})
+		frappe.db.delete("Approval Policy", {"document_type": "Course Allocation"})
+		seed_course_allocation_policy()
+		seed_course_allocation_policy()
+		self.assertEqual(frappe.get_all("Approval Policy", {"document_type": "Course Allocation"}, pluck="name"), ["Course Allocation - HOD"])
+		doc = self.allocation().insert()
+		request = request_approval(doc.doctype, doc.name)
+		for user in (ECE_HOD, DEAN):  # the HOD of another department and a stranger
+			frappe.set_user(user)
+			try:
+				with self.assertRaises(frappe.PermissionError):
+					approve(request)
+			finally:
+				frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Course Allocation", doc.name, "docstatus"), 0)
+
+	def test_faculty_of_another_company_is_refused(self):
+		frappe.db.set_value("Employee", demo.employee_of(ASSISTANT_A), "company", demo.ARTS)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.allocation().insert()
+		self.assertIn(demo.ARTS, str(caught.exception))
+
+	def test_offering_of_another_company_is_refused(self):
+		frappe.db.set_value("Program", frappe.db.get_value("Student Group", self.offerings["O1"], "program"), "oc_company", demo.ARTS)
+		with self.assertRaises(frappe.ValidationError):
+			self.allocation().insert()
+
+	def test_submitted_hours_are_per_company(self):
+		self.submit_through_hod(self.allocation().insert())
+		b = demo.employee_of(ASSISTANT_B)
+		self.assertEqual(workload.submitted_hours(self.term, demo.ENGINEERING)[b], 13)
+		self.assertEqual(workload.submitted_hours(self.term, demo.ARTS), {})
+
+	def test_no_cadre_and_no_maximum_warn_instead_of_passing_silently(self):
+		frappe.db.set_value("Employee", demo.employee_of(ASSISTANT_A), "oc_cadre", None)
+		frappe.db.set_value("Faculty Norm Cadre", {"parent": ["like", "%"], "cadre": "Associate Professor", "min_hours_per_week": 5}, "max_hours_per_week", 0)
+		frappe.clear_messages()
+		self.allocation().insert()
+		texts = [m["message"] for m in frappe.get_message_log()]
+		self.assertTrue([t for t in texts if demo.employee_of(ASSISTANT_A) in t and "no cadre" in t])
+		self.assertTrue([t for t in texts if demo.employee_of(ASSOCIATE) in t and "no maximum" in t])
+
+	def test_submit_rechecks_hours_other_allocations_added_since_the_draft(self):
+		mine = self.allocation([r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 2, 0, 0)]).insert()  # 8 hours
+		ece = self.allocation([("O5", ASSISTANT_B, 4, 1, 4)], department=ECE).insert()  # 9 hours
+		self.submit_through_hod(ece)
+		with self.assertRaises(frappe.ValidationError):  # 9 + 8 = 17
+			self.submit_through_hod(mine)
+		self.assertEqual(frappe.db.get_value("Course Allocation", mine.name, "docstatus"), 0)

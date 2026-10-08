@@ -1,6 +1,7 @@
 """M07-01 / M07-06 Faculty module setup: the faculty profile fields on Employee (blueprint 9.2) and the
 qualification fields on Job Applicant. HRMS Employee is the faculty profile; no parallel DocType."""
 
+import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
 
@@ -20,6 +21,21 @@ def options(values):
 def setup_faculty():
 	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
 	grant_sensitive_fields()
+
+
+ALLOCATION_POLICY = "Course Allocation - HOD"
+
+
+def seed_course_allocation_policy():
+	"""Course Allocations are approved by the HOD of the allocated department, unless the college has its own policy."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Course Allocation"}) or not frappe.db.exists("Position", "HOD"):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": ALLOCATION_POLICY, "document_type": "Course Allocation",
+			"levels": [{"approver_type": "Position", "approver": "HOD", "scope_field": "department", "title": "HOD", "limit_to_company": 1}],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
 
 
 def grant_sensitive_fields():

@@ -30,6 +30,9 @@ def start_request(doc, policy=None, level=1):
 	latest = latest_request(doc)
 	if latest and latest.status in (rules.PENDING, rules.APPROVED):
 		frappe.throw(_("{0} is already {1} in {2}.").format(doc.name, _(latest.status).lower(), latest.name))
+	before_request = getattr(doc, "before_approval_request", None)
+	if before_request:
+		before_request()  # optional hook: a document may refuse a request that could never be approved
 	policy = policy or find_policy(doc)
 	if not policy:
 		doc.flags.ignore_permissions = True

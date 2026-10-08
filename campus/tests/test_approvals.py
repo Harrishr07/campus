@@ -338,3 +338,13 @@ class TestCallServiceFinalAction(ApprovalTestCase):
 		_doc, name = self.new_request()
 		with self.assertRaisesRegex(frappe.ValidationError, "approval_final_actions"):
 			self.act_as(fx.CLERK, approve, name)
+
+
+class TestBeforeApprovalRequestHook(ApprovalTestCase):
+	def test_a_document_can_refuse_the_request_before_one_is_created(self):
+		doc = fx.make_document(60000, self.department, notes="refuse-request")
+		with self.assertRaises(frappe.ValidationError):
+			request_approval(fx.DOCTYPE, doc.name)
+		self.assertFalse(frappe.db.exists("Approval Request", {"reference_doctype": fx.DOCTYPE, "reference_name": doc.name}))
+		doc.db_set("notes", "fine")
+		self.assertTrue(request_approval(fx.DOCTYPE, doc.name))

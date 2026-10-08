@@ -40,21 +40,20 @@ def limits(company, cadre, on_date):
 	return flt(rule.min_hours_per_week), flt(rule.max_hours_per_week), flt(norm.overload_block_margin_hours)
 
 
-def submitted_hours(academic_term, exclude=None):
-	"""{employee: weekly hours} over the submitted Course Allocations of the term, except `exclude`."""
-	rows = frappe.get_all(
-		"Course Allocation Row",
-		filters={"parenttype": "Course Allocation", "parent": ["in", submitted_allocations(academic_term, exclude)]},
-		fields=["faculty", "lecture_hours", "tutorial_hours", "practical_hours"],
+def submitted_hours(academic_term, company, exclude=None, lock=False):
+	"""{employee: weekly hours} over the submitted Course Allocations of the company and term, except `exclude`.
+	With `lock` the rows are read with FOR UPDATE, so a read after taking a lock sees the latest committed data."""
+	allocation, row = frappe.qb.DocType("Course Allocation"), frappe.qb.DocType("Course Allocation Row")
+	query = (
+		frappe.qb.from_(row)
+		.join(allocation)
+		.on(row.parent == allocation.name)
+		.select(row.faculty, row.lecture_hours, row.tutorial_hours, row.practical_hours)
+		.where((allocation.academic_term == academic_term) & (allocation.company == company) & (allocation.docstatus == 1))
 	)
-	return hours_by_faculty(rows)
-
-
-def submitted_allocations(academic_term, exclude=None):
-	filters = {"academic_term": academic_term, "docstatus": 1}
 	if exclude:
-		filters["name"] = ["!=", exclude]
-	return frappe.get_all("Course Allocation", filters=filters, pluck="name") or [""]
+		query = query.where(allocation.name != exclude)
+	return hours_by_faculty((query.for_update() if lock else query).run(as_dict=True))
 
 
 def term_offerings(department, academic_term):

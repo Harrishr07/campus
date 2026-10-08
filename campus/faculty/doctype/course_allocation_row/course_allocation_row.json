@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "owner": "Administrator",
@@ -24,7 +24,8 @@
   "lecture_hours",
   "tutorial_hours",
   "practical_hours",
-  "total_hours"
+  "total_hours",
+  "added_instructor"
  ],
  "fields": [
   {
@@ -87,6 +88,15 @@
    "label": "Total Hrs / Week",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "added_instructor",
+   "fieldtype": "Link",
+   "label": "Instructor Added",
+   "options": "Instructor",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Set on submit when this row made the faculty an instructor of the offering; cancel removes only these."
   }
  ]
 }
