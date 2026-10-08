@@ -2,12 +2,14 @@
 qualification fields on Job Applicant. HRMS Employee is the faculty profile; no parallel DocType."""
 
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.permissions import add_permission, update_permission_property
 
 MODULE = "Faculty"
 CADRES = ["Professor", "Associate Professor", "Assistant Professor"]
 QUALIFICATIONS = ["Diploma", "Graduate", "Post Graduate", "Doctorate"]  # lowest first; the rank order of qualification.py
 PHD_STATUSES = ["Not Pursuing", "Pursuing", "Submitted", "Awarded"]
 NET_SET = ["NET", "SET", "SLET"]
+SENSITIVE_ROLES = ("HR Manager", "HR User", "Principal")
 TEACHING = 'eval:doc.oc_staff_type=="Teaching"'
 
 
@@ -17,13 +19,31 @@ def options(values):
 
 def setup_faculty():
 	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
+	grant_sensitive_fields()
+
+
+def grant_sensitive_fields():
+	"""Qualification, PhD, AICTE ID and override fields of Employee are permlevel 1: HR and the Principal only."""
+	for role in SENSITIVE_ROLES:
+		add_permission("Employee", role, 1)
+		update_permission_property("Employee", role, 1, "write", 1)
+
+
+PERMLEVEL_ONE = (
+	"oc_aicte_faculty_id", "oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set",
+	"oc_prior_teaching_experience", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by",
+)  # fmt: skip
 
 
 def employee_fields():
+	return [{**f, "permlevel": 1} if f["fieldname"] in PERMLEVEL_ONE else f for f in faculty_profile_fields()]
+
+
+def faculty_profile_fields():
 	return [
 		field("oc_faculty_tab", "Tab Break", "Faculty", "old_parent"),
 		field("oc_staff_type", "Select", "Staff Type", "oc_faculty_tab", options=options(["Teaching", "Non-teaching", "Project"]), in_standard_filter=1),
-		field("oc_cadre", "Select", "Cadre", "oc_staff_type", options=options(CADRES), depends_on=TEACHING, in_standard_filter=1),
+		field("oc_cadre", "Select", "Cadre", "oc_staff_type", options=options(CADRES), depends_on=TEACHING, mandatory_depends_on=TEACHING, in_standard_filter=1),
 		field("oc_funding_mode", "Select", "Funding Mode", "oc_cadre", options=options(["Aided", "Self-financing"])),
 		field("oc_pay_scale", "Data", "Pay Scale", "oc_funding_mode"),
 		field("oc_aicte_faculty_id", "Data", "AICTE Faculty ID", "oc_pay_scale"),

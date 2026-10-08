@@ -13,7 +13,7 @@ def execute(filters=None):
 	if not filters:
 		return columns(), []
 	rows = data(filters)
-	return columns(), rows, None, None, summary(rows)
+	return columns(), rows, data_issues(filters), None, summary(rows)
 
 
 def data(filters):
@@ -22,6 +22,14 @@ def data(filters):
 			"date_of_joining": t.date_of_joining, "years": staffing.experience_years(t, filters.academic_year)}
 		for t in staffing.teachers(filters.company, filters.academic_year, filters.department)
 	]  # fmt: skip
+
+
+def data_issues(filters):
+	left = staffing.left_without_relieving_date(filters.company, filters.academic_year, filters.department)
+	if not left:
+		return None
+	names = ", ".join(f"{e.name} ({e.employee_name})" for e in left)
+	return _("Not counted, marked Left with no relieving date: {0}").format(names)
 
 
 def summary(rows):

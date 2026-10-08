@@ -6,6 +6,7 @@ two Assistant Professors without, all joined 2015-06-01; sanctioned posts CSE 1/
 
 import frappe
 
+from campus.faculty import staffing
 from campus.faculty.report.cadre_ratio import cadre_ratio
 from campus.faculty.report.faculty_vs_sanctioned_posts import faculty_vs_sanctioned_posts
 from campus.faculty.report.phd_faculty import phd_faculty
@@ -103,3 +104,61 @@ class TestFacultyReports(CampusTestCase):
 			frappe.flags.in_import = was_importing
 			frappe.set_user("Administrator")
 			frappe.db.rollback(save_point="faculty_report_user")
+
+
+class TestFacultyFixRound1(CampusTestCase):
+	demo_scale = "small"
+	LEFT_FIELDS = ("status", "relieving_date")
+
+	def leave(self, username, relieving_date):
+		frappe.db.set_value("Employee", demo.employee_of(username), {"status": "Left", "relieving_date": relieving_date})
+
+	def teachers(self):
+		return {t.name for t in staffing.teachers(demo.ENGINEERING, YEAR)}
+
+	def test_left_without_a_relieving_date_is_not_a_teacher(self):
+		self.leave("faculty_3", None)
+		self.assertNotIn(demo.employee_of("faculty_3"), self.teachers())
+		self.assertEqual(point("full_time_teachers")["value"], 3)
+
+	def test_left_before_the_year_started_is_not_a_teacher(self):
+		self.leave("faculty_3", "2026-05-31")  # 2026-27 starts on 2026-06-01
+		self.assertNotIn(demo.employee_of("faculty_3"), self.teachers())
+
+	def test_left_during_the_year_still_counts_for_it(self):
+		self.leave("faculty_3", "2026-09-30")
+		self.assertIn(demo.employee_of("faculty_3"), self.teachers())
+		self.assertEqual(point("full_time_teachers")["value"], 4)
+
+	def test_report_lists_left_employees_without_a_date_as_a_data_issue(self):
+		self.leave("faculty_3", None)
+		message = teaching_experience.execute(FILTERS)[2]
+		self.assertIn(demo.employee_of("faculty_3"), message)
+
+	def test_reports_respect_employee_user_permissions(self):
+		user = "p2t05-cse-only@example.com"
+		frappe.db.set_value("Employee", demo.employee_of("faculty_3"), "department", ECE)
+		frappe.db.savepoint("cse_only_user")
+		was_importing, frappe.flags.in_import = frappe.flags.in_import, True
+		try:
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "cse", "send_welcome_email": 0, "roles": [{"role": "HR User"}]}).insert()
+			frappe.flags.in_import = was_importing
+			frappe.get_doc({"doctype": "User Permission", "user": user, "allow": "Department", "for_value": CSE}).insert()
+			frappe.set_user(user)
+			names = {r["employee"] for r in run(teaching_experience)}
+		finally:
+			frappe.flags.in_import = was_importing
+			frappe.set_user("Administrator")
+			frappe.db.rollback(save_point="cse_only_user")
+		self.assertEqual(names, {demo.employee_of(u) for u in ("hod_cse", "faculty_1", "faculty_2")})
+
+	def test_sensitive_fields_are_permlevel_one_for_hr_and_the_principal(self):
+		meta = frappe.get_meta("Employee")
+		for fieldname in ("oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set", "oc_prior_teaching_experience",
+			"oc_aicte_faculty_id", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by"):  # fmt: skip
+			self.assertEqual(meta.get_field(fieldname).permlevel, 1, fieldname)
+		for role in ("HR Manager", "HR User", "Principal"):
+			self.assertTrue(frappe.db.exists("Custom DocPerm", {"parent": "Employee", "role": role, "permlevel": 1, "read": 1, "write": 1}), role)
+
+	def test_cadre_is_mandatory_for_teaching_staff(self):
+		self.assertEqual(frappe.get_meta("Employee").get_field("oc_cadre").mandatory_depends_on, 'eval:doc.oc_staff_type=="Teaching"')

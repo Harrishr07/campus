@@ -7,7 +7,6 @@ The data point functions return {"value", "records"} for the IQAC registry (camp
 from frappe.utils import flt
 
 from campus.faculty import staffing
-from campus.faculty.norms import cadre_rule, norm_in_force  # noqa: F401  (public API)
 
 
 def full_time_teachers(company, academic_year, department=None):

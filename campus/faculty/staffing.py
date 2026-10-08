@@ -2,7 +2,9 @@
 IQAC data points so both give the same numbers.
 
 A teacher of the year is an Employee with Staff Type Teaching who joined on or before the year end and was not
-relieved before the year start. Teaching experience (2.4.3) is experience in this institution: joining date to the
+relieved before the year start: Left staff count only with a relieving date on or after the year start (Left with no
+relieving date is a data issue, see `left_without_relieving_date`). Employees are read with the session user's
+permissions, so a user limited to a department or company sees only that part. Teaching experience (2.4.3) is experience in this institution: joining date to the
 year end (or the relieving date), in years of 365.25 days. Students are those with a submitted Program Enrollment in
 the year, by the program's department (as the IQAC `total_students` data point).
 """
@@ -18,14 +20,32 @@ from campus.faculty.setup import CADRES
 
 def teachers(company, academic_year, department=None):
 	start, end = year_bounds(academic_year)
-	filters = {"company": company, "oc_staff_type": "Teaching", "date_of_joining": ["<=", end]}
+	rows = frappe.get_list(
+		"Employee", teaching_filters(company, end, department),
+		["name", "employee_name", "department", "oc_cadre", "oc_phd_status", "oc_phd_awarded_on",
+			"date_of_joining", "relieving_date", "status"],
+		order_by="department, name", limit_page_length=0,
+	)  # fmt: skip
+	return [r for r in rows if on_roll(r, start)]
+
+
+def teaching_filters(company, year_end, department=None):
+	filters = {"company": company, "oc_staff_type": "Teaching", "date_of_joining": ["<=", year_end]}
 	if department:
 		filters["department"] = department
-	rows = frappe.get_all(
-		"Employee", filters, ["name", "employee_name", "department", "oc_cadre", "oc_phd_status", "oc_phd_awarded_on",
-			"date_of_joining", "relieving_date"], order_by="department, name",
-	)  # fmt: skip
-	return [r for r in rows if not r.relieving_date or getdate(r.relieving_date) >= start]
+	return filters
+
+
+def on_roll(employee, year_start):
+	if employee.status == "Left" and not employee.relieving_date:
+		return False
+	return not employee.relieving_date or getdate(employee.relieving_date) >= year_start
+
+
+def left_without_relieving_date(company, academic_year, department=None):
+	"""Teaching employees marked Left with no relieving date: left out of the counts until HR fixes the record."""
+	filters = {**teaching_filters(company, year_bounds(academic_year)[1], department), "status": "Left", "relieving_date": ["is", "not set"]}
+	return frappe.get_list("Employee", filters, ["name", "employee_name"], order_by="name", limit_page_length=0)
 
 
 def sanctioned_posts(company, academic_year, department=None):
