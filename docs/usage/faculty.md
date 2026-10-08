@@ -36,3 +36,22 @@ IQAC data points (for Phase 3 formulas): `full_time_teachers`, `sanctioned_posts
 
 Demo (`make_demo`): norm "AICTE APH (demo)" (SFR 20, 1:2:6), 2026-27 sanctioned posts CSE 1/2/6 and ECE 1/1/3,
 and the four demo instructors as CSE Professor, Associate Professor and two Assistant Professors.
+
+## Course allocation and workload (M07-02)
+- **Workload norm** is part of the Faculty Norm: each cadre row has Min and Max Teaching Hours / Week, and the norm
+  has an Overload Block Margin (default 2 hours).
+- **Course Allocation** (Faculty > Transactions): one per department and term, covering the course offerings
+  (course-based Student Groups) of the department's programs. Rows give the offering, the faculty and the weekly
+  Lecture / Tutorial / Practical hours. The faculty must be an active Employee with an Instructor record.
+- A teacher's weekly total counts this allocation plus every other submitted allocation of the term. Above the cadre
+  maximum the form warns. Above maximum + margin the save is blocked unless the **Dean Academics** (Position Holder
+  of DEAN-ACADEMICS) enters a Dean Override Reason; the Dean is recorded, and the override lapses if the rows or the
+  reason change afterwards.
+- Every offering of the term needs at least one faculty before the allocation can be submitted; the form warns
+  while offerings are missing. Approval goes through the approval engine (demo policy "Course Allocation - HOD":
+  the HOD of the department). With no policy it submits directly.
+- On submit the faculty are added as instructors of the offerings (existing instructors stay); cancel removes the
+  ones the allocation added.
+- **Workload Balance** report (company and term required, department optional): per teacher the Lecture, Tutorial
+  and Practical hours of submitted allocations against the norm's min / max with a status (Under, Within, Over,
+  Beyond Limit), a total row per department and a summary.

@@ -1,7 +1,7 @@
 {
  "app": "campus",
  "charts": [],
- "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Faculty</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Norm\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Sanctioned Post\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty vs Sanctioned Posts\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student-Teacher Ratio\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Faculty</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Norm\", \"col\": 3}}, {\"id\": \"sc0011\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Allocation\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty vs Sanctioned Posts\", \"col\": 3}}, {\"id\": \"sc0012\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workload Balance\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student-Teacher Ratio\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
  "creation": "2026-10-08 00:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -47,7 +47,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 2,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -74,10 +74,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Allocation",
+   "link_count": 0,
+   "link_to": "Course Allocation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -135,9 +146,20 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Workload Balance",
+   "link_count": 0,
+   "link_to": "Workload Balance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-08 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",
@@ -164,6 +186,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
   }
  ],
  "sequence_id": 49.0,
@@ -184,8 +212,8 @@
   },
   {
    "color": "Grey",
-   "label": "Sanctioned Post",
-   "link_to": "Sanctioned Post",
+   "label": "Course Allocation",
+   "link_to": "Course Allocation",
    "type": "DocType",
    "doc_view": "List"
   },
@@ -195,6 +223,13 @@
    "link_to": "Faculty vs Sanctioned Posts",
    "type": "Report",
    "report_ref_doctype": "Sanctioned Post"
+  },
+  {
+   "color": "Grey",
+   "label": "Workload Balance",
+   "link_to": "Workload Balance",
+   "type": "Report",
+   "report_ref_doctype": "Course Allocation"
   },
   {
    "color": "Grey",

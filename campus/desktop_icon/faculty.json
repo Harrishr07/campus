@@ -11,7 +11,7 @@
  "label": "Faculty",
  "link_to": "Faculty",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-08 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "Faculty",
  "owner": "Administrator",
@@ -35,6 +35,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
   }
  ],
  "standard": 1

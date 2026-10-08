@@ -11,12 +11,13 @@ from campus.tests.demo import CSE_DEPARTMENT, ECE_DEPARTMENT, ENGINEERING, depar
 
 YEAR = "2026-27"
 NORM_FROM = "2022-06-01"
-# cadre, ratio share, minimum qualification, PhD required, minimum experience (years)
+# cadre, ratio share, minimum qualification, PhD required, minimum experience (years), min / max teaching hours a week
 NORM_CADRES = [
-	("Professor", 1, "Post Graduate", 1, 10),
-	("Associate Professor", 2, "Post Graduate", 1, 8),
-	("Assistant Professor", 6, "Post Graduate", 0, 0),
+	("Professor", 1, "Post Graduate", 1, 10, 8, 14),
+	("Associate Professor", 2, "Post Graduate", 1, 8, 10, 16),
+	("Assistant Professor", 6, "Post Graduate", 0, 0, 12, 18),
 ]
+ALLOCATION_POLICY = "Course Allocation - HOD"
 SANCTIONED = {CSE_DEPARTMENT: (1, 2, 6), ECE_DEPARTMENT: (1, 1, 3)}
 # username -> cadre, PhD status, PhD awarded on, NET/SET, prior experience, funding mode
 PROFILES = {
@@ -29,6 +30,7 @@ PROFILES = {
 
 def make_faculty():
 	make_norm()
+	make_allocation_policy()
 	make_sanctioned_posts()
 	make_profiles()
 
@@ -40,11 +42,30 @@ def make_norm():
 		{
 			"norm_name": "AICTE APH (demo)", "regulator": "AICTE", "student_faculty_ratio": 20,
 			"cadres": [
-				{"cadre": c, "ratio_share": s, "minimum_qualification": q, "requires_phd": p, "minimum_experience_years": e}
-				for c, s, q, p, e in NORM_CADRES
+				{
+					"cadre": c, "ratio_share": s, "minimum_qualification": q, "requires_phd": p, "minimum_experience_years": e,
+					"min_hours_per_week": lo, "max_hours_per_week": hi,
+				}
+				for c, s, q, p, e, lo, hi in NORM_CADRES
 			],
 		},
 	)  # fmt: skip
+
+
+def make_allocation_policy():
+	"""Course Allocations are approved by the HOD of the allocated department (M07-02)."""
+	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults (enabled, limit to company)
+	try:
+		get_or_insert(
+			"Approval Policy",
+			{"policy_name": ALLOCATION_POLICY, "document_type": "Course Allocation"},
+			{
+				"enabled": 1, "on_final_action": "Submit",
+				"levels": [{"approver_type": "Position", "approver": "HOD", "scope_field": "department", "title": "HOD", "limit_to_company": 1}],
+			},
+		)
+	finally:
+		frappe.flags.in_import = was_importing
 
 
 def make_sanctioned_posts():
