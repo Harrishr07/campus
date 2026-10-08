@@ -58,11 +58,21 @@ def seed_message_templates():
 		).insert(ignore_permissions=True)
 
 
+CONFIDENTIAL = {"Internal Complaints Committee", "Anti-Ragging Committee", "Grievance Redressal Committee"}
+
+
+def mark_confidential():
+	"""Set Confidential on the seeded sensitive committees (also for sites seeded before the flag existed)."""
+	for name in CONFIDENTIAL:
+		if frappe.db.exists("Body Type", name):
+			frappe.db.set_value("Body Type", name, "confidential", 1)
+
+
 def seed_body_types():
 	for name, term_years, meetings, quorum, rules in STATUTORY:
 		make_body_type(name, 1, term_years=term_years, min_meetings_per_year=meetings, quorum_percent=quorum, rules=rules)
 	for name in NON_STATUTORY:
-		make_body_type(name, 0)
+		make_body_type(name, 0, confidential=int(name in CONFIDENTIAL))
 
 
 def make_body_type(name, statutory, rules=(), **values):

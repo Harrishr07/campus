@@ -13,8 +13,16 @@ def notify_overdue(on_date=None):
 	"""Message the owners of overdue open items; one message per item per ISO week. Returns the items found."""
 	on_date = getdate(on_date or today())
 	year, week, _day = on_date.isocalendar()
-	items = frappe.get_all("Meeting Action Item", {"status": ["in", OPEN_STATUSES], "due_date": ["<", on_date]}, pluck="name")
+	cancelled = frappe.get_all("Body Meeting", {"status": "Cancelled"}, pluck="name") or [""]
+	items = frappe.get_all(
+		"Meeting Action Item",
+		{"status": ["in", OPEN_STATUSES], "due_date": ["<", on_date], "body_meeting": ["not in", cancelled]},
+		pluck="name",
+	)
 	for name in items:
-		item = frappe.get_doc("Meeting Action Item", name)
-		send(OVERDUE_EVENT, item, [f"Employee:{item.responsible}"], context={"dedupe_token": f"{year}-W{week}"})
+		try:
+			item = frappe.get_doc("Meeting Action Item", name)
+			send(OVERDUE_EVENT, item, [f"Employee:{item.responsible}"], context={"dedupe_token": f"{year}-W{week}"})
+		except Exception:
+			frappe.log_error(title=f"Overdue action reminder failed for {name}")  # no context: keep the rest going
 	return len(items)

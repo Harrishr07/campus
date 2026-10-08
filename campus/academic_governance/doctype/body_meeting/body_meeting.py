@@ -22,11 +22,18 @@ class BodyMeeting(Document):
 			self.fill_attendance()
 
 	def validate(self):
-		self.validate_attendance()
-		self.refresh_quorum()
-		if self.resolutions and self.quorum_status != "Met":
-			frappe.throw(_("Resolutions cannot be recorded: quorum is not met. {0}").format(self.quorum_note or ""))
-		self.number_resolutions()
+		saved = self.get_doc_before_save()
+		if is_frozen(saved):
+			self.keep_frozen_meeting(saved)
+		else:
+			self.follow_date_change(saved)
+			self.validate_attendance()
+			self.refresh_quorum()
+		self.validate_resolutions(saved)
+
+	def on_trash(self):
+		if frappe.db.exists("Meeting Resolution", {"parent": self.name, "resolution_no": ["is", "set"]}):
+			frappe.throw(_("A meeting with numbered resolutions cannot be deleted. Cancel it instead; the resolutions are kept as void."))
 
 	def fill_attendance(self):
 		for member in api.members_in_office(self.body, self.meeting_date):
@@ -40,6 +47,12 @@ class BodyMeeting(Document):
 					"present": 0,
 				},
 			)
+
+	def follow_date_change(self, saved):
+		"""Until someone is marked present the attendance is just the members in office, so a new date refreshes it."""
+		if saved and self.has_value_changed("meeting_date") and not any(row.present for row in self.attendance):
+			self.set("attendance", [])
+			self.fill_attendance()
 
 	def validate_attendance(self):
 		keys = [quorum.member_key(row) for row in self.attendance]
@@ -59,33 +72,77 @@ class BodyMeeting(Document):
 			else ""
 		)
 
-	def number_resolutions(self):
-		new = [row for row in self.resolutions if not row.resolution_no]
-		year = getdate(self.meeting_date).year
-		if any(row.resolution_no and not row.resolution_no.startswith(f"{self.body}/{year}/") for row in self.resolutions):
-			frappe.throw(_("The meeting date cannot move to another year once resolutions are numbered"))
-		if not new:
-			return
-		serial = last_serial(self.body, year)
+	def keep_frozen_meeting(self, saved):
+		"""A Held meeting, or one with numbered resolutions, keeps the date, attendance and quorum it was recorded with."""
+		attendance = lambda doc: sorted((quorum.member_key(r), cint(r.present)) for r in doc.attendance)
+		if getdate(self.meeting_date) != getdate(saved.meeting_date) or attendance(self) != attendance(saved):
+			frappe.throw(_("The date and attendance of a held meeting, or one with resolutions, cannot change"))
+		for field in ("quorum_status", "in_office_count", "quorum_required", "present_count", "quorum_note"):
+			self.set(field, saved.get(field))
+
+	def validate_resolutions(self, saved):
+		old = {row.name: row for row in saved.resolutions} if saved else {}
+		self.keep_numbered_rows(old)
+		new = [row for row in self.resolutions if row.name not in old or not old[row.name].resolution_no]
 		for row in new:
+			row.resolution_no = row.serial = None  # numbers are the server's
+		if new:
+			self.validate_can_resolve()
+			self.number_resolutions(new)
+		if self.status == "Cancelled":
+			for row in self.resolutions:
+				row.void = 1
+
+	def keep_numbered_rows(self, old):
+		current = {row.name: row for row in self.resolutions}
+		for name, saved_row in old.items():
+			if not saved_row.resolution_no:
+				continue
+			row = current.get(name)
+			if not row:
+				frappe.throw(_("Resolution {0} cannot be removed. Cancel the meeting to void it.").format(saved_row.resolution_no))
+			if (row.resolution_text, row.decision) != (saved_row.resolution_text, saved_row.decision):
+				frappe.throw(_("Resolution {0} cannot be edited once numbered").format(saved_row.resolution_no))
+			row.resolution_no, row.serial = saved_row.resolution_no, saved_row.serial
+
+	def validate_can_resolve(self):
+		if self.status == "Cancelled" or getdate(self.meeting_date) > getdate(today()):
+			frappe.throw(_("Resolutions can only be recorded for a meeting that has taken place and was not cancelled"))
+		if self.quorum_status != "Met":
+			frappe.throw(_("Resolutions cannot be recorded: quorum is not met. {0}").format(self.quorum_note or ""))
+
+	def number_resolutions(self, rows):
+		year = getdate(self.meeting_date).year
+		serial = last_serial(self.body, year)
+		for row in rows:
 			serial += 1
 			row.serial = serial
 			row.resolution_no = f"{self.body}/{year}/{serial:03d}"
 
 	@frappe.whitelist()
 	def send_notice(self, override_reason=None):
+		"""Send the notice. Everything the rules depend on is re-read from the database under a lock; the posted copy is ignored."""
 		self.check_permission("write")
-		if self.notice_sent_on:
+		stored = frappe.db.get_value("Body Meeting", self.name, ["meeting_date", "status", "notice_sent_on"], for_update=True, as_dict=True)
+		if stored.notice_sent_on:
 			frappe.throw(_("The notice has already been sent"))
-		if self.status != "Scheduled" or getdate(self.meeting_date) < getdate(today()):
+		if stored.status != "Scheduled" or getdate(stored.meeting_date) < getdate(today()):
 			frappe.throw(_("A notice can only be sent for a scheduled meeting that has not happened yet"))
 		days = frappe.db.get_single_value("Governance Settings", "notice_days")
-		late = notice_is_late(self.meeting_date, today(), cint(days))
-		if late and not override_reason:
+		late = notice_is_late(stored.meeting_date, today(), cint(days))
+		reason = (override_reason or "").strip()
+		if late and not reason:
 			frappe.throw(_("The notice must go out at least {0} days before the meeting. Give a reason to send it late.").format(days))
-		self.db_set({"notice_sent_on": now_datetime(), "notice_override_reason": override_reason if late else None})
-		members = [f"Employee:{row.employee}" if row.employee else f"External Member:{row.external_member}" for row in self.attendance]
-		send(NOTICE_EVENT, self, members)
+		meeting = frappe.get_doc("Body Meeting", self.name)
+		row = frappe.qb.DocType("Meeting Attendance")
+		attendance = frappe.qb.from_(row).select(row.employee, row.external_member).where(row.parent == self.name).for_update().run(as_dict=True)
+		send(NOTICE_EVENT, meeting, [f"Employee:{r.employee}" if r.employee else f"External Member:{r.external_member}" for r in attendance])
+		meeting.db_set({"notice_sent_on": now_datetime(), "notice_override_reason": reason if late else None})
+		self.notice_sent_on, self.notice_override_reason = meeting.notice_sent_on, meeting.notice_override_reason
+
+
+def is_frozen(saved):
+	return bool(saved) and (saved.status == "Held" or any(row.resolution_no for row in saved.resolutions))
 
 
 def last_serial(body, year):
@@ -94,7 +151,7 @@ def last_serial(body, year):
 	frappe.db.get_value("Body", body, "name", for_update=True)
 	(row,) = frappe.db.sql(
 		"""select max(r.serial) from `tabMeeting Resolution` r join `tabBody Meeting` m on r.parent = m.name
-		where m.body = %s and year(m.meeting_date) = %s for update""",
-		(body, year),
+		where m.body = %s and m.meeting_date >= %s and m.meeting_date < %s for update""",
+		(body, f"{year}-01-01", f"{year + 1}-01-01"),
 	)
 	return row[0] or 0

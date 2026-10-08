@@ -1,7 +1,7 @@
 {
  "app": "campus",
  "charts": [],
- "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Governance</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Meeting\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Meeting Action Item\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"External Member\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Composition Compliance\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 3}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 3}}]",
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Governance</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Type\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Meeting\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Meeting Action Item\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Composition Compliance\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 3}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 3}}]",
  "creation": "2026-10-08 14:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -123,7 +123,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 18:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Academic Governance",
@@ -156,6 +156,13 @@
  "shortcuts": [
   {
    "color": "Grey",
+   "label": "Body Type",
+   "link_to": "Body Type",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
    "label": "Body",
    "link_to": "Body",
    "type": "DocType",
@@ -172,13 +179,6 @@
    "color": "Grey",
    "label": "Meeting Action Item",
    "link_to": "Meeting Action Item",
-   "type": "DocType",
-   "doc_view": "List"
-  },
-  {
-   "color": "Grey",
-   "label": "External Member",
-   "link_to": "External Member",
    "type": "DocType",
    "doc_view": "List"
   },

@@ -6,6 +6,7 @@
  "field_order": [
   "body_type_name",
   "statutory",
+  "confidential",
   "column_break_terms",
   "term_years",
   "min_meetings_per_year",
@@ -29,6 +30,12 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "description": "Required by regulation (UGC 2023 cl. 12), not just institutional practice."
+  },
+  {
+   "fieldname": "confidential",
+   "fieldtype": "Check",
+   "label": "Confidential",
+   "description": "Meetings and action items of its bodies are readable only by the bodies' members in office, the Principal and the System Manager."
   },
   {
    "fieldname": "column_break_terms",
@@ -70,7 +77,7 @@
  "index_web_pages_for_search": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-10-08 14:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Body Type",
