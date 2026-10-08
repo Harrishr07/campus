@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Timetable",
+ "field_order": [
+  "naming_series",
+  "company",
+  "academic_term",
+  "slot_template",
+  "column_break_1",
+  "department",
+  "status",
+  "published_on",
+  "section_entries",
+  "entries",
+  "section_unavailability",
+  "unavailability"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "TT-.YYYY.-",
+   "default": "TT-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "slot_template",
+   "fieldtype": "Link",
+   "label": "Slot Template",
+   "options": "Timetable Slot Template",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "in_standard_filter": 1,
+   "description": "Leave blank to schedule every submitted Course Allocation of the term."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPublished",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Last Published",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_entries",
+   "fieldtype": "Section Break",
+   "label": "Timetable"
+  },
+  {
+   "fieldname": "entries",
+   "fieldtype": "Table",
+   "label": "Grid",
+   "options": "Timetable Entry"
+  },
+  {
+   "fieldname": "section_unavailability",
+   "fieldtype": "Section Break",
+   "label": "Faculty Unavailability"
+  },
+  {
+   "fieldname": "unavailability",
+   "fieldtype": "Table",
+   "label": "Unavailable",
+   "options": "Timetable Unavailability"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "autoname": "naming_series:",
+ "title_field": "academic_term",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ]
+}

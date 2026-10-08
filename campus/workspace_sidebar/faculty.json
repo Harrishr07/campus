@@ -52,6 +52,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Timetable Slot Template",
+   "link_to": "Timetable Slot Template",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "clipboard-list",
@@ -91,6 +102,28 @@
    "keep_closed": 0,
    "label": "Course Allocation",
    "link_to": "Course Allocation",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Timetable",
+   "link_to": "Timetable",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Timetable Generation Run",
+   "link_to": "Timetable Generation Run",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -171,9 +204,20 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Timetable Clash Checker",
+   "link_to": "Timetable Clash Checker",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-08 12:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",

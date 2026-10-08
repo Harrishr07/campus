@@ -55,3 +55,13 @@ and the four demo instructors as CSE Professor, Associate Professor and two Assi
 - **Workload Balance** report (company and term required, department optional): per teacher the Lecture, Tutorial
   and Practical hours of submitted allocations against the norm's min / max with a status (Under, Within, Over,
   Beyond Limit), a total row per department and a summary.
+
+## Timetable (M07-03)
+
+1. Give each Room a Room Type (Classroom, Lab, Skill Lab, Seminar Hall; Exam Hall is not timetabled) and Seating Capacity. Create a Timetable Slot Template (days, numbered periods with times, breaks, practical block length, soft daily maximum per teacher).
+2. Submit the term's Course Allocations (the solver reads their weekly Lecture / Tutorial / Practical hours).
+3. Create a Timetable (company, term, template, optional department), list any Faculty Unavailability, then Actions > Generate. The Timetable Generation Run records what was placed and every constraint it could not satisfy.
+4. Edit the grid by hand if needed (every save is checked for faculty, room and section clashes, lab rules and unavailability). Actions > Check Clashes opens the Timetable Clash Checker.
+5. Actions > Publish creates Course Schedules for each matching weekday to term end. Publishing again replaces only this timetable's Course Schedules from today on; past schedules and any schedule with Student Attendance are kept.
+
+Not yet: electives of a group in parallel, cross-timetable clash checks (education's own Course Schedule overlap check is the safety net at publish), holidays, class/faculty/room print formats, OR-Tools CP-SAT backend (the pure-Python solver sits behind `solver.solve`).

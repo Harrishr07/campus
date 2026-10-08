@@ -4,6 +4,8 @@ qualification fields on Job Applicant. HRMS Employee is the faculty profile; no 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from campus.faculty.timetable.setup import setup_timetable
+
 MODULE = "Faculty"
 CADRES = ["Professor", "Associate Professor", "Assistant Professor"]
 QUALIFICATIONS = ["Diploma", "Graduate", "Post Graduate", "Doctorate"]  # lowest first; the rank order of qualification.py
@@ -18,6 +20,7 @@ def options(values):
 
 def setup_faculty():
 	create_custom_fields({"Employee": employee_fields(), "Job Applicant": applicant_fields()}, update=True)
+	setup_timetable()
 
 
 ALLOCATION_POLICY = "Course Allocation - HOD"
