@@ -6,7 +6,13 @@
  "field_order": [
   "regulation",
   "grades",
-  "codes"
+  "codes",
+  "methods_section",
+  "methods",
+  "online_grades",
+  "gpa_section",
+  "gpa_excluded_categories",
+  "count_additional_with_honours"
  ],
  "fields": [
   {
@@ -31,11 +37,48 @@
    "label": "Result Codes",
    "options": "Grading Scheme Code",
    "description": "U (fail), SA (shortage of attendance) and AB (absent) are required."
+  },
+  {
+   "fieldname": "methods_section",
+   "fieldtype": "Section Break",
+   "label": "Grading Methods"
+  },
+  {
+   "fieldname": "methods",
+   "fieldtype": "Table",
+   "label": "Methods",
+   "options": "Grading Scheme Method",
+   "description": "Grading method per course type. A course type without a row is graded absolutely. Lab and Project are always absolute."
+  },
+  {
+   "fieldname": "online_grades",
+   "fieldtype": "Table",
+   "label": "Online Course Grades",
+   "options": "Grading Scheme Grade",
+   "description": "Mark ranges for online (NPTEL / SWAYAM) courses."
+  },
+  {
+   "fieldname": "gpa_section",
+   "fieldtype": "Section Break",
+   "label": "SGPA / CGPA"
+  },
+  {
+   "fieldname": "gpa_excluded_categories",
+   "fieldtype": "Table MultiSelect",
+   "label": "Categories Excluded from GPA",
+   "options": "Grading Scheme Excluded Category"
+  },
+  {
+   "fieldname": "count_additional_with_honours",
+   "fieldtype": "Check",
+   "label": "Count Additional Courses Once Honours or Minor Is Completed",
+   "default": "0",
+   "description": "Additional courses are always excluded from SGPA/CGPA unless this is set and the student completed the Honours or Minor."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Grading Scheme",

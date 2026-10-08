@@ -368,6 +368,10 @@ class TestMarkSheetEntry(ExamFixture):
 
 
 class TestSchemeValidation(ExamFixture):
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_value("Regulation", "R2022-EXM-EXTC", "status", "Draft")  # an Effective one locks its scheme
+
 	def test_grading_scheme_rejects_overlapping_ranges(self):
 		scheme = frappe.get_doc("Grading Scheme", "R2022-EXM-EXTC")
 		scheme.grades[1].min_mark = 85

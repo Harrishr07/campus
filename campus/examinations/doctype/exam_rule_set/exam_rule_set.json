@@ -5,7 +5,13 @@
  "engine": "InnoDB",
  "field_order": [
   "regulation",
-  "types"
+  "types",
+  "attempts_section",
+  "cia_carry_forward",
+  "absent_counts_as_attempt",
+  "column_break_attempts",
+  "max_attempts",
+  "internal_only_min_pct"
  ],
  "fields": [
   {
@@ -23,11 +29,48 @@
    "label": "Course Types",
    "options": "Exam Rule Set Type",
    "reqd": 1
+  },
+  {
+   "fieldname": "attempts_section",
+   "fieldtype": "Section Break",
+   "label": "Attempts"
+  },
+  {
+   "fieldname": "cia_carry_forward",
+   "fieldtype": "Check",
+   "label": "Carry Forward CIA",
+   "default": "0",
+   "description": "An arrear attempt keeps the CIA marks of the first attempt."
+  },
+  {
+   "fieldname": "absent_counts_as_attempt",
+   "fieldtype": "Check",
+   "label": "Absence Counts as an Attempt",
+   "default": "0",
+   "description": "A withdrawal or a shortage of attendance never counts as an attempt."
+  },
+  {
+   "fieldname": "column_break_attempts",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "max_attempts",
+   "fieldtype": "Int",
+   "label": "Maximum Attempts",
+   "non_negative": 1,
+   "description": "0: no limit other than the programme duration."
+  },
+  {
+   "fieldname": "internal_only_min_pct",
+   "fieldtype": "Percent",
+   "label": "Internal Only Pass %",
+   "description": "Pass mark, as % of the CIA maximum, of an Internal Only course."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",
