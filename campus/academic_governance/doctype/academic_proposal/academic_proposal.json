@@ -12,6 +12,7 @@
   "status",
   "current_stage",
   "current_body_type",
+  "submitted_on",
   "approved_on",
   "approving_resolution",
   "subject_section",
@@ -86,6 +87,13 @@
    "fieldtype": "Link",
    "label": "Awaiting",
    "options": "Body Type",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "submitted_on",
+   "fieldtype": "Date",
+   "label": "Submitted On",
    "read_only": 1,
    "no_copy": 1
   },
@@ -175,7 +183,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 15:00:00.000000",
+ "modified": "2026-10-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Academic Proposal",

@@ -247,35 +247,56 @@ class Curriculum(Document):
 			frappe.throw(message, title=_("Curriculum Rules Not Met"))
 
 	def lock_siblings(self):
-		"""Row-lock every version of this programme and regulation (held until commit) and read them fresh."""
-		return frappe.db.sql(
+		"""Row-lock every version of this programme and regulation (held until commit) and read them fresh,
+		each with the set of batches it is limited to (empty: the default for every batch)."""
+		siblings = frappe.db.sql(
 			"""select name, version, status from `tabCurriculum`
 			where program = %s and regulation = %s for update""",
 			(self.program, self.regulation),
 			as_dict=True,
 		)
+		listed = {}
+		for row in frappe.get_all(
+			"Curriculum Batch",
+			{"parenttype": "Curriculum", "parent": ["in", [s.name for s in siblings] or [""]]},
+			["parent", "academic_year"],
+		):
+			listed.setdefault(row.parent, set()).add(row.academic_year)
+		for sibling in siblings:
+			sibling.batches = listed.get(sibling.name, set())
+		return siblings
+
+	def own_batches(self):
+		return {row.academic_year for row in self.applicable_batches}
 
 	def validate_single_effective(self):
-		"""Taken under the sibling lock so two concurrent Effective transitions cannot both succeed."""
+		"""Taken under the sibling lock so two concurrent Effective transitions cannot both succeed.
+		A newer Effective version blocks this one only when they cover a common batch (both default, or a shared batch)."""
 		if self.status != "Effective":
 			return
 		for sibling in self.lock_siblings():
-			if sibling.status == "Effective" and sibling.version > cint(self.version):
+			if sibling.status == "Effective" and sibling.version > cint(self.version) and batches_overlap(sibling.batches, self.own_batches()):
 				frappe.throw(
-					_("A newer version of this curriculum ({0}) is already Effective.").format(sibling.name)
+					_("A newer version of this curriculum ({0}) is already Effective for the same batches.").format(sibling.name)
 				)
 
 	def supersede_previous(self):
-		"""An Effective curriculum without listed batches supersedes the older Effective ones of its programme and regulation.
+		"""An Effective curriculum without listed batches supersedes the older Effective default versions; versions
+		limited to some batches keep serving theirs, and a batch-limited one supersedes nobody.
 
 		Runs in the transaction that holds the sibling lock from validate. The direct db.set_value
 		intentionally bypasses the Effective snapshot lock: this is the one allowed change to a locked record.
 		"""
-		if self.applicable_batches:  # limited to some batches: the other Effective versions still serve the rest
+		if self.own_batches():
 			return
 		for sibling in self.lock_siblings():
-			if sibling.status == "Effective" and sibling.name != self.name:
+			if sibling.status == "Effective" and sibling.name != self.name and not sibling.batches:
 				frappe.db.set_value("Curriculum", sibling.name, "status", "Superseded")
+
+
+def batches_overlap(batches, other):
+	"""Two Effective curricula collide when both are defaults or they list a common batch."""
+	return (not batches and not other) or bool(batches & other)
 
 
 @frappe.whitelist()

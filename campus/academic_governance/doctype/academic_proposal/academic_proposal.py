@@ -6,10 +6,11 @@ Regulation Effective. Changes are versioned (track_changes) and comments stay on
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import today
 
 from campus.academic_governance import proposal_approval, proposals
 
-SERVER_FIELDS = ("status", "current_stage", "current_body_type", "approved_on", "approving_resolution")
+SERVER_FIELDS = ("status", "submitted_on", "current_stage", "current_body_type", "approved_on", "approving_resolution")
 SUBJECT_FIELDS = ("proposal_type", "company", "department", "regulation", "curriculum")
 
 
@@ -87,7 +88,7 @@ class AcademicProposal(Document):
 		if self.status != "Draft":
 			frappe.throw(_("Only a Draft proposal can be submitted."))
 		self.validate_ready_for_approval()
-		self.status, self.current_stage = "In Route", 1
+		self.status, self.current_stage, self.submitted_on = "In Route", 1, today()
 		self.current_body_type = self.proposal_type_doc.route[0].body_type
 		self.save_as_server()
 		return self.status
@@ -111,7 +112,7 @@ class AcademicProposal(Document):
 		if self.status != "In Route":
 			frappe.throw(_("{0} is {1}, not in route.").format(frappe.bold(self.name), _(self.status)))
 		route = [row.body_type for row in self.proposal_type_doc.route]
-		previous = self.stage_resolutions[-1].resolution_date if self.stage_resolutions else None
+		previous = self.stage_resolutions[-1].resolution_date if self.stage_resolutions else self.submitted_on
 		found = proposals.find_resolution(self, self.current_body_type, previous)
 		if not found:
 			frappe.throw(

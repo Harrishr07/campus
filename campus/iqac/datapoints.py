@@ -21,9 +21,10 @@ uses; a department keeps the students with a submitted Program Enrollment in one
 Phase 2 (P2-T05): full_time_teachers, sanctioned_posts, phd_teachers, teacher_experience_years and student_teacher_ratio
 come from campus.faculty.api (see campus/faculty/staffing.py for the counting rules); `department` is Employee.department.
 
-Phase 2 (P2-T03): syllabus_revised_courses (AQAR 1.1.2) and new_courses_introduced (AQAR 1.2.1): distinct courses named on
-Academic Proposals of that Proposal Type category that were finally approved within the academic year (`department` is
-the proposal's department); see campus.academic_governance.api.proposal_courses.
+Phase 2 (P2-T03): syllabus_revised_programmes (AQAR 1.1.2: distinct programmes whose curriculum an approved Syllabus Revision
+proposal changed) and new_courses_introduced (AQAR 1.2.1: distinct courses named on approved New Course proposals), both
+finally approved within the academic year (`department` is the proposal's department); see
+campus.academic_governance.api.proposal_programmes / proposal_courses.
 """
 
 import frappe
@@ -226,10 +227,10 @@ def student_teacher_ratio(company, academic_year, department=None):
 	return faculty.student_teacher_ratio(company, academic_year, department)
 
 
-@campus_metric("syllabus_revised_courses")
-def syllabus_revised_courses(company, academic_year, department=None):
-	courses = governance.proposal_courses(company, academic_year, "Syllabus Revision", department)
-	return {"value": len(courses), "records": refs("Course", courses)}
+@campus_metric("syllabus_revised_programmes")
+def syllabus_revised_programmes(company, academic_year, department=None):
+	programmes = governance.proposal_programmes(company, academic_year, "Syllabus Revision", department)
+	return {"value": len(programmes), "records": refs("Program", programmes)}
 
 
 @campus_metric("new_courses_introduced")

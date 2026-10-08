@@ -15,11 +15,18 @@ class Body(Document):
 		self.name = f"{self.body_name} - {abbr}"
 
 	def validate(self):
+		self.validate_department()
 		for member in self.members:
 			self.validate_member(member)
 		self.validate_no_overlapping_terms()
 		if self.enabled:
 			self.validate_composition()
+
+	def validate_department(self):
+		from campus.academic_governance.proposals import DEPARTMENT_BODY_TYPES
+
+		if self.body_type in DEPARTMENT_BODY_TYPES and not self.department:
+			frappe.throw(_("A {0} belongs to a department; set the Department.").format(_(self.body_type)))
 
 	def validate_member(self, member):
 		if bool(member.employee) == bool(member.external_member):

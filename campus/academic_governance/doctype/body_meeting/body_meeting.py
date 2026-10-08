@@ -101,7 +101,7 @@ class BodyMeeting(Document):
 			row = current.get(name)
 			if not row:
 				frappe.throw(_("Resolution {0} cannot be removed. Cancel the meeting to void it.").format(saved_row.resolution_no))
-			if (row.resolution_text, row.decision) != (saved_row.resolution_text, saved_row.decision):
+			if (row.resolution_text, row.decision, row.proposal or "") != (saved_row.resolution_text, saved_row.decision, saved_row.proposal or ""):
 				frappe.throw(_("Resolution {0} cannot be edited once numbered").format(saved_row.resolution_no))
 			row.resolution_no, row.serial = saved_row.resolution_no, saved_row.serial
 

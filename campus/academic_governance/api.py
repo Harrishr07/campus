@@ -30,22 +30,32 @@ def quorum_rule(body_type):
 	return percent or 0, quorum_mandatory_categories(body_type)
 
 
-def proposal_courses(company, academic_year, aqar_category, department=None):
-	"""Courses named on Approved Academic Proposals of the AQAR category (Proposal Type) approved within the academic year."""
+def approved_proposals(company, academic_year, aqar_category, department=None):
+	"""Names of the Approved Academic Proposals of the AQAR category (Proposal Type) approved within the academic year."""
 	year = frappe.db.get_value("Academic Year", academic_year, ["year_start_date", "year_end_date"], as_dict=True)
 	if not year:
 		return []
-	proposal, kind, course = (frappe.qb.DocType(d) for d in ("Academic Proposal", "Proposal Type", "Academic Proposal Course"))
+	proposal, kind = frappe.qb.DocType("Academic Proposal"), frappe.qb.DocType("Proposal Type")
 	query = (
 		frappe.qb.from_(proposal)
 		.join(kind).on(kind.name == proposal.proposal_type)
-		.join(course).on((course.parent == proposal.name) & (course.parenttype == "Academic Proposal"))
-		.select(course.course)
-		.distinct()
+		.select(proposal.name)
 		.where((proposal.company == company) & (proposal.status == "Approved") & (kind.aqar_category == aqar_category))
 		.where(proposal.approved_on.between(year.year_start_date, year.year_end_date))
-		.orderby(course.course)
 	)  # fmt: skip
 	if department:
 		query = query.where(proposal.department == department)
 	return [row[0] for row in query.run()]
+
+
+def proposal_courses(company, academic_year, aqar_category, department=None):
+	"""Distinct Courses named on the approved proposals of the category (AQAR 1.2.1 new courses)."""
+	names = approved_proposals(company, academic_year, aqar_category, department)
+	return sorted(set(frappe.get_all("Academic Proposal Course", {"parenttype": "Academic Proposal", "parent": ["in", names or [""]]}, pluck="course")))
+
+
+def proposal_programmes(company, academic_year, aqar_category, department=None):
+	"""Distinct Programmes whose curriculum an approved proposal of the category changed (AQAR 1.1.2 syllabus revision)."""
+	names = approved_proposals(company, academic_year, aqar_category, department)
+	curricula = frappe.get_all("Academic Proposal", {"name": ["in", names or [""]], "curriculum": ["is", "set"]}, pluck="curriculum")
+	return sorted(set(frappe.get_all("Curriculum", {"name": ["in", curricula or [""]]}, pluck="program")))
