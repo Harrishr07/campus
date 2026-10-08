@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-10 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "external_member",
+  "member_name",
+  "supplier",
+  "column_break_1",
+  "body_meeting",
+  "body",
+  "meeting_date",
+  "company",
+  "section_break_amounts",
+  "honorarium",
+  "ta_da",
+  "total_amount",
+  "column_break_2",
+  "tds_section",
+  "section_break_invoice",
+  "purchase_invoice",
+  "tds_amount",
+  "net_payable",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HON-.YYYY.-",
+   "default": "HON-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "external_member",
+   "fieldtype": "Link",
+   "label": "External Member",
+   "options": "External Member",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fetch_from": "external_member.member_name",
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "label": "Member Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "read_only": 1,
+   "description": "The member's Supplier, set from the External Member. PAN and bank details are kept there."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "body_meeting",
+   "fieldtype": "Link",
+   "label": "Body Meeting",
+   "options": "Body Meeting",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "A meeting the member attended (marked present)."
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Link",
+   "label": "Body",
+   "options": "Body",
+   "read_only": 1
+  },
+  {
+   "fieldname": "meeting_date",
+   "fieldtype": "Date",
+   "label": "Meeting Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "The company of the meeting's Body."
+  },
+  {
+   "fieldname": "section_break_amounts",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "honorarium",
+   "fieldtype": "Currency",
+   "label": "Honorarium",
+   "options": "INR",
+   "reqd": 1,
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ta_da",
+   "fieldtype": "Currency",
+   "label": "TA / DA",
+   "options": "INR",
+   "non_negative": 1,
+   "description": "Travel and daily allowance, reimbursed without TDS."
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "options": "INR",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tds_section",
+   "fieldtype": "Link",
+   "label": "TDS Section",
+   "options": "Tax Withholding Category",
+   "description": "Tax Withholding Category applied to the honorarium on the Purchase Invoice; defaults from the Supplier. Rate and threshold come from the category."
+  },
+  {
+   "fieldname": "section_break_invoice",
+   "fieldtype": "Section Break",
+   "label": "Purchase Invoice"
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Drafted on approval; Accounts reviews and submits it."
+  },
+  {
+   "fieldname": "tds_amount",
+   "fieldtype": "Currency",
+   "label": "TDS Withheld",
+   "options": "INR",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "net_payable",
+   "fieldtype": "Currency",
+   "label": "Net Payable",
+   "options": "INR",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Honorarium Claim",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Honorarium Claim",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "amend": 1, "delete": 1, "report": 1, "print": 1, "export": 1},
+  {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "amend": 1, "report": 1, "print": 1, "export": 1},
+  {"role": "Accounts User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1},
+  {"role": "Principal", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1},
+  {"role": "Academics User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "member_name",
+ "track_changes": 1
+}

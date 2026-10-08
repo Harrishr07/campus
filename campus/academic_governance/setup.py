@@ -2,6 +2,7 @@
 
 import frappe
 
+from campus.academic_governance.honorarium import seed_honorarium_policy
 from campus.academic_governance.seed import mark_confidential, seed_body_types, seed_message_templates, seed_proposal_types
 
 
@@ -10,6 +11,7 @@ def setup_academic_governance():
 	seed_proposal_types()
 	mark_confidential()
 	seed_message_templates()
+	seed_honorarium_policy()
 
 
 def clear_stale_proposal_references():

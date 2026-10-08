@@ -4,7 +4,10 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "notice_days"
+  "notice_days",
+  "honorarium_section",
+  "honorarium_item",
+  "travel_item"
  ],
  "fields": [
   {
@@ -14,12 +17,31 @@
    "default": "7",
    "non_negative": 1,
    "description": "A meeting notice must be sent at least this many days before the meeting, unless an override reason is given."
+  },
+  {
+   "fieldname": "honorarium_section",
+   "fieldtype": "Section Break",
+   "label": "Honorarium"
+  },
+  {
+   "fieldname": "honorarium_item",
+   "fieldtype": "Link",
+   "label": "Honorarium Item",
+   "options": "Item",
+   "description": "Service Item for the honorarium line of the Purchase Invoice an Honorarium Claim drafts. Its Item Defaults give the expense account."
+  },
+  {
+   "fieldname": "travel_item",
+   "fieldtype": "Link",
+   "label": "Travel Item",
+   "options": "Item",
+   "description": "Service Item for the TA/DA line."
   }
  ],
  "index_web_pages_for_search": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-10-08 18:00:00.000000",
+ "modified": "2026-10-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Governance Settings",
