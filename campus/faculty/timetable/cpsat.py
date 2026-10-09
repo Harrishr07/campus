@@ -9,6 +9,7 @@ Honest reporting: when the optimum places fewer sessions than asked, no complete
 "infeasible" (proven); when the time limit stops the search first the best timetable found is returned as "feasible".
 """
 
+import os
 import time
 from collections import defaultdict
 from dataclasses import replace
@@ -23,6 +24,7 @@ from campus.faculty.timetable.solver import Result
 PRESOLVE_LIMIT = 50_000
 WARM_START_SHARE, WARM_START_CAP, MIN_SOLVE_SECONDS = 0.1, 15, 0.5
 REPEAT_COST, OVERLOAD_COST, LATE_COST = 100, 200, 1
+WORKERS = int(os.environ.get("CAMPUS_CPSAT_WORKERS") or 8)  # each CP-SAT worker holds its own copy of the model
 
 
 def solve(problem):
@@ -40,7 +42,7 @@ def solve(problem):
 	hint(model, variables, warm)  # CP-SAT never returns less than the search found
 	solver = cp_model.CpSolver()
 	solver.parameters.max_time_in_seconds = remaining
-	solver.parameters.num_workers = 8
+	solver.parameters.num_workers = WORKERS
 	solver.parameters.cp_model_presolve = len(variables) < PRESOLVE_LIMIT  # on a big model presolve alone can eat the budget
 	status = solver.Solve(model)
 	if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
