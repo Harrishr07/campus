@@ -7,7 +7,7 @@ component and approval policy. HRMS's own salary components are never changed.""
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, fmt_money
 
 from campus.examinations import remuneration_rules as rules
 
@@ -102,18 +102,52 @@ def cancel_or_delete_invoice(claim):
 		frappe.delete_doc("Purchase Invoice", invoice, ignore_permissions=True)
 
 
+def refuse_cancel_after_payment(claim):
+	"""A claim whose submitted invoice has any payment allocated (Payment Entry, Journal Entry, debit note: Payment
+	Ledger rows against it from another voucher) is not cancelled: ERPNext would unlink the payment, leaving it an
+	advance while the claim's work is freed for a second payout."""
+	if not claim.purchase_invoice or frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True) != 1:
+		return
+	vouchers = frappe.get_all(
+		"Payment Ledger Entry",
+		{"against_voucher_type": "Purchase Invoice", "against_voucher_no": claim.purchase_invoice, "voucher_no": ["!=", claim.purchase_invoice], "delinked": 0},
+		pluck="voucher_no", distinct=True,
+	)  # fmt: skip
+	if vouchers:
+		frappe.throw(
+			_("Purchase Invoice {0} has payments allocated ({1}): cancel or unallocate the payment first.").format(claim.purchase_invoice, ", ".join(vouchers))
+		)
+
+
+def invoice_chain(invoice):
+	"""The invoice and every cancelled invoice it amends, back to the first."""
+	names, current = [invoice.name], invoice.amended_from
+	while current and current not in names:
+		names.append(current)
+		current = frappe.db.get_value("Purchase Invoice", current, "amended_from")
+	return names
+
+
 def paid_claim(invoice):
-	"""The submitted claim an invoice (or the cancelled invoice it amends) pays (locking read)."""
-	links = [invoice.name, invoice.amended_from] if invoice.amended_from else [invoice.name]
-	return frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", links], "docstatus": 1}, "name", for_update=True)
+	"""The submitted claim an invoice (or a cancelled invoice it amends) pays (locking read)."""
+	return frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 1}, "name", for_update=True)
 
 
 def check_invoice(invoice, method=None):
 	"""Purchase Invoice before_submit: an invoice of a claim pays exactly the approved claim (its Supplier, college and
-	amount per Item, before tax)."""
+	amount per Item before tax, TDS applied when the Supplier has a category, no added charge besides GST); an
+	amendment of an invoice whose claim was cancelled is never submitted (the claim's work is free again)."""
 	name = paid_claim(invoice)
 	if name:
-		check_invoice_matches(invoice, frappe.get_doc(CLAIM, name))
+		claim = frappe.get_doc(CLAIM, name)
+		check_invoice_matches(invoice, claim)
+		check_tds_and_charges(invoice, claim)
+		return
+	cancelled = frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 2}, "name")
+	if cancelled:
+		frappe.throw(
+			_("Purchase Invoice {0} belongs to the cancelled Examiner Remuneration Claim {1}: amend the claim instead.").format(invoice.name, cancelled)
+		)
 
 
 def refresh_claim(invoice, method=None):
@@ -132,9 +166,19 @@ def check_invoice_matches(invoice, claim):
 	if (invoice.supplier, invoice.company) != (claim.supplier, claim.company) or billed != expected:
 		frappe.throw(
 			_("Purchase Invoice {0} must pay Examiner Remuneration Claim {1} as approved: {2} for {3}. Cancel and amend the claim to change it.").format(
-				invoice.name, claim.name, frappe.format(claim.total_amount, "Currency"), claim.supplier
+				invoice.name, claim.name, fmt_money(claim.total_amount, currency=claim.currency), claim.supplier
 			)
 		)
+
+
+def check_tds_and_charges(invoice, claim):
+	if claim.tds_section and (not invoice.apply_tds or any(not row.apply_tds for row in invoice.items)):
+		frappe.throw(_("Purchase Invoice {0} must withhold TDS ({1}) as Examiner Remuneration Claim {2} does.").format(invoice.name, claim.tds_section, claim.name))
+	for row in invoice.taxes:
+		if row.is_tax_withholding_account or row.get("gst_tax_type") or row.add_deduct_tax == "Deduct":
+			continue
+		if flt(row.base_tax_amount):
+			frappe.throw(_("Row {0}: Purchase Invoice {1} of Examiner Remuneration Claim {2} cannot add a charge ({3}).").format(row.idx, invoice.name, claim.name, row.account_head))
 
 
 def refuse_invoice_cancel(invoice, method=None):

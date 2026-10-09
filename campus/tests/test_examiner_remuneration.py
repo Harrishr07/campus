@@ -395,6 +395,75 @@ class TestExternalPayment(RemunerationFixture):
 		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 2)
 		self.assertEqual(self.claim(member=self.member).total_amount, 60)
 
+	def submitted_invoice(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.submit()
+		return frappe.get_doc(CLAIM, claim.name), invoice
+
+	def test_a_claim_paid_by_payment_entry_cannot_be_cancelled(self):
+		from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
+		claim, invoice = self.submitted_invoice()
+		payment = get_payment_entry("Purchase Invoice", invoice.name, bank_account=f"Cash - {ABBR}")
+		payment.update({"reference_no": "EXR-PAY", "reference_date": today()})
+		payment.insert().submit()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			claim.cancel()
+		self.assertIn(payment.name, str(caught.exception))
+		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value(CLAIM, claim.name, "docstatus"), 1)
+
+	def test_a_claim_paid_by_journal_entry_cannot_be_cancelled(self):
+		if not frappe.db.exists("Party Type", "Supplier"):  # the bare test site has only Student
+			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
+		claim, invoice = self.submitted_invoice()
+		entry = frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"accounts": [
+					{"account": invoice.credit_to, "party_type": "Supplier", "party": invoice.supplier, "debit_in_account_currency": 54,
+						"reference_type": "Purchase Invoice", "reference_name": invoice.name},
+					{"account": f"Cash - {ABBR}", "credit_in_account_currency": 54},
+				],
+			}
+		).insert()  # fmt: skip
+		entry.submit()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			claim.cancel()
+		self.assertIn(entry.name, str(caught.exception))
+		self.assertEqual(frappe.db.get_value(CLAIM, claim.name, "docstatus"), 1)
+
+	def test_an_amendment_of_an_invoice_cancelled_with_its_claim_is_not_submitted(self):
+		claim, invoice = self.submitted_invoice()
+		claim.cancel()
+		amended = frappe.copy_doc(frappe.get_doc("Purchase Invoice", invoice.name))
+		amended.update({"amended_from": invoice.name, "docstatus": 0, "tax_withholding_entries": []})  # recomputed on save
+		amended.insert()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			amended.submit()
+		self.assertIn(claim.name, str(caught.exception))
+
+	def test_an_extra_charge_on_the_invoice_is_refused(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		account = make_account(COLLEGE, ABBR, "EXR Charges", "Indirect Expenses", account_type="Chargeable")
+		invoice.append("taxes", {"charge_type": "Actual", "account_head": account, "description": "Extra", "tax_amount": 100, "add_deduct_tax": "Add", "category": "Total"})
+		invoice.save()
+		with self.assertRaises(frappe.ValidationError):
+			invoice.submit()
+
+	def test_an_invoice_without_tds_is_refused_for_a_supplier_with_a_category(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.apply_tds = 0
+		for row in invoice.items:
+			row.apply_tds = 0
+		invoice.save()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			invoice.submit()
+		self.assertIn("TDS", str(caught.exception))
+
 	def test_the_invoice_carries_the_claim_date(self):
 		claim = self.approved(self.claim(member=self.member, posting_date=add_days(today(), -3)))
 		self.assertEqual(str(frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "posting_date")), add_days(today(), -3))

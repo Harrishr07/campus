@@ -9,7 +9,8 @@ examiner never approve). The final approval submits the claim, which pays it (ca
 an internal examiner by an Additional Salary on the next payroll, an external examiner (an External Member with a
 Supplier) by a draft Purchase Invoice with TDS per the Supplier's Tax Withholding Category. Cancelling the claim
 cancels its Additional Salary (refused by HRMS once a submitted slip paid it) or its invoice (draft: deleted; submitted:
-cancelled with the user's rights; the invoice alone cannot be cancelled while the claim stands).
+cancelled with the user's rights, refused while any payment is allocated to it; the invoice alone cannot be
+cancelled while the claim stands, and an amendment of an invoice cancelled with its claim is never submitted).
 """
 
 import frappe
@@ -46,6 +47,10 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 		else:
 			invoice = remuneration_payment.draft_purchase_invoice(self)
 			self.db_set({"purchase_invoice": invoice.name, **remuneration_payment.payable_figures(invoice)})
+
+	def before_cancel(self):
+		if self.examiner_type != INTERNAL:
+			remuneration_payment.refuse_cancel_after_payment(self)
 
 	def on_cancel(self):
 		if self.examiner_type == INTERNAL:
