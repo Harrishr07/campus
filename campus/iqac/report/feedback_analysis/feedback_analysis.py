@@ -3,7 +3,9 @@
 Only closed campaigns (window ended before today) the user may read (company User Permissions apply) are counted, so a
 figure never moves while answers come in. Every (campaign, group) cell answered by fewer respondents than Campus
 Settings > Feedback Minimum Group Size is dropped before cells are pooled into a row, so a small campaign never shows as
-the difference between two filters; the report says how many cells were left out. Free-text answers are counted, never
+the difference between two filters; the report says how many cells were left out. Answers to a (campaign, question)
+answered by fewer than that are left out first, for every grouping: an optional question answered by a few would
+otherwise show as a Course or Faculty figure minus the question rows. Free-text answers are counted, never
 listed.
 """
 
@@ -15,7 +17,7 @@ from frappe.utils import flt, today
 
 from campus.campus_platform.company_scope import permitted_companies
 from campus.iqac.access import READERS
-from campus.iqac.feedback import ANSWER, RESPONSE, minimum_group_size
+from campus.iqac.feedback import ANSWER, RESPONSE, large_question_answers, minimum_group_size
 
 GROUPS = {"Question": ("campaign", "question_row"), "Course": ("course_offering",), "Faculty": ("instructor",)}
 
@@ -30,7 +32,9 @@ def execute(filters=None):
 	if group_by not in GROUPS:
 		frappe.throw(_("Group By must be one of {0}.").format(", ".join(GROUPS)))
 	least = minimum_group_size()
-	kept, hidden = large_cells(answers(filters), GROUPS[group_by], least)
+	answered, small_questions = large_question_answers(answers(filters), least)
+	kept, small_groups = large_cells(answered, GROUPS[group_by], least)
+	hidden = small_questions + small_groups
 	rows = [row(group_by, items) for items in grouped(kept, GROUPS[group_by]).values()]
 	message = _("{0} group(s) with fewer than {1} responses (the minimum group size) are not shown.").format(hidden, least) if hidden else None
 	return columns(group_by), rows, message

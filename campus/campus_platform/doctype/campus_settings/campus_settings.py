@@ -3,11 +3,20 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 
 class CampusSettings(Document):
 	def validate(self):
 		self.validate_evidence_sources()
+		self.validate_feedback_group_size()
+
+	def validate_feedback_group_size(self):
+		"""Feedback groups smaller than 3 would let one respondent's answer show (M01-05 anonymity)."""
+		from campus.iqac.api import MINIMUM_GROUP_FLOOR
+
+		if cint(self.feedback_minimum_group_size) < MINIMUM_GROUP_FLOOR:
+			frappe.throw(_("Feedback Minimum Group Size must be at least {0}.").format(MINIMUM_GROUP_FLOOR))
 
 	def validate_evidence_sources(self):
 		"""A file field named for an Evidence Source must be an Attach field of that document type."""

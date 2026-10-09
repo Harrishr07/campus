@@ -242,6 +242,68 @@ class TestAnonymity(FeedbackFixture):
 			for text in (secret, fx.STUDENT_USER, self.world["asha"]):
 				self.assertNotIn(text, f"{row.method} {row.error}")
 
+	def test_a_failed_submit_inside_a_request_logs_no_form_data_or_user(self):
+		from types import SimpleNamespace
+		from unittest.mock import patch
+
+		campaign = self.campaign()
+		secret = "SECRET-REQUEST-T07"
+		before = set(frappe.get_all("Error Log", pluck="name"))
+		saved_request, saved_form = getattr(frappe.local, "request", None), frappe.local.form_dict
+		frappe.local.request = SimpleNamespace(method="POST", path="/api/method/campus.iqac.feedback.submit_response", referrer=None)
+		answers = self.answers(campaign, text=secret)
+		frappe.set_user(fx.STUDENT_USER)
+		frappe.local.form_dict = frappe._dict(
+			cmd="campus.iqac.feedback.submit_response", campaign=campaign.name, answers=answers, member="T07-MEMBER", signature="T07-SIGNATURE"
+		)
+		try:
+			with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
+				with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded"):
+					feedback.submit_response(campaign.name, answers)
+			self.assertFalse({"campaign", "answers", "member", "signature"} & set(frappe.form_dict))  # nothing later sees them
+		finally:
+			frappe.set_user("Administrator")
+			frappe.local.request, frappe.local.form_dict = saved_request, saved_form
+		new = frappe.get_all("Error Log", {"name": ["not in", list(before) or [""]]}, ["error", "metadata"])
+		self.assertEqual([row.error for row in new], ["KeyError"])
+		for text in (secret, fx.STUDENT_USER, "T07-MEMBER", "T07-SIGNATURE", campaign.name):
+			self.assertNotIn(text, new[0].metadata or "")
+
+	def test_the_audience_size_counts_people_not_their_records(self):
+		from unittest.mock import patch
+
+		asha, bala = self.world["asha"], self.world["bala"]
+		keys = [f"Student:{asha}", f"User:{fx.STUDENT_USER}", f"Student:{bala}", "External Member:M1", "External Member:M2"]
+		self.assertEqual(feedback.audience_size(keys), 4)  # Asha's student record and login are one person
+		campaign = self.campaign()
+		with patch("campus.iqac.feedback.respondents", return_value=keys[:3]):  # 3 keys, 2 people, minimum 3
+			with self.assertRaisesRegex(frappe.ValidationError, "too small"):
+				self.respond(campaign, fx.STUDENT_USER)
+
+	def test_an_existing_campaign_with_a_rule_still_saves_when_only_its_note_changes(self):
+		rule = fx.make_rule(f"T07 Rule {frappe.generate_hash(length=4)}", "Student Group", student_group=self.offering)
+		campaign = self.campaign(audience="Students", audience_rule=rule.name, course_offering=None)
+		frappe.db.set_value("Audience Rule", rule.name, "company", fx.OTHER_COLLEGE)  # the rule was re-scoped later
+		campaign.reload()
+		campaign.action_taken = "Lab hours added"
+		campaign.save()
+		campaign.audience_rule = None
+		campaign.audience_rule = rule.name
+		campaign.audience = "Parents"  # an audience change is checked again
+		with self.assertRaisesRegex(frappe.ValidationError, "is not of"):
+			campaign.save()
+
+	def test_the_minimum_group_size_never_falls_below_three(self):
+		settings = frappe.get_single("Campus Settings")
+		settings.feedback_minimum_group_size = 2
+		with self.assertRaisesRegex(frappe.ValidationError, "at least 3"):
+			settings.save()
+		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 1)  # a direct write cannot lower it
+		try:
+			self.assertEqual(feedback.minimum_group_size(), 3)
+		finally:
+			frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 3)
+
 	def test_an_anonymous_campaign_below_the_minimum_audience_takes_no_answers_or_invitations(self):
 		parents = self.campaign(audience="Parents")  # one guardian, minimum 3
 		with self.assertRaisesRegex(frappe.ValidationError, "too small"):
@@ -485,6 +547,30 @@ class TestAnalysis(FeedbackFixture):
 		self.assertEqual(together["responses"], 3)
 		frappe.set_user("Administrator")
 		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"]["average"], 5.0)  # the single 1 is not mixed in
+
+	def test_an_optional_question_answered_by_too_few_never_shows_by_difference(self):
+		form = self.form([
+			{"question": "The lectures met CO1", "question_type": "Likert", "course_outcome": "CO1"},
+			{"question": "The lab met CO1", "question_type": "Likert", "course_outcome": "CO1", "is_required": 0},
+		])  # fmt: skip
+		campaign = self.campaign(form=form)
+		lectures, lab = (q.name for q in form.questions)
+		for user in (fx.STUDENT_USER, *EXTRA_USERS[:2]):
+			answers = {lectures: 5, lab: 1} if user == fx.STUDENT_USER else {lectures: 5}  # only one answers the lab question
+			frappe.set_user(user)
+			try:
+				feedback.submit_response(campaign.name, json.dumps(answers))
+			finally:
+				frappe.set_user("Administrator")
+		self.close(campaign)
+		frappe.set_user(COORDINATOR)
+		report = lambda group_by: feedback_analysis.execute({"company": fx.COLLEGE, "group_by": group_by, "campaign": campaign.name})[1]
+		questions, [course], [faculty] = report("Question"), report("Course"), report("Faculty")
+		frappe.set_user("Administrator")
+		self.assertEqual([(r["question"], r["average"]) for r in questions], [("The lectures met CO1", 5.0)])
+		self.assertEqual((course["responses"], course["average"]), (3, 5.0))  # the lone lab rating is not pooled in
+		self.assertEqual(faculty["average"], 5.0)
+		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"], {"responses": 3, "average": 5.0, "percent": 100.0, "suppressed": 0})
 
 	def test_only_closed_campaigns_are_analysed(self):
 		campaign = self.campaign()

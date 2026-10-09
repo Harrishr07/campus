@@ -54,7 +54,7 @@ def queue(campaign, event_key, dedupe_token):
 	"""A bulk run sending `event_key` to the campaign's audience; None when nobody is addressed, or the campaign is
 	anonymous with an audience below the minimum group size (it takes no answers)."""
 	recipients = feedback.respondents(campaign)
-	if not recipients or (campaign.is_anonymous and len(set(recipients)) < feedback.minimum_group_size()):
+	if not recipients or feedback.too_small(campaign, recipients):
 		return None
 	parameters = {"campaign": campaign.name, "event_key": event_key, "dedupe_token": dedupe_token}
 	return run_bulk(f"{event_key} {campaign.name}", recipients, HANDLER, parameters=parameters)

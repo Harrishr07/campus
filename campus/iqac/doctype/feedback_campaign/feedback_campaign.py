@@ -13,6 +13,7 @@ from frappe.utils import getdate, today
 
 OFFERING_AUDIENCES = ("Course Offering Students", "Parents", "Teachers")
 EXTERNAL_AUDIENCES = ("Alumni", "Employers")
+AUDIENCE_FIELDS = ("audience", "audience_rule", "course_offering", "company")
 LOCKED_ONCE_ANSWERED = ("form", "audience", "course_offering", "instructor", "audience_rule", "company", "is_anonymous")
 
 
@@ -25,6 +26,9 @@ class FeedbackCampaign(Document):
 		self.validate_locked()
 
 	def validate_audience(self):
+		"""Checked when the campaign is made or its audience changes, so a rule re-scoped later never blocks a note."""
+		if not self.is_new() and not any(self.has_value_changed(f) for f in AUDIENCE_FIELDS):
+			return
 		if self.audience in EXTERNAL_AUDIENCES or self.audience == OFFERING_AUDIENCES[0]:
 			self.audience_rule = None  # offering students are the offering's own members (their CO scores count)
 		if self.audience not in EXTERNAL_AUDIENCES and not (self.audience_rule or self.course_offering):

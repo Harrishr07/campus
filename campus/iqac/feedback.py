@@ -19,7 +19,6 @@ from datetime import datetime, time
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Count, Sum
 from frappe.utils import cint, flt, getdate, today
 from frappe.utils.password import get_encryption_key
 
@@ -32,6 +31,9 @@ TEXT_LIMIT = 2000
 ANONYMOUS_OWNER = "Guest"
 SAVEPOINT = "feedback_response"
 CO_AUDIENCE = "Course Offering Students"
+USER_FIELDS = {"Student": "user", "Guardian": "user", "Employee": "user_id"}  # the login a key belongs to
+MINIMUM_GROUP_FLOOR = 3
+REQUEST_FIELDS = ("campaign", "answers", "member", "signature")
 
 
 # Keys, tokens and signatures
@@ -106,10 +108,38 @@ def check_audience_size(campaign, addressed):
 	"""An anonymous campaign addressing fewer people than the minimum group size could be traced through the offering
 	and instructor its responses keep, so it takes no answers or invitations."""
 	least = minimum_group_size()
-	if cint(campaign.is_anonymous) and len(set(addressed)) < least:
+	if too_small(campaign, addressed):
 		frappe.throw(
 			_("The audience of this anonymous campaign is too small (fewer than {0}) to keep answers anonymous. Widen the audience or make the campaign named.").format(least)
 		)
+
+
+def too_small(campaign, addressed):
+	"""True for an anonymous campaign addressing fewer people than the minimum group size."""
+	return bool(cint(campaign.is_anonymous)) and audience_size(addressed) < minimum_group_size()
+
+
+def audience_size(keys):
+	"""How many people `keys` address: a person's Student / Guardian / Employee record and their login count once."""
+	by_doctype = {}
+	for key in set(keys):
+		doctype, _sep, name = key.partition(":")
+		by_doctype.setdefault(doctype, set()).add(name)
+	people = set()
+	for doctype, names in by_doctype.items():
+		users = login_of(doctype, names)
+		people.update(f"User:{users[name]}" if users.get(name) else f"{doctype}:{name}" for name in names)
+	return len(people)
+
+
+def login_of(doctype, names):
+	"""{record name: user} for records of `doctype` that have a login (External Members have none)."""
+	if doctype == "User":
+		return {name: name for name in names}
+	field = USER_FIELDS.get(doctype)
+	if not field:
+		return {}
+	return dict(frappe.get_all(doctype, {"name": ["in", list(names)], field: ["is", "set"]}, ["name", field], as_list=True))
 
 
 def is_open(campaign, day=None):
@@ -128,8 +158,7 @@ def open_campaigns_for(user=None):
 			continue
 		addressed = respondents(campaign)
 		mine = sorted(keys & set(addressed))
-		too_small = cint(campaign.is_anonymous) and len(set(addressed)) < minimum_group_size()
-		if mine and not too_small and not any(has_responded(campaign.name, key) for key in mine):
+		if mine and not too_small(campaign, addressed) and not any(has_responded(campaign.name, key) for key in mine):
 			result.append(frappe._dict(name=campaign.name, campaign_title=campaign.campaign_title, end_date=campaign.end_date))
 	return result
 
@@ -143,7 +172,12 @@ def submit_response(campaign, answers, member=None, signature=None):
 
 	A refusal is a ValidationError / PermissionError with a message that names no answer. Any other failure is undone to
 	a savepoint, logged by its class name only (never a traceback, whose frames hold the answers and the respondent) and
-	reported as one generic ValidationError raised outside the handler, so no exception chain carries it either."""
+	reported as one generic ValidationError raised outside the handler, so no exception chain carries it either.
+
+	The posted fields are taken out of frappe.form_dict first: Frappe copies form_dict and the session user into the
+	metadata of every Error Log and request error snapshot, so nothing logged later in this request may see them."""
+	for field in REQUEST_FIELDS:
+		frappe.form_dict.pop(field, None)
 	failed = None
 	frappe.db.savepoint(SAVEPOINT)
 	try:
@@ -154,8 +188,15 @@ def submit_response(campaign, answers, member=None, signature=None):
 	except Exception as error:
 		failed = type(error).__name__
 		frappe.db.rollback(save_point=SAVEPOINT)
-	frappe.log_error(_("Feedback response failed"), failed)
+	log_failure(failed)
 	frappe.throw(_("Your feedback could not be recorded. Please try again later."))
+
+
+def log_failure(error_class):
+	"""An Error Log row naming the failure's class only, with empty metadata (log_error would add the request and user)."""
+	frappe.get_doc({"doctype": "Error Log", "method": _("Feedback response failed"), "error": error_class, "metadata": "{}"}).insert(
+		ignore_permissions=True
+	)
 
 
 def record_response(name, answers, member, signature):
@@ -255,8 +296,8 @@ def midnight(day):
 
 
 def minimum_group_size():
-	"""Smallest group a report or score may show (Campus Settings); never below 1."""
-	return max(cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size")), 1)
+	"""Smallest group a report or score may show (Campus Settings); never below MINIMUM_GROUP_FLOOR."""
+	return max(cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size")), MINIMUM_GROUP_FLOOR)
 
 
 def indirect_co_scores(offering):
@@ -279,25 +320,39 @@ def indirect_co_scores(offering):
 
 
 def co_cells(offering):
-	"""{CO: [(campaign, responses, ratings, total)]} for the offering's closed student campaigns."""
+	"""{CO: [(campaign, responses, ratings, total)]} for the offering's closed student campaigns, from the ratings of
+	(campaign, question) cells with at least the minimum group size only: a CO tagged on an optional question answered by
+	a few would otherwise show them as the difference between the CO and its other questions."""
 	campaign, response, answer = frappe.qb.DocType("Feedback Campaign"), frappe.qb.DocType(RESPONSE), frappe.qb.DocType(ANSWER)
-	rows = (
+	ratings = (
 		frappe.qb.from_(response)
 		.join(campaign)
 		.on(campaign.name == response.campaign)
 		.join(answer)
 		.on((answer.parent == response.name) & (answer.parenttype == RESPONSE))
-		.select(
-			answer.course_outcome, response.campaign, Count(response.name).distinct().as_("responses"),
-			Count(answer.rating).as_("ratings"), Sum(answer.rating).as_("total"),
-		)
+		.select(answer.course_outcome, response.campaign, answer.question_row, response.name.as_("response"), answer.rating)
 		.where((response.course_offering == offering) & (campaign.audience == CO_AUDIENCE) & (campaign.end_date < today()))
 		.where((answer.question_type == "Likert") & answer.rating.isnotnull())
 		.where(answer.course_outcome.isnotnull() & (answer.course_outcome != ""))
-		.groupby(answer.course_outcome, response.campaign)
 		.run(as_dict=True)
 	)  # fmt: skip
-	cells = {}
-	for row in rows:
-		cells.setdefault(row.course_outcome, []).append(row)
+	pooled = {}
+	for item in large_question_answers(ratings, minimum_group_size())[0]:
+		cell = pooled.setdefault((item.course_outcome, item.campaign), frappe._dict(campaign=item.campaign, responses=set(), ratings=0, total=0))
+		cell.responses.add(item.response)
+		cell.ratings += 1
+		cell.total += item.rating
+	cells = {item.course_outcome: [] for item in ratings}  # a CO left with no cell shows as suppressed
+	for (co, _campaign), cell in pooled.items():
+		cells.setdefault(co, []).append(frappe._dict(cell, responses=len(cell.responses)))
 	return cells
+
+
+def large_question_answers(items, least):
+	"""The answers among `items` (each with campaign, question_row, response) whose (campaign, question row) was
+	answered by at least `least` responses, and how many (campaign, question) cells were dropped."""
+	answered = {}
+	for item in items:
+		answered.setdefault((item.campaign, item.question_row), set()).add(item.response)
+	kept = [item for item in items if len(answered[(item.campaign, item.question_row)]) >= least]
+	return kept, sum(1 for responses in answered.values() if len(responses) < least)

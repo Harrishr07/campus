@@ -39,7 +39,7 @@ def get_context(context):
 	context.is_anonymous = campaign.is_anonymous
 	if any(feedback.has_responded(campaign.name, key) for key in keys):
 		context.state = "answered"
-	elif not feedback.is_open(campaign) or (campaign.is_anonymous and len(set(addressed)) < feedback.minimum_group_size()):
+	elif not feedback.is_open(campaign) or feedback.too_small(campaign, addressed):
 		context.state = "closed"
 	else:
 		context.state = "open"
