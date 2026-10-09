@@ -7,7 +7,8 @@ Principal of the company; the requester and owner never approve); only the final
 each listed version whose grading (marks, grace, grades, results, GPAs: its fingerprint) is still the one listed
 becomes the latest (the one it replaces stays readable
 to the COE) and its student and guardians are notified; a valid Grade Sheet of the replaced version is revoked and
-re-issued for the new one. Not cancellable: a ratified version is published.
+re-issued for the new one, and the student's results of later sessions are recomputed on it (pending versions where
+those are published). Not cancellable: a ratified version is published.
 """
 
 import hashlib
@@ -48,8 +49,9 @@ class ResultRatification(ApprovableDocument, Document):
 		for item in self.items:
 			replaced = publish_version(item.student_result, item.fingerprint, self.name)
 			if replaced is not None:
-				reissue_grade_sheets(replaced, item.student_result)
+				reissue_grade_sheets(replaced, item.student_result, self.name)
 				notify(item.student_result)
+				refresh_later_results(item.student, self.exam_session, self.name)
 
 
 def approval_requested(doc):
@@ -90,7 +92,7 @@ def publish_version(name, listed_fingerprint, ratification):
 	return replaced
 
 
-def reissue_grade_sheets(replaced, name):
+def reissue_grade_sheets(replaced, name, ratification):
 	"""A replaced version's valid Grade Sheet is revoked now and one is issued for the ratified version after commit
 	(P2-T20): a grade sheet always shows the published grades and CGPA. The approver usually has no print right on
 	Student Result, so the new sheet is rendered in a job (Administrator in the worker, as the exam fee invoice)."""
@@ -100,24 +102,66 @@ def reissue_grade_sheets(replaced, name):
 	for old in replaced:
 		filters = {"reference_doctype": RESULT, "reference_name": old, "print_format": GRADE_SHEET, "status": "Valid"}
 		if frappe.db.exists("Verifiable Document", filters):
-			revoke_for(frappe.get_doc(RESULT, old), _("Superseded by the ratified version {0}").format(name))
+			revoke_for(frappe.get_doc(RESULT, old), _("Superseded by the version {0} ratified by {1}").format(name, ratification))
 			issued = True
 	if issued:
-		frappe.enqueue(REISSUE_JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, student_result=name)
+		frappe.enqueue(
+			REISSUE_JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, student_result=name, ratification=ratification
+		)
 
 
-def issue_grade_sheet(student_result):
-	"""Worker entry point: issue the Grade Sheet of a ratified version that has no valid one (idempotent)."""
-	from campus.campus_platform.verification import issue
+def issue_grade_sheet(student_result, ratification):
+	"""Worker entry point: issue the Grade Sheet of a ratified version that has no valid one (idempotent). A failure
+	is logged with the ratification; the COE then issues it with Issue Grade Sheet."""
+	from campus.campus_platform import verification
 
 	caller = frappe.session.user
 	frappe.set_user("Administrator")
 	try:
 		filters = {"reference_doctype": RESULT, "reference_name": student_result, "print_format": GRADE_SHEET, "status": "Valid"}
 		if frappe.db.get_value(RESULT, student_result, "is_latest") and not frappe.db.exists("Verifiable Document", filters):
-			issue(frappe.get_doc(RESULT, student_result), GRADE_SHEET)
+			frappe.db.savepoint("grade_sheet_reissue")
+			try:
+				verification.issue(frappe.get_doc(RESULT, student_result), GRADE_SHEET)
+			except Exception as e:
+				frappe.db.rollback(save_point="grade_sheet_reissue")
+				frappe.log_error(
+					title=_("Grade Sheet re-issue failed ({0})").format(ratification),
+					message=_("Ratification {0}: the Grade Sheet of {1} was not issued: {2}. Issue it with Issue Grade Sheet.").format(
+						ratification, student_result, e
+					),
+				)
 	finally:
 		frappe.set_user(caller)
+
+
+def refresh_later_results(student, exam_session, ratification):
+	"""Recompute the student's results of later sessions on the ratified version (P2-T20): their CGPA and arrears read
+	it. A published later session gets a pending version (its own ratification publishes it and re-issues its sheet);
+	an unpublished one is replaced in place. A session that cannot be recomputed is logged, never blocking this one."""
+	from campus.examinations.results import compute_student_result
+
+	start = frappe.db.get_value("Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date")
+	result, term = frappe.qb.DocType(RESULT), frappe.qb.DocType("Academic Term")
+	later = (
+		frappe.qb.from_(result)
+		.join(term).on(term.name == result.academic_term)
+		.select(result.exam_session).distinct()
+		.where((result.student == student) & (result.is_latest == 1) & (result.exam_session != exam_session) & (term.term_start_date > start))
+		.orderby(term.term_start_date)
+		.run(pluck=True)
+	)  # fmt: skip
+	for session in later:
+		frappe.db.savepoint("later_result")
+		try:
+			compute_student_result(student, session)
+		except frappe.ValidationError as e:
+			frappe.db.rollback(save_point="later_result")
+			frappe.clear_messages()
+			frappe.log_error(
+				title=_("Later result not refreshed ({0})").format(ratification),
+				message=_("Ratification {0}: the result of {1} in {2} was not recomputed: {3}").format(ratification, student, session, e),
+			)
 
 
 def notify(name):

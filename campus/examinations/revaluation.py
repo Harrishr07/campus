@@ -200,10 +200,10 @@ def justify(application, course, justification):
 	from campus.examinations.doctype.valuation_allocation.valuation_allocation import course_teachers
 
 	doc = frappe.get_doc(APPLICATION, frappe.db.get_value(APPLICATION, application, "name", for_update=True))
+	if frappe.session.user not in course_teachers(doc.exam_session, course):  # before anything about the application
+		raise frappe.PermissionError(_("Only a teacher of {0} this term justifies its revaluation.").format(course))
 	if doc.docstatus != 0 or doc.application_type != REVALUATION:
 		frappe.throw(_("A justification is recorded on a draft Revaluation application."))
-	if frappe.session.user not in course_teachers(doc.exam_session, course):
-		raise frappe.PermissionError(_("Only a teacher of {0} this term justifies its revaluation.").format(course))
 	if not (justification or "").strip():
 		frappe.throw(_("Write the justification."))
 	row = next((r for r in doc.courses if r.course == course), None)
@@ -221,6 +221,7 @@ def issue_photocopy(application):
 	frappe.only_for(MARKS_ROLES)
 	frappe.db.get_value(APPLICATION, application, "name", for_update=True)
 	doc = frappe.get_doc(APPLICATION, application)
+	check_company(doc)
 	if doc.docstatus != 1 or doc.application_type != PHOTOCOPY:
 		frappe.throw(_("Photocopies are issued on a submitted Photocopy application."))
 	if not fee_paid(doc):
@@ -229,14 +230,92 @@ def issue_photocopy(application):
 		doc.db_set("photocopy_issued_on", now_datetime())
 
 
+def check_company(doc):
+	"""Refuse a COE restricted (User Permission) to other companies."""
+	from campus.campus_platform.company_scope import permitted_companies
+
+	permitted = permitted_companies(frappe.session.user)
+	if permitted is not None and doc.company not in permitted:
+		raise frappe.PermissionError(_("{0} belongs to a college you do not work for.").format(doc.name))
+
+
+# ---- who reads an application ---------------------------------------------------------------------
+
+FULL_READ_ROLES = ("COE", "System Manager", "Dean Academics")
+
+
+def teachable_drafts(user):
+	"""Draft Revaluation applications listing a course `user` teaches in the term of the application's session."""
+	from campus.examinations.access import instructed_offerings
+
+	taught = frappe.get_all(
+		"Student Group", {"name": ["in", instructed_offerings(user)], "group_based_on": "Course"}, ["course", "academic_term"]
+	)
+	if not taught:
+		return []
+	app, row, session = frappe.qb.DocType(APPLICATION), frappe.qb.DocType(APPLICATION_COURSE), frappe.qb.DocType(SESSION)
+	pairs = None
+	for t in taught:
+		clause = (row.course == t.course) & (session.academic_term == t.academic_term)
+		pairs = clause if pairs is None else pairs | clause
+	return (
+		frappe.qb.from_(app)
+		.join(row).on((row.parent == app.name) & (row.parenttype == APPLICATION))
+		.join(session).on(session.name == app.exam_session)
+		.select(app.name).distinct()
+		.where((app.docstatus == 0) & (app.application_type == REVALUATION) & pairs)
+		.run(pluck=True)
+	)  # fmt: skip
+
+
+def permission_query(user=None):
+	"""COE, System Manager and Dean Academics read every application; a teacher only the drafts to justify."""
+	from campus.examinations.access import has_any_role
+
+	user = user or frappe.session.user
+	if has_any_role(user, FULL_READ_ROLES):
+		return ""
+	names = teachable_drafts(user)
+	return f"`tab{APPLICATION}`.name in ({', '.join(frappe.db.escape(n) for n in names)})" if names else "1=0"
+
+
+def has_permission(doc, ptype=None, user=None):
+	"""Deny-only for teachers: read of a draft revaluation they can justify, nothing else."""
+	from campus.examinations.access import has_any_role
+
+	user = user or frappe.session.user
+	if has_any_role(user, FULL_READ_ROLES):
+		return None
+	if ptype not in ("read", "print"):
+		return False
+	return bool(doc.name) and doc.name in teachable_drafts(user)
+
+
 # ---- fee ----------------------------------------------------------------------------------------
 
 
 def check_invoiceable(doc):
+	"""Before submit: the fee of the type must be set (never a silent free application) and invoiceable."""
 	from campus.campus_finance.api import check_fee_invoice
+	from campus.examinations.exam_fee import RATE
 
-	if flt(doc.fee_amount) > 0:
-		check_fee_invoice(doc.student, EXAM_HEAD, doc.company)
+	if flt(doc.fee_amount) <= 0:
+		label = frappe.get_meta(RATE).get_label(FEE_FIELDS[doc.application_type])
+		frappe.throw(_("Set the {0} on the Exam Fee Rate of {1} before submitting.").format(_(label), frappe.bold(doc.company)))
+	check_fee_invoice(doc.student, EXAM_HEAD, doc.company)
+
+
+@frappe.whitelist(methods=["POST"])
+def reraise_fee(application):
+	"""COE: queue the fee invoice again of a submitted application whose invoice job failed."""
+	frappe.only_for(MARKS_ROLES)
+	values = frappe.db.get_value(APPLICATION, application, ["docstatus", "fee_amount", "fee_invoice", "company"], as_dict=True, for_update=True)
+	check_company(frappe._dict(values, name=application))
+	if values.docstatus != 1 or flt(values.fee_amount) <= 0:
+		frappe.throw(_("{0} is not a submitted application with a fee.").format(frappe.bold(application)))
+	if values.fee_invoice:
+		frappe.throw(_("{0} already has its invoice {1}.").format(frappe.bold(application), values.fee_invoice))
+	frappe.enqueue(FEE_JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, application=application)
 
 
 def queue_fee(doc):
@@ -315,13 +394,21 @@ def validate_outcome(doc):
 		frappe.throw(_("{0} of {1} already has an outcome.").format(frappe.bold(doc.course), app.name))
 	set_revaluer(doc)
 	check_revaluer(doc)
-	row = next(r for r in published_result(doc.student, doc.exam_session).courses if r.course == doc.course)
+	row = next((r for r in current_result(doc.student, doc.exam_session).courses if r.course == doc.course), None)
+	if not row:
+		frappe.throw(_("{0} is not on the result of {1}.").format(frappe.bold(doc.course), frappe.bold(doc.exam_session)))
 	ese_max = student_limits(doc.student, offering_course(row.course_offering))["ese_max"]
 	if not 0 <= flt(doc.new_ese) <= flt(ese_max):
 		frappe.throw(_("The ESE on revaluation lies within 0-{0}.").format(flt(ese_max)))
 	doc.original_ese = current_ese(doc.student, doc.exam_session, doc.course, doc.name)
 	doc.ese_change = round(flt(doc.new_ese) - flt(doc.original_ese), 2)
 	doc.original_grade = row.grade
+
+
+def current_result(student, exam_session):
+	"""The pending version when one exists (an earlier outcome not yet ratified), else the published one."""
+	pending = frappe.db.get_value(RESULT, {"student": student, "exam_session": exam_session, "pending_ratification": 1})
+	return frappe.get_doc(RESULT, pending) if pending else published_result(student, exam_session)
 
 
 def set_revaluer(doc):
@@ -333,6 +420,8 @@ def set_revaluer(doc):
 		doc.revaluer = email and frappe.db.get_value("User", {"email": email})
 	if not doc.revaluer:
 		frappe.throw(_("Choose the revaluer: an Employee or External Member with a user."))
+	if doc.revaluer == frappe.session.user:
+		frappe.throw(_("The revaluer does not record their own outcome; the COE records it."))
 
 
 def check_revaluer(doc):

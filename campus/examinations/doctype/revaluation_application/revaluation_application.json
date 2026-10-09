@@ -139,7 +139,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 20:00:00.000000",
+ "modified": "2026-10-09 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Revaluation Application",
@@ -176,6 +176,10 @@
    "read": 1,
    "report": 1,
    "export": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1
   }
  ],
  "track_changes": 1,

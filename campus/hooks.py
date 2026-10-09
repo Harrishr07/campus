@@ -484,6 +484,9 @@ doc_events["Webhook"] = {"validate": f"{_qp}.refuse_confidential_webhook"}
 _valuation = "campus.examinations.valuation_access"
 permission_query_conditions["Dummy Number Map"] = f"{_valuation}.map_query"
 has_permission["Dummy Number Map"] = f"{_valuation}.map_has_permission"
+# P2-T20: a teacher reads only the draft revaluations of a course they teach (to justify them)
+permission_query_conditions["Revaluation Application"] = "campus.examinations.revaluation.permission_query"
+has_permission["Revaluation Application"] = "campus.examinations.revaluation.has_permission"
 for _dt in ("Valuation Allocation", "Valuation Entry"):
 	permission_query_conditions[_dt] = f"{_valuation}.examiner_query"
 	has_permission[_dt] = f"{_valuation}.examiner_has_permission"

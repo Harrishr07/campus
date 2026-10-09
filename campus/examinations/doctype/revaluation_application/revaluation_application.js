@@ -16,6 +16,13 @@ frappe.ui.form.on("Revaluation Application", {
 				);
 			});
 		}
+		if (frm.doc.docstatus === 1 && frm.doc.fee_amount > 0 && !frm.doc.fee_invoice) {
+			frm.add_custom_button(__("Raise Fee Again"), () =>
+				frappe
+					.call({ method: "campus.examinations.revaluation.reraise_fee", args: { application: frm.doc.name } })
+					.then(() => frm.reload_doc())
+			);
+		}
 		if (frm.doc.docstatus === 1 && frm.doc.application_type === "Photocopy" && !frm.doc.photocopy_issued_on) {
 			frm.add_custom_button(__("Issue Photocopy"), () =>
 				frappe

@@ -28,12 +28,14 @@ from campus.tests.finance_factories import ensure_fiscal_years, ensure_selling_s
 from campus.tests.test_exam_registration import with_customer
 from campus.tests.test_regulation import year_name
 from campus.tests.test_result_processing import APPROVER, RATIFICATION, ResultFixture
+from campus.tests.factories import make_company
 from campus.tests.test_results import COLLEGE, COE_USER, FACULTY, OTHER_FACULTY, make_instructor, make_login
 
 APPLICATION, OUTCOME = "Revaluation Application", "Revaluation Outcome"
 REVALUER = "exam-revaluer@example.com"
 FEES = {"photocopy_fee": 300, "revaluation_fee": 500, "review_fee": 700}
 WINDOW_DAYS = 10
+OTHER_COLLEGE = "Reval Other College"
 
 
 class RevaluationFixture(ResultFixture):
@@ -51,8 +53,8 @@ class RevaluationFixture(ResultFixture):
 		make_login(REVALUER, "Instructor")
 		cls.revaluer = make_instructor(REVALUER)
 		# EXM FA and EXM TL are taught by OTHER_FACULTY (the justifying teacher), EXM TH by FACULTY
-		for course in ("EXM FA", "EXM TL"):
-			offering = frappe.get_doc("Student Group", cls.offerings22[course])
+		for offering_name in (cls.offerings22["EXM FA"], cls.offerings22["EXM TL"], cls.pre_offering):  # and EXM PRE
+			offering = frappe.get_doc("Student Group", offering_name)
 			offering.append("instructors", {"instructor": cls.other_instructor})
 			offering.save()
 
@@ -76,10 +78,10 @@ class RevaluationFixture(ResultFixture):
 	def regulation(self, student):
 		return frappe.db.get_value("Student", student.name, "oc_regulation")
 
-	def apply(self, kind, courses, student=None, submit=True):
+	def apply(self, kind, courses, student=None, submit=True, session=None):
 		doc = frappe.get_doc(
 			{
-				"doctype": APPLICATION, "student": (student or self.s22).name, "exam_session": self.session.name,
+				"doctype": APPLICATION, "student": (student or self.s22).name, "exam_session": (session or self.session).name,
 				"application_type": kind, "courses": [{"course": c} for c in courses],
 			}
 		).insert()  # fmt: skip
@@ -103,15 +105,15 @@ class RevaluationFixture(ResultFixture):
 		finally:
 			frappe.set_user("Administrator")
 
-	def photocopy(self, courses):
-		doc = self.apply(revaluation.PHOTOCOPY, courses)
+	def photocopy(self, courses, session=None):
+		doc = self.apply(revaluation.PHOTOCOPY, courses, session=session)
 		self.pay(doc)
 		revaluation.issue_photocopy(doc.name)
 		return doc.reload()
 
-	def revaluation_paid(self, courses=("EXM FA",)):
-		self.photocopy(courses)
-		doc = self.apply(revaluation.REVALUATION, courses, submit=False)
+	def revaluation_paid(self, courses=("EXM FA",), session=None):
+		self.photocopy(courses, session)
+		doc = self.apply(revaluation.REVALUATION, courses, submit=False, session=session)
 		for course in courses:
 			self.justify(doc, course)
 		doc.reload().submit()
@@ -129,10 +131,10 @@ class RevaluationFixture(ResultFixture):
 			doc.submit()
 		return doc.reload()
 
-	def ratify(self):
+	def ratify(self, session=None):
 		"""Ratify the pending versions through the approval engine (the policy is ResultFixture's)."""
 		frappe.set_user(COE_USER)
-		doc = frappe.get_doc({"doctype": RATIFICATION, "exam_session": self.session.name, "reason": "Revaluation outcomes"}).insert()
+		doc = frappe.get_doc({"doctype": RATIFICATION, "exam_session": (session or self.session).name, "reason": "Revaluation outcomes"}).insert()
 		request = request_approval(RATIFICATION, doc.name)
 		frappe.set_user(APPROVER)
 		try:
@@ -329,6 +331,7 @@ class TestOutcome(RevaluationFixture):
 			self.outcome(review, "EXM FA", 45, submit=False)
 		outcome = self.outcome(review, "EXM FA", 45, user=FACULTY)  # 33.6 + 45 = 78.6 -> A
 		self.assertEqual((outcome.original_ese, outcome.ese_change), (40, 5))
+		self.assertEqual(outcome.original_grade, "A")  # the grade of the pending version the revaluation made, not U
 		row = next(c for c in frappe.get_doc("Student Result", outcome.result_version).courses if c.course == "EXM FA")
 		self.assertEqual((row.ese, row.total, row.grade), (45, 78.6, "A"))
 
@@ -340,6 +343,16 @@ class TestOutcome(RevaluationFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "teaches"):
 			self.outcome(reval, "EXM FA", 40, user=OTHER_FACULTY, submit=False)
 		self.assertEqual(self.outcome(reval, "EXM FA", 40, user=FACULTY).docstatus, 1)
+
+	def test_the_revaluer_does_not_record_their_own_outcome(self):
+		reval = self.revaluation_paid(["EXM FA"])
+		doc = frappe.get_doc(
+			{"doctype": OUTCOME, "application": reval.name, "course": "EXM FA", "examiner_type": "Internal",
+			"employee": frappe.db.get_value("Employee", {"user_id": REVALUER}), "new_ese": 40}
+		)  # fmt: skip
+		frappe.set_user(REVALUER)
+		with self.assertRaisesRegex(frappe.ValidationError, "own"):
+			doc.insert(ignore_permissions=True)
 
 	def test_the_outcome_is_bound_to_its_application(self):
 		reval = self.revaluation_paid(["EXM FA"])
@@ -393,3 +406,86 @@ class TestReports(RevaluationFixture):
 		self.assertEqual(point["value"], 1)
 		self.assertEqual(point["records"], [{"doctype": APPLICATION, "name": reval.name}])
 		self.assertEqual(data_point("evaluation_grievances", COLLEGE, year_name("2026"))["value"], 0)
+
+
+
+class TestLaterSessions(RevaluationFixture):
+	def test_a_ratified_revaluation_refreshes_the_later_sessions_results(self):
+		# EXM PRE (pre_session) 36 + 54 = 90 -> A+ 9; revalued to 60: 96 -> O 10. The later session's CGPA (with its
+		# own 73 grade-point credits over 9) moves from (73 + 36) / 13 = 8.38 to (73 + 40) / 13 = 8.69.
+		frappe.db.set_value("Exam Session", self.pre_session.name, {"status": "Published", "publish_at": add_days(now_datetime(), -1)})
+		later = frappe.db.get_value("Student Result", {"student": self.s22.name, "exam_session": self.session.name, "is_latest": 1})
+		reval = self.revaluation_paid(["EXM PRE"], session=self.pre_session)
+		self.outcome(reval, "EXM PRE", 60)
+		self.assertFalse(frappe.db.exists("Student Result", {"exam_session": self.session.name, "pending_ratification": 1}))
+		self.ratify(session=self.pre_session)
+		pending = frappe.get_doc("Student Result", {"student": self.s22.name, "exam_session": self.session.name, "pending_ratification": 1})
+		self.assertEqual((flt(pending.cgpa), pending.previous_version), (8.69, later))
+		self.assertIn("CGPA: 8.38 -> 8.69", pending.change_log)
+		self.assertEqual(frappe.db.get_value("Student Result", later, "is_latest"), 1)  # until its own ratification
+
+
+class TestInstructorAccess(RevaluationFixture):
+	def visible(self, user):
+		frappe.set_user(user)
+		try:
+			return frappe.get_list(APPLICATION, pluck="name")
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_a_teacher_of_the_course_opens_and_justifies_the_draft_and_no_one_else_sees_it(self):
+		self.photocopy(["EXM FA"])
+		draft = self.apply(revaluation.REVALUATION, ["EXM FA"], submit=False)
+		self.assertEqual(self.visible(OTHER_FACULTY), [draft.name])  # teaches EXM FA
+		self.assertTrue(frappe.has_permission(APPLICATION, "read", draft, user=OTHER_FACULTY))
+		self.assertFalse(frappe.has_permission(APPLICATION, "write", draft, user=OTHER_FACULTY))
+		self.assertEqual(self.visible(FACULTY), [])  # teaches EXM TH only
+		self.assertFalse(frappe.has_permission(APPLICATION, "read", draft, user=FACULTY))
+		self.justify(draft, "EXM FA")
+		draft.reload().submit()
+		self.assertEqual(self.visible(OTHER_FACULTY), [])  # drafts only
+		self.assertFalse(frappe.has_permission(APPLICATION, "read", draft.reload(), user=OTHER_FACULTY))
+
+	def test_a_non_teacher_learns_nothing_from_justify(self):
+		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"])  # submitted, and not a revaluation
+		with self.assertRaises(frappe.PermissionError):
+			self.justify(doc, "EXM FA", user=FACULTY)
+
+
+class TestFeeSafety(RevaluationFixture):
+	def test_a_blank_fee_rate_refuses_the_submit(self):
+		frappe.db.set_value("Exam Fee Rate", {"company": COLLEGE}, "photocopy_fee", 0)
+		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"], submit=False)
+		with self.assertRaisesRegex(frappe.ValidationError, "Photocopy Fee"):
+			doc.submit()
+
+	def test_the_coe_raises_a_missing_invoice_again(self):
+		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"])
+		with self.assertRaisesRegex(frappe.ValidationError, "already"):
+			revaluation.reraise_fee(doc.name)
+		frappe.db.set_value(APPLICATION, doc.name, "fee_invoice", None)  # as if the invoice job had failed
+		revaluation.reraise_fee(doc.name)
+		invoice = frappe.db.get_value(APPLICATION, doc.name, "fee_invoice")
+		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", invoice, "grand_total")), 300)
+		frappe.set_user(FACULTY)
+		with self.assertRaises(frappe.PermissionError):
+			revaluation.reraise_fee(doc.name)
+
+	def test_issue_photocopy_respects_the_coes_company_restriction(self):
+		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"])
+		self.pay(doc)
+		make_company(OTHER_COLLEGE, "RVOC")
+		frappe.get_doc({"doctype": "User Permission", "user": COE_USER, "allow": "Company", "for_value": OTHER_COLLEGE}).insert()
+		frappe.set_user(COE_USER)
+		with self.assertRaises(frappe.PermissionError):
+			revaluation.issue_photocopy(doc.name)
+
+	def test_a_failed_grade_sheet_job_is_logged_with_the_ratification(self):
+		from campus.examinations.doctype.result_ratification import result_ratification
+
+		before = frappe.db.count("Error Log")
+		with patch("campus.campus_platform.verification.issue", side_effect=frappe.ValidationError("render failed")):
+			result_ratification.issue_grade_sheet(self.v1, "RRAT-TEST")
+		self.assertEqual(frappe.db.count("Error Log"), before + 1)
+		log = frappe.get_all("Error Log", fields=["method", "error"], order_by="creation desc", limit=1)[0]
+		self.assertIn("RRAT-TEST", log.method + (log.error or ""))
