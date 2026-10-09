@@ -41,7 +41,7 @@ def campus_modules():
 class TestNavigation(CampusTestCase):
 	def test_areas_are_complete_and_agree(self):
 		sidebars = {s.name for s in campus_sidebars()}
-		self.assertEqual(len(sidebars), 11)
+		self.assertEqual(len(sidebars), 12)
 		self.assertEqual(sidebars, {w.name for w in campus_workspaces()})
 		self.assertEqual(sidebars, set(frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name")))
 		self.assertTrue(frappe.db.exists("Desktop Icon", {"name": APP_ICON, "icon_type": "App", "app": "campus"}))
