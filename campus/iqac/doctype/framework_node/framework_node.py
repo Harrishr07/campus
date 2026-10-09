@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from campus.iqac.formula import validate_formula
+from campus.iqac.formula import dependents, validate_formula
 from campus.iqac.framework import assert_editable
 
 PARENT_TYPE = {"Key Indicator": "Criterion", "Metric": "Key Indicator", "Sub-Metric": "Metric"}  # roots are not listed
@@ -23,6 +23,7 @@ class FrameworkNode(Document):
 
 	def on_trash(self):
 		assert_editable(self.framework)
+		self.check_not_used()
 
 	def validate_parent(self):
 		if not self.parent_node:
@@ -39,7 +40,14 @@ class FrameworkNode(Document):
 		if self.formula and self.node_type != "Metric":
 			frappe.throw(_("Only a Metric has a formula."))
 		if self.formula:
-			validate_formula(self.formula)
+			validate_formula(self.formula, self.framework, self.code, check_nodes=not self.flags.skip_node_references)
+		elif not self.is_new() and self.get_doc_before_save().formula:
+			self.check_not_used()
+
+	def check_not_used(self):
+		users = dependents(self.framework, self.code)
+		if users:
+			frappe.throw(_("Node {0} is used in the formula of {1}.").format(frappe.bold(self.code), ", ".join(users)))
 
 	def validate_answer(self):
 		if self.answer_type == "Choice" and not (self.choices or "").strip():

@@ -44,20 +44,20 @@ def refs(doctype, names):
 	return [{"doctype": doctype, "name": name} for name in names]
 
 
-@campus_metric("students_admitted")
+@campus_metric("students_admitted", "Admissions", "Students with a submitted Program Enrollment in the academic year")
 def students_admitted(company, academic_year, department=None):
 	filters = {"oc_company": company, "academic_year": academic_year, "docstatus": 1}
 	names = frappe.get_all("Program Enrollment", program_filter(filters, department), pluck="name", order_by="name")
 	return {"value": len(names), "records": refs("Program Enrollment", names)}
 
 
-@campus_metric("final_year_appeared")
+@campus_metric("final_year_appeared", "Examinations", "Final-year students who sat at least one course in the published final-year sessions")
 def final_year_appeared(company, academic_year, department=None):
 	names = sorted(appeared_results(company, academic_year, department))
 	return {"value": len(names), "records": refs("Student Result", names)}
 
 
-@campus_metric("final_year_passed")
+@campus_metric("final_year_passed", "Examinations", "Final-year students who appeared and passed every course")
 def final_year_passed(company, academic_year, department=None):
 	outcomes = appeared_results(company, academic_year, department)
 	names = sorted(name for name, results in outcomes.items() if set(results) == {"Pass"})
@@ -96,14 +96,14 @@ def scholarship_students(company, academic_year, scheme_type, department=None):
 	return {"value": len({r.student for r in rows}), "records": refs("Scholarship Application", sorted(r.name for r in rows))}
 
 
-@campus_metric("scholarship_govt_students")
-@campus_metric("scholarship_beneficiaries_govt")
+@campus_metric("scholarship_govt_students", "Campus Finance", "Distinct students with a sanctioned government scholarship (AQAR 5.1.1)")
+@campus_metric("scholarship_beneficiaries_govt", "Campus Finance", "Distinct students with a sanctioned government scholarship (AQAR 5.1.1)")
 def scholarship_govt_students(company, academic_year, department=None):
 	return scholarship_students(company, academic_year, "Government", department)
 
 
-@campus_metric("scholarship_inst_students")
-@campus_metric("scholarship_beneficiaries_institution")
+@campus_metric("scholarship_inst_students", "Campus Finance", "Distinct students with a sanctioned institutional scholarship (AQAR 5.1.2)")
+@campus_metric("scholarship_beneficiaries_institution", "Campus Finance", "Distinct students with a sanctioned institutional scholarship (AQAR 5.1.2)")
 def scholarship_inst_students(company, academic_year, department=None):
 	return scholarship_students(company, academic_year, "Institutional", department)
 
@@ -135,7 +135,7 @@ def counted_quotas():
 		if not q.is_supernumerary and q.counts_in_seat_matrix]  # fmt: skip
 
 
-@campus_metric("reserved_seats_filled")
+@campus_metric("reserved_seats_filled", "Admissions", "Seats filled in reserved categories")
 def reserved_seats_filled(company, academic_year, department=None):
 	filters = {
 		"oc_company": company, "academic_year": academic_year, "docstatus": 1,
@@ -145,7 +145,7 @@ def reserved_seats_filled(company, academic_year, department=None):
 	return {"value": len(names), "records": refs("Program Enrollment", names)}
 
 
-@campus_metric("seats_earmarked_reserved")
+@campus_metric("seats_earmarked_reserved", "Admissions", "Seats sanctioned for reserved categories")
 def seats_earmarked_reserved(company, academic_year, department=None):
 	matrices = frappe.get_all(
 		"Seat Matrix", program_filter({"company": company, "academic_year": academic_year}, department), pluck="name"
@@ -165,13 +165,13 @@ def year_students(company, academic_year, department=None):
 	return sorted(set(frappe.get_all("Program Enrollment", program_filter(filters, department), pluck="student")))
 
 
-@campus_metric("total_students")
+@campus_metric("total_students", "Admissions", "Distinct students with a submitted Program Enrollment in the year")
 def total_students(company, academic_year, department=None):
 	students = year_students(company, academic_year, department)
 	return {"value": len(students), "records": refs("Student", students)}
 
 
-@campus_metric("outgoing_students")
+@campus_metric("outgoing_students", "Student Services", "Students who left with a transfer certificate in the year, less cancelled admissions")
 def outgoing_students(company, academic_year, department=None):
 	start, end = frappe.db.get_value("Academic Year", academic_year, ["year_start_date", "year_end_date"])
 	leavers = set(frappe.get_all("Student", {"oc_company": company, "leaving_certificate_number": ["is", "set"],
@@ -182,7 +182,7 @@ def outgoing_students(company, academic_year, department=None):
 	return {"value": len(leavers), "records": refs("Student", sorted(leavers))}
 
 
-@campus_metric("programmes_offered")
+@campus_metric("programmes_offered", "Admissions", "Programs with a Seat Matrix in the year")
 def programmes_offered(company, academic_year, department=None):
 	rows = frappe.get_all(
 		"Seat Matrix", program_filter({"company": company, "academic_year": academic_year}, department), pluck="program"
@@ -191,14 +191,14 @@ def programmes_offered(company, academic_year, department=None):
 	return {"value": len(programs), "records": refs("Program", programs)}
 
 
-@campus_metric("courses_offered")
+@campus_metric("courses_offered", "Curriculum", "Courses with a course Student Group in the year")
 def courses_offered(company, academic_year, department=None):
 	filters = {"oc_company": company, "academic_year": academic_year, "group_based_on": "Course", "disabled": 0}
 	courses = sorted(set(frappe.get_all("Student Group", program_filter(filters, department), pluck="course")) - {None})
 	return {"value": len(courses), "records": refs("Course", courses)}
 
 
-@campus_metric("mentor_ratio")
+@campus_metric("mentor_ratio", "Student Services", "Students per active mentor (NAAC 2.3.3)")
 def mentor_ratio(company, academic_year, department=None):
 	students = year_students(company, academic_year, department)
 	assigned = frappe.get_all("Student", {"name": ["in", students or [""]], "oc_mentor": ["is", "set"]}, pluck="oc_mentor")
@@ -208,49 +208,49 @@ def mentor_ratio(company, academic_year, department=None):
 
 
 # P2-T05 faculty data points (NAAC 2.2.2, 2.4.1-2.4.3), computed by the Faculty module.
-@campus_metric("full_time_teachers")
+@campus_metric("full_time_teachers", "Faculty", "Full-time teachers in the year (NAAC 2.4.1)")
 def full_time_teachers(company, academic_year, department=None):
 	return faculty.full_time_teachers(company, academic_year, department)
 
 
-@campus_metric("sanctioned_posts")
+@campus_metric("sanctioned_posts", "Faculty", "Sanctioned teaching posts in the year")
 def sanctioned_posts(company, academic_year, department=None):
 	return faculty.sanctioned_posts(company, academic_year, department)
 
 
-@campus_metric("phd_teachers")
+@campus_metric("phd_teachers", "Faculty", "Teachers with a Ph.D. (NAAC 2.4.3)")
 def phd_teachers(company, academic_year, department=None):
 	return faculty.phd_teachers(company, academic_year, department)
 
 
-@campus_metric("teacher_experience_years")
+@campus_metric("teacher_experience_years", "Faculty", "Teaching experience of the full-time teachers in years (NAAC 2.4.2)")
 def teacher_experience_years(company, academic_year, department=None):
 	return faculty.teacher_experience_years(company, academic_year, department)
 
 
-@campus_metric("student_teacher_ratio")
+@campus_metric("student_teacher_ratio", "Faculty", "Students per full-time teacher (NAAC 2.2.2)")
 def student_teacher_ratio(company, academic_year, department=None):
 	return faculty.student_teacher_ratio(company, academic_year, department)
 
 
 # P2-T09 faculty development data points (NAAC 6.3.4 FDPs, 6.3.2 conference support).
-@campus_metric("fdp_teachers")
+@campus_metric("fdp_teachers", "Faculty", "Distinct teachers present at a Faculty Development Programme in the year (NAAC 6.3.4)")
 def fdp_teachers(company, academic_year, department=None):
 	return faculty.fdp_teachers(company, academic_year, department)
 
 
-@campus_metric("teachers_financially_supported")
+@campus_metric("teachers_financially_supported", "Faculty", "Teachers financially supported for conferences or memberships (NAAC 6.3.2)")
 def teachers_financially_supported(company, academic_year, department=None):
 	return faculty.teachers_financially_supported(company, academic_year, department)
 
 
-@campus_metric("syllabus_revised_programmes")
+@campus_metric("syllabus_revised_programmes", "Academic Governance", "Programmes whose syllabus was revised by an approved proposal (AQAR 1.1.2)")
 def syllabus_revised_programmes(company, academic_year, department=None):
 	programmes = governance.proposal_programmes(company, academic_year, "Syllabus Revision", department)
 	return {"value": len(programmes), "records": refs("Program", programmes)}
 
 
-@campus_metric("new_courses_introduced")
+@campus_metric("new_courses_introduced", "Academic Governance", "New courses introduced by approved proposals (AQAR 1.2.1)")
 def new_courses_introduced(company, academic_year, department=None):
 	courses = governance.proposal_courses(company, academic_year, "New Course", department)
 	return {"value": len(courses), "records": refs("Course", courses)}

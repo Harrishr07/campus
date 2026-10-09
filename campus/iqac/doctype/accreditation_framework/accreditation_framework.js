@@ -10,10 +10,12 @@ frappe.ui.form.on("Accreditation Framework", {
 			);
 		}
 		if (frm.doc.status === "Published") {
-			frm.add_custom_button(__("Retire"), () => {
-				frm.set_value("status", "Retired");
-				frm.save();
-			});
+			frm.add_custom_button(__("Retire"), () =>
+				frappe.confirm(__("A retired framework cannot be used for new cycles and cannot be reopened. Retire?"), () => {
+					frm.set_value("status", "Retired");
+					frm.save();
+				})
+			);
 		}
 		frm.add_custom_button(__("Clone to New Version"), () => clone_to_new_version(frm));
 	},

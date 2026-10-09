@@ -16,16 +16,19 @@ NODE_FIELDS = (
 SLOT_FIELDS = ("slot_name", "kind", "required")
 
 
-def status_of(framework):
-	"""Status of a framework; frameworks that predate the status field are Drafts."""
-	return frappe.db.get_value("Accreditation Framework", framework, "status") or "Draft"
+def status_of(framework, lock=False):
+	"""Status of a framework; frameworks that predate the status field are Drafts.
+
+	`lock` takes the row lock and reads the committed status, so a publish and a node edit cannot both win."""
+	return frappe.db.get_value("Accreditation Framework", framework, "status", for_update=lock) or "Draft"
 
 
 def assert_editable(framework):
-	if status_of(framework) != "Draft":
+	status = status_of(framework, lock=True)
+	if status != "Draft":
 		frappe.throw(
 			_("{0} is {1} and cannot be changed. Clone it to a new version to make changes.").format(
-				frappe.bold(framework), status_of(framework)
+				frappe.bold(framework), status
 			)
 		)
 
@@ -49,5 +52,7 @@ def clone(source, new_name, version):
 		values = {field: node.get(field) for field in NODE_FIELDS}
 		values["evidence_slots"] = [{field: slot.get(field) for field in SLOT_FIELDS} for slot in node.evidence_slots]
 		parent = node.parent_node and f"{new_name}-{codes[node.parent_node]}"
-		frappe.get_doc({"doctype": "Framework Node", "framework": new_name, "parent_node": parent, **values}).insert()
+		copy = frappe.get_doc({"doctype": "Framework Node", "framework": new_name, "parent_node": parent, **values})
+		copy.flags.skip_node_references = True  # a formula may use a node created later; the source tree was validated
+		copy.insert()
 	return new_name

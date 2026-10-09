@@ -15,6 +15,7 @@ class AccreditationFramework(Document):
 	def validate(self):
 		self.status = self.status or "Draft"
 		self.validate_dates()
+		self.validate_unique_version()
 		if not self.is_new():
 			self.validate_lock()
 		if self.status == "Published" and not frappe.db.exists("Framework Node", {"framework": self.name}):
@@ -24,8 +25,16 @@ class AccreditationFramework(Document):
 		if self.valid_from and self.valid_to and self.valid_to < self.valid_from:
 			frappe.throw(_("Valid To cannot be before Valid From."))
 
+	def validate_unique_version(self):
+		if not (self.framework_code and self.version):
+			return
+		table = frappe.qb.DocType("Accreditation Framework")
+		same = (table.framework_code == self.framework_code) & (table.version == self.version) & (table.name != self.name)
+		if frappe.qb.from_(table).select(table.name).where(same).limit(1).for_update().run():
+			frappe.throw(_("Version {0} of {1} already exists.").format(frappe.bold(self.version), frappe.bold(self.framework_code)))
+
 	def validate_lock(self):
-		before = status_of(self.name)
+		before = status_of(self.name, lock=True)
 		if before == "Draft":
 			return
 		retiring = before == "Published" and self.status == "Retired"
