@@ -44,8 +44,12 @@ class SelfAppraisalFixture(CampusTestCase):
 		seed_appraisal_review_policy()
 		self.hours = mock.patch(HOURS, return_value={self.faculty: 12, self.hod: 6})
 		self.hours.start()
+		# the cycle is one academic year; other tests' Academic Years may overlap it and split the annual caps
+		self.year = mock.patch("campus.faculty.self_appraisal.academic_year_of", return_value=lambda on_date: "2026-27")
+		self.year.start()
 
 	def tearDown(self):
+		self.year.stop()
 		self.hours.stop()
 		frappe.set_user("Administrator")
 		frappe.db.rollback(save_point="sa_test")

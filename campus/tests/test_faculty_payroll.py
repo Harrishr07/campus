@@ -44,19 +44,16 @@ class PayrollFixture(CampusTestCase):
 	def setUp(self):
 		super().setUp()
 		frappe.db.savepoint("payroll_test")
+		self.addCleanup(frappe.db.rollback, save_point="payroll_test")  # tearDown is skipped when setUp raises
 		self.company = demo.ENGINEERING
 		self.aided, self.self_financing = demo.employee_of("faculty_1"), demo.employee_of("faculty_2")
 		seed_salary_components()
 		seed_salary_structures(self.company)
 		self.make_holiday_list()
-		if not frappe.db.exists("Fiscal Year", {"year_start_date": "2026-04-01"}):
+		if not frappe.db.exists("Fiscal Year", {"year_start_date": ["<=", START], "year_end_date": [">=", END]}):
 			frappe.get_doc(
 				{"doctype": "Fiscal Year", "year": "Payroll Test 2026-27", "year_start_date": "2026-04-01", "year_end_date": "2027-03-31"}
 			).insert(ignore_permissions=True)
-
-	def tearDown(self):
-		frappe.db.rollback(save_point="payroll_test")
-		super().tearDown()
 
 	def submit_structures(self, company=None):
 		for mode in (AIDED, SELF_FINANCING):

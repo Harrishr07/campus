@@ -541,6 +541,8 @@ class TestPublish(TimetableFixture):
 
 	def test_regenerating_a_published_timetable_marks_it_changed(self):
 		doc = self.published()
+		# the solver may reproduce the same grid, so make the stored one differ (status untouched) before regenerating
+		frappe.db.set_value("Timetable Entry", doc.entries[0].name, "period", 99, update_modified=False)
 		generation.start_generation(doc.name, replace_existing=1)
 		self.assertEqual(frappe.db.get_value("Timetable", doc.name, "status"), "Changed since publish")
 
