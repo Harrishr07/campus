@@ -12,7 +12,10 @@ from campus.iqac.setup import sync_data_points
 from campus.tests.factories import make_company
 from campus.tests.utils import CampusTestCase
 
+REFUSALS = (SyntaxError, NameError, TypeError, ValueError, RecursionError, MemoryError)
 SCRATCH = "DP Scratch Framework"
+# Not yet registered, carried to the P2-T24 brief (register them and add to this set): days_exam_to_result,
+# evaluation_grievances, students_appeared, pass_percentage.
 PHASE_1_2_KEYS = {
 	"students_admitted", "final_year_appeared", "final_year_passed", "scholarship_govt_students",
 	"scholarship_inst_students", "reserved_seats_filled", "seats_earmarked_reserved", "total_students",
@@ -44,6 +47,16 @@ ESCAPES = [
 	"dir()",
 	"type(1)",
 	"compile('1', 'x', 'eval')",
+	"round(*(1, 2))",
+	"max(*students_admitted)",
+	"__builtins__",
+	"__builtins__['open']",
+	"f'{students_admitted}'",
+	"f'{9 ** 9}'",
+	"-" * 5000 + "1",
+	"(" * 300 + "1" + ")" * 300,
+	"1 + " * 5000 + "1",
+	"1" * 2000,
 	"'{0.__class__}'.format(1)",
 	"'a' * 10",
 	"students_admitted if open else 1",
@@ -119,12 +132,18 @@ class TestDataPointRegistrySync(CampusTestCase):
 class TestFormulaSandbox(ScratchCase):
 	def test_escapes_cannot_be_evaluated(self):
 		for formula in ESCAPES:
-			with self.subTest(formula=formula), self.assertRaises(Exception):
+			with self.subTest(formula=formula), self.assertRaises(REFUSALS):
 				evaluate(formula, {"students_admitted": 1})
 
 	def test_escapes_fail_validation_on_save(self):
 		make_scratch()
 		for formula in ESCAPES:
+			with self.subTest(formula=formula), self.assertRaises(frappe.ValidationError):
+				node("9.9.1", formula=formula).insert()
+
+	def test_bare_function_is_not_a_numeric_result(self):
+		make_scratch()
+		for formula in ("round", "max", "min + 1"):
 			with self.subTest(formula=formula), self.assertRaises(frappe.ValidationError):
 				node("9.9.1", formula=formula).insert()
 
@@ -203,6 +222,24 @@ class TestNodeReferences(ScratchCase):
 		self.assertEqual(frappe.db.get_value("Framework Node", f"{clone}-9.9.1", "formula"), "n_9_9_2 + 1")
 
 
+class TestSyncKeepsUsedDataPoints(ScratchCase):
+	def test_a_data_point_used_by_a_formula_is_kept_flagged_unregistered_not_deleted(self):
+		sync_data_points()
+		make_scratch()
+		node("9.9.1", formula="students_admitted * 2").insert()
+		frappe.get_doc(
+			{"doctype": "Data Point", "key": "zz_gone", "module": "IQAC", "description": "x", "registered": 1}
+		).insert(ignore_permissions=True)
+		frappe.db.set_value("Framework Node", f"{SCRATCH}-9.9.1", "formula", "students_admitted + zz_gone")
+		with patch("campus.iqac.setup.frappe.log_error"):
+			sync_data_points()
+		self.assertEqual(frappe.db.get_value("Data Point", "zz_gone", "registered"), 0)
+		self.assertEqual(frappe.db.get_value("Data Point", "students_admitted", "registered"), 1)
+		frappe.db.set_value("Framework Node", f"{SCRATCH}-9.9.1", "formula", "students_admitted")
+		sync_data_points()
+		self.assertFalse(frappe.db.exists("Data Point", "zz_gone"))
+
+
 class TestComputeSnapshot(ScratchCase):
 	@classmethod
 	def setUpClass(cls):
@@ -254,6 +291,16 @@ class TestComputeSnapshot(ScratchCase):
 			names = compute.compute_cycle(self.cycle.name)
 		self.assertEqual(sorted(names), [f"{self.cycle.name}-9.9.1", f"{self.cycle.name}-9.9.2"])
 		self.assertEqual(points.call_count, 2)  # total_students and full_time_teachers, once
+
+	def test_one_bad_node_does_not_abort_the_cycle(self):
+		frappe.db.set_value("Accreditation Framework", SCRATCH, "status", "Draft")
+		node("9.9.3", formula="students_admitted").insert()
+		frappe.db.set_value("Accreditation Framework", SCRATCH, "status", "Published")
+		frappe.db.set_value("Framework Node", f"{SCRATCH}-9.9.3", "formula", "not_a_point + 1")
+		with self.points(), patch("campus.iqac.compute.frappe.log_error") as log:
+			names = compute.compute_cycle(self.cycle.name)
+		self.assertEqual(sorted(names), [f"{self.cycle.name}-9.9.1", f"{self.cycle.name}-9.9.2"])
+		self.assertTrue(log.called)
 
 	def test_no_denominator_gives_zero_through_a_chain(self):
 		with self.points(teachers=0):

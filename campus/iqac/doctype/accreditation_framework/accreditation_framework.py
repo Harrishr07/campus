@@ -49,3 +49,7 @@ class AccreditationFramework(Document):
 	def on_trash(self):
 		if status_of(self.name) != "Draft":
 			frappe.throw(_("Only a Draft framework can be deleted."))
+
+
+def on_doctype_update():
+	frappe.db.add_unique("Accreditation Framework", ["framework_code", "version"], constraint_name="unique_code_version")

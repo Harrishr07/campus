@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 2,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -39,6 +39,17 @@
    "label": "Framework Node",
    "link_count": 0,
    "link_to": "Framework Node",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Data Point",
+   "link_count": 0,
+   "link_to": "Data Point",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -93,7 +104,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "IQAC",

@@ -5,6 +5,7 @@ import inspect
 import frappe
 
 from campus.iqac.aqar_seed import PLACEHOLDER, seed_nodes
+from campus.iqac.formula import referenced_keys
 from campus.iqac.registry import DESCRIPTIONS, REGISTRY, data_point_keys
 
 FRAMEWORK = "NAAC-AQAR-RAF2017"
@@ -33,10 +34,28 @@ def sync_data_points():
 			"function": f"{function.__module__}.{function.__name__}",
 		}
 		doc = frappe.get_doc("Data Point", key) if frappe.db.exists("Data Point", key) else frappe.new_doc("Data Point")
-		doc.update({"key": key, **values})
+		doc.update({"key": key, "registered": 1, **values})
 		doc.save(ignore_permissions=True)
+	used = formula_keys()
 	for stale in set(frappe.get_all("Data Point", pluck="name")) - keys:
-		frappe.delete_doc("Data Point", stale, ignore_permissions=True)
+		if stale in used:  # a formula still names it: keep the record, flagged, and say so
+			frappe.db.set_value("Data Point", stale, "registered", 0)
+			frappe.log_error(
+				title="Unregistered data point still used", message=f"Data point {stale} is used by a Framework Node formula but no longer registered."
+			)
+		else:
+			frappe.delete_doc("Data Point", stale, ignore_permissions=True)
+
+
+def formula_keys():
+	"""Every name used by a Framework Node formula."""
+	used = set()
+	for formula in frappe.get_all("Framework Node", {"formula": ["is", "set"]}, pluck="formula"):
+		try:
+			used.update(referenced_keys(formula))
+		except (SyntaxError, ValueError, RecursionError, MemoryError):
+			continue
+	return used
 
 
 def seed_framework():

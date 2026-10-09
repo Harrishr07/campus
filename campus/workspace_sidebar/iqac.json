@@ -52,6 +52,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Data Point",
+   "link_to": "Data Point",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "clipboard-list",
@@ -107,7 +118,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "IQAC",

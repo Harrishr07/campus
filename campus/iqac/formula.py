@@ -17,6 +17,7 @@ from frappe.utils.safe_exec import safe_eval
 from campus.iqac.registry import data_point_keys
 
 ENGINE_VERSION = "1"
+MAX_LENGTH = 1000  # characters; deeper nesting than this is no metric
 FUNCTIONS = {"round": round, "min": min, "max": max}
 ALLOWED_NODES = (
 	ast.Expression, ast.BinOp, ast.UnaryOp, ast.BoolOp, ast.Compare, ast.IfExp, ast.Call, ast.Name, ast.Constant,
@@ -32,7 +33,12 @@ def node_identifier(code):
 
 def parse(formula):
 	"""AST of `formula`; SyntaxError when it is not a plain expression of whitelisted constructs."""
-	tree = ast.parse(formula.strip(), mode="eval")
+	if len(formula) > MAX_LENGTH:
+		raise SyntaxError("Formula too long")
+	try:
+		tree = ast.parse(formula.strip(), mode="eval")
+	except (RecursionError, MemoryError, ValueError) as error:  # absurd nesting, null bytes
+		raise SyntaxError(type(error).__name__) from error
 	for item in ast.walk(tree):
 		if not isinstance(item, ALLOWED_NODES) or not allowed(item):
 			raise SyntaxError(f"Operation not allowed: {type(item).__name__}")
@@ -78,9 +84,11 @@ def validate_formula(formula, framework=None, code=None, check_nodes=True):
 	if check_nodes:
 		check_node_references(framework, code, keys, nodes)
 	try:
-		evaluate(formula, dict.fromkeys(keys, 1))
+		result = evaluate(formula, dict.fromkeys(keys, 1))
 	except Exception as error:
 		frappe.throw(_("The formula cannot be evaluated: {0}").format(str(error) or type(error).__name__))
+	if not isinstance(result, int | float):
+		frappe.throw(_("The formula must give a number."))
 
 
 def framework_nodes(framework, lock=True):
