@@ -59,7 +59,7 @@ def record(student, student_name, status, course_schedule, schedule):
 	if existing and existing.status == status:
 		return existing.name
 	if existing:
-		old = frappe.get_doc("Student Attendance", existing.name)
+		old = frappe.get_doc("Student Attendance", existing.name, for_update=True)
 		old.flags.ignore_permissions = True
 		old.cancel()
 	doc = frappe.get_doc(

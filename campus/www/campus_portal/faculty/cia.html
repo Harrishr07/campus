@@ -6,13 +6,15 @@
 <ul class="cp-list">
 	{% for s in sheets %}
 	<li><a href="?mark_sheet={{ s.name|urlencode }}">{{ s.course|e }} &middot; {{ s.course_offering|e }}</a><br>
-		{{ s.exam_session|e }} <span class="cp-badge">{{ _(s.session_status or "") }}</span></li>
+		{{ s.exam_session|e }} <span class="cp-badge">{{ _(s.session_status or "")|e }}</span></li>
 	{% endfor %}
 </ul>
 {% else %}
 <p><strong>{{ sheet.course|e }}</strong> &middot; {{ sheet.course_offering|e }} &middot; {{ sheet.exam_session|e }}
-	{% if sheet.lock_state %}<span class="cp-badge">{{ _(sheet.lock_state) }}</span>{% endif %}</p>
-{% if not sheet.editable %}<p class="cp-empty">{{ _("CIA marks are locked. Edits need an approved CIA Unlock Request.") }}</p>{% endif %}
+	{% if sheet.lock_state %}<span class="cp-badge">{{ _(sheet.lock_state)|e }}</span>{% endif %}</p>
+{% if sheet.published %}<p class="cp-empty">{{ _("The Exam Session is published: these marks are final.") }}</p>
+{% elif not sheet.editable %}<p class="cp-empty">{{ _("CIA marks are locked. Edits need an approved CIA Unlock Request.") }}</p>
+{% elif sheet.entry == "consolidated" %}<p class="cp-empty">{{ _("The CIA Schedule has no questions yet: CIA is shown as consolidated.") }}</p>{% endif %}
 <form class="cp-form" data-cia>
 	<input type="hidden" name="mark_sheet" value="{{ sheet.name|e }}">
 	<div class="cp-scroll">
@@ -26,17 +28,17 @@
 			{% for q in sheet.questions %}{% set m = s.marks[loop.index0] %}
 			<td><input type="number" min="0" max="{{ q.max_marks }}" step="0.5" inputmode="decimal" aria-label="{{ s.student|e }} {{ q.component|e }} {{ q.question|e }}"
 				data-student="{{ s.student|e }}" data-component="{{ q.component|e }}" data-question="{{ q.question|e }}"
-				value="{{ m.marks if m.marks is not none else '' }}" {% if not sheet.editable %}disabled{% endif %}>
+				value="{{ m.marks if m.marks is not none else '' }}" data-initial="{{ m.marks if m.marks is not none else '' }}" {% if not sheet.editable %}disabled{% endif %}>
 				<label><input type="checkbox" data-absent {% if m.absent %}checked{% endif %} {% if not sheet.editable %}disabled{% endif %}> {{ _("AB") }}</label></td>
 			{% endfor %}
-			<td>{% if sheet.questions %}{{ s.cia or 0 }}{% else %}
+			<td>{% if sheet.entry != "column" %}{{ s.cia or 0 }}{% else %}
 				<input type="number" min="0" step="0.5" inputmode="decimal" aria-label="{{ s.student|e }} {{ _('CIA') }}" data-student="{{ s.student|e }}" data-cia
 					value="{{ s.cia or 0 }}" {% if not sheet.editable %}disabled{% endif %}>{% endif %}</td></tr>
 		{% endfor %}
 		</tbody>
 	</table>
 	</div>
-	{% if sheet.editable %}<button class="cp-btn" type="submit">{{ _("Save CIA marks") }}</button>{% endif %}
+	{% if sheet.editable and sheet.entry != "consolidated" %}<button class="cp-btn" type="submit">{{ _("Save CIA marks") }}</button>{% endif %}
 	<p class="cp-message" role="alert"></p>
 </form>
 {% endif %}

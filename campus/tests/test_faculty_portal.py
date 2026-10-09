@@ -1,9 +1,9 @@
 """P2-T11 (M07, M06-08) API permission tests for the faculty pages of /campus-portal: my timetable, attendance for own
 or substituted periods (bulk present with exceptions, 60 students), CIA entry on the teacher's own Mark Sheet Entry
-under the T13 lock, course plan, own leave on HRMS and read-only mentees. Every action is refused to a student, to
+under the T13 lock (test_faculty_portal_cia), course plan, own leave on HRMS and read-only mentees. Every action is refused to a student, to
 another teacher's offering, and (substitutes) to any period but the substituted one.
 
-Fixtures: the T08 substitution fixture (T07 timetable published from Monday 2026-11-16) and the T13 CIA fixture.
+Fixtures: the T08 substitution fixture (T07 timetable published from Monday 2026-11-16).
 """
 
 import time
@@ -15,8 +15,6 @@ from frappe.website.serve import get_response_without_exception_handling
 
 from campus.faculty import portal
 from campus.tests import demo
-from campus.tests.test_cia import THEORY_PATTERN, CIAFixture
-from campus.tests.test_results import FACULTY, OTHER_FACULTY, STUDENT_22_USER
 from campus.tests.test_substitution import DEFAULT_COMPANY, FIRST, SECOND, SUB_USER, SubstitutionFixture, submit_leave
 from campus.tests.test_timetable import employee
 from campus.www.campus_portal.faculty import attendance as attendance_page
@@ -60,6 +58,17 @@ class FacultyPortalFixture(SubstitutionFixture):
 		finally:
 			frappe.set_user("Administrator")
 
+	def mark(self, user, schedule, absent):
+		"""Open the roll and post it, as the page does (the roll's version token goes back with the marks)."""
+		version = self.as_user(user, portal.attendance_roll, schedule)["version"]
+		return self.as_user(user, portal.mark_attendance, schedule, absent=absent, version=version)
+
+	def co_instruct(self, username, group):
+		instructor = frappe.db.get_value("Instructor", {"employee": employee(username)})
+		frappe.get_doc(
+			{"doctype": "Student Group Instructor", "parent": group, "parenttype": "Student Group", "parentfield": "instructors", "instructor": instructor}
+		).insert(ignore_permissions=True)  # fmt: skip
+
 
 class TestAttendance(FacultyPortalFixture):
 	def setUp(self):
@@ -71,7 +80,7 @@ class TestAttendance(FacultyPortalFixture):
 			self.enrol(period.student_group, self.students)
 
 	def test_a_teacher_marks_their_own_period_all_present_but_the_exceptions(self):
-		result = self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=frappe.as_json([self.students[1]]))
+		result = self.mark(TEACHER, self.own.name, frappe.as_json([self.students[1]]))
 		self.assertEqual(result, {"present": 2, "absent": 1})
 		self.assertEqual(
 			self.attendance(self.own.name),
@@ -79,10 +88,34 @@ class TestAttendance(FacultyPortalFixture):
 		)
 
 	def test_remarking_corrects_only_the_changed_students(self):
-		self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=[])
-		self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=[self.students[0]])
+		self.mark(TEACHER, self.own.name, [])
+		self.mark(TEACHER, self.own.name, [self.students[0]])
 		self.assertEqual(self.attendance(self.own.name)[self.students[0]], "Absent")
 		self.assertEqual(frappe.db.count("Student Attendance", {"course_schedule": self.own.name, "docstatus": 2}), 1)
+
+	def test_a_stale_roll_is_refused_and_the_newer_marks_stay(self):
+		self.co_instruct("faculty_2", self.own.student_group)  # both teachers may mark this period
+		stale = self.as_user(COLLEAGUE, portal.attendance_roll, self.own.name)["version"]
+		self.mark(TEACHER, self.own.name, [self.students[0]])
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.as_user(COLLEAGUE, portal.mark_attendance, self.own.name, absent=[], version=stale)
+		self.assertIn("reload", str(caught.exception).lower())
+		self.assertEqual(self.attendance(self.own.name)[self.students[0]], "Absent")
+
+	def test_a_post_without_the_roll_version_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=[], version="1:2020-01-01 00:00:00")
+		self.mark(TEACHER, self.own.name, [])
+		with self.assertRaises(frappe.ValidationError):
+			self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=[], version=None)
+
+	def test_an_offering_instructor_owns_its_periods_everywhere(self):
+		self.co_instruct("faculty_1", self.others.student_group)
+		date = frappe.db.get_value("Course Schedule", self.others.name, "schedule_date")
+		listed = self.as_user(TEACHER, portal.my_timetable, from_date=date, to_date=date)["periods"]
+		self.assertIn((self.others.name, "Own"), [(p["course_schedule"], p["grant"]) for p in listed])
+		self.assertEqual(self.as_user(TEACHER, portal.attendance_roll, self.others.name)["grant"], "Own")
+		self.assertIn(self.others.student_group, [row["offering"] for row in self.as_user(TEACHER, portal.course_plan)])
 
 	def test_another_teachers_period_is_refused_whatever_the_desk_roles(self):
 		self.assertIn("Academics User", frappe.get_roles(TEACHER))  # desk may mark any attendance; the portal may not
@@ -92,7 +125,7 @@ class TestAttendance(FacultyPortalFixture):
 		self.assertEqual(self.attendance(self.others.name), {})
 
 	def test_the_roll_shows_the_group_with_the_marked_status(self):
-		self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=[self.students[2]])
+		self.mark(TEACHER, self.own.name, [self.students[2]])
 		roll = self.as_user(TEACHER, portal.attendance_roll, self.own.name)
 		self.assertEqual(roll["grant"], "Own")
 		self.assertEqual([(s["student"], s["status"]) for s in roll["students"]], [(s, "Absent" if s == self.students[2] else "Present") for s in self.students])
@@ -100,13 +133,13 @@ class TestAttendance(FacultyPortalFixture):
 	def test_an_absentee_outside_the_group_is_refused(self):
 		outsider = frappe.get_all("Student", {"name": ["not in", self.students]}, pluck="name", limit=1)
 		with self.assertRaises(frappe.ValidationError):
-			self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=outsider)
+			self.mark(TEACHER, self.own.name, outsider)
 		self.assertEqual(self.attendance(self.own.name), {})
 
 	def test_a_student_is_refused_every_faculty_action(self):
 		calls = [
 			(portal.my_timetable, {}), (portal.attendance_roll, {"course_schedule": self.own.name}),
-			(portal.mark_attendance, {"course_schedule": self.own.name, "absent": []}), (portal.my_mark_sheets, {}),
+			(portal.mark_attendance, {"course_schedule": self.own.name, "absent": []}), 
 			(portal.course_plan, {}), (portal.my_leaves, {}), (portal.my_mentees, {}),
 			(portal.apply_leave, {"leave_type": "x", "from_date": FIRST, "to_date": FIRST}),
 		]  # fmt: skip
@@ -126,6 +159,7 @@ class TestAttendance(FacultyPortalFixture):
 		self.assertIn("&lt;script&gt;x&lt;/script&gt;", html)
 		self.assertNotIn("<script>x</script>", html)
 		self.assertEqual(html.count('name="absent"'), len(self.students))
+		self.assertIn(f'name="version" value="{portal.marks_version(self.own.name)}"', html)
 
 	def test_every_faculty_page_renders_for_a_teacher_and_turns_a_student_away(self):
 		pages = ("/campus-portal/faculty", *(f"/campus-portal/faculty/{p}" for p in ("attendance", "cia", "course-plan", "leave", "mentees")))
@@ -143,7 +177,7 @@ class TestAttendance(FacultyPortalFixture):
 			attendance_page.get_context(frappe._dict())
 
 	def test_every_write_accepts_post_only(self):
-		for method in (portal.mark_attendance, portal.save_cia_marks, portal.apply_leave):
+		for method in (portal.mark_attendance, portal.apply_leave):
 			self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[method], ["POST"])
 
 	def test_sixty_students_are_marked_in_one_request(self):
@@ -153,7 +187,7 @@ class TestAttendance(FacultyPortalFixture):
 		self.enrol(group, students)
 		absent = students[::7]  # 9 exceptions
 		started = time.monotonic()
-		result = self.as_user(TEACHER, portal.mark_attendance, self.own.name, absent=frappe.as_json(absent))
+		result = self.mark(TEACHER, self.own.name, frappe.as_json(absent))
 		self.assertLess(time.monotonic() - started, 60)
 		self.assertEqual(result, {"present": 51, "absent": 9})
 		marked = self.attendance(self.own.name)
@@ -175,14 +209,14 @@ class TestSubstitutePeriods(FacultyPortalFixture):
 
 	def test_the_substitute_marks_the_substituted_period(self):
 		self.assertEqual(self.as_user(SUB_USER, portal.attendance_roll, self.mine.course_schedule)["grant"], "Substitution")
-		self.as_user(SUB_USER, portal.mark_attendance, self.mine.course_schedule, absent=[])
+		self.mark(SUB_USER, self.mine.course_schedule, [])
 		self.assertEqual(self.attendance(self.mine.course_schedule), dict.fromkeys(self.students, "Present"))
 
 	def test_the_substitute_is_refused_any_other_period(self):
 		own_of_colleague = self.period_of("faculty_2")
 		for schedule in (self.other.course_schedule, own_of_colleague.name):  # only proposed; never theirs
 			with self.assertRaises(frappe.PermissionError):
-				self.as_user(SUB_USER, portal.mark_attendance, schedule, absent=[])
+				self.as_user(SUB_USER, portal.mark_attendance, schedule, absent=[], version=None)
 			self.assertEqual(self.attendance(schedule), {})
 
 	def test_the_timetable_lists_own_and_substituted_periods_only(self):
@@ -230,71 +264,6 @@ class TestCoursePlanMenteesAndLeave(FacultyPortalFixture):
 		leave_type = demo.get_or_insert("Leave Type", {"leave_type_name": "TT Substitution LWP"}, {"is_lwp": 1})
 		name = self.as_user(TEACHER, portal.apply_leave, leave_type, FIRST, FIRST, half_day=1)
 		self.assertEqual(frappe.db.get_value("Leave Application", name, ["half_day", "total_leave_days"]), (1, 0.5))
-
-
-class TestCIAEntry(CIAFixture):
-	def setUp(self):
-		super().setUp()
-		frappe.db.savepoint("faculty_portal_cia")
-		self.offering = self.offerings22["EXM TH"]  # FACULTY instructs it; OTHER_FACULTY nothing
-		self.schedule(self.offering, THEORY_PATTERN)
-		self.sheet_name = self.sheet(self.offering).name
-
-	def tearDown(self):
-		frappe.set_user("Administrator")
-		frappe.db.rollback(save_point="faculty_portal_cia")
-		super().tearDown()
-
-	def as_user(self, user, fn, *args, **kwargs):
-		frappe.set_user(user)
-		try:
-			return fn(*args, **kwargs)
-		finally:
-			frappe.set_user("Administrator")
-
-	def payload(self, value):
-		return [{"student": self.s22.name, "component": c, "question": q, "marks": value, "absent": 0} for c, q, *_tags in THEORY_PATTERN]
-
-	def test_the_teacher_enters_question_marks_and_cia_consolidates(self):
-		self.as_user(FACULTY, portal.save_cia_marks, self.sheet_name, frappe.as_json(self.payload(20)))
-		sheet = self.sheet(self.offering)
-		self.assertEqual({r.marks for r in sheet.cia_marks if r.student == self.s22.name}, {20})
-		view = self.as_user(FACULTY, portal.cia_sheet, self.sheet_name)
-		self.assertEqual((view["lock_state"], view["editable"]), ("Open", True))
-		row = next(s for s in view["students"] if s["student"] == self.s22.name)
-		self.assertEqual(row["cia"], next(r.cia for r in sheet.marks if r.student == self.s22.name))
-		self.assertGreater(row["cia"], 0)
-
-	def test_another_teacher_or_a_student_is_refused(self):
-		for user in (OTHER_FACULTY, STUDENT_22_USER):
-			for call, args in ((portal.save_cia_marks, (self.sheet_name, self.payload(5))), (portal.cia_sheet, (self.sheet_name,))):
-				with self.assertRaises(frappe.PermissionError, msg=user):
-					self.as_user(user, call, *args)
-		self.assertFalse(any(r.marks for r in self.sheet(self.offering).cia_marks))
-
-	def test_a_sheet_of_an_offering_the_teacher_does_not_instruct_is_refused(self):
-		other = self.sheet(self.offerings22["EXM LB"]).name
-		self.assertNotIn(other, [s["name"] for s in self.as_user(FACULTY, portal.my_mark_sheets)])
-		with self.assertRaises(frappe.PermissionError):
-			self.as_user(FACULTY, portal.save_cia_marks, other, [])
-
-	def test_the_lock_is_respected(self):
-		self.as_user(FACULTY, portal.save_cia_marks, self.sheet_name, self.payload(10))
-		self.pass_deadline(frappe.get_doc("CIA Schedule", {"course_offering": self.offering}))
-		self.assertFalse(self.as_user(FACULTY, portal.cia_sheet, self.sheet_name)["editable"])
-		with self.assertRaises(frappe.ValidationError) as caught:
-			self.as_user(FACULTY, portal.save_cia_marks, self.sheet_name, self.payload(12))
-		self.assertIn("locked", str(caught.exception).lower())
-		self.assertEqual({r.marks for r in self.sheet(self.offering).cia_marks if r.student == self.s22.name}, {10})
-
-	def test_unknown_rows_are_refused(self):
-		with self.assertRaises(frappe.ValidationError):
-			self.as_user(FACULTY, portal.save_cia_marks, self.sheet_name, [{"student": self.s22.name, "component": "Nope", "question": "Q9", "marks": 1}])
-
-	def test_my_mark_sheets_lists_own_offerings(self):
-		self.assertEqual([s["name"] for s in self.as_user(FACULTY, portal.my_mark_sheets)], [self.sheet_name])
-		with self.assertRaises(frappe.PermissionError):
-			self.as_user(STUDENT_22_USER, portal.my_mark_sheets)
 
 
 def make_bare_student(n):

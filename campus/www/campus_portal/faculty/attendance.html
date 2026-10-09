@@ -16,13 +16,14 @@
 	{% if roll.grant == "Substitution" %}<span class="cp-badge">{{ _("Substitution") }}</span>{% endif %}</p>
 <form class="cp-form cp-attendance" data-attendance>
 	<input type="hidden" name="course_schedule" value="{{ p.course_schedule|e }}">
+	<input type="hidden" name="version" value="{{ roll.version|e }}">
 	<p>{{ _("Everyone is present. Tick only the absentees.") }}
 		<span class="cp-badge" data-count data-label-present="{{ _('Present')|e }}" data-label-absent="{{ _('Absent')|e }}"></span></p>
 	<ul class="cp-list">
 		{% for s in roll.students %}
 		<li><label class="cp-check"><input type="checkbox" name="absent" value="{{ s.student|e }}" {% if s.status == "Absent" %}checked{% endif %}>
 			<span>{{ s.roll or "" }} {{ s.student_name|e }} <small>{{ s.student|e }}</small></span>
-			{% if s.status %}<small class="cp-badge">{{ _(s.status) }}</small>{% endif %}</label></li>
+			{% if s.status %}<small class="cp-badge">{{ _(s.status)|e }}</small>{% endif %}</label></li>
 		{% endfor %}
 	</ul>
 	<button class="cp-btn" type="submit">{{ _("Save attendance") }}</button>

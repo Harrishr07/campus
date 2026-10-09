@@ -3,22 +3,20 @@ periods, CIA entry, course plan, own leave and mentees.
 
 The caller is the session user's active Employee, never an id from the request. A period is the teacher's own when
 its Course Schedule names their Instructor or they instruct its Student Group; a substitute gets exactly the period
-of their Confirmed Substitution. CIA entry is for instructors of the sheet's offering (the T13 rule) and saves the
-Mark Sheet Entry, whose controller applies the CIA lock. Desk roles such as Academics User widen nothing here.
+of their Confirmed Substitution. CIA entry is in campus.faculty.portal_cia. Desk roles such as Academics User widen nothing here.
 """
 
 from urllib.parse import quote
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, cint, date_diff, flt, getdate, today
+from frappe.utils import add_days, cint, date_diff, getdate, today
 
-from campus.examinations.api import cia_lock_state, instructed_offerings, instructor_users, mentees_of
+from campus.examinations.api import instructed_offerings, mentees_of
 from campus.faculty import substitute_attendance
 
 OWN, SUBSTITUTION = "Own", "Substitution"
 TIMETABLE_DAYS, MAX_TIMETABLE_DAYS = 7, 31
-SHEET, CIA_SCHEDULE = "Mark Sheet Entry", "CIA Schedule"
 
 
 def page_context(context, active):
@@ -59,7 +57,7 @@ def my_timetable(from_date=None, to_date=None):
 	if end < start or date_diff(end, start) >= MAX_TIMETABLE_DAYS:
 		frappe.throw(_("Choose a range of up to {0} days.").format(MAX_TIMETABLE_DAYS))
 	dates = ["between", [start, end]]
-	own = frappe.get_all("Course Schedule", {"instructor": ["in", instructors_of(employee) or [""]], "schedule_date": dates}, pluck="name")
+	own = own_schedules(employee, {"schedule_date": dates})
 	covered = frappe.get_all(
 		"Substitution", {"substitute_user": frappe.session.user, "status": substitute_attendance.LIVE_GRANT, "schedule_date": dates}, pluck="course_schedule"
 	)
@@ -86,11 +84,23 @@ def instructors_of(employee):
 	return frappe.get_all("Instructor", {"employee": employee}, pluck="name")
 
 
+def listed_offerings():
+	"""Student Groups naming the caller as an instructor (the T13 rule)."""
+	return [o for o in instructed_offerings(frappe.session.user) if o]
+
+
+def own_schedules(employee, filters=None, pluck="name"):
+	"""The caller's own periods, one definition for the timetable, attendance and course plan: the Course Schedule
+	names their Instructor, or they instruct its Student Group."""
+	return frappe.get_all(
+		"Course Schedule", filters or {}, pluck=pluck, distinct=True,
+		or_filters={"instructor": ["in", instructors_of(employee) or [""]], "student_group": ["in", listed_offerings() or [""]]},
+	)  # fmt: skip
+
+
 def own_offerings(employee):
 	"""Student Groups the caller instructs, or teaches a scheduled period of."""
-	listed = {o for o in instructed_offerings(frappe.session.user) if o}
-	taught = frappe.get_all("Course Schedule", {"instructor": ["in", instructors_of(employee) or [""]]}, pluck="student_group", distinct=True)
-	return sorted(listed | set(taught))
+	return sorted(set(listed_offerings()) | set(own_schedules(employee, pluck="student_group")))
 
 
 # ---- attendance -------------------------------------------------------------------------------
@@ -98,10 +108,9 @@ def own_offerings(employee):
 
 def period_grant(course_schedule, employee):
 	"""Own or Substitution when the caller may mark this period; PermissionError otherwise."""
-	schedule = frappe.db.get_value("Course Schedule", course_schedule, ["instructor", "student_group"], as_dict=True)
-	if schedule and (schedule.instructor in instructors_of(employee) or schedule.student_group in instructed_offerings(frappe.session.user)):
+	if own_schedules(employee, {"name": course_schedule}):
 		return OWN
-	if schedule and substitute_attendance.granting_substitution(frappe.session.user, course_schedule):
+	if substitute_attendance.granting_substitution(frappe.session.user, course_schedule):
 		return SUBSTITUTION
 	frappe.throw(_("This period is neither yours nor substituted to you."), frappe.PermissionError)
 
@@ -118,13 +127,17 @@ def attendance_roll(course_schedule):
 		{"student": s.student, "student_name": s.student_name, "roll": s.group_roll_number, "status": marked.get(s.student)}
 		for s in roll(schedule.student_group)
 	]
-	return {"period": period_row(schedule, grant), "grant": grant, "students": students}
+	return {"period": period_row(schedule, grant), "grant": grant, "students": students, "version": marks_version(course_schedule)}
 
 
 @frappe.whitelist(methods=["POST"])
-def mark_attendance(course_schedule, absent=None):
-	"""Mark the period: the listed students Absent, every other active student of the group Present."""
+def mark_attendance(course_schedule, absent=None, version=None):
+	"""Mark the period: the listed students Absent, every other active student of the group Present. `version` is the
+	roll's token: marks saved by someone else since the roll was opened refuse the post instead of being overwritten."""
 	period_grant(course_schedule, require_faculty())
+	frappe.db.get_value("Course Schedule", course_schedule, "name", for_update=True)  # mark_period holds the same lock
+	if not version or version != marks_version(course_schedule, for_update=True):
+		frappe.throw(_("The attendance of this period changed since you opened it. Please reload the page and mark again."))
 	absent = substitute_attendance.as_list(absent)
 	group = frappe.db.get_value("Course Schedule", course_schedule, "student_group")
 	present = list(dict.fromkeys(s.student for s in roll(group) if s.student not in absent))
@@ -132,107 +145,21 @@ def mark_attendance(course_schedule, absent=None):
 	return {"present": len(present), "absent": len(absent)}
 
 
+def marks_version(course_schedule, for_update=False):
+	"""Count and last change of the period's submitted attendance; a locking read after the period lock."""
+	count, modified = frappe.db.sql(
+		f"""select count(*), max(modified) from `tabStudent Attendance`
+		where course_schedule = %s and docstatus = 1{" for update" if for_update else ""}""",
+		course_schedule,
+	)[0]
+	return f"{count}:{modified or ''}"
+
+
 def roll(student_group):
 	return frappe.get_all(
 		"Student Group Student", {"parent": student_group, "parenttype": "Student Group", "active": 1},
 		["student", "student_name", "group_roll_number"], order_by="group_roll_number, student",
 	)  # fmt: skip
-
-
-# ---- CIA (M06-08) -----------------------------------------------------------------------------
-
-
-@frappe.whitelist()
-def my_mark_sheets():
-	"""Mark Sheet Entries of the offerings the caller instructs."""
-	require_faculty()
-	offerings = [o for o in instructed_offerings(frappe.session.user) if o]
-	sheets = frappe.get_all(
-		SHEET, {"course_offering": ["in", offerings or [""]]}, ["name", "exam_session", "course_offering", "course"], order_by="exam_session, course_offering"
-	)
-	for sheet in sheets:
-		sheet.session_status = frappe.db.get_value("Exam Session", sheet.exam_session, "status")
-	return sheets
-
-
-def own_sheet(mark_sheet, ptype):
-	require_faculty()
-	offering = frappe.db.get_value(SHEET, mark_sheet, "course_offering")
-	if not offering or frappe.session.user not in instructor_users(offering):
-		frappe.throw(_("You do not instruct this offering."), frappe.PermissionError)
-	doc = frappe.get_doc(SHEET, mark_sheet)
-	doc.check_permission(ptype)
-	return doc
-
-
-@frappe.whitelist()
-def cia_sheet(mark_sheet):
-	"""The sheet's students with their CIA question marks (or CIA column), the lock state and whether it is editable."""
-	doc = own_sheet(mark_sheet, "read")
-	schedule = frappe.db.get_value(CIA_SCHEDULE, {"course_offering": doc.course_offering})
-	lock_state = cia_lock_state(schedule) if schedule else None
-	published = frappe.db.get_value("Exam Session", doc.exam_session, "status") == "Published"
-	questions = cia_questions(schedule)
-	cells = {(r.student, r.component, r.question): r for r in doc.get("cia_marks", [])}
-	students = []
-	for row in doc.marks:
-		marks = [cells.get((row.student, q.component, q.question)) for q in questions]
-		students.append(
-			{
-				"student": row.student, "student_name": row.student_name, "cia": row.cia, "cia_attendance": row.cia_attendance,
-				"marks": [{"marks": m.marks if m else None, "absent": m.absent if m else 0} for m in marks],
-			}
-		)  # fmt: skip
-	return {
-		"name": doc.name, "exam_session": doc.exam_session, "course_offering": doc.course_offering, "course": doc.course,
-		"cia_schedule": schedule, "lock_state": lock_state, "editable": not published and lock_state != "Locked",
-		"questions": questions, "students": students,
-	}  # fmt: skip
-
-
-def cia_questions(schedule):
-	if not schedule:
-		return []
-	return frappe.get_all(
-		"CIA Schedule Question", {"parent": schedule, "parenttype": CIA_SCHEDULE}, ["component", "question", "max_marks"], order_by="idx"
-	)
-
-
-@frappe.whitelist(methods=["POST"])
-def save_cia_marks(mark_sheet, marks):
-	"""Save CIA marks on the caller's own sheet: rows of {student, component, question, marks, absent} under a CIA
-	Schedule, else {student, cia}. The Mark Sheet Entry controller checks ranges and refuses edits once locked."""
-	doc = own_sheet(mark_sheet, "write")
-	rows = frappe.parse_json(marks) if isinstance(marks, str) else marks
-	if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
-		frappe.throw(_("Give the marks as a list of rows."))
-	schedule = frappe.db.get_value(CIA_SCHEDULE, {"course_offering": doc.course_offering})
-	(apply_question_marks if schedule else apply_cia_column)(doc, rows, schedule)
-	doc.save()
-	return {row.student: row.cia for row in doc.marks}
-
-
-def apply_question_marks(doc, rows, schedule):
-	students = {r.student for r in doc.marks}
-	questions = {(q.component, q.question) for q in cia_questions(schedule)}
-	cells = {(r.student, r.component, r.question): r for r in doc.get("cia_marks", [])}
-	for row in rows:
-		key = (row.get("student"), row.get("component"), row.get("question"))
-		if key[0] not in students or key[1:] not in questions:
-			frappe.throw(_("No CIA question {1} {2} for {0} on this sheet.").format(*key))
-		values = {"marks": flt(row.get("marks")), "absent": cint(row.get("absent"))}
-		if key in cells:
-			cells[key].update(values)
-		else:  # the controller's sync adds the CO / Bloom tags
-			doc.append("cia_marks", {"student": key[0], "component": key[1], "question": key[2], **values})
-
-
-def apply_cia_column(doc, rows, _schedule):
-	by_student = {r.student: r for r in doc.marks}
-	for row in rows:
-		if row.get("student") not in by_student:
-			frappe.throw(_("{0} is not on this sheet.").format(row.get("student")))
-		by_student[row["student"]].cia = flt(row.get("cia"))
 
 
 # ---- course plan, mentees, leave --------------------------------------------------------------

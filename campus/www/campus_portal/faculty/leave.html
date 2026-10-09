@@ -19,7 +19,7 @@
 {% if not leaves %}<p class="cp-empty">{{ _("No leave applications.") }}</p>{% endif %}
 <ul class="cp-list">
 	{% for l in leaves %}
-	<li><strong>{{ l.leave_type|e }}</strong> <span class="cp-badge">{{ _(l.status) }}</span><br>
+	<li><strong>{{ l.leave_type|e }}</strong> <span class="cp-badge">{{ _(l.status)|e }}</span><br>
 		{{ frappe.utils.formatdate(l.from_date) }} - {{ frappe.utils.formatdate(l.to_date) }} ({{ l.total_leave_days }})</li>
 	{% endfor %}
 </ul>
