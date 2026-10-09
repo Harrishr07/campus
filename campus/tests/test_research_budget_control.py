@@ -5,12 +5,14 @@ a head of the sanction whose account they post to. Revenue heads are controlled 
 capital heads by campus under a lock on the sanction, Stop or Warn per the scheme. A submitted Re-appropriation
 Request moves an amount between heads for a fiscal year: the Budgets follow and the sanction logs it."""
 
+import json
 from unittest.mock import patch
 
 import frappe
 from erpnext.accounts.doctype.budget.budget import BudgetError
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_invoice
+from erpnext.controllers.accounts_controller import update_child_qty_rate
 from frappe.utils import add_days, getdate, today
 
 from campus.campus_finance.fee_heads import ensure_sac_code
@@ -247,6 +249,55 @@ class TestBudgetControl(SanctionFixtures):
 			self.journal(sanction, self.equipment_account, 150000, self.equipment).submit()
 		self.journal(sanction, self.equipment_account, 100000, self.equipment).submit()
 
+	def test_cancelling_a_capital_credit_is_checked(self):
+		sanction = self.submitted_sanction()
+		self.journal(sanction, self.equipment_account, 500000, self.equipment).submit()
+		credit = self.journal(sanction, self.equipment_account, -100000, self.equipment)  # e.g. a supplier credit
+		credit.submit()
+		self.journal(sanction, self.equipment_account, 100000, self.equipment).submit()  # the head is full again
+		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
+			credit.reload().cancel()  # would bring spending back to 600000
+		self.assertEqual(frappe.db.get_value("Journal Entry", credit.name, "docstatus"), 1)
+
+	def test_cancelling_a_capital_debit_note_is_checked(self):
+		from erpnext.controllers.sales_and_purchase_return import make_return_doc
+
+		sanction = self.submitted_sanction()
+		invoice = self.invoice(sanction, [(self.equipment_account, 500000, self.equipment)])
+		invoice.submit()
+		debit_note = make_return_doc("Purchase Invoice", invoice.name)
+		debit_note.items[0].qty, debit_note.items[0].rate = -1, 500000
+		debit_note.insert()
+		debit_note.submit()
+		self.journal(sanction, self.equipment_account, 500000, self.equipment).submit()
+		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
+			debit_note.reload().cancel()
+
+	def update_order_items(self, order, rate, head=None):
+		row = order.items[0]
+		items = [{"docname": row.name, "item_code": row.item_code, "qty": 1, "rate": rate, "uom": row.uom,
+			"conversion_factor": row.conversion_factor, "schedule_date": str(row.schedule_date)}]  # fmt: skip
+		update_child_qty_rate("Purchase Order", json.dumps(items), order.name)
+
+	def test_updating_order_items_is_checked_against_the_capital_limit(self):
+		sanction = self.submitted_sanction()
+		order = self.order(sanction, [(self.equipment_account, 400000, self.equipment)])
+		order.submit()
+		self.update_order_items(order, 450000)  # the order itself is counted once
+		self.assertEqual(frappe.db.get_value("Purchase Order Item", order.items[0].name, "amount"), 450000)
+		frappe.db.savepoint("update_items")
+		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
+			self.update_order_items(order, 600000)
+		frappe.db.rollback(save_point="update_items")
+
+	def test_head_rules_hold_on_updated_order_items(self):
+		sanction = self.submitted_sanction()
+		order = self.order(sanction, [(self.consumables_account, 1000, self.consumables)])
+		order.submit()
+		frappe.db.set_value("Purchase Order Item", order.items[0].name, BUDGET_HEAD_FIELD, self.equipment)  # a stale tag
+		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
+			self.update_order_items(order.reload(), 900)
+
 	def test_capital_spend_is_limited_to_the_amount_sanctioned_to_date(self):
 		sanction = self.submitted_sanction(
 			heads=[(self.equipment, self.year1.name, 300000), (self.equipment, self.year2.name, 200000)],
@@ -328,6 +379,30 @@ class TestBudgetControl(SanctionFixtures):
 			self.reappropriation(sanction, self.travel, self.consumables, 100, agency_approval_letter=None)
 		with self.assertRaisesRegex(frappe.ValidationError, "submitted"):
 			self.reappropriation(self.sanction(), self.travel, self.consumables, 100)
+
+	def test_reappropriation_reads_budgets_and_heads_with_locking_reads(self):
+		sanction = self.submitted_sanction()
+		request = self.reappropriation(sanction, self.consumables, self.travel, 20000)
+		real, queries = frappe.db.sql, []
+
+		def spy(query, *args, **kwargs):
+			queries.append(str(query))
+			return real(query, *args, **kwargs)
+
+		with patch.object(frappe.db, "sql", side_effect=spy):
+			request.submit()
+		def locking(q):
+			return "for update" in q.lower()
+
+		start = next(i for i, q in enumerate(queries) if "from `tabsanction`" in q.lower() and locking(q))
+		after_lock = queries[start:]
+		# campus's own Budget reads (ERPNext's Budget controller has plain reads of its own, e.g. its duplicate check)
+		budget_reads = [q for q in after_lock if "from `tabbudget`" in q.lower() and ("`cost_center`" in q or "`name` = %s" in q)]
+		self.assertTrue(budget_reads)
+		self.assertEqual([q for q in budget_reads if not locking(q)], [], "Budget reads after the sanction lock are locking")
+		head_reads = [q for q in after_lock if q.lstrip().lower().startswith("select") and "`tabsanction head`" in q.lower()]
+		self.assertTrue(head_reads)
+		self.assertEqual([q for q in head_reads if not locking(q)], [], "Sanction Head reads after the lock are locking")
 
 	def test_cancelling_a_reappropriation_restores_the_limits(self):
 		sanction = self.submitted_sanction()

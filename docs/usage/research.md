@@ -69,7 +69,10 @@ Limits follow the scheme's **Budget Action** (Stop or Warn):
 - **Capital heads**: these have no ERPNext Budget, so Campus checks them when a Purchase Order, Purchase Invoice or
   Journal Entry is submitted, under a lock on the sanction. A head's spending up to the end of each fiscal year
   can't pass what was sanctioned for it up to that year, or its total. Spending is the submitted invoice lines,
-  the journal rows and the unbilled part of open orders. An order and its invoice count once.
+  the journal rows and the unbilled part of open orders. An order and its invoice count once. Amounts are net of
+  taxes: non-recoverable GST that ERPNext capitalises into the asset is not counted against the head.
+- The capital check also runs when a submitted order's items are updated (Update Items), and when you cancel a
+  credit to a capital head (a debit note, or a journal crediting it), because that cancel gives the spending back.
 
 **Extend** on a sanction also carries the Budgets into the revised end date's fiscal year. Nothing new is
 sanctioned for that year, so only the unspent balance can be spent there.

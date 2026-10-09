@@ -8,10 +8,12 @@ period. A head can't be named on a line outside a sanction. Journal Entry rows a
 
 Revenue heads are controlled by the sanction's ERPNext Budgets (grant_setup / budget_sync). A revenue line is refused
 in a year no Budget covers. Capital heads have no ERPNext Budget (ERPNext budgets only income and expense), so their
-limits are enforced here when a Purchase Order, Purchase Invoice or Journal Entry is submitted, under a lock on the
+limits are enforced here when a Purchase Order, Purchase Invoice or Journal Entry is submitted, when a submitted order's
+items are updated and when a credit to the head (a debit note, a crediting journal) is cancelled, under a lock on the
 sanction. A capital head's spending up to the end of each fiscal year can't pass what was sanctioned for it up to that
 year, nor its total. Spending is the submitted invoice lines and journal rows tagged to the head, plus the unbilled
-part of its open Purchase Orders. The scheme's Budget Action decides Stop or Warn."""
+part of its open Purchase Orders, all net of taxes (non-recoverable tax capitalised on an asset is not counted). The
+scheme's Budget Action decides Stop or Warn."""
 
 import frappe
 from frappe import _
@@ -162,22 +164,39 @@ def scheme_head_of_item_group(scheme, item_group):
 	)
 
 
-# capital head limits (before_submit of Purchase Order, Purchase Invoice, Journal Entry)
+# capital head limits: before_submit of Purchase Order, Purchase Invoice and Journal Entry, and a submitted Purchase
+# Order's Update Items (before_update_after_submit). The document's own submitted rows are left out of the spending
+# read and counted from the document, so an updated order counts once.
 def check_capital_limits(doc, method=None):
 	for (sanction, head), lines in sorted(capital_lines(doc).items()):
 		if flt(sum(amount for _date, amount in lines), 2) > 0:
-			check_head_limit(sanction, head, lines, billing=current_billing(doc))
+			check_head_limit(sanction, head, lines, billing=current_billing(doc), exclude=doc.name)
+
+
+def validate_updated_order(doc, method=None):
+	"""Update Items on a submitted Purchase Order: the line rules and the capital limit, as at submit."""
+	validate_lines(doc)
+	check_capital_limits(doc)
+
+
+def check_capital_credit_cancel(doc, method=None):
+	"""before_cancel of Purchase Invoice and Journal Entry: cancelling a credit to a capital head (a debit note, a
+	journal crediting it) gives that spending back, so the head must still be within its limits without it."""
+	for (sanction, head), lines in sorted(capital_lines(doc).items()):
+		if flt(sum(amount for _date, amount in lines), 2) < 0:
+			check_head_limit(sanction, head, [], exclude=doc.name)
 
 
 def capital_lines(doc):
 	"""{(sanction, head): [(date, amount in company currency)]} for the document's capital-head lines."""
-	lines = {}
+	lines, sanctions = {}, {}
 	for row in doc.get(LINE_TABLES[doc.doctype]):
 		head = row.get(BUDGET_HEAD_FIELD)
 		if not head or not frappe.get_cached_value("Grant Budget Head", head, "is_capital"):
 			continue
-		sanction = frappe.db.get_value("Sanction", {"project": row.project, "docstatus": 1})
-		lines.setdefault((sanction, head), []).append((line_date(doc), line_amount(doc, row)))
+		if row.project not in sanctions:
+			sanctions[row.project] = frappe.db.get_value("Sanction", {"project": row.project, "docstatus": 1})
+		lines.setdefault((sanctions[row.project], head), []).append((line_date(doc), line_amount(doc, row)))
 	return lines
 
 
@@ -200,9 +219,9 @@ def current_billing(doc):
 	return billing
 
 
-def check_head_limit(sanction, head, lines, billing=None):
+def check_head_limit(sanction, head, lines, billing=None, exclude=None):
 	scheme = frappe.db.get_value("Sanction", sanction, "funding_scheme", for_update=True)  # one check per sanction at a time
-	spending = [*capital_spending(sanction, head, billing), *lines]
+	spending = [*capital_spending(sanction, head, billing, exclude), *lines]
 	breach = first_breach(head_limits(sanction, head), spending)
 	if not breach:
 		return
@@ -242,39 +261,44 @@ def first_breach(limits, spending):
 	return None
 
 
-def capital_spending(sanction, head, billing=None):
-	"""[(date, amount)] of submitted lines tagged to the head of the sanction's project, by locking reads."""
+def capital_spending(sanction, head, billing=None, exclude=None):
+	"""[(date, amount)] of submitted lines tagged to the head of the sanction's project, by locking reads, leaving out
+	the document `exclude`."""
 	project = frappe.db.get_value("Sanction", sanction, "project")
-	return [*invoiced(project, head), *journalled(project, head), *ordered(project, head, billing or {})]
+	exclude = exclude or ""
+	return [*invoiced(project, head, exclude), *journalled(project, head, exclude), *ordered(project, head, billing or {}, exclude)]
 
 
-def invoiced(project, head):
+def invoiced(project, head, exclude=""):
 	item, invoice = frappe.qb.DocType("Purchase Invoice Item"), frappe.qb.DocType("Purchase Invoice")
 	return (
 		frappe.qb.from_(item).join(invoice).on(invoice.name == item.parent)
 		.select(invoice.posting_date, item.base_net_amount)
-		.where((invoice.docstatus == 1) & (item.project == project) & (item[BUDGET_HEAD_FIELD] == head))
+		.where((invoice.docstatus == 1) & (item.project == project) & (item[BUDGET_HEAD_FIELD] == head) & (invoice.name != exclude))
 		.for_update().run()
 	)  # fmt: skip
 
 
-def journalled(project, head):
+def journalled(project, head, exclude=""):
 	row, entry = frappe.qb.DocType("Journal Entry Account"), frappe.qb.DocType("Journal Entry")
 	return (
 		frappe.qb.from_(row).join(entry).on(entry.name == row.parent)
 		.select(entry.posting_date, row.debit - row.credit)
-		.where((entry.docstatus == 1) & (row.project == project) & (row[BUDGET_HEAD_FIELD] == head))
+		.where((entry.docstatus == 1) & (row.project == project) & (row[BUDGET_HEAD_FIELD] == head) & (entry.name != exclude))
 		.for_update().run()
 	)  # fmt: skip
 
 
-def ordered(project, head, billing):
+def ordered(project, head, billing, exclude=""):
 	"""The unbilled part of open orders, less what the invoice being submitted bills (as ERPNext Budget counts it)."""
 	item, order = frappe.qb.DocType("Purchase Order Item"), frappe.qb.DocType("Purchase Order")
 	rows = (
 		frappe.qb.from_(item).join(order).on(order.name == item.parent)
 		.select(order.transaction_date, item.name, item.amount, item.billed_amt, order.conversion_rate)
-		.where((order.docstatus == 1) & (order.status != "Closed") & (item.project == project) & (item[BUDGET_HEAD_FIELD] == head))
+		.where(
+			(order.docstatus == 1) & (order.status != "Closed") & (item.project == project) & (item[BUDGET_HEAD_FIELD] == head)
+			& (order.name != exclude)
+		)
 		.for_update().run(as_dict=True)
 	)  # fmt: skip
 	unbilled = []

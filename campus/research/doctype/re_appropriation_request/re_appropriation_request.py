@@ -10,7 +10,8 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from campus.research.budget_control import head_overspend
-from campus.research.budget_sync import sync_budgets
+from campus.research.budget_sync import locked_sanction, sync_budgets
+from campus.research.doctype.sanction.sanction import Sanction
 
 
 class ReappropriationRequest(Document):
@@ -45,8 +46,9 @@ class ReappropriationRequest(Document):
 		self.check_available(source, for_update=True)
 		self.add_to_head(source, -flt(self.amount))
 		self.add_to_head(target, flt(self.amount))
-		sanction = frappe.get_doc("Sanction", self.sanction)
-		sanction.check_revenue_head_accounts()  # a revenue head newly on the sanction needs its own single account
+		# a revenue head newly on the sanction needs its own single account: the Sanction's check, run on the head rows
+		# as re-read under the lock
+		Sanction.check_revenue_head_accounts(locked_sanction(self.sanction))
 		breach = head_overspend(self.sanction, source)
 		if breach:
 			frappe.throw(
@@ -83,7 +85,7 @@ class ReappropriationRequest(Document):
 			else:
 				frappe.db.set_value("Sanction Head", row.name, "amount", remaining)
 			return
-		last = frappe.db.get_value("Sanction Head", {"parent": self.sanction, "parenttype": "Sanction"}, "max(idx)") or 0
+		last = frappe.db.get_value("Sanction Head", {"parent": self.sanction, "parenttype": "Sanction"}, "max(idx)", for_update=True) or 0
 		frappe.get_doc(
 			{
 				"doctype": "Sanction Head", "parent": self.sanction, "parenttype": "Sanction", "parentfield": "heads",
@@ -93,10 +95,11 @@ class ReappropriationRequest(Document):
 		).db_insert()
 
 	def log(self, message):
-		frappe.get_doc("Sanction", self.sanction).add_comment(
-			"Info",
-			message.format(
-				self.name, frappe.format(self.amount, "Currency"), self.from_head, self.to_head, self.fiscal_year,
-				self.agency_letter_no, frappe.format(self.agency_letter_date, "Date"),
-			),
+		content = message.format(
+			self.name, frappe.format(self.amount, "Currency"), self.from_head, self.to_head, self.fiscal_year,
+			self.agency_letter_no, frappe.format(self.agency_letter_date, "Date"),
 		)  # fmt: skip
+		frappe.get_doc(
+			{"doctype": "Comment", "comment_type": "Info", "reference_doctype": "Sanction", "reference_name": self.sanction,
+			 "content": content}
+		).insert(ignore_permissions=True)  # fmt: skip

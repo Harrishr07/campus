@@ -259,6 +259,9 @@ doc_events["Purchase Order"] = {"validate": f"{_budget_control}.validate_lines",
 doc_events["Journal Entry"]["validate"] = [doc_events["Journal Entry"]["validate"], f"{_budget_control}.validate_lines"]
 doc_events["Journal Entry"]["before_submit"] = f"{_budget_control}.check_capital_limits"
 doc_events["Expense Claim"] = {"validate": f"{_budget_control}.validate_lines"}
+doc_events["Purchase Order"]["before_update_after_submit"] = f"{_budget_control}.validate_updated_order"  # Update Items
+doc_events["Purchase Invoice"]["before_cancel"] = [doc_events["Purchase Invoice"]["before_cancel"], f"{_budget_control}.check_capital_credit_cancel"]
+doc_events["Journal Entry"]["before_cancel"] = f"{_budget_control}.check_capital_credit_cancel"
 for _dt in ("Payment Entry", "Journal Entry"):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
 	_before = doc_events.setdefault(_dt, {}).get("before_submit")
 	doc_events[_dt]["before_submit"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.examinations.remuneration_payment.check_paid_invoice"]
