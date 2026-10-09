@@ -416,6 +416,7 @@ def publish_results(session, students):
 		results.compute_student_result(student, session)
 	doc.status = "Published"
 	doc.publish_at = add_days(now_datetime(), -1)
+	doc.exam_end = doc.exam_end or getdate(add_days(now_datetime(), -21))  # results 20 days after the last exam (AQAR 2.5.1)
 	doc.flags.passing_board_approval = True  # the thin-slice demo has no Passing Board meeting (P2-T19 publish_results)
 	doc.save(ignore_permissions=True)
 

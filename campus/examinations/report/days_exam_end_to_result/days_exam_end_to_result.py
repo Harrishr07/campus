@@ -19,7 +19,7 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "exam_session", "label": _("Exam Session"), "fieldtype": "Link", "options": "Exam Session", "width": 160},
+		{"fieldname": "exam_session", "label": _("Exam Session"), "fieldtype": "Data", "width": 160},  # Data: the Average row
 		{"fieldname": "exam_end", "label": _("Last Exam"), "fieldtype": "Date", "width": 120},
 		{"fieldname": "publish_at", "label": _("Published At"), "fieldtype": "Datetime", "width": 170},
 		{"fieldname": "days", "label": _("Days"), "fieldtype": "Float", "precision": 2, "width": 100},

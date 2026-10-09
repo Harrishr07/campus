@@ -1,7 +1,7 @@
 """M01-02 / M17-06 Data points, all (company, academic_year, department=None); `department` narrows by Program.department.
 
 Thin slice: students_admitted: submitted Program Enrollments of the company in the academic year.
-final_year_appeared / final_year_passed: Student Results of the company's Exam Sessions flagged `is_final_year`
+final_year_appeared / final_year_passed: Student Results of the company's released (publish_at passed) Exam Sessions flagged `is_final_year`
 whose term belongs to the academic year. A student appeared when at least one course was sat (Pass or Fail;
 SA and AB rows are not sittings) and passed when, in addition, every course of the result is Pass.
 Counts are per Student Result, i.e. per student per final-year session.
@@ -74,12 +74,7 @@ def final_year_passed(company, academic_year, department=None):
 
 def appeared_results(company, academic_year, department=None):
 	"""{Student Result: [course results]} of the final-year results in which at least one course was sat."""
-	terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
-	sessions = frappe.get_all(
-		"Exam Session",
-		{"company": company, "is_final_year": 1, "status": "Published", "academic_term": ["in", terms]},
-		pluck="name",
-	)
+	sessions = exams.released_sessions(company, academic_year, final_year=True)  # Published, publish_at passed
 	if not sessions:
 		return {}
 	results = frappe.get_all(

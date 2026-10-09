@@ -8,6 +8,7 @@ import frappe
 from campus.admissions.api import admit
 from campus.admissions.report.live_seat_matrix import live_seat_matrix
 from campus.examinations.report.result_analysis.result_analysis import execute as result_analysis
+from campus.examinations.report.days_exam_end_to_result.days_exam_end_to_result import execute as days_report
 from campus.iqac.registry import data_point
 from campus.iqac.setup import FRAMEWORK
 from campus.student_services import portal
@@ -142,6 +143,9 @@ class TestSliceDemo(CampusTestCase):
 		self.assertEqual((total["appeared"], total["passed"], total["pass_pct"]), (4, 2, 50))
 		self.assertEqual(data_point("pass_percentage", demo.ENGINEERING, demo_slice.YEAR)["value"], total["pass_pct"])
 		self.assertEqual(data_point("students_appeared", demo.ENGINEERING, demo_slice.YEAR)["value"], total["appeared"])
+		days = days_report({"company": demo.ENGINEERING, "academic_year": demo_slice.YEAR})[1]
+		self.assertEqual(days[-1]["days"], 20)  # exam end 21 days ago, published yesterday
+		self.assertEqual(data_point("days_exam_to_result", demo.ENGINEERING, demo_slice.YEAR)["value"], days[-1]["days"])
 
 	def test_reserved_seat_data_points_are_filled_from_the_flagged_demo_categories(self):
 		filled = data_point("reserved_seats_filled", demo.ENGINEERING, demo_slice.YEAR)

@@ -188,3 +188,11 @@ def days_exam_to_result(company, academic_year, programs=None):
 	from campus.examinations import coe_reports
 
 	return coe_reports.days_exam_to_result(company, academic_year, programs)
+
+
+def released_sessions(company, academic_year=None, final_year=False):
+	"""Names of the company's released Exam Sessions (Published, publish_at passed), optionally of one academic year
+	and final-year only: the session reader every examination report and data point shares (P2-T24 fix 1)."""
+	from campus.examinations import coe_reports
+
+	return [s.name for s in coe_reports.released_sessions(company, academic_year, final_year=final_year)]

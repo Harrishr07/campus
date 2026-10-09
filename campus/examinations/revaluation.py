@@ -24,7 +24,7 @@ publishes; the published version is never edited. The student is told the outcom
 
 Reports: Revaluation Change Stats; Evaluation Grievances vs Appeared (AQAR 2.5.2) and the evaluation_grievances
 data point: distinct students with a submitted Revaluation or Review application (a photocopy alone is not a
-grievance) in the company's published sessions of the academic year.
+grievance) in the company's released sessions (published, publish_at passed) of the academic year.
 """
 
 import frappe
@@ -495,10 +495,10 @@ def seed_outcome_template():
 
 
 def year_sessions(company, academic_year):
-	terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
-	return frappe.get_all(
-		SESSION, {"company": company, "status": "Published", "academic_term": ["in", terms or [""]]}, pluck="name", order_by="name"
-	)
+	"""The company's released sessions of the year (campus.examinations.coe_reports.released_sessions)."""
+	from campus.examinations.coe_reports import released_sessions
+
+	return [s.name for s in released_sessions(company, academic_year)]
 
 
 def grievance_applications(sessions, programs=None):

@@ -1,4 +1,4 @@
-"""M17-06 Rank List: per program, the students of an exam session whose latest, ratified result is a Pass (no course
+"""M17-06 Rank List: per program, the students of a released exam session whose latest, ratified result is a Pass (no course
 failed or outstanding in the session), ranked by SGPA (or CGPA) highest first; equal scores share a rank.
 
 Limited to the companies the user is permitted for and to the results the user may read."""
@@ -30,8 +30,8 @@ def columns():
 
 
 def data(filters):
-	if frappe.db.get_value("Exam Session", filters.exam_session, "company") != filters.company:
-		return []
+	if filters.exam_session not in {s.name for s in coe_reports.released_sessions(filters.company)}:
+		return []  # another college's, unpublished or still embargoed
 	basis = BASES.get(filters.basis, "sgpa")
 	programs = [filters.program] if filters.program else None
 	results = [

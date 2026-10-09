@@ -23,7 +23,7 @@ def execute(filters=None):
 
 def columns(group_by):
 	return [
-		{"fieldname": "group", "label": _(group_by), "fieldtype": "Link", "options": group_by, "width": 200},
+		{"fieldname": "group", "label": _(group_by), "fieldtype": "Data", "width": 200},  # Data: the Total row
 		{"fieldname": "appeared", "label": _("Appeared"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "passed", "label": _("Passed"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "pass_pct", "label": _("Pass %"), "fieldtype": "Percent", "width": 110},

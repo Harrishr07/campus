@@ -240,7 +240,11 @@ Every print below reads **published** results only (the latest ratified version,
 # Examinations: COE reports and data points (P2-T24)
 
 All are script reports in the Examinations module (COE, Dean Academics, System Manager; the valuation reports for COE
-and Exam Confidential). Each needs a Company and shows nothing for a company the user is not permitted for.
+and Exam Confidential), listed under Reports in the Examinations workspace and sidebar. Each needs a Company and shows
+nothing for a company the user is not permitted for. The result reports and the examination data points (with
+Evaluation Grievances vs Appeared, `evaluation_grievances`, `final_year_appeared` / `final_year_passed`) count only
+**released** sessions: Published and Release At passed. A session still under embargo counts nowhere, and the Rank
+List of an unpublished or embargoed session is empty.
 
 - **Exam Registration Summary**: per session and program, registrations, confirmed, attendance shortage, detained,
   debarred, and current / arrear / not-eligible courses.

@@ -1,7 +1,8 @@
 """M17-06 COE reports and data points (AQAR 2.5.1, 2.6.3; 2.5.2 is campus.examinations.revaluation).
 
 The reports and the data points read the same rows: the latest, ratified version of each Student Result (is_latest,
-not pending_ratification: P2-T19) of the company's Published Exam Sessions whose term belongs to the academic year.
+not pending_ratification: P2-T19) of the company's released Exam Sessions (Published, publish_at passed:
+released_sessions) whose term belongs to the academic year.
 Appeared / passed follow campus.examinations.coe_report_rules.
 
 - students_appeared: distinct students who sat at least one course in the year's sessions (the denominator of AQAR
@@ -18,6 +19,7 @@ Reports call these with `lister=frappe.get_list` so the user's permissions apply
 """
 
 import frappe
+from frappe.utils import now_datetime
 
 from campus.campus_platform.company_scope import permitted_companies
 from campus.examinations import coe_report_rules as rules
@@ -39,13 +41,22 @@ def refs(doctype, names):
 # ---- reading ------------------------------------------------------------------------------------
 
 
-def year_sessions(company, academic_year, lister=frappe.get_all, final_year=False, fields=("name",)):
-	"""The company's Published Exam Sessions whose term belongs to the academic year."""
-	terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
-	filters = {"company": company, "status": PUBLISHED, "academic_term": ["in", terms or [""]]}
+def released_sessions(company, academic_year=None, lister=frappe.get_all, final_year=False, fields=("name",)):
+	"""The company's released Exam Sessions (Published and publish_at passed: an embargoed session counts nowhere),
+	optionally only those whose term belongs to `academic_year`. The one session reader of every COE report and
+	examination data point (P2-T24 fix 1 ruling), so their figures stay equal."""
+	filters = {"company": company, "status": PUBLISHED, "publish_at": ["<=", now_datetime()]}
+	if academic_year:
+		terms = frappe.get_all("Academic Term", {"academic_year": academic_year}, pluck="name")
+		filters["academic_term"] = ["in", terms or [""]]
 	if final_year:
 		filters["is_final_year"] = 1
 	return lister(SESSION, filters=filters, fields=list(fields), order_by="name")
+
+
+def year_sessions(company, academic_year, lister=frappe.get_all, final_year=False, fields=("name",)):
+	"""The company's released Exam Sessions whose term belongs to the academic year."""
+	return released_sessions(company, academic_year, lister, final_year, fields)
 
 
 def published_results(sessions, programs=None, lister=frappe.get_all):

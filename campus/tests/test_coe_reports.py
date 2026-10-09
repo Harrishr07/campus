@@ -24,11 +24,18 @@ from campus.examinations.report.rank_list.rank_list import execute as rank_repor
 from campus.examinations.report.result_analysis.result_analysis import execute as analysis_report
 from campus.examinations.report.valuation_difference.valuation_difference import execute as difference_report
 from campus.examinations.report.valuation_progress.valuation_progress import execute as progress_report
+from campus.examinations import results
 from campus.iqac.registry import data_point
 from campus.tests.test_regulation import year_name
 from campus.tests.test_results import COE_USER, COLLEGE, PROGRAM, ExamFixture
 
 YEAR = year_name("2022")
+
+
+def make_department(name):
+	"""A leaf Department of the test college (named `<name> - <abbr>` by ERPNext)."""
+	found = frappe.db.get_value("Department", {"department_name": name, "company": COLLEGE})
+	return found or frappe.get_doc({"doctype": "Department", "department_name": name, "company": COLLEGE}).insert().name
 EXAM_END, PUBLISHED_AT = "2023-02-20", "2023-03-12 10:00:00"
 SCOPE = "campus.examinations.coe_reports.permitted_companies"
 
@@ -105,19 +112,51 @@ class TestResultDataPoints(COEReportFixture):
 		self.assertEqual(self.as_coe(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}), [])
 
 	def test_a_result_version_awaiting_ratification_is_not_counted(self):
-		latest = self.result_name(self.s22)
-		frappe.db.set_value("Student Result", latest, {"is_latest": 0, "pending_ratification": 1})
-		self.assertEqual(data_point("students_appeared", COLLEGE, YEAR)["value"], 2)
+		# a re-run after publication (e.g. a revaluation) gives s22 a pending V2 passing EXM FA; V1 stays the published one
+		sheets = frappe.get_all("Mark Sheet Entry", {"exam_session": self.session.name, "course": "EXM FA"}, pluck="name")
+		frappe.db.set_value("Mark Sheet Entry Row", {"parent": ["in", sheets], "student": self.s22.name}, "ese", 40)
+		pending = results.compute_student_result(self.s22.name, self.session.name)
+		self.assertEqual(frappe.db.get_value("Student Result", pending, ["version", "pending_ratification", "is_latest"]), (2, 1, 0))
+		self.assertEqual(data_point("final_year_passed", COLLEGE, YEAR)["value"], 1)  # still s26 only
+		self.assertEqual(data_point("pass_percentage", COLLEGE, YEAR)["value"], 33.33)
+		point = data_point("students_appeared", COLLEGE, YEAR)
+		self.assertEqual(point["value"], 3)
+		rows = self.as_coe(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Course"})
+		self.assertEqual(next(r for r in rows if r["group"] == "EXM FA")["passed"], 1)
+
+	def test_an_embargoed_session_counts_nowhere(self):
+		frappe.db.set_value("Exam Session", self.session.name, "publish_at", frappe.utils.add_days(frappe.utils.now_datetime(), 1))
+		for key in ("students_appeared", "pass_percentage", "days_exam_to_result", "final_year_appeared", "final_year_passed", "evaluation_grievances"):
+			self.assertEqual(data_point(key, COLLEGE, YEAR)["value"], 0, key)
+		for report, filters in (
+			(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}),
+			(days_report, {"company": COLLEGE, "academic_year": YEAR}),
+			(grievance_report, {"company": COLLEGE, "academic_year": YEAR}),
+			(arrear_report, {"company": COLLEGE}),
+			(rank_report, {"company": COLLEGE, "exam_session": self.session.name}),
+		):
+			with self.subTest(report=report.__module__):
+				self.assertEqual(self.as_coe(report, filters), [])
+
+	def test_total_rows_sit_in_data_columns(self):
+		for report, filters in (
+			(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}),
+			(days_report, {"company": COLLEGE, "academic_year": YEAR}),
+			(grievance_report, {"company": COLLEGE, "academic_year": YEAR}),
+		):
+			columns, rows = report(filters)
+			with self.subTest(report=report.__module__):
+				self.assertTrue(rows)
+				self.assertEqual(columns[0]["fieldtype"], "Data")
 
 	def test_department_narrows_by_the_program(self):
-		department = frappe.get_all("Department", {"is_group": 0}, pluck="name", limit=2)
-		frappe.db.set_value("Program", PROGRAM, "department", department[0])
-		self.assertEqual(data_point("students_appeared", COLLEGE, YEAR, department[0])["value"], 3)
-		self.assertEqual(data_point("pass_percentage", COLLEGE, YEAR, department[0])["value"], 33.33)
-		self.assertEqual(data_point("days_exam_to_result", COLLEGE, YEAR, department[0])["value"], 20)
-		if len(department) > 1:
-			for key in ("students_appeared", "pass_percentage", "days_exam_to_result"):
-				self.assertEqual(data_point(key, COLLEGE, YEAR, department[1])["value"], 0, key)
+		ours, other = (make_department(name) for name in ("T24 Exam Dept", "T24 Other Dept"))
+		frappe.db.set_value("Program", PROGRAM, "department", ours)
+		self.assertEqual(data_point("students_appeared", COLLEGE, YEAR, ours)["value"], 3)
+		self.assertEqual(data_point("pass_percentage", COLLEGE, YEAR, ours)["value"], 33.33)
+		self.assertEqual(data_point("days_exam_to_result", COLLEGE, YEAR, ours)["value"], 20)
+		for key in ("students_appeared", "pass_percentage", "days_exam_to_result"):
+			self.assertEqual(data_point(key, COLLEGE, YEAR, other)["value"], 0, key)
 
 	def test_days_exam_to_result_is_the_report_average(self):
 		point = data_point("days_exam_to_result", COLLEGE, YEAR)
@@ -138,6 +177,13 @@ class TestCOEReports(COEReportFixture):
 	def test_rank_list_ranks_the_students_who_passed_every_course(self):
 		rows = self.as_coe(rank_report, {"company": COLLEGE, "exam_session": self.session.name})
 		self.assertEqual([(r["rank"], r["student"]) for r in rows], [(1, self.s26.name)])
+
+	def test_rank_list_needs_a_released_session(self):
+		filters = {"company": COLLEGE, "exam_session": self.session.name}
+		frappe.db.set_value("Exam Session", self.session.name, "publish_at", frappe.utils.add_days(frappe.utils.now_datetime(), 1))
+		self.assertEqual(self.as_coe(rank_report, filters), [])  # embargoed
+		frappe.db.set_value("Exam Session", self.session.name, {"status": "Marks Entry", "publish_at": None})
+		self.assertEqual(self.as_coe(rank_report, filters), [])  # unpublished
 
 	def test_arrear_list_names_the_outstanding_courses(self):
 		rows = self.as_coe(arrear_report, {"company": COLLEGE})

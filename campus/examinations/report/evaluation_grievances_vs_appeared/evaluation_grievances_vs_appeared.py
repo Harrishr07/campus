@@ -1,4 +1,4 @@
-"""M06-06 / AQAR 2.5.2 Evaluation Grievances vs Appeared: per published exam session of the company in the academic
+"""M06-06 / AQAR 2.5.2 Evaluation Grievances vs Appeared: per released exam session of the company in the academic
 year, the students who appeared (sat at least one course on their published result), the students with a grievance
 about evaluation (a submitted Revaluation or Review application; a photocopy alone is not one) and the percentage.
 The total row counts distinct students over the year, as the evaluation_grievances data point does.
@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 
 from campus.campus_platform.company_scope import permitted_companies
+from campus.examinations.coe_reports import released_sessions
 from campus.examinations.revaluation import GRIEVANCE_TYPES, appeared_students
 from campus.examinations.revaluation_rules import grievance_pct
 
@@ -20,7 +21,7 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "exam_session", "label": _("Exam Session"), "fieldtype": "Link", "options": "Exam Session", "width": 140},
+		{"fieldname": "exam_session", "label": _("Exam Session"), "fieldtype": "Data", "width": 140},  # Data: the Total row
 		{"fieldname": "academic_term", "label": _("Academic Term"), "fieldtype": "Link", "options": "Academic Term", "width": 160},
 		{"fieldname": "appeared", "label": _("Students Appeared"), "fieldtype": "Int", "width": 130},
 		{"fieldname": "grievances", "label": _("Students with Grievances"), "fieldtype": "Int", "width": 160},
@@ -32,11 +33,7 @@ def data(filters):
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and filters.company not in permitted:
 		return []
-	terms = frappe.get_all("Academic Term", {"academic_year": filters.academic_year}, pluck="name")
-	sessions = frappe.get_list(
-		"Exam Session", filters={"company": filters.company, "status": "Published", "academic_term": ["in", terms or [""]]},
-		fields=["name", "academic_term"], order_by="name",
-	)  # fmt: skip
+	sessions = released_sessions(filters.company, filters.academic_year, lister=frappe.get_list, fields=("name", "academic_term"))
 	applications = frappe.get_list(
 		"Revaluation Application",
 		filters={"exam_session": ["in", [s.name for s in sessions] or [""]], "docstatus": 1, "application_type": ["in", GRIEVANCE_TYPES]},

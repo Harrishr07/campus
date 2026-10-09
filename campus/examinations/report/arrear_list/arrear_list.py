@@ -26,9 +26,7 @@ def columns():
 
 
 def data(filters):
-	sessions = frappe.get_list(
-		"Exam Session", filters={"company": filters.company, "status": coe_reports.PUBLISHED}, pluck="name"
-	)
+	sessions = [s.name for s in coe_reports.released_sessions(filters.company, lister=frappe.get_list)]
 	programs = [filters.program] if filters.program else None
 	students = {}
 	for result in coe_reports.published_results(sessions, programs, lister=frappe.get_list):
