@@ -188,6 +188,45 @@ amend it. The amendment is the next **version** and needs approval again.
 - **Grant Ledger by Head**: the entries behind each head for a period, with the opening, a running balance and the
   period total that the UC shows.
 
+## PFMS EAT export (P3-T18, M08-07)
+
+**PFMS Export Batch** (Research > Transactions): pick the sanction, the export type and the period. Saving the draft
+lists the sanction's payments of that type in the period:
+
+- **Expenditure**: Payment Entries to a supplier against the sanction's Purchase Invoices (the allocated amount, so a
+  part payment exports what was paid), and Purchase Invoices paid on the invoice itself.
+- **Advance**: Payment Entries to a supplier against the sanction's Purchase Orders, or left unallocated with the
+  sanction's project or cost centre.
+- **Transfer**: any of these to a supplier marked **Registered PFMS Agency** (a fund transfer to another agency).
+
+An invoice or order is the sanction's when its lines are on the sanction's cost centre. One only partly on it is
+excluded, because the sanction's share of the payment can't be told.
+
+**Vendor check**: a payment is excluded, with the reason, when its supplier has no **PFMS Vendor Code** (on the
+Supplier) or no bank account with an account number and IFSC (the payment's party bank account, else the supplier's
+default). The **Excluded Payments** table lists them. Fix the supplier and the next batch picks the payment up.
+
+**Re-export**: submitting the batch locks the sanction, selects the payments again and gives each row a reference and
+an export key, unique in the database. A payment in a submitted batch is not exported again unless PFMS reports it
+failed, so re-exporting a period gives only the new and the failed payments. **Already Exported** shows how many were
+left out for that reason. A batch with a row PFMS accepted can't be cancelled; cancelling any other frees its rows.
+
+**The file**: the batch attaches the EAT bulk-upload CSV, laid out by its **PFMS Export Layout** (Research > Settings).
+A layout is a list of columns, each a header and a source (a payment or batch field, or a fixed value), plus the date
+format and the header row. The seeded "PFMS EAT ... (placeholder)" layouts are placeholders until the official EAT
+file spec is supplied: change the columns to the official ones, with no code change. Every layout needs a **Row
+Reference** column. Text cells that would start a spreadsheet formula (=, +, -, @) get a leading apostrophe.
+
+**Import Status**: upload the status file PFMS returns. The layout names its columns (row reference, status, PFMS
+reference, message) and which status values mean success or failure. Accepted rows are final. Failed rows go into
+the next batch of the period. A row already accepted or failed, an unknown reference or an unknown status is skipped
+and listed. The batch is **Processed** when no row is waiting for a status.
+
+**Adapters**: the batch's **Adapter** is "File" (the file above); nothing calls PFMS. Another app can add one, such
+as an API adapter once the agency grants access, with the hook `pfms_adapters = {"Name": "path.to.AdapterClass"}`.
+The class implements `export_expenditure`, `export_advance`, `export_transfer` and `import_status`
+(campus.research.pfms_adapter.PFMSAdapter).
+
 ## Deferred
 
 - Re-opening a Closed Purchase Order with capital head lines does not re-run the capital check. Closing frees the
@@ -213,3 +252,6 @@ amend it. The amendment is the next **version** and needs approval again.
 - The project-side unreconciled read at final approval is not a locking read, so untagged spending posted on the
   project under another cost centre at the same moment as the approval can slip past the gate. The posting then
   flags the UC Source Changed, or Recheck Source catches it. (P3-T17 fix 1)
+- PFMS export: payments made by Journal Entry and Expense Claim reimbursements are not exported, and a payment
+  cancelled after it was exported is not withdrawn from PFMS. Cancel it in PFMS by hand. The official EAT layout,
+  UC upload and the PFMS API adapter wait for the spec and agency access. (P3-T18)

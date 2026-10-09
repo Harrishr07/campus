@@ -1,0 +1,314 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sanction",
+  "export_type",
+  "from_date",
+  "to_date",
+  "column_break_1",
+  "company",
+  "status",
+  "layout",
+  "adapter",
+  "section_sanction",
+  "agency_code",
+  "funding_agency",
+  "funding_agency_code",
+  "column_break_2",
+  "sanction_order_no",
+  "project",
+  "cost_center",
+  "currency",
+  "section_rows",
+  "row_count",
+  "total_amount",
+  "excluded_count",
+  "already_exported_count",
+  "column_break_3",
+  "success_count",
+  "failed_count",
+  "export_file",
+  "rows",
+  "section_exclusions",
+  "exclusions",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PFMS-.YYYY.-",
+   "default": "PFMS-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "sanction",
+   "fieldtype": "Link",
+   "label": "Sanction",
+   "options": "Sanction",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "export_type",
+   "fieldtype": "Select",
+   "label": "Export Type",
+   "options": "Expenditure\nAdvance\nTransfer",
+   "default": "Expenditure",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nExported\nProcessed\nCancelled",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "layout",
+   "fieldtype": "Link",
+   "label": "PFMS Export Layout",
+   "options": "PFMS Export Layout",
+   "description": "The column mapping of the export file."
+  },
+  {
+   "fieldname": "adapter",
+   "fieldtype": "Data",
+   "label": "Adapter",
+   "default": "File",
+   "description": "How the batch reaches PFMS. File: the EAT bulk-upload file."
+  },
+  {
+   "fieldname": "section_sanction",
+   "fieldtype": "Section Break",
+   "label": "Sanction"
+  },
+  {
+   "fieldname": "agency_code",
+   "fieldtype": "Data",
+   "label": "Agency Unique Code",
+   "read_only": 1,
+   "description": "The college's PFMS unique agency code (Research Settings)."
+  },
+  {
+   "fieldname": "funding_agency",
+   "fieldtype": "Link",
+   "label": "Funding Agency",
+   "options": "Funding Agency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "funding_agency_code",
+   "fieldtype": "Data",
+   "label": "Funding Agency PFMS Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sanction_order_no",
+   "fieldtype": "Data",
+   "label": "Sanction Order No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Centre",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_rows",
+   "fieldtype": "Section Break",
+   "label": "Rows"
+  },
+  {
+   "fieldname": "row_count",
+   "fieldtype": "Int",
+   "label": "Rows",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "excluded_count",
+   "fieldtype": "Int",
+   "label": "Excluded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "already_exported_count",
+   "fieldtype": "Int",
+   "label": "Already Exported",
+   "read_only": 1,
+   "description": "Payments of the period already in a batch and not reported failed."
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "success_count",
+   "fieldtype": "Int",
+   "label": "Accepted by PFMS",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "failed_count",
+   "fieldtype": "Int",
+   "label": "Failed in PFMS",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "export_file",
+   "fieldtype": "Attach",
+   "label": "Export File",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "PFMS Export Batch Row",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_exclusions",
+   "fieldtype": "Section Break",
+   "label": "Excluded Payments"
+  },
+  {
+   "fieldname": "exclusions",
+   "fieldtype": "Table",
+   "label": "Excluded",
+   "options": "PFMS Export Batch Exclusion",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "PFMS Export Batch",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "PFMS Export Batch",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "naming_series:",
+ "is_submittable": 1
+}

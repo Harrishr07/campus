@@ -1,0 +1,169 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "layout_name",
+  "export_type",
+  "is_placeholder",
+  "column_break_1",
+  "date_format",
+  "include_header",
+  "section_columns",
+  "columns",
+  "section_status",
+  "status_reference_column",
+  "status_column",
+  "status_pfms_reference_column",
+  "status_message_column",
+  "column_break_2",
+  "success_values",
+  "failure_values"
+ ],
+ "fields": [
+  {
+   "fieldname": "layout_name",
+   "fieldtype": "Data",
+   "label": "Layout Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "export_type",
+   "fieldtype": "Select",
+   "label": "Export Type",
+   "reqd": 1,
+   "options": "Expenditure\nAdvance\nTransfer",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "is_placeholder",
+   "fieldtype": "Check",
+   "label": "Placeholder Layout",
+   "default": "1",
+   "in_list_view": 1,
+   "description": "Placeholder: the official PFMS EAT bulk-upload layout is not supplied yet. Replace the columns with the official ones and clear this."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_format",
+   "fieldtype": "Select",
+   "label": "Date Format",
+   "options": "dd/mm/yyyy\ndd-mm-yyyy\nyyyy-mm-dd",
+   "default": "dd/mm/yyyy"
+  },
+  {
+   "fieldname": "include_header",
+   "fieldtype": "Check",
+   "label": "Include Header Row",
+   "default": "1"
+  },
+  {
+   "fieldname": "section_columns",
+   "fieldtype": "Section Break",
+   "label": "Export File Columns"
+  },
+  {
+   "fieldname": "columns",
+   "fieldtype": "Table",
+   "label": "Columns",
+   "options": "PFMS Export Layout Column",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_status",
+   "fieldtype": "Section Break",
+   "label": "Status File",
+   "description": "The columns of the status file PFMS returns, matched to export rows by the row reference."
+  },
+  {
+   "fieldname": "status_reference_column",
+   "fieldtype": "Data",
+   "label": "Row Reference Column",
+   "reqd": 1,
+   "default": "Row Reference"
+  },
+  {
+   "fieldname": "status_column",
+   "fieldtype": "Data",
+   "label": "Status Column",
+   "reqd": 1,
+   "default": "Status"
+  },
+  {
+   "fieldname": "status_pfms_reference_column",
+   "fieldtype": "Data",
+   "label": "PFMS Reference Column",
+   "default": "PFMS Reference"
+  },
+  {
+   "fieldname": "status_message_column",
+   "fieldtype": "Data",
+   "label": "Message Column",
+   "default": "Remarks"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "success_values",
+   "fieldtype": "Small Text",
+   "label": "Success Values",
+   "default": "Success\nAccepted",
+   "description": "One per line; matched ignoring case."
+  },
+  {
+   "fieldname": "failure_values",
+   "fieldtype": "Small Text",
+   "label": "Failure Values",
+   "default": "Failed\nRejected",
+   "description": "One per line. A failed row is exported again by the next batch."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "PFMS Export Layout",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "autoname": "field:layout_name",
+ "title_field": "layout_name"
+}
