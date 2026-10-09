@@ -159,3 +159,11 @@ def cia_lock_state(cia_schedule):
 	from campus.examinations import cia
 
 	return cia.lock_state(cia_schedule)
+
+
+def evaluation_grievances(company, academic_year, programs=None):
+	"""{value, records}: distinct students with a submitted Revaluation or Review application in the company's
+	published sessions of the academic year (AQAR 2.5.2; `programs` narrows by the application's program)."""
+	from campus.examinations import revaluation
+
+	return revaluation.evaluation_grievances(company, academic_year, programs)

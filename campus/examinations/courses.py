@@ -52,7 +52,7 @@ def student_limits(student, course):
 
 
 def rule_limits(rule_set, course, student=None):
-	"""Values of `rule_set` (an Exam Rule Set) for `course`: maxima resolved, pass thresholds and the attempt rule."""
+	"""Values of `rule_set` (an Exam Rule Set) for `course`: maxima resolved, pass thresholds, the attempt rule and revaluation eligibility."""
 	for row in rule_set.types:
 		if row.course_type == course["course_type"]:
 			return {
@@ -62,6 +62,7 @@ def rule_limits(rule_set, course, student=None):
 				"total_min_pct": row.total_min_pct,
 				"ese_only_from_attempt": row.ese_only_from_attempt,
 				"ese_only_min_pct": row.ese_only_min_pct,
+				"revaluation_allowed": row.revaluation_allowed,
 			}
 	frappe.throw(
 		_("The Exam Rule Set of the regulation of {0} has no {1} course type.").format(

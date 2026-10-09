@@ -29,6 +29,10 @@ Phase 2 (P2-T03): syllabus_revised_programmes (AQAR 1.1.2: distinct programmes w
 proposal changed) and new_courses_introduced (AQAR 1.2.1: distinct courses named on approved New Course proposals), both
 finally approved within the academic year (`department` is the proposal's department); see
 campus.academic_governance.api.proposal_programmes / proposal_courses.
+
+Phase 2 (P2-T20): evaluation_grievances (AQAR 2.5.2): distinct students with a submitted Revaluation or Review
+application in the company's published Exam Sessions of the academic year (a photocopy request alone is not a
+grievance); `department` narrows by the application's program; see campus.examinations.api.evaluation_grievances.
 """
 
 import frappe
@@ -36,6 +40,7 @@ from frappe.utils import getdate
 
 from campus.academic_governance import api as governance
 from campus.campus_finance.api import scholarship_beneficiaries
+from campus.examinations import api as exams
 from campus.faculty import api as faculty
 from campus.iqac.registry import campus_metric
 
@@ -254,3 +259,8 @@ def syllabus_revised_programmes(company, academic_year, department=None):
 def new_courses_introduced(company, academic_year, department=None):
 	courses = governance.proposal_courses(company, academic_year, "New Course", department)
 	return {"value": len(courses), "records": refs("Course", courses)}
+
+
+@campus_metric("evaluation_grievances", "Examinations", "Students with a revaluation or review application in the year's published exam sessions (AQAR 2.5.2)")
+def evaluation_grievances(company, academic_year, department=None):
+	return exams.evaluation_grievances(company, academic_year, department_programs(department))

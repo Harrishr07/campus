@@ -160,3 +160,17 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 4 | Convocation export format | placeholder columns (register no, name, date of birth, programme, regulation, CGPA, %, class, completion term) until the university's format is known |
 | 5 | Degree credit total | the regulation's Curriculum Rule Minimum Total Credits, checked against passed core credits (additional / Honours / Minor excluded); not checked when unset |
 | 6 | Withdrawn / SA / Pending courses at graduation | arrears until passed, as in arrears.py (T21: a withdrawal is no attempt or appearance but the course is owed) |
+
+### P2-T20 photocopy, revaluation, review
+- Ruling: a revaluation outcome's ESE replaces the mark sheet's in the Result Run (moderation and grace on top); the mark sheet stays as published. After publication the change is a pending Student Result version through Result Ratification; ratification revokes the replaced version's Grade Sheet and issues one for the new version.
+- Ruling: the new mark stands whether it is higher or lower; no difference threshold is applied to a revaluation (the third-valuation threshold is for double valuation only).
+- Ruling: the window for all three types is counted from the release of the results (publish_at), per the brief.
+- Ruling: a grievance about evaluation (AQAR 2.5.2) is a submitted Revaluation or Review application; a photocopy request alone is not one. Student Grievances of the Evaluation type are not counted (deferred).
+
+### Pending confirmation (P2-T20)
+| # | Item | Applied |
+|---|------|---------|
+| 1 | Application window | 15 days from the release for every seeded regulation (the note gives no figure) |
+| 2 | Photocopy and justification before revaluation | R2022 only (cl. 16.4); AU-R2021 and R2026 go straight to revaluation |
+| 3 | Review window | the same window from the release, so a revaluation finished late leaves no time for a review |
+| 4 | Fees | none seeded: each college sets them on its Exam Fee Rate |

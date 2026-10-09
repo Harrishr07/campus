@@ -22,6 +22,9 @@ course passed, arrears count the courses not yet passed. A final-year session wi
 
 An Arrear with no row on a mark sheet of the session stays Pending (owed, outside the SGPA, counted as an arrear).
 
+Revaluation (P2-T20): the ESE of a course with a submitted Revaluation Outcome is the latest outcome's, in place of
+the mark sheet's (moderation and grace still apply on top).
+
 Versioned: before publication a re-run replaces the latest version in place. After publication a change makes one
 pending version with a change log, graded on the relative bands frozen at publication; the published version stays
 the latest (and the only one students and staff see) until a Result Ratification publishes the pending one.
@@ -41,6 +44,7 @@ from campus.examinations.arrears import outstanding_arrears
 from campus.examinations.courses import offering_course, student_limits
 from campus.examinations.doctype.mark_moderation.mark_moderation import approved_adjustments
 from campus.examinations.result_cohort import Cohorts
+from campus.examinations.revaluation import revised_ese
 from campus.student_services.api import eligibility_status, students_on_break, student_offerings, withdrawal_code
 
 RUN_TYPE = "Result Run"
@@ -128,6 +132,7 @@ class StudentRun:
 		self.moderation = approved_adjustments(session.name)
 		self.history = earlier_rows(student, session.name, session.academic_term)
 		self.short_of_attendance = cohorts.short(student)
+		self.revalued = revised_ese(student, session.name)  # Revaluation Outcomes (P2-T20), after publication only
 
 	def values(self):
 		rows = [row for row in self.current_rows() + self.arrear_rows() if row]
@@ -184,6 +189,8 @@ class StudentRun:
 		if marks is None and kind == ARREAR and not absent_in_hall:  # no sheet row yet: still owed, nothing graded
 			return {**row, "grade": PENDING, "result": PENDING}
 		marks = marks or frappe._dict(cia=None, ese=0, absent=0)
+		if course["course"] in self.revalued and not marks.absent:
+			marks.ese = self.revalued[course["course"]]
 		if kind == ARREAR:
 			carried = [r["cia"] for r in earlier if r["result"] in SAT]
 			marks.cia = result_rules.arrear_cia(carried, marks.cia, cint(self.rule_set.cia_carry_forward))

@@ -188,6 +188,28 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Revaluation Application",
+   "link_to": "Revaluation Application",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Revaluation Outcome",
+   "link_to": "Revaluation Outcome",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Progression Run",
    "link_to": "Progression Run",
    "link_type": "DocType",
@@ -454,6 +476,28 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Revaluation Change Stats",
+   "link_to": "Revaluation Change Stats",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Evaluation Grievances vs Appeared",
+   "link_to": "Evaluation Grievances vs Appeared",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Remuneration Register",
    "link_to": "Remuneration Register",
    "link_type": "Report",
@@ -483,7 +527,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 18:30:00.000000",
+ "modified": "2026-10-09 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

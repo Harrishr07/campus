@@ -66,6 +66,13 @@ ATTEMPT_RULES = {
 	"R2022": {"cia_carry_forward": 1, "absent_counts_as_attempt": 1, "max_attempts": 0, "internal_only_min_pct": 50},
 	"R2026": {"cia_carry_forward": 0, "absent_counts_as_attempt": 1, "max_attempts": 0, "internal_only_min_pct": 50},
 }  # fmt: skip
+# M06-06 photocopy / revaluation / review: R2022 16.4 needs the photocopy and a faculty justification before a
+# revaluation; the window length is not in the note (pending confirmation in docs/rulings.md, P2-T20).
+REVALUATION_RULES = {
+	"AU-R2021": {"revaluation_window_days": 15, "revaluation_after_photocopy": 0},
+	"R2022": {"revaluation_window_days": 15, "revaluation_after_photocopy": 1},
+	"R2026": {"revaluation_window_days": 15, "revaluation_after_photocopy": 0},
+}  # fmt: skip
 
 # class, variant, CGPA min, first appearance required, max years (0: none), break of study included,
 # max years for lateral entry (0: max years applies)
@@ -140,6 +147,7 @@ def exam_rule_set(regulation, code):
 		"regulation": regulation,
 		"types": rows(EXAM_RULE_FIELDS, EXAM_RULES[code]),
 		**ATTEMPT_RULES[code],
+		**REVALUATION_RULES[code],
 	}
 
 
@@ -204,3 +212,15 @@ def fill_honours_credits():
 		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name") if credits else []
 		for name in frappe.get_all("Classification Rule", {"regulation": ["in", regulations or [""]], "honours_credits": 0}, pluck="name"):
 			frappe.db.set_value("Classification Rule", name, "honours_credits", credits, update_modified=False)
+
+
+def fill_revaluation_rules():
+	"""Exam Rule Sets seeded before the revaluation fields existed have no window (no application accepted): give
+	those of each REVALUATION_RULES regulation (by code, the company suffix ignored) the seeded values. Rule sets with
+	a window are left alone. DML only; run by a patch."""
+	for code, values in REVALUATION_RULES.items():
+		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name")
+		for name in frappe.get_all(
+			"Exam Rule Set", {"regulation": ["in", regulations or [""]], "revaluation_window_days": 0}, pluck="name"
+		):
+			frappe.db.set_value("Exam Rule Set", name, values, update_modified=False)

@@ -613,6 +613,16 @@ class TestPublicationGuard(PassingBoardFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
 			self.publish(self.meeting())
 
+	def test_a_result_without_a_programme_is_checked_against_the_last_run(self):
+		self.two_programme_runs(mark_hours=-100)
+		frappe.db.set_value("Student Result", {"exam_session": self.session.name, "student": self.s_ab.name}, "program", None, update_modified=False)
+		self.stamp("Student Result", add_to_date(now_datetime(), hours=-46), student=self.s_ab.name)  # after the last run ended
+		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
+			self.publish(self.meeting())
+		self.stamp("Student Result", add_to_date(now_datetime(), hours=-47.5), student=self.s_ab.name)  # inside it
+		self.publish(self.meeting())
+		self.assertEqual(frappe.db.get_value("Exam Session", self.session.name, "status"), "Published")
+
 	def test_a_mark_edited_during_a_run_blocks_publication(self):
 		self.run_session()
 		self.backdate_inputs()

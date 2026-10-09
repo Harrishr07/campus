@@ -22,7 +22,11 @@
   "grace_max_per_course",
   "column_break_grace",
   "grace_max_courses",
-  "grace_max_total"
+  "grace_max_total",
+  "revaluation_section",
+  "revaluation_window_days",
+  "column_break_revaluation",
+  "revaluation_after_photocopy"
  ],
  "fields": [
   {
@@ -148,11 +152,33 @@
    "non_negative": 1,
    "depends_on": "grace_allowed",
    "description": "Per student per session. 0: no limit."
+  },
+  {
+   "fieldname": "revaluation_section",
+   "fieldtype": "Section Break",
+   "label": "Photocopy, Revaluation and Review"
+  },
+  {
+   "fieldname": "revaluation_window_days",
+   "fieldtype": "Int",
+   "label": "Application Window (days)",
+   "description": "Photocopy, revaluation and review applications are accepted from the release of the results until this many days after it. 0: none accepted."
+  },
+  {
+   "fieldname": "column_break_revaluation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "revaluation_after_photocopy",
+   "fieldtype": "Check",
+   "label": "Revaluation after Photocopy and Justification",
+   "default": "0",
+   "description": "A revaluation needs the issued photocopy of the script and a justification by a teacher of the course (R2022 16.4). Which course types are eligible is set per type above."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",

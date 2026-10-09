@@ -113,7 +113,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 23,
+   "link_count": 25,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -168,6 +168,28 @@
    "label": "Result Ratification",
    "link_count": 0,
    "link_to": "Result Ratification",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Revaluation Application",
+   "link_count": 0,
+   "link_to": "Revaluation Application",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Revaluation Outcome",
+   "link_count": 0,
+   "link_to": "Revaluation Outcome",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -374,7 +396,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 5,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -426,6 +448,28 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 1,
+   "label": "Revaluation Change Stats",
+   "link_count": 0,
+   "link_to": "Revaluation Change Stats",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Evaluation Grievances vs Appeared",
+   "link_count": 0,
+   "link_to": "Evaluation Grievances vs Appeared",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
    "label": "Remuneration Register",
    "link_count": 0,
    "link_to": "Remuneration Register",
@@ -453,7 +497,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 18:30:00.000000",
+ "modified": "2026-10-09 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

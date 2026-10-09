@@ -99,10 +99,12 @@ def check_inputs(session, runs, meeting_at):
 	"""Refuse when a grading input changed after the Passing Board sat, or after the results were run on it: a Mark
 	Sheet Entry or Mark Moderation of the session after the EARLIEST start of the latest runs (the cohorts are
 	shared across programmes, and a run reads marks from its start), a Student Result after its own programme's run
-	finished. The board approved the results those runs produced."""
+	finished (one with no programme after the last run finished). The board approved the results those runs produced."""
 	earliest_start = min(started for started, _finished in runs.values())
 	checks = [(doctype, {}, earliest_start) for doctype in MARK_INPUTS]
 	checks += [(RESULT, {"program": program}, finished) for program, (_started, finished) in runs.items()]
+	latest_finish = max(finished for _started, finished in runs.values())
+	checks += [(RESULT, {"program": ["is", "not set"]}, latest_finish)]  # a result without a programme: the last run
 	for doctype, filters, limit in checks:
 		at = frappe.db.get_value(doctype, {"exam_session": session.name, **filters}, "modified", order_by="modified desc")
 		if at and (get_datetime(at) > limit or get_datetime(at) > meeting_at):
