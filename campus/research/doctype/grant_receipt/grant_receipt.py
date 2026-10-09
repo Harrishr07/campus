@@ -3,7 +3,8 @@ Entry debiting the bank / cash account and crediting the sanction's "Grant Recei
 project and cost centre (blueprint D9: a receipt is never income; income is recognised later as the grant is spent).
 A Journal Entry is used rather than a Payment Entry because a Funding Agency is not an ERPNext party.
 
-An instalment can't be received beyond its amount; the check runs under a lock on the sanction."""
+An instalment can't be received beyond its amount; the check runs under a lock on the sanction, and the entry is built
+from the sanction's set-up as re-read under that lock."""
 
 import frappe
 from frappe import _
@@ -27,7 +28,10 @@ class GrantReceipt(Document):
 		self.check_received_in()
 
 	def before_submit(self):
-		frappe.db.get_value("Sanction", self.sanction, "name", for_update=True)  # one receipt at a time per sanction
+		# one receipt at a time per sanction; the locking read sees a concurrent cancel that removed the set-up
+		sanction = self.get_sanction(for_update=True)
+		if sanction.docstatus != 1:
+			frappe.throw(_("Sanction {0} must be submitted to receive money against it.").format(self.sanction))
 		balance = flt(self.instalment_amount()) - self.received_so_far()
 		if flt(self.amount, 2) > flt(balance, 2):
 			frappe.throw(
@@ -35,7 +39,7 @@ class GrantReceipt(Document):
 					self.instalment, self.sanction, frappe.format(balance, "Currency"), frappe.format(self.amount, "Currency")
 				)
 			)
-		self.journal_entry = self.make_journal_entry()
+		self.journal_entry = self.make_journal_entry(sanction)
 
 	def on_submit(self):
 		update_received(self.sanction)
@@ -48,8 +52,8 @@ class GrantReceipt(Document):
 				entry.cancel()
 		update_received(self.sanction)
 
-	def get_sanction(self):
-		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True)
+	def get_sanction(self, for_update=False):
+		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
 		if not sanction:
 			frappe.throw(_("Sanction {0} does not exist.").format(self.sanction))
 		return sanction
@@ -74,8 +78,7 @@ class GrantReceipt(Document):
 			frappe.throw(_("Received In must be a bank or cash ledger of {0}.").format(self.company))
 		self.voucher_type = "Bank Entry" if account.account_type == "Bank" else "Cash Entry"
 
-	def make_journal_entry(self):
-		sanction = self.get_sanction()
+	def make_journal_entry(self, sanction):
 		entry = frappe.get_doc(
 			{
 				"doctype": "Journal Entry", "voucher_type": self.voucher_type, "company": self.company,

@@ -48,13 +48,23 @@ class GrantSetup:
 			frappe.delete_doc("Budget", name, ignore_permissions=True)
 		for doctype, name in records:
 			if name:
-				frappe.delete_doc(doctype, name, ignore_permissions=True)
+				self.delete(doctype, name)
+
+	def delete(self, doctype, name):
+		try:
+			frappe.delete_doc(doctype, name, ignore_permissions=True)
+		except frappe.LinkExistsError:
+			frappe.throw(
+				_("{0} can't be cancelled: its {1} {2} is used by other documents. Cancel or delete them first.").format(
+					self.sanction.name, _(doctype), name
+				)
+			)
 
 	def check_nothing_posted(self):
 		sanction = self.sanction
 		conditions = {"account": sanction.liability_account, "cost_center": sanction.cost_center, "project": sanction.project}
-		for field, value in conditions.items():
-			if value and frappe.db.exists("GL Entry", {field: value}):
+		for field, value in conditions.items():  # locking reads: a receipt committed while we waited is seen
+			if value and frappe.db.get_value("GL Entry", {field: value}, "name", for_update=True):
 				frappe.throw(
 					_("{0} has accounting entries against its project, cost centre or liability account, so it can't be cancelled.").format(
 						sanction.name

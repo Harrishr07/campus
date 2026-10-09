@@ -275,6 +275,55 @@ class TestSanction(CampusTestCase):
 		self.assertTrue(frappe.db.exists("Project", sanction.reload().project))
 		self.assertEqual(sanction.docstatus, 1)
 
+	def test_cancel_amend_submit_gives_one_set_up(self):
+		sanction = self.sanction()
+		sanction.submit()
+		sanction.cancel()
+		amended = frappe.copy_doc(sanction)
+		amended.amended_from, amended.docstatus = sanction.name, 0
+		amended.insert()
+		amended.submit()
+		amended.reload()
+		self.assertEqual(frappe.get_all("Cost Center", {"parent_cost_center": self.research_cc}, pluck="name"), [amended.cost_center])
+		self.assertEqual(frappe.get_all("Project", {"company": COLLEGE}, pluck="name"), [amended.project])
+		self.assertEqual(len(self.budgets(amended.cost_center)), 2)
+
+	def test_cancel_refused_while_another_document_uses_the_set_up(self):
+		sanction = self.sanction()
+		sanction.submit()
+		sanction.reload()
+		frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"accounts": [
+					{"account": self.consumables_account, "debit_in_account_currency": 10, "cost_center": sanction.cost_center,
+					 "project": sanction.project, "oc_budget_head": self.consumables},
+					{"account": self.bank, "credit_in_account_currency": 10},
+				],
+			}  # fmt: skip
+		).insert()  # a draft
+		frappe.db.savepoint("sanction_cancel")
+		with self.assertRaisesRegex(frappe.ValidationError, "used by other documents") as raised:
+			frappe.get_doc("Sanction", sanction.name).cancel()
+		self.assertNotIsInstance(raised.exception, frappe.LinkExistsError)
+		frappe.db.rollback(save_point="sanction_cancel")
+
+	def test_cancel_checks_postings_with_locking_reads(self):
+		from unittest.mock import patch
+
+		sanction = self.sanction()
+		sanction.submit()
+		real, locked = frappe.db.get_value, []
+
+		def spy(doctype, *args, **kwargs):
+			if doctype == "GL Entry" and kwargs.get("for_update"):
+				locked.append(args)
+			return real(doctype, *args, **kwargs)
+
+		with patch.object(frappe.db, "get_value", side_effect=spy):
+			frappe.get_doc("Sanction", sanction.name).cancel()
+		self.assertEqual(len(locked), 3)  # liability account, cost centre, project
+
 	def assert_cancel_refused(self, name):
 		frappe.db.savepoint("sanction_cancel")  # a failed request rolls back; so does this
 		with self.assertRaisesRegex(frappe.ValidationError, "accounting entries"):
@@ -311,6 +360,15 @@ class TestSanction(CampusTestCase):
 		self.assertEqual(frappe.db.get_value("Journal Entry", receipt.journal_entry, "docstatus"), 2)
 		sanction.reload()
 		self.assertEqual(sanction.total_received, 0)
+
+	def test_receipt_refused_when_the_locked_sanction_is_no_longer_submitted(self):
+		sanction = self.sanction()
+		sanction.submit()
+		receipt = self.receipt(sanction.reload())
+		frappe.db.set_value("Sanction", sanction.name, "docstatus", 2)  # as a concurrent cancel would leave it
+		with self.assertRaisesRegex(frappe.ValidationError, "must be submitted"):
+			receipt.before_submit()
+		self.assertFalse(frappe.db.exists("Journal Entry", {"user_remark": ["like", f"%{receipt.name}%"]}))
 
 	def test_receipt_cannot_exceed_the_instalment_balance(self):
 		sanction = self.sanction()
