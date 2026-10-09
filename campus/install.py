@@ -16,6 +16,7 @@ from campus.examinations.setup import ensure_coe_role, setup_examinations
 from campus.faculty.setup import seed_course_allocation_policy, setup_faculty
 from campus.iqac.export_seed import seed_export_templates
 from campus.iqac.feedback_seed import setup_feedback
+from campus.iqac.regulator_seed import seed_regulator_templates
 from campus.iqac.setup import (
 	ensure_iqac_role,
 	seed_evidence_sources,
@@ -65,6 +66,7 @@ def after_install():
 	sync_data_points()
 	seed_iqac_policies()
 	setup_feedback()
+	seed_regulator_templates()
 	seed_evidence_sources()
 	setup_research()
 
@@ -93,5 +95,6 @@ def after_migrate():
 	sync_data_points()
 	seed_iqac_policies()
 	setup_feedback()
+	seed_regulator_templates()
 	seed_evidence_sources()
 	setup_research()
