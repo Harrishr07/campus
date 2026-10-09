@@ -439,6 +439,10 @@ has_permission = {
 has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
 # Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
 doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
+_qp = "campus.examinations.question_papers"
+doc_events["Version"] = {"before_insert": f"{_qp}.refuse_confidential_version"}
+doc_events["Notification"] = {"validate": f"{_qp}.refuse_confidential_notification"}
+doc_events["Webhook"] = {"validate": f"{_qp}.refuse_confidential_webhook"}
 # P2-T18 valuation: the dummy-number map is Exam Confidential only; examiners reach only their own allocations.
 _valuation = "campus.examinations.valuation_access"
 permission_query_conditions["Dummy Number Map"] = f"{_valuation}.map_query"

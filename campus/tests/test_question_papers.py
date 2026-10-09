@@ -7,6 +7,7 @@ import os
 from unittest.mock import patch
 
 import frappe
+import frappe.client
 from frappe.utils import add_days, add_to_date, get_datetime, now_datetime, today
 from pypdf import PdfReader, PdfWriter
 
@@ -26,6 +27,8 @@ EC_USER = "qp-confidential@example.com"
 SM_USER = "qp-sysmanager@example.com"
 SM_EC_USER = "qp-sysmanager-ec@example.com"
 FACULTY = "qp-faculty@example.com"
+COE_USER = "qp-coe@example.com"
+OTHER_COE = "qp-other-coe@example.com"
 QP = "Question Paper"
 LOG = "QP Access Log"
 SETTINGS = "Question Paper Settings"
@@ -71,6 +74,8 @@ class QuestionPaperFixture(CampusTestCase):
 		make_login(SM_USER, ["System Manager"])
 		make_login(SM_EC_USER, ["System Manager", EXAM_CONFIDENTIAL])
 		make_login(FACULTY, ["Academics User"])
+		make_login(COE_USER, ["COE"])
+		make_login(OTHER_COE, ["COE"], company=OTHER_COLLEGE)
 		cls.rooms = [cls.room(f"QPT Hall {n}") for n in (1, 2)]
 
 	@staticmethod
@@ -95,23 +100,32 @@ class QuestionPaperFixture(CampusTestCase):
 		frappe.db.rollback(save_point="qp_test")
 		frappe.db.after_rollback.reset()
 		frappe.db.after_commit.reset()
+		frappe.local.qp_log_buffer = None
 
 	def policies(self):
 		return frappe.get_all("Approval Policy", {"document_type": QP}, pluck="name") or [""]
 
 	def exam_session(self, term):
 		return frappe.get_doc({"doctype": "Exam Session", "company": COLLEGE, "academic_term": term,
-			"status": "Draft", "exam_start": add_days(today(), 5), "exam_end": add_days(today(), 20),
+			"status": "Draft", "exam_start": add_days(today(), -2), "exam_end": add_days(today(), 20),
 			"schedule": [{"course": COURSE, "exam_date": add_days(today(), 10), "slot": "AN"}]}).insert()  # fmt: skip
 
 	def bank_item(self, co, bloom, marks=25, **extra):
 		return frappe.get_doc({"doctype": "Question Bank Item", "company": COLLEGE, "course": COURSE, "course_outcome": co,
 			"bloom_level": bloom, "marks": marks, "difficulty": "Medium", "question": f"Explain {co} {bloom}", **extra}).insert().name  # fmt: skip
 
+	def slot_in(self, session, minutes):
+		"""Put the course's AN slot of `session` `minutes` from now (release_at is always the slot start)."""
+		start = add_to_date(now_datetime(), minutes=minutes).replace(microsecond=0)
+		frappe.db.set_value("Exam Schedule", {"parent": session.name, "course": COURSE}, {"exam_date": start.date(), "slot": "AN"})
+		frappe.db.set_single_value(SETTINGS, "afternoon_starts_at", start.strftime("%H:%M:%S"))
+		return start
+
 	def draft(self, release_in_minutes=120, items=None, sets=("A", "B"), session=None):
+		session = session or self.session
+		self.slot_in(session, release_in_minutes)
 		doc = frappe.get_doc({
-			"doctype": QP, "exam_session": (session or self.session).name, "course": COURSE, "total_marks": 100,
-			"release_at": add_to_date(now_datetime(), minutes=release_in_minutes),
+			"doctype": QP, "exam_session": session.name, "course": COURSE, "total_marks": 100,
 			"blueprint": [
 				{"criterion": "Course Outcome", "value": "CO1", "min_percent": 40, "max_percent": 60},
 				{"criterion": "Course Outcome", "value": "CO2", "min_percent": 40, "max_percent": 60},
@@ -159,6 +173,13 @@ class QuestionPaperFixture(CampusTestCase):
 	def logs(self, paper, **filters):
 		return frappe.get_all(LOG, {"question_paper": paper, **filters},
 			["user", "action", "result", "reason", "ip_address", "paper_set", "room", "copies"], order_by="creation asc")  # fmt: skip
+
+	def withdraw(self, paper, user=COE_USER, reason="Leaked"):
+		frappe.set_user(user)
+		try:
+			question_papers.withdraw(paper, reason)
+		finally:
+			frappe.set_user("Administrator")
 
 	def can_read(self, user, paper):
 		return frappe.has_permission(QP, "read", doc=frappe.get_doc(QP, paper), user=user)
@@ -271,6 +292,20 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 		self.assertEqual(get_datetime(doc.release_at), get_datetime(f"{add_days(today(), 10)} 14:00:00"))
 		self.assertEqual(doc.company, COLLEGE)
 
+	def test_release_at_is_always_the_slot_start(self):
+		doc = frappe.get_doc({"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100,
+			"release_at": add_to_date(now_datetime(), days=40)}).insert()  # fmt: skip
+		self.assertEqual(get_datetime(doc.release_at), get_datetime(f"{add_days(today(), 10)} 14:00:00"))
+		self.assertTrue(frappe.get_meta(QP).get_field("release_at").read_only)
+
+	def test_the_download_lead_is_at_most_120_minutes(self):
+		settings = frappe.get_doc(SETTINGS)
+		settings.download_lead_minutes = 121
+		with self.assertRaises(frappe.ValidationError):
+			settings.save()
+		settings.download_lead_minutes = 120
+		settings.save()
+
 	def test_a_missing_slot_time_gives_no_release_time(self):
 		frappe.db.set_single_value(SETTINGS, "afternoon_starts_at", None)
 		self.assertIsNone(question_papers.slot_start(self.session.name, COURSE))
@@ -360,7 +395,7 @@ class TestSettingsAndVersions(QuestionPaperFixture):
 		"""Critical 3: versions would copy questions and paper fields to a System Manager readable table."""
 		doc = self.draft()
 		doc.total_marks = 100
-		doc.release_at = add_to_date(doc.release_at, minutes=5)
+		doc.blueprint[0].max_percent = 70
 		doc.save()
 		item = frappe.get_doc("Question Bank Item", self.items[0])
 		item.question = "Changed"
@@ -376,18 +411,32 @@ class TestSettingsAndVersions(QuestionPaperFixture):
 
 
 class TestAccessLog(QuestionPaperFixture):
-	def test_a_denial_survives_the_rollback_of_its_request(self):
+	def test_denials_survive_the_rollback_of_their_request_in_one_flush(self):
 		paper = self.paper(release_in_minutes=120).name
 		frappe.db.savepoint("qp_request")
+		frappe.set_user(EC_USER)
+		for paper_set in ("A", "B"):
+			with self.assertRaises(QPAccessDenied):
+				question_papers.open_paper(paper, paper_set)
+		frappe.set_user("Administrator")
+		frappe.db.rollback(save_point="qp_request")  # the request fails and rolls back
+		self.assertFalse(self.logs(paper, action="Download"))
+		with patch.object(frappe.db, "commit") as commit:
+			frappe.db.after_rollback.run()
+		commit.assert_called_once_with()
+		self.assertEqual(sorted((r.paper_set, r.result) for r in self.logs(paper, action="Download")), [("A", "Denied"), ("B", "Denied")])
+
+	def test_a_committed_request_is_not_logged_twice(self):
+		paper = self.paper(release_in_minutes=120).name
 		frappe.set_user(EC_USER)
 		with self.assertRaises(QPAccessDenied):
 			question_papers.open_paper(paper, "A")
 		frappe.set_user("Administrator")
-		frappe.db.rollback(save_point="qp_request")  # the request fails and rolls back
-		self.assertFalse(self.logs(paper, action="Download"))
-		with patch.object(frappe.db, "commit"):
+		frappe.db.after_commit.run()  # the request committed: its rows are in, the buffer is done
+		with patch.object(frappe.db, "commit") as commit:
 			frappe.db.after_rollback.run()
-		self.assertEqual([(r.user, r.result) for r in self.logs(paper, action="Download")], [(EC_USER, "Denied")])
+		commit.assert_not_called()
+		self.assertEqual(len(self.logs(paper, action="Download")), 1)
 
 	def test_a_list_denial_is_logged_once_a_minute(self):
 		self.assertEqual(question_papers.permission_query(user=SM_USER), "1=0")
@@ -439,16 +488,32 @@ class TestRoleRestriction(QuestionPaperFixture):
 		self.assertFalse(self.can_read(SM_USER, paper))
 		self.assertFalse(self.can_read(FACULTY, paper))
 
-	def test_bank_items_of_a_sealed_paper_are_hidden_until_its_window_and_never_editable(self):
-		self.paper(release_in_minutes=120)
-		item = frappe.get_doc("Question Bank Item", self.items[0])
-		self.assertFalse(frappe.has_permission("Question Bank Item", "read", doc=item, user=EC_USER))
+	def test_the_whole_bank_of_a_course_is_hidden_while_a_sealed_paper_is_closed(self):
+		"""N-1: hiding only the paper's own items would tell which questions are on it."""
+		spare = self.bank_item("CO1", "Understand")
 		frappe.set_user(EC_USER)
-		self.assertNotIn(item.name, frappe.get_list("Question Bank Item", pluck="name"))
+		before = set(frappe.get_list("Question Bank Item", {"course": COURSE}, pluck="name"))
 		frappe.set_user("Administrator")
-		frappe.db.set_value(QP, {"exam_session": self.session.name}, "download_opens_at", add_to_date(now_datetime(), minutes=-1))
-		self.assertTrue(frappe.has_permission("Question Bank Item", "read", doc=item, user=EC_USER))
-		self.assertFalse(frappe.has_permission("Question Bank Item", "write", doc=item, user=EC_USER))
+		self.assertEqual(before, {*self.items, spare})
+		paper = self.paper(release_in_minutes=120).name
+		frappe.set_user(EC_USER)
+		self.assertEqual(frappe.get_list("Question Bank Item", {"course": COURSE}, pluck="name"), [])
+		self.assertEqual(frappe.db.count("Question Bank Item", {"course": COURSE}), len(before))  # raw count, unscoped
+		self.assertEqual(frappe.client.get_count("Question Bank Item", {"course": COURSE}), 0)
+		from frappe.desk.search import search_link
+		self.assertEqual(search_link("Question Bank Item", "QBI"), [])
+		frappe.set_user("Administrator")
+		for name in (self.items[0], spare):  # a used and an unused item answer alike
+			for ptype in ("read", "write"):
+				self.assertFalse(frappe.has_permission("Question Bank Item", ptype, doc=frappe.get_doc("Question Bank Item", name), user=EC_USER), (name, ptype))
+		new_item = frappe.get_doc({"doctype": "Question Bank Item", "company": COLLEGE, "course": COURSE, "course_outcome": "CO1",
+			"bloom_level": "Apply", "marks": 5, "question": "New"})  # fmt: skip
+		self.assertFalse(frappe.has_permission("Question Bank Item", "create", doc=new_item, user=EC_USER))
+		frappe.db.set_value(QP, paper, "download_opens_at", add_to_date(now_datetime(), minutes=-1))
+		used, unused = (frappe.get_doc("Question Bank Item", n) for n in (self.items[0], spare))
+		self.assertTrue(frappe.has_permission("Question Bank Item", "read", doc=used, user=EC_USER))
+		self.assertFalse(frappe.has_permission("Question Bank Item", "write", doc=used, user=EC_USER))
+		self.assertTrue(frappe.has_permission("Question Bank Item", "write", doc=unused, user=EC_USER))
 
 	def test_confidential_documents_cannot_be_shared(self):
 		paper = self.paper(approve=False).name
@@ -521,8 +586,8 @@ class TestApproval(QuestionPaperFixture):
 
 	def test_a_withdrawn_paper_is_never_downloadable(self):
 		paper = self.paper(release_in_minutes=10).name
+		self.withdraw(paper)
 		frappe.set_user(EC_USER)
-		question_papers.withdraw(paper)
 		with self.assertRaises(QPAccessDenied):
 			question_papers.open_paper(paper, "A")
 		frappe.set_user("Administrator")
@@ -530,9 +595,7 @@ class TestApproval(QuestionPaperFixture):
 
 	def test_a_withdrawn_draft_stays_withdrawn(self):
 		doc = self.draft()
-		frappe.set_user(EC_USER)
-		question_papers.withdraw(doc.name)
-		frappe.set_user("Administrator")
+		self.withdraw(doc.name)
 		doc = frappe.get_doc(QP, doc.name)
 		self.assertEqual(doc.moderation_status, "Withdrawn")
 		doc.total_marks = 90
@@ -541,11 +604,15 @@ class TestApproval(QuestionPaperFixture):
 		with self.assertRaises(frappe.ValidationError):
 			approvals.request_approval(QP, doc.name)
 
-	def test_only_exam_confidential_withdraws(self):
+	def test_only_the_coe_or_a_system_manager_of_the_college_withdraws_with_a_reason(self):
 		paper = self.paper(release_in_minutes=120).name
-		frappe.set_user(SM_USER)
-		with self.assertRaises(frappe.PermissionError):
-			question_papers.withdraw(paper)
+		for user in (EC_USER, OTHER_COE, FACULTY):
+			with self.assertRaises(frappe.PermissionError):
+				self.withdraw(paper, user)
+		with self.assertRaises(frappe.ValidationError):
+			self.withdraw(paper, COE_USER, reason=" ")
+		self.withdraw(paper, SM_USER)
+		self.assertEqual(frappe.db.get_value(QP, paper, ["docstatus", "withdrawal_reason"]), (2, "Leaked"))
 
 	def test_the_approval_policy_is_seeded(self):
 		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
@@ -625,3 +692,122 @@ class TestPrintLog(QuestionPaperFixture):
 		for room in (classroom, elsewhere):
 			with self.assertRaises(frappe.ValidationError):
 				question_papers.print_copies(paper, "A", room, 5)
+
+
+class TestRound2(QuestionPaperFixture):
+	def test_approved_files_are_protected_and_snapshotted(self):
+		"""I-A: an approved paper's sealed File can be neither changed nor swapped."""
+		doc = self.paper(release_in_minutes=10)
+		self.assertTrue(frappe.get_meta(QP).protect_attached_files)
+		self.assertTrue(doc.set_a_file_id and doc.set_a_file_sha256)
+		sealed = frappe.get_doc("File", doc.set_a_file_id)
+		for ptype in ("write", "delete"):
+			self.assertFalse(frappe.has_permission("File", ptype, doc=sealed, user=EC_USER), ptype)
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc("File", sealed.name, ignore_permissions=True)
+
+	def test_a_swapped_sealed_file_is_rejected(self):
+		from campus.examinations.question_paper_files import binding, cipher
+
+		doc = self.paper(release_in_minutes=10)
+		path = frappe.get_site_path(doc.set_a_file.strip("/"))
+		with open(path, "wb") as f:  # same paper and field, different paper content
+			f.write(cipher().encrypt(binding(doc.name, "set_a_file") + pdf_bytes("swapped")))
+		frappe.set_user(EC_USER)
+		with self.assertRaises(QPAccessDenied):
+			question_papers.open_paper(doc.name, "A")
+
+	def test_a_withdrawn_paper_stays_closed_and_cannot_be_copied_or_deleted(self):
+		"""I-C"""
+		doc = self.paper(release_in_minutes=-60)  # its window is open
+		self.assertTrue(self.can_read(EC_USER, doc.name))
+		self.withdraw(doc.name)
+		self.assertFalse(self.can_read(EC_USER, doc.name))
+		frappe.set_user(EC_USER)
+		self.assertEqual(frappe.get_list(QP, {"name": doc.name}, pluck="name"), [])
+		frappe.set_user("Administrator")
+		copy = frappe.copy_doc(frappe.get_doc(QP, doc.name))
+		copy.amended_from = doc.name
+		with self.assertRaises(frappe.ValidationError):
+			copy.insert()
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc(QP, doc.name, ignore_permissions=True)
+
+	def test_a_never_approved_draft_with_log_rows_can_be_deleted(self):
+		doc = self.draft()
+		frappe.set_user(EC_USER)
+		with self.assertRaises(QPAccessDenied):
+			question_papers.open_paper(doc.name, "A")
+		frappe.set_user("Administrator")
+		frappe.delete_doc(QP, doc.name, ignore_permissions=True)
+		self.assertEqual(len(self.logs(doc.name, action="Download")), 1)  # the log keeps the name
+
+	def test_a_nominated_setter_cannot_approve(self):
+		"""I-D"""
+		employee = self.employee("QPT Setter EC")
+		frappe.db.set_value("Employee", employee, "user_id", SM_EC_USER)
+		frappe.get_doc({"doctype": "QP Setter Nomination", "exam_session": self.session.name, "course": COURSE,
+			"deadline": add_days(today(), 3), "setters": [{"employee": employee}]}).insert()  # fmt: skip
+		doc = self.draft()
+		request = approvals.request_approval(QP, doc.name)
+		frappe.set_user(SM_EC_USER)
+		with self.assertRaises(frappe.PermissionError):
+			approvals.approve(request)
+		frappe.set_user("Administrator")
+
+	def test_an_editor_of_the_questions_cannot_approve(self):
+		doc = self.draft()
+		frappe.set_user(EC_USER)
+		doc = frappe.get_doc(QP, doc.name)
+		doc.questions[0].paper_set = "A"
+		doc.blueprint[0].max_percent = 65
+		doc.save()
+		frappe.set_user("Administrator")
+		self.assertIn(EC_USER, doc.editors)
+		request = approvals.request_approval(QP, doc.name)
+		frappe.set_user(EC_USER)
+		with self.assertRaises(frappe.PermissionError):
+			approvals.approve(request)
+		frappe.set_user(SM_EC_USER)
+		approvals.approve(request)
+		frappe.set_user("Administrator")
+
+	def test_no_version_notification_or_webhook_on_confidential_doctypes(self):
+		"""O-1 guards"""
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc({"doctype": "Version", "ref_doctype": QP, "docname": "QP-X", "data": "{}"}).insert(ignore_permissions=True)
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc({"doctype": "Notification", "name": "QPT Leak", "subject": "x", "document_type": "Question Bank Item",
+				"event": "New", "channel": "System Notification", "message": "{{ doc.question }}"}).insert(ignore_permissions=True)  # fmt: skip
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc({"doctype": "Webhook", "webhook_doctype": QP, "webhook_docevent": "on_update",
+				"request_url": "https://example.com/hook", "request_method": "POST"}).insert(ignore_permissions=True)  # fmt: skip
+
+	def test_the_key_comes_from_the_environment_or_a_file_outside_sites(self):
+		import tempfile
+
+		from cryptography.fernet import Fernet
+
+		from campus.examinations.question_paper_files import KEY_CONFIG, key
+
+		env_key = Fernet.generate_key().decode()
+		with patch.dict(os.environ, {"CAMPUS_QP_KEY": env_key}):
+			self.assertEqual(key(), env_key)
+		file_key = Fernet.generate_key().decode()
+		with tempfile.NamedTemporaryFile("w", suffix=".key", delete=False) as f:
+			f.write(file_key + "\n")
+		self.addCleanup(os.remove, f.name)
+		with patch.dict(frappe.conf, {"campus_qp_key_file": f.name, KEY_CONFIG: None}):
+			self.assertEqual(key(), file_key)
+		inside = frappe.get_site_path("private", "qp.key")
+		with patch.dict(frappe.conf, {"campus_qp_key_file": inside, KEY_CONFIG: None}):
+			with self.assertRaises(frappe.ValidationError):
+				key()
+
+	def test_a_missing_key_is_never_regenerated_over_sealed_files(self):
+		self.draft()  # a sealed file exists
+		with patch.dict(frappe.conf, {question_paper_setup.KEY_CONFIG: None, "campus_qp_key_file": None}), \
+			patch.dict(os.environ, {}, clear=False), patch.object(question_paper_setup, "update_site_config") as update:  # fmt: skip
+			os.environ.pop("CAMPUS_QP_KEY", None)
+			self.assertFalse(question_paper_setup.ensure_key())
+		update.assert_not_called()

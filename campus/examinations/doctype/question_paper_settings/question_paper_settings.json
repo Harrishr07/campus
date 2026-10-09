@@ -17,7 +17,7 @@
    "label": "Download Opens (minutes before release)",
    "reqd": 1,
    "default": "30",
-   "description": "The paper can be downloaded from this many minutes before its release time until the slot ends."
+   "description": "The paper can be downloaded from this many minutes (at most 120) before its release time until the slot ends."
   },
   {
    "fieldname": "slot_minutes",
@@ -47,7 +47,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:00:00.000000",
+ "modified": "2026-10-09 01:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Question Paper Settings",

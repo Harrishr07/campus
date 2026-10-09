@@ -5,8 +5,10 @@ the Phase-1 approval engine (policy "Question Paper Moderation": Exam Confidenti
 lets the setter or the requester approve). A request is refused unless the paper could be sealed: blueprint check
 (CO coverage, Bloom distribution: question_paper_rules), release time, Set A and every attached set sealed for this
 paper. The final approval submits the paper: that seals it, snapshots its download window from the settings, and
-allows one approved paper per exam session and course. Withdrawn is one-way. Release At defaults to the slot start
-of the course in the session's schedule.
+allows one approved paper per exam session and course, and snapshots each sealed File (name, SHA-256). Besides the
+requester and the owner, the nominated setters of the course and every user who changed the paper's content never
+approve it. Withdrawn is one-way; a withdrawn sealed paper stays closed and is never amended, copied or deleted.
+Release At is always the slot start of the course in the session's schedule.
 """
 
 import frappe
@@ -16,7 +18,7 @@ from frappe.model.document import Document
 from campus.campus_platform import approval_rules
 from campus.campus_platform.approval_engine import find_policy, latest_request
 from campus.campus_platform.approvals import ApprovableDocument
-from campus.examinations.question_paper_files import PAPER_FILE_FIELDS, bound_file, seal_attachments
+from campus.examinations.question_paper_files import PAPER_FILE_FIELDS, bound_file, seal_attachments, snapshot
 from campus.examinations.question_paper_rules import blueprint_issues
 from campus.examinations.question_papers import APPROVED, WITHDRAWN, log_once, slot_start, window_for
 
@@ -27,10 +29,13 @@ class QuestionPaper(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
 		self.refuse_change_once_withdrawn()
+		if self.amended_from:
+			frappe.throw(_("A question paper cannot be amended or copied; create and moderate a new one."))
 		self.company = frappe.db.get_value("Exam Session", self.exam_session, "company")
-		self.release_at = self.release_at or slot_start(self.exam_session, self.course)
+		self.release_at = slot_start(self.exam_session, self.course)
 		self.validate_questions()
 		seal_attachments(self)
+		self.record_editor()
 		self.blueprint_issues = "\n".join(self.check_blueprint()) or None
 		if self.docstatus == 0 and self.moderation_status != WITHDRAWN:
 			pending = (latest_request(self) or {}).get("status") == approval_rules.PENDING
@@ -58,10 +63,32 @@ class QuestionPaper(ApprovableDocument, Document):
 		self.validate_sealable()
 		self.refuse_second_approved_paper()
 		self.download_opens_at, self.download_closes_at = window_for(self.release_at)
+		snapshot(self)
 		self.moderation_status = APPROVED
 
 	def on_cancel(self):
 		self.db_set("moderation_status", WITHDRAWN)
+
+	def on_trash(self):
+		if self.docstatus != 0:
+			frappe.throw(_("An approved or withdrawn question paper is never deleted."))
+		super().on_trash()
+
+	def approval_excluded_users(self):
+		"""Users who never approve this paper (with the engine's requester and owner): its editors and the nominated
+		setters of the course in the session."""
+		nominations = frappe.get_all("QP Setter Nomination", {"exam_session": self.exam_session, "course": self.course}, pluck="name")
+		employees = frappe.get_all("QP Nomination Setter", {"parent": ["in", nominations or [""]]}, pluck="employee")
+		setters = frappe.get_all("Employee", {"name": ["in", employees or [""]], "user_id": ["is", "set"]}, pluck="user_id")
+		return {*setters, *(self.editors or "").split()}
+
+	def record_editor(self):
+		before = self.get_doc_before_save()
+		if before and content_signature(before) == content_signature(self):
+			return
+		editors = (self.editors or "").split()
+		if frappe.session.user not in editors:
+			self.editors = "\n".join([*editors, frappe.session.user])
 
 	def refuse_change_once_withdrawn(self):
 		before = self.get_doc_before_save()
@@ -107,3 +134,12 @@ class QuestionPaper(ApprovableDocument, Document):
 		)  # fmt: skip
 		if other:
 			frappe.throw(_("{0} is already the approved paper of {1} in this session.").format(other, self.course))
+
+
+def content_signature(doc):
+	"""What a setter writes: the questions, the pattern, the marks and the files."""
+	return (
+		[(q.paper_set, q.question_item) for q in doc.questions],
+		[(r.criterion, r.value, r.min_percent, r.max_percent) for r in doc.blueprint],
+		doc.total_marks, doc.set_a_file, doc.set_b_file,
+	)  # fmt: skip

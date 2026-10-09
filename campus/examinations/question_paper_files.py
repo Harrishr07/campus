@@ -4,28 +4,35 @@ download endpoint inside the release window.
 Frappe serves /private/files/ through the File controller's own permission check, which grants the uploader and
 Administrator regardless of app hooks, so access control alone cannot keep a paper closed. On save, a plain PDF in
 an Attach field is replaced by a private `.enc` File holding its Fernet ciphertext under the dedicated site key
-`campus_qp_key` (not the shared encryption_key); a direct file URL then only ever returns ciphertext.
+`campus_qp_key` (not the shared encryption_key); a direct file URL then only ever returns ciphertext. The key is
+read from the environment (CAMPUS_QP_KEY) first, then from a key file outside sites/ (site_config
+`campus_qp_key_file`, so backups do not carry it), and only then from site_config itself.
 
 Binding: the encrypted plaintext starts with a header naming the paper and the field, and the sealed File is
 attached to (Question Paper, name, field). A `.enc` value is accepted, and decrypted, only when both match, so a
-paper can neither point at nor copy another paper's sealed file, and a plain file named `.enc` is refused.
+paper can neither point at nor copy another paper's sealed file, and a plain file named `.enc` is refused. Approval
+also snapshots each sealed File's name and the SHA-256 of its ciphertext; an approved paper serves only that file.
 
 Plaintext: only this paper's (or the uploader's unattached) plain upload is sealed, and an upload whose content
 matches a File of another document is refused. The plain Files are deleted once the save commits; a daily sweep
 removes any plain File left attached to a Question Paper.
 """
 
+import hashlib
 import io
+import os
 from functools import partial
 
 import frappe
 from cryptography.fernet import Fernet, InvalidToken
 from frappe import _
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, get_bench_path, now_datetime
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 KEY_CONFIG = "campus_qp_key"
+KEY_FILE_CONFIG = "campus_qp_key_file"
+KEY_ENV = "CAMPUS_QP_KEY"
 SEALED_SUFFIX = ".enc"
 PAPER_FILE_FIELDS = {"A": "set_a_file", "B": "set_b_file"}
 QUESTION_PAPER = "Question Paper"
@@ -36,11 +43,25 @@ class QPFileError(frappe.ValidationError):
 	pass
 
 
+def key():
+	"""The question paper key: environment, else a key file outside sites/, else site_config; None when unset."""
+	if os.environ.get(KEY_ENV):
+		return os.environ[KEY_ENV].strip()
+	path = frappe.conf.get(KEY_FILE_CONFIG)
+	if path:
+		real, sites = os.path.realpath(path), os.path.realpath(os.path.join(get_bench_path(), "sites"))
+		if real == sites or real.startswith(sites + os.sep):
+			frappe.throw(_("The question paper key file must be outside the bench's sites folder (it is backed up)."))
+		with open(real) as f:
+			return f.read().strip()
+	return frappe.conf.get(KEY_CONFIG)
+
+
 def cipher():
-	key = frappe.conf.get(KEY_CONFIG)
-	if not key:
-		frappe.throw(_("The question paper key ({0}) is missing from site_config; run bench migrate.").format(KEY_CONFIG))
-	return Fernet(key.encode())
+	value = key()
+	if not value:
+		frappe.throw(_("The question paper key is not configured ({0}, {1} or {2}).").format(KEY_ENV, KEY_FILE_CONFIG, KEY_CONFIG))
+	return Fernet(value.encode())
 
 
 def binding(name, field):
@@ -95,8 +116,10 @@ def plain_uploads(doc, field, url):
 
 
 def delete_files(names):
+	"""Delete plain uploads; they are detached first, since an approved paper protects its attached Files."""
 	for name in names:
 		if frappe.db.exists("File", name):
+			frappe.db.set_value("File", name, {"attached_to_doctype": None, "attached_to_name": None, "attached_to_field": None})
 			frappe.delete_doc("File", name, ignore_permissions=True, force=True)
 	if not frappe.in_test:
 		frappe.db.commit()  # after_commit runs once the save's transaction has committed
@@ -133,9 +156,26 @@ def decrypt_bound(file_name, paper, field):
 	return plain[len(header):] if plain.startswith(header) else None
 
 
+def fingerprint(file_name):
+	"""SHA-256 of the File's stored bytes (the ciphertext)."""
+	with open(frappe.get_doc("File", file_name).get_full_path(), "rb") as f:
+		return hashlib.sha256(f.read()).hexdigest()
+
+
+def snapshot(doc):
+	"""Fix each sealed File's name and fingerprint on `doc` (approval)."""
+	for field in PAPER_FILE_FIELDS.values():
+		name = doc.get(field) and bound_file(doc, field)
+		doc.set(f"{field}_id", name or None)
+		doc.set(f"{field}_sha256", name and fingerprint(name) or None)
+
+
 def read_sealed(doc, field):
-	"""The decrypted PDF of `doc`'s `field`; QPFileError unless it is this paper's own sealed file."""
+	"""The decrypted PDF of `doc`'s `field`; QPFileError unless it is this paper's own sealed file (and, once
+	approved, the very file and bytes snapshotted at approval)."""
 	name = bound_file(doc, field)
+	if name and doc.docstatus != 0 and (name != doc.get(f"{field}_id") or fingerprint(name) != doc.get(f"{field}_sha256")):
+		name = None
 	content = name and decrypt_bound(name, doc.name, field)
 	if not content:
 		raise QPFileError(_("The paper file is not a sealed file of this paper."))

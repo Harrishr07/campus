@@ -13,6 +13,7 @@
   "moderation_status",
   "download_opens_at",
   "download_closes_at",
+  "withdrawal_reason",
   "section_pattern",
   "blueprint",
   "blueprint_issues",
@@ -22,6 +23,13 @@
   "set_a_file",
   "column_break_files",
   "set_b_file",
+  "section_audit",
+  "editors",
+  "set_a_file_id",
+  "set_a_file_sha256",
+  "column_break_audit",
+  "set_b_file_id",
+  "set_b_file_sha256",
   "amended_from"
  ],
  "fields": [
@@ -66,7 +74,8 @@
    "fieldtype": "Datetime",
    "label": "Release At",
    "in_list_view": 1,
-   "description": "The slot start. Empty: taken from the session's schedule and the slot times in Question Paper Settings. The download window is fixed on approval."
+   "description": "Always the slot start of the course in the session's schedule (slot times in Question Paper Settings). The download window is fixed on approval.",
+   "read_only": 1
   },
   {
    "fieldname": "moderation_status",
@@ -93,6 +102,14 @@
    "label": "Downloads Close At",
    "read_only": 1,
    "no_copy": 1
+  },
+  {
+   "fieldname": "withdrawal_reason",
+   "fieldtype": "Small Text",
+   "label": "Withdrawal Reason",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.moderation_status=='Withdrawn'"
   },
   {
    "fieldname": "section_pattern",
@@ -146,6 +163,52 @@
    "no_copy": 1
   },
   {
+   "fieldname": "section_audit",
+   "fieldtype": "Section Break",
+   "label": "Sealing",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "editors",
+   "fieldtype": "Small Text",
+   "label": "Editors",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Users who changed the questions, pattern or files; they never approve this paper."
+  },
+  {
+   "fieldname": "set_a_file_id",
+   "fieldtype": "Data",
+   "label": "Set A File (sealed)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "set_a_file_sha256",
+   "fieldtype": "Data",
+   "label": "Set A SHA-256",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_audit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "set_b_file_id",
+   "fieldtype": "Data",
+   "label": "Set B File (sealed)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "set_b_file_sha256",
+   "fieldtype": "Data",
+   "label": "Set B SHA-256",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -157,7 +220,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:00:00.000000",
+ "modified": "2026-10-09 01:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Question Paper",
@@ -182,5 +245,6 @@
  "naming_rule": "Expression (old style)",
  "track_changes": 0,
  "max_attachments": 8,
- "is_submittable": 1
+ "is_submittable": 1,
+ "protect_attached_files": 1
 }

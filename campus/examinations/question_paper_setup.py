@@ -2,11 +2,13 @@
 seed moderation policy (Exam Confidential of the paper's college; the setter and requester never approve), and the
 removal of Version rows that would copy confidential fields into a table System Managers read."""
 
+import os
+
 import frappe
 from cryptography.fernet import Fernet
 from frappe.installer import update_site_config
 
-from campus.examinations.question_paper_files import KEY_CONFIG
+from campus.examinations.question_paper_files import KEY_CONFIG, KEY_ENV, KEY_FILE_CONFIG, QUESTION_PAPER, SEALED_SUFFIX, key
 
 SETTINGS = "Question Paper Settings"
 DEFAULT_SETTINGS = {"download_lead_minutes": 30, "slot_minutes": 180, "forenoon_starts_at": "10:00:00", "afternoon_starts_at": "14:00:00"}
@@ -22,10 +24,21 @@ def setup_question_papers():
 
 
 def ensure_key():
-	if not frappe.conf.get(KEY_CONFIG):
-		key = Fernet.generate_key().decode()
-		update_site_config(KEY_CONFIG, key)
-		frappe.conf[KEY_CONFIG] = key
+	"""True when a question paper key is configured. A missing key is generated into site_config only while no
+	sealed file exists: a new key would make every sealed paper unreadable, so then it is refused, loudly."""
+	if key():
+		if not frappe.conf.get(KEY_FILE_CONFIG) and not os.environ.get(KEY_ENV):
+			print(f"campus: the question paper key is in site_config ({KEY_CONFIG}), so site backups carry it. "
+				f"Move it to the {KEY_ENV} environment variable or a file outside sites/ named by {KEY_FILE_CONFIG}.")  # fmt: skip
+		return True
+	if frappe.db.exists("File", {"attached_to_doctype": QUESTION_PAPER, "file_url": ["like", f"%{SEALED_SUFFIX}"]}):
+		print(f"campus: no question paper key is configured but sealed papers exist; NOT generating a new key. "
+			f"Restore the key ({KEY_ENV}, {KEY_FILE_CONFIG} or {KEY_CONFIG}).")  # fmt: skip
+		return False
+	value = Fernet.generate_key().decode()
+	update_site_config(KEY_CONFIG, value)
+	frappe.conf[KEY_CONFIG] = value
+	return True
 
 
 def seed_settings():

@@ -6,16 +6,20 @@ user without it (System Manager included), so a Custom DocPerm cannot open them 
 
 A paper is sealed when the moderation approval (Phase-1 approval engine) submits it. Approval snapshots its download
 window (release_at minus the lead minutes, to the end of the slot) onto the paper, so a later Settings edit changes
-nothing. A sealed paper is closed to everybody until that window opens; its bank questions are hidden until then and
-never editable again. Its PDFs are encrypted at rest (question_paper_files) and leave the server only through
+nothing. A sealed paper is closed to everybody until that window opens; while it is, the whole bank of its course is
+hidden and locked alike (no oracle of which items are on it), and its own items are never editable again. Its PDFs are encrypted at rest (question_paper_files) and leave the server only through
 `download_paper` (POST, not cached): inside the window, to Exam Confidential, watermarked with the user and the
-time. Printing copies for an exam hall of the college is recorded by `record_print`. `withdraw` retires a paper
-for good (a sealed one is cancelled); a withdrawn paper is never downloadable.
+time. Printing copies for an exam hall of the college is recorded by `record_print`. `withdraw` (COE or System
+Manager of the college, with a reason) retires a paper for good: a withdrawn sealed paper stays closed forever.
 
 Every attempt to open (desk/API read or print, the desk form for every user including Administrator), list without
 the role (once a minute per user), download, print or withdraw a paper is written to QP Access Log, allowed or
-denied, with user, time and IP. A row written in a request that then rolls back is written again, and committed,
-after the rollback (frappe.db.after_rollback), so a denial is never lost.
+denied, with user, time and IP. The rows of a transaction are also buffered; if it rolls back (a denied request
+does), one after_rollback flush writes them all again and commits once, so a denial is never lost.
+
+System Manager configuration paths (backups, Jinja templates, Customize Form, Server Scripts, self-granted roles)
+are Administrator-equivalent: a documented residual (docs/rulings.md). Version, Notification and Webhook records on
+these DocTypes are refused.
 
 Administrator bypasses Frappe's permission checks altogether; its desk opens are still logged, the questions of a
 sealed paper are stripped from the desk form, and the encrypted PDF and the endpoint's window check still apply.
@@ -73,7 +77,9 @@ def slot_start(exam_session, course):
 
 
 def is_closed(doc, now=None):
-	"""A sealed (approved) paper whose snapshotted window has not opened yet."""
+	"""A sealed (approved) paper whose snapshotted window has not opened yet, or a withdrawn sealed paper (for good)."""
+	if doc.docstatus == 2:
+		return True
 	opens = doc.get("download_opens_at")
 	return doc.docstatus == 1 and (not opens or (now or now_datetime()) < get_datetime(opens))
 
@@ -123,7 +129,7 @@ def permission_query(user=None, doctype=None):
 		log_list_denial(user)
 		return "1=0"
 	now = frappe.db.escape(str(now_datetime()))
-	return f"(`tabQuestion Paper`.docstatus != 1 or `tabQuestion Paper`.download_opens_at <= {now})"
+	return f"(`tabQuestion Paper`.docstatus = 0 or (`tabQuestion Paper`.docstatus = 1 and `tabQuestion Paper`.download_opens_at <= {now}))"
 
 
 def confidential_has_permission(doc, ptype=None, user=None, debug=False):
@@ -137,17 +143,20 @@ def confidential_query(user=None, doctype=None):
 
 
 def bank_item_has_permission(doc, ptype=None, user=None, debug=False):
-	"""Question Bank Item: Exam Confidential only; an item of a sealed paper is hidden until the paper's window
-	opens and is never changed again."""
+	"""Question Bank Item: Exam Confidential only. While any sealed paper of the course is closed, every item of the
+	course is hidden and locked alike (hiding only the paper's items would show which questions are on it); an item
+	used by a sealed paper is never changed again."""
 	if not confidential_has_permission(doc, ptype, user):
 		return False
-	opens = not doc.is_new() and sealed_windows(doc.name)
-	if not opens:
-		return True
-	if ptype not in READ_PTYPES:
+	if course_closed(doc.company, doc.course):
 		return False
-	now = now_datetime()
-	return all(o and get_datetime(o) <= now for o in opens)
+	if ptype in READ_PTYPES or doc.is_new():
+		return True
+	return not frappe.db.sql(
+		"""select 1 from `tabQuestion Paper Question` q join `tabQuestion Paper` p on p.name = q.parent
+		and q.parenttype = 'Question Paper' where q.question_item = %s and p.docstatus = 1 limit 1""",
+		doc.name,
+	)  # fmt: skip
 
 
 def bank_item_query(user=None, doctype=None):
@@ -156,25 +165,50 @@ def bank_item_query(user=None, doctype=None):
 		return ""
 	if not is_confidential_user(user):
 		return "1=0"
+	return f"""not exists (select 1 from `tabQuestion Paper` p where {closed_paper_sql()}
+		and p.company = `tabQuestion Bank Item`.company and p.course = `tabQuestion Bank Item`.course)"""
+
+
+def closed_paper_sql():
 	now = frappe.db.escape(str(now_datetime()))
-	return f"""`tabQuestion Bank Item`.name not in (select q.question_item from `tabQuestion Paper Question` q
-		join `tabQuestion Paper` p on p.name = q.parent and q.parenttype = 'Question Paper'
-		where p.docstatus = 1 and (p.download_opens_at is null or p.download_opens_at > {now}))"""
+	return f"p.docstatus = 1 and (p.download_opens_at is null or p.download_opens_at > {now})"
 
 
-def sealed_windows(item):
-	"""download_opens_at of each sealed paper that uses bank item `item`."""
-	return frappe.db.sql(
-		"""select p.download_opens_at from `tabQuestion Paper Question` q
-		join `tabQuestion Paper` p on p.name = q.parent and q.parenttype = 'Question Paper'
-		where q.question_item = %s and p.docstatus = 1""",
-		item, pluck=True,
-	)  # fmt: skip
+def course_closed(company, course):
+	"""Whether a sealed paper of `course` in `company` has not reached its download window."""
+	return bool(frappe.db.sql(f"select 1 from `tabQuestion Paper` p where {closed_paper_sql()} and p.company = %s and p.course = %s limit 1",
+		(company, course)))  # fmt: skip
 
 
 def file_has_permission(doc, ptype=None, user=None, debug=False):
-	"""A question paper's File is never read directly (it is ciphertext); the download endpoint serves it."""
-	return doc.attached_to_doctype != QUESTION_PAPER or ptype in ("write", "create", "delete")
+	"""A question paper's File is never read directly (it is ciphertext; the download endpoint serves it), and once
+	the paper leaves draft its Files can no longer be changed or removed."""
+	if doc.attached_to_doctype != QUESTION_PAPER:
+		return True
+	if ptype not in ("write", "create", "delete"):
+		return False
+	return not cint(frappe.db.get_value(QUESTION_PAPER, doc.attached_to_name, "docstatus"))
+
+
+UNVERSIONED = (BANK_ITEM, QUESTION_PAPER, "QP Setter Nomination")
+
+
+def refuse_confidential_version(doc, method=None):
+	"""Version before_insert: a Version would copy confidential fields into a table System Managers read."""
+	if doc.ref_doctype in UNVERSIONED:
+		frappe.throw(_("{0} keeps no version history (confidential).").format(_(doc.ref_doctype)))
+
+
+def refuse_confidential_notification(doc, method=None):
+	"""Notification validate: a template could mail confidential fields out."""
+	if doc.document_type in CONFIDENTIAL_DOCTYPES:
+		frappe.throw(_("Notifications cannot be set on {0} (confidential).").format(_(doc.document_type)))
+
+
+def refuse_confidential_webhook(doc, method=None):
+	"""Webhook validate: a webhook would post confidential documents to another server."""
+	if doc.webhook_doctype in CONFIDENTIAL_DOCTYPES:
+		frappe.throw(_("Webhooks cannot be set on {0} (confidential).").format(_(doc.webhook_doctype)))
 
 
 def block_confidential_share(doc, method=None):
@@ -195,15 +229,37 @@ def log_access(doc, action, allowed, reason="", user=None, paper_set=None, room=
 		"room": room, "copies": cint(copies),
 	}  # fmt: skip
 	insert_log(values)
-	frappe.db.after_rollback.add(lambda: insert_log(values, commit=True))
+	keep_for_rollback(values)
 
 
-def insert_log(values, commit=False):
+def insert_log(values):
 	log = frappe.get_doc(dict(values))
 	log.flags.ignore_links = True
 	log.insert(ignore_permissions=True)
-	if commit and not frappe.in_test:
-		frappe.db.commit()
+
+
+def keep_for_rollback(values):
+	"""Buffer the row for this transaction; one flush after a rollback writes them all and commits once."""
+	buffer = getattr(frappe.local, "qp_log_buffer", None)
+	if buffer is None:
+		buffer = frappe.local.qp_log_buffer = []
+		frappe.db.after_rollback.add(flush_after_rollback)
+		frappe.db.after_commit.add(drop_buffer)  # committed: the rows are already in
+	buffer.append(values)
+
+
+def flush_after_rollback():
+	rows = getattr(frappe.local, "qp_log_buffer", None) or []
+	frappe.local.qp_log_buffer = None
+	if not rows:
+		return
+	for values in rows:
+		insert_log(values)
+	frappe.db.commit()
+
+
+def drop_buffer():
+	frappe.local.qp_log_buffer = None
 
 
 def log_once(doc, action, allowed, reason, user):
@@ -288,21 +344,38 @@ def record_print(question_paper, paper_set, room, copies):
 		deny(denied)
 
 
+WITHDRAW_ROLES = ("COE", "System Manager")
+
+
 @frappe.whitelist(methods=["POST"])
-def withdraw(question_paper):
-	"""Withdraw a paper for good (Exam Confidential, any time): a sealed paper is cancelled, a draft is closed."""
-	if not is_confidential_user(frappe.session.user):
-		raise frappe.PermissionError(_("Only Exam Confidential may withdraw question papers."))
+def withdraw(question_paper, reason):
+	"""Withdraw a paper for good (COE or System Manager of the paper's college, any time, with a reason): a sealed
+	paper is cancelled and stays closed, a draft is closed."""
+	reason = (reason or "").strip()
 	doc = frappe.get_doc(QUESTION_PAPER, question_paper)
+	if not may_withdraw(frappe.session.user, doc.company):
+		raise frappe.PermissionError(_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(doc.company))
+	if not reason:
+		frappe.throw(_("Give the reason for withdrawing the paper."))
 	if doc.docstatus == 2 or doc.moderation_status == WITHDRAWN:
 		return
 	doc.flags.ignore_permissions = doc.flags.ignore_approval_lock = True
 	if doc.docstatus == 1:
 		doc.cancel()
+		doc.db_set("withdrawal_reason", reason)
 	else:
-		doc.moderation_status = WITHDRAWN
+		doc.moderation_status, doc.withdrawal_reason = WITHDRAWN, reason
 		doc.save()
-	log_access(doc, "Withdraw", True)
+	log_access(doc, "Withdraw", True, reason)
+
+
+def may_withdraw(user, company):
+	from frappe.permissions import get_user_permissions
+
+	if user != "Administrator" and not set(WITHDRAW_ROLES) & set(frappe.get_roles(user)):
+		return False
+	allowed = [p.get("doc") for p in get_user_permissions(user).get("Company", [])]
+	return not allowed or company in allowed
 
 
 def deny(denied):
