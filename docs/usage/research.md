@@ -48,3 +48,39 @@ Funding Agency **Institution** with a scheme of its own. It works like any other
 4. **Extend** records a revised end date with the agency's extension order. The project's end date follows.
 5. **Cancel** works only before anything has been posted against the project, cost centre or liability account.
    It removes the Project, Cost Center, Budgets and liability account.
+
+## Spending, budget control and re-appropriation (P3-T15, M08-04, M08-05)
+
+Every Purchase Order, Purchase Invoice, Journal Entry and Expense Claim line on a sanction's project or cost centre
+carries a **Grant Budget Head** (`oc_budget_head`):
+
+- The head must be one of the sanction's heads. The line's account must be one of that head's accounts for the
+  college: an Equipment line posting to a consumables account is refused. When the item's group is mapped under a
+  head of the scheme, that head is filled in, and another head is refused.
+- The line must use both the sanction's project and its cost centre. A line on the cost centre gets the project
+  filled in. The date must be inside the sanction period. A head can't go on a line that isn't a sanction's.
+- Journal Entry rows need a head only when they post spending (an expense or fixed asset account). Grant Receipt
+  bank and liability rows need none. Capital purchases go through a Purchase Invoice, not an Expense Claim.
+
+Limits follow the scheme's **Budget Action** (Stop or Warn):
+
+- **Revenue heads**: the sanction's ERPNext Budgets apply. A revenue line dated in a period that no Budget covers
+  is refused.
+- **Capital heads**: these have no ERPNext Budget, so Campus checks them when a Purchase Order, Purchase Invoice or
+  Journal Entry is submitted, under a lock on the sanction. A head's spending up to the end of each fiscal year
+  can't pass what was sanctioned for it up to that year, or its total. Spending is the submitted invoice lines,
+  the journal rows and the unbilled part of open orders. An order and its invoice count once.
+
+**Extend** on a sanction also carries the Budgets into the revised end date's fiscal year. Nothing new is
+sanctioned for that year, so only the unspent balance can be spent there.
+
+**Re-appropriation Request** (Research > Transactions): pick the sanction, the fiscal year, the from and to heads
+(the to head can be any head of the scheme) and the amount. Enter the agency's letter number and date, and attach
+the letter. Submitting it:
+
+- moves the amount between the sanction's head rows (the total sanctioned stays the same)
+- revises the affected ERPNext Budgets (cancelled and replaced; the new one's Revision Of names the old)
+- adds a comment on the sanction
+
+A head can't give away money already spent or committed against it. A revenue head left with nothing loses its
+Budget, and its lines are then refused. Cancelling the request moves the amount back.

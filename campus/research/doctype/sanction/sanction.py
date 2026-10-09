@@ -5,7 +5,7 @@ college (campus.research.api.validate_scheme_usable). A sanction may come from a
 Submitting it sets up the ERPNext records the grant is run on (campus.research.grant_setup, blueprint D9): a Project, a
 Cost Center under the research cost centre, a Budget per revenue head account and the liability account "Grant Received
 in Advance - <sanction>". Cancelling it before any transaction removes them. Grant Receipts credit that liability.
-`extend_sanction` revises the end date with the agency's extension order.
+`extend_sanction` revises the end date with the agency's extension order; the Budgets follow (budget_sync).
 """
 
 import frappe
@@ -14,6 +14,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate
 
 from campus.research.api import head_accounts, validate_scheme_usable
+from campus.research.budget_sync import sync_budgets
 from campus.research.grant_setup import GrantSetup
 
 
@@ -57,6 +58,7 @@ class Sanction(Document):
 		row.db_insert()
 		self.db_set("end_date", revised)
 		frappe.db.set_value("Project", self.project, "expected_end_date", revised)
+		sync_budgets(self.name)  # P3-T15: the Budgets run into the revised end date's fiscal year
 		self.add_comment(
 			"Info", _("Extended to {0} under order {1}.").format(frappe.format(revised, "Date"), order_no)
 		)

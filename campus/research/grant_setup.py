@@ -63,8 +63,10 @@ class GrantSetup:
 	def check_nothing_posted(self):
 		sanction = self.sanction
 		conditions = {"account": sanction.liability_account, "cost_center": sanction.cost_center, "project": sanction.project}
-		for field, value in conditions.items():  # locking reads: a receipt committed while we waited is seen
-			if value and frappe.db.get_value("GL Entry", {field: value}, "name", for_update=True):
+		for field, value in conditions.items():
+			# locking reads on the indexed account and cost centre see a receipt committed while we waited; GL Entry's
+			# project has no index (a locking read would lock the whole table), and every posting here carries the cost centre
+			if value and frappe.db.get_value("GL Entry", {field: value}, "name", for_update=field != "project"):
 				frappe.throw(
 					_("{0} has accounting entries against its project, cost centre or liability account, so it can't be cancelled.").format(
 						sanction.name
@@ -138,6 +140,7 @@ class GrantSetup:
 		budget.distribute_equally = 0
 		budget.save()
 		budget.submit()
+		return budget.name
 
 	def fiscal_year(self, date):
 		return get_fiscal_year(date, company=self.company)[0]

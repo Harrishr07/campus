@@ -10,7 +10,7 @@ from frappe.utils import add_days, getdate, today
 from campus.campus_platform.approvals import approve, reject, request_approval
 from campus.research import proposals
 from campus.research.report.research_proposal_pipeline import research_proposal_pipeline as pipeline
-from campus.research.setup import REMINDER_EVENT, setup_research
+from campus.research.setup import REMINDER_EVENT, seed_research
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import make_account, make_company_with_accounts
 from campus.tests.utils import CampusTestCase
@@ -67,7 +67,7 @@ class TestResearchProposal(CampusTestCase):
 		frappe.db.savepoint("research_proposal_test")
 		self.addCleanup(frappe.db.rollback, save_point="research_proposal_test")
 		self.addCleanup(frappe.set_user, "Administrator")
-		setup_research()
+		seed_research()
 		self.make_settings(COLLEGE, ABBR)
 		consumables = make_account(COLLEGE, ABBR, "RP Consumables", "Indirect Expenses")
 		travel = make_account(COLLEGE, ABBR, "RP Travel", "Indirect Expenses")

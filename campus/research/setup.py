@@ -1,8 +1,11 @@
 """M08-02 Research setup, run on install and migrate (idempotent): the PI deadline reminder template and the default
 internal review policy for Research Proposals (P3-T13), and the "Institution" Funding Agency that seed money is
-sanctioned under (P3-T14). Existing (possibly edited) records are left alone."""
+sanctioned under (P3-T14), and the `oc_budget_head` custom fields on purchase, journal and expense claim lines (P3-T15).
+Existing (possibly edited) records are left alone."""
 
 import frappe
+
+from campus.research.budget_control import setup_budget_head_fields
 
 REMINDER_EVENT = "research_proposal.deadline"
 REVIEW_POLICY = "Research Proposal Internal Review"
@@ -10,6 +13,12 @@ INSTITUTION_AGENCY = "Institution"
 
 
 def setup_research():
+	seed_research()
+	setup_budget_head_fields()
+
+
+def seed_research():
+	"""The records only (no custom field DDL), so tests can call it."""
 	seed_reminder_template()
 	seed_review_policy()
 	seed_institution_agency()

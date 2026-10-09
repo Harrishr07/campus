@@ -252,6 +252,16 @@ doc_events["Purchase Invoice"] = {
 	"before_submit": "campus.examinations.remuneration_payment.check_invoice",  # P2-T23
 	"before_cancel": "campus.examinations.remuneration_payment.refuse_invoice_cancel",  # P2-T23
 }
+_budget_control = "campus.research.budget_control"  # P3-T15: grant budget heads on spending lines
+doc_events["Purchase Invoice"]["validate"] = f"{_budget_control}.validate_lines"
+doc_events["Purchase Invoice"]["before_submit"] = [doc_events["Purchase Invoice"]["before_submit"], f"{_budget_control}.check_capital_limits"]
+doc_events["Purchase Order"] = {"validate": f"{_budget_control}.validate_lines", "before_submit": f"{_budget_control}.check_capital_limits"}
+doc_events["Journal Entry"]["validate"] = [doc_events["Journal Entry"]["validate"], f"{_budget_control}.validate_lines"]
+doc_events["Journal Entry"]["before_submit"] = f"{_budget_control}.check_capital_limits"
+doc_events["Expense Claim"] = {"validate": f"{_budget_control}.validate_lines"}
+for _dt in ("Payment Entry", "Journal Entry"):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
+	_before = doc_events.setdefault(_dt, {}).get("before_submit")
+	doc_events[_dt]["before_submit"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.examinations.remuneration_payment.check_paid_invoice"]
 
 # Scheduled Tasks
 # ---------------

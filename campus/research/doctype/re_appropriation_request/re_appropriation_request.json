@@ -1,0 +1,199 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-09 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "description": "Moves an amount between the heads of a sanction for one fiscal year, under the agency's approval letter. Submitting it updates the sanction's heads and Budgets.",
+ "field_order": [
+  "naming_series",
+  "sanction",
+  "company",
+  "fiscal_year",
+  "column_break_1",
+  "from_head",
+  "to_head",
+  "amount",
+  "currency",
+  "approval_section",
+  "agency_letter_no",
+  "agency_letter_date",
+  "column_break_2",
+  "agency_approval_letter",
+  "reason",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "REAPP-.YYYY.-",
+   "default": "REAPP-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "sanction",
+   "fieldtype": "Link",
+   "label": "Sanction",
+   "options": "Sanction",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "sanction.company",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "fiscal_year",
+   "fieldtype": "Link",
+   "label": "Fiscal Year",
+   "options": "Fiscal Year",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_head",
+   "fieldtype": "Link",
+   "label": "From Head",
+   "options": "Grant Budget Head",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_head",
+   "fieldtype": "Link",
+   "label": "To Head",
+   "options": "Grant Budget Head",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "options": "currency",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "fetch_from": "sanction.currency",
+   "hidden": 1
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Agency Approval"
+  },
+  {
+   "fieldname": "agency_letter_no",
+   "fieldtype": "Data",
+   "label": "Agency Letter No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "agency_letter_date",
+   "fieldtype": "Date",
+   "label": "Agency Letter Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "agency_approval_letter",
+   "fieldtype": "Attach",
+   "label": "Agency Approval Letter",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Re-appropriation Request",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Re-appropriation Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "sanction",
+ "track_changes": 1
+}
