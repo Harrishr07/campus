@@ -23,9 +23,13 @@ def unmapped_heads(scheme, company):
 
 
 def validate_scheme_usable(scheme, company):
-	"""Throw unless every budget head of `scheme` maps to an account of `company`."""
-	if not frappe.db.exists("Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}):
+	"""Throw unless `company` has Research Settings, `scheme` has budget heads, every head maps to an account of
+	`company` and no item group sits under two of its heads."""
+	get_research_settings(company)
+	heads = frappe.get_all("Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head")
+	if not heads:
 		frappe.throw(_("Funding Scheme {0} has no budget heads.").format(scheme))
+	validate_item_groups_distinct(heads)
 	missing = unmapped_heads(scheme, company)
 	if missing:
 		frappe.throw(
@@ -33,6 +37,21 @@ def validate_scheme_usable(scheme, company):
 				scheme, company, ", ".join(missing)
 			)
 		)
+
+
+def validate_item_groups_distinct(heads):
+	"""Throw when an item group is mapped under more than one of `heads`, so a purchase line has a single head."""
+	rows = frappe.get_all(
+		"Grant Budget Head Item Group",
+		{"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head"},
+		["parent", "item_group"],
+	)
+	heads_by_group = {}
+	for row in rows:
+		heads_by_group.setdefault(row.item_group, set()).add(row.parent)
+	shared = sorted(group for group, owners in heads_by_group.items() if len(owners) > 1)
+	if shared:
+		frappe.throw(_("Item groups {0} are mapped under more than one budget head of the scheme.").format(", ".join(shared)))
 
 
 def head_accounts(head, company):
@@ -53,9 +72,19 @@ def get_research_settings(company):
 
 def interest_treatment(company, agency):
 	"""Where interest on `agency`'s grant funds goes for `company`: the agency's choice, else the college's setting
-	(Grant Liability by default, blueprint D9)."""
-	return (
+	(Grant Liability by default, blueprint D9). Interest Income needs the college's Interest Income Account."""
+	settings = frappe.db.get_value(
+		"Research Settings", company, ["interest_treatment", "interest_income_account"], as_dict=True
+	) or frappe._dict()
+	treatment = (
 		frappe.db.get_value("Funding Agency", agency, "interest_treatment")
-		or frappe.db.get_value("Research Settings", company, "interest_treatment")
+		or settings.interest_treatment
 		or DEFAULT_INTEREST_TREATMENT
 	)
+	if treatment == "Interest Income" and not settings.interest_income_account:
+		frappe.throw(
+			_("Funding Agency {0} treats interest as income: set the Interest Income Account in {1}'s Research Settings.").format(
+				agency, company
+			)
+		)
+	return treatment

@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from campus.research.api import validate_item_groups_distinct
+
 
 class FundingScheme(Document):
 	def validate(self):
@@ -17,6 +19,7 @@ class FundingScheme(Document):
 		repeated = sorted({head for head in heads if heads.count(head) > 1})
 		if repeated:
 			frappe.throw(_("Budget heads {0} appear more than once.").format(", ".join(repeated)))
+		validate_item_groups_distinct(heads)
 
 	def validate_percentages(self):
 		if not 0 <= flt(self.overhead_percent) <= 100:

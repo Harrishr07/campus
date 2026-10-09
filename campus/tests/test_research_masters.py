@@ -48,12 +48,19 @@ class TestResearchMasters(CampusTestCase):
 	def make_agency(self, name, **values):
 		return frappe.get_doc({"doctype": "Funding Agency", "agency_name": name, **values}).insert().name
 
-	def make_head(self, name, accounts=(), is_capital=0):
+	def make_item_group(self, name):
+		if not frappe.db.exists("Item Group", name):
+			parent = frappe.db.get_value("Item Group", {"is_group": 1}, "name")  # the bare test site may lack "All Item Groups"
+			frappe.get_doc({"doctype": "Item Group", "item_group_name": name, "parent_item_group": parent}).insert()
+		return name
+
+	def make_head(self, name, accounts=(), is_capital=0, item_groups=()):
 		return (
 			frappe.get_doc(
 				{
 					"doctype": "Grant Budget Head", "head_name": name, "is_capital": is_capital,
 					"accounts": [{"company": company, "account": account} for company, account in accounts],
+					"item_groups": [{"item_group": group} for group in item_groups],
 				}  # fmt: skip
 			)
 			.insert()
@@ -69,14 +76,14 @@ class TestResearchMasters(CampusTestCase):
 			}  # fmt: skip
 		).insert()
 
-	def make_settings(self, **values):
+	def make_settings(self, company=COLLEGE, abbr=ABBR, **values):
 		return frappe.get_doc(
 			{
-				"doctype": "Research Settings", "company": COLLEGE,
-				"grant_liability_parent": f"Current Liabilities - {ABBR}",
-				"grant_income_account": make_account(COLLEGE, ABBR, "Grant Income", "Indirect Income"),
+				"doctype": "Research Settings", "company": company,
+				"grant_liability_parent": f"Current Liabilities - {abbr}",
+				"grant_income_account": make_account(company, abbr, "Grant Income", "Indirect Income"),
 				"deferred_capital_grant_account": make_account(
-					COLLEGE, ABBR, "Deferred Capital Grant", "Non-Current Liabilities"
+					company, abbr, "Deferred Capital Grant", "Non-Current Liabilities"
 				),
 				**values,
 			}  # fmt: skip
@@ -87,6 +94,7 @@ class TestResearchMasters(CampusTestCase):
 		consumables = self.make_head("RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)])
 		equipment = self.make_head("RST Equipment", [(COLLEGE, self.equipment)], is_capital=1)
 		scheme = self.make_scheme("RST Core Research Grant", [consumables, equipment])
+		self.make_settings()
 
 		self.assertEqual(api.unmapped_heads(scheme.name, COLLEGE), [])
 		api.validate_scheme_usable(scheme.name, COLLEGE)  # does not raise
@@ -95,13 +103,40 @@ class TestResearchMasters(CampusTestCase):
 		consumables = self.make_head("RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)])
 		equipment = self.make_head("RST Equipment", [(COLLEGE, self.equipment)], is_capital=1)
 		scheme = self.make_scheme("RST Core Research Grant", [consumables, equipment])
+		self.make_settings(OTHER, OTHER_ABBR)
 
 		self.assertEqual(api.unmapped_heads(scheme.name, OTHER), [equipment])
 		with self.assertRaisesRegex(frappe.ValidationError, "RST Equipment"):
 			api.validate_scheme_usable(scheme.name, OTHER)
 
+	def test_scheme_unusable_without_research_settings_for_company(self):
+		head = self.make_head("RST Consumables", [(COLLEGE, self.consumables)])
+		scheme = self.make_scheme("RST Core Research Grant", [head])
+		self.assertEqual(api.unmapped_heads(scheme.name, COLLEGE), [])
+		with self.assertRaisesRegex(frappe.ValidationError, "Research Settings"):
+			api.validate_scheme_usable(scheme.name, COLLEGE)
+
+	def test_item_group_under_two_heads_of_a_scheme_is_refused(self):
+		supplies = self.make_item_group("RST Lab Supplies")
+		consumables = self.make_head("RST Consumables", [(COLLEGE, self.consumables)], item_groups=[supplies])
+		travel = self.make_head("RST Travel", [(COLLEGE, self.travel)], item_groups=[supplies])
+		with self.assertRaisesRegex(frappe.ValidationError, "RST Lab Supplies"):
+			self.make_scheme("RST Overlapping Groups", [consumables, travel])
+		# a head edited after the scheme was saved is caught when the scheme is used
+		travel_doc = frappe.get_doc("Grant Budget Head", travel)
+		travel_doc.item_groups = []
+		travel_doc.save()
+		scheme = self.make_scheme("RST Overlapping Later", [consumables, travel])
+		self.make_settings()
+		api.validate_scheme_usable(scheme.name, COLLEGE)
+		travel_doc.append("item_groups", {"item_group": supplies})
+		travel_doc.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "RST Lab Supplies"):
+			api.validate_scheme_usable(scheme.name, COLLEGE)
+
 	def test_scheme_without_heads_is_unusable(self):
 		scheme = self.make_scheme("RST Empty Scheme", [])
+		self.make_settings()
 		with self.assertRaisesRegex(frappe.ValidationError, "no budget heads"):
 			api.validate_scheme_usable(scheme.name, COLLEGE)
 
@@ -140,6 +175,25 @@ class TestResearchMasters(CampusTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Expense"):
 			self.make_head("RST Revenue On Asset", [(COLLEGE, self.equipment)])
 
+	def test_capital_head_needs_a_fixed_asset_ledger(self):
+		bank = make_account(COLLEGE, ABBR, "RST Grant Bank", "Bank Accounts", account_type="Bank")
+		with self.assertRaisesRegex(frappe.ValidationError, "Fixed Asset"):
+			self.make_head("RST Capital On Bank", [(COLLEGE, bank)], is_capital=1)
+
+	def test_revenue_head_refuses_depreciation_stock_adjustment_and_round_off(self):
+		for account_type in ("Depreciation", "Stock Adjustment", "Round Off"):
+			account = make_account(COLLEGE, ABBR, f"RST {account_type}", "Indirect Expenses", account_type=account_type)
+			with self.subTest(account_type=account_type), self.assertRaisesRegex(frappe.ValidationError, account_type):
+				self.make_head(f"RST Revenue On {account_type}", [(COLLEGE, account)])
+
+	def test_disabled_or_frozen_accounts_refused(self):
+		disabled = make_account(COLLEGE, ABBR, "RST Disabled Expense", "Indirect Expenses", disabled=1)
+		frozen = make_account(COLLEGE, ABBR, "RST Frozen Income", "Indirect Income", freeze_account="Yes")
+		with self.assertRaisesRegex(frappe.ValidationError, "disabled"):
+			self.make_head("RST On Disabled", [(COLLEGE, disabled)])
+		with self.assertRaisesRegex(frappe.ValidationError, "frozen"):
+			self.make_settings(grant_income_account=frozen)
+
 	def test_head_rejects_duplicate_account_row(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "more than once"):
 			self.make_head("RST Duplicate Row", [(COLLEGE, self.consumables), (COLLEGE, self.consumables)])
@@ -166,6 +220,14 @@ class TestResearchMasters(CampusTestCase):
 		income_agency = self.make_agency("RST Private Foundation", interest_treatment="Interest Income")
 		self.assertEqual(api.interest_treatment(COLLEGE, income_agency), "Interest Income")
 		self.assertEqual(api.interest_treatment(COLLEGE, self.agency), "Grant Liability")
+
+	def test_agency_override_to_income_needs_the_college_interest_income_account(self):
+		self.make_settings()  # Grant Liability, no interest income account
+		income_agency = self.make_agency("RST Private Foundation", interest_treatment="Interest Income")
+		with self.assertRaisesRegex(frappe.ValidationError, "Interest Income Account"):
+			api.interest_treatment(COLLEGE, income_agency)
+		with self.assertRaisesRegex(frappe.ValidationError, "Interest Income Account"):
+			api.interest_treatment(OTHER, income_agency)  # no Research Settings at all
 
 	def test_interest_income_treatment_needs_an_income_account(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Interest Income Account"):
