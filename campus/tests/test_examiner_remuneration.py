@@ -395,6 +395,19 @@ class TestExternalPayment(RemunerationFixture):
 		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 2)
 		self.assertEqual(self.claim(member=self.member).total_amount, 60)
 
+	def journal_payment(self, invoice):
+		"""A draft Journal Entry paying the invoice's 54 from cash."""
+		return frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"accounts": [
+					{"account": invoice.credit_to, "party_type": "Supplier", "party": invoice.supplier, "debit_in_account_currency": 54,
+						"reference_type": "Purchase Invoice", "reference_name": invoice.name},
+					{"account": f"Cash - {ABBR}", "credit_in_account_currency": 54},
+				],
+			}
+		).insert()  # fmt: skip
+
 	def submitted_invoice(self):
 		claim = self.approved(self.claim(member=self.member))
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
@@ -418,21 +431,59 @@ class TestExternalPayment(RemunerationFixture):
 		if not frappe.db.exists("Party Type", "Supplier"):  # the bare test site has only Student
 			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
 		claim, invoice = self.submitted_invoice()
-		entry = frappe.get_doc(
-			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
-				"accounts": [
-					{"account": invoice.credit_to, "party_type": "Supplier", "party": invoice.supplier, "debit_in_account_currency": 54,
-						"reference_type": "Purchase Invoice", "reference_name": invoice.name},
-					{"account": f"Cash - {ABBR}", "credit_in_account_currency": 54},
-				],
-			}
-		).insert()  # fmt: skip
+		entry = self.journal_payment(invoice)
 		entry.submit()
 		with self.assertRaises(frappe.ValidationError) as caught:
 			claim.cancel()
 		self.assertIn(entry.name, str(caught.exception))
 		self.assertEqual(frappe.db.get_value(CLAIM, claim.name, "docstatus"), 1)
+
+	def test_the_payment_check_waits_on_ledger_rows_in_flight(self):
+		from unittest.mock import patch
+
+		claim, _invoice = self.submitted_invoice()
+		with patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql:
+			remuneration_payment.refuse_cancel_after_payment(claim)
+		ledger = [str(c.args[0]) for c in sql.call_args_list if "tabPayment Ledger Entry" in str(c.args[0])]
+		self.assertTrue(ledger)
+		self.assertTrue(all("FOR UPDATE" in q.upper() for q in ledger), ledger)
+
+	def test_a_payment_prepared_before_the_claim_was_cancelled_is_not_submitted(self):
+		from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
+
+		claim, invoice = self.submitted_invoice()
+		payment = get_payment_entry("Purchase Invoice", invoice.name, bank_account=f"Cash - {ABBR}")
+		payment.update({"reference_no": "EXR-PAY", "reference_date": today()})
+		payment.insert()
+		claim.cancel()
+		# a submit racing the cancel still holds the invoice reference that ERPNext has since unlinked in the database
+		with self.assertRaises(frappe.ValidationError) as caught:
+			remuneration_payment.check_paid_invoice(payment)
+		self.assertIn(invoice.name, str(caught.exception))
+		with self.assertRaises(frappe.ValidationError):
+			payment.submit()
+		self.assertEqual(frappe.db.get_value("Payment Entry", payment.name, "docstatus"), 0)
+
+	def test_a_journal_entry_prepared_before_the_claim_was_cancelled_is_not_submitted(self):
+		if not frappe.db.exists("Party Type", "Supplier"):
+			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
+		claim, invoice = self.submitted_invoice()
+		entry = self.journal_payment(invoice)
+		claim.cancel()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			remuneration_payment.check_paid_invoice(entry)
+		self.assertIn(invoice.name, str(caught.exception))
+		with self.assertRaises(frappe.ValidationError):
+			entry.submit()
+
+	def test_a_tax_row_is_accepted_without_a_gstin(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		account = make_account(COLLEGE, ABBR, "EXR Input Tax", "Duties and Taxes", account_type="Tax")
+		invoice.append("taxes", {"charge_type": "On Net Total", "account_head": account, "description": "GST", "rate": 18, "add_deduct_tax": "Add", "category": "Total"})
+		invoice.save()
+		invoice.submit()
+		self.assertEqual(invoice.docstatus, 1)
 
 	def test_an_amendment_of_an_invoice_cancelled_with_its_claim_is_not_submitted(self):
 		claim, invoice = self.submitted_invoice()

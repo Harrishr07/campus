@@ -108,15 +108,36 @@ def refuse_cancel_after_payment(claim):
 	advance while the claim's work is freed for a second payout."""
 	if not claim.purchase_invoice or frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True) != 1:
 		return
-	vouchers = frappe.get_all(
-		"Payment Ledger Entry",
-		{"against_voucher_type": "Purchase Invoice", "against_voucher_no": claim.purchase_invoice, "voucher_no": ["!=", claim.purchase_invoice], "delinked": 0},
-		pluck="voucher_no", distinct=True,
-	)  # fmt: skip
+	ledger = frappe.qb.DocType("Payment Ledger Entry")
+	rows = (
+		frappe.qb.from_(ledger)
+		.select(ledger.voucher_no)
+		.where(
+			(ledger.against_voucher_type == "Purchase Invoice") & (ledger.against_voucher_no == claim.purchase_invoice)
+			& (ledger.voucher_no != claim.purchase_invoice) & (ledger.delinked == 0)
+		)
+		.for_update()  # waits on ledger rows a concurrent payment is writing
+	).run()  # fmt: skip
+	vouchers = sorted({row[0] for row in rows})
 	if vouchers:
 		frappe.throw(
-			_("Purchase Invoice {0} has payments allocated ({1}): cancel or unallocate the payment first.").format(claim.purchase_invoice, ", ".join(vouchers))
+			_("Purchase Invoice {0} has payments allocated ({1}): cancel or unallocate the payment or debit note first.").format(
+				claim.purchase_invoice, ", ".join(vouchers)
+			)
 		)
+
+
+def check_paid_invoice(voucher, method=None):
+	"""Payment Entry / Journal Entry before_submit: a voucher paying a claim's Purchase Invoice locks the invoice row
+	(so it waits on a claim cancel in flight) and is refused unless the invoice is still submitted."""
+	if voucher.doctype == "Payment Entry":
+		invoices = {r.reference_name for r in voucher.references if r.reference_doctype == "Purchase Invoice"}
+	else:
+		invoices = {r.reference_name for r in voucher.accounts if r.reference_type == "Purchase Invoice"}
+	claimed = invoices and set(frappe.get_all(CLAIM, {"purchase_invoice": ["in", list(invoices)]}, pluck="purchase_invoice"))
+	for invoice in sorted(claimed or ()):
+		if frappe.db.get_value("Purchase Invoice", invoice, "docstatus", for_update=True) != 1:
+			frappe.throw(_("Purchase Invoice {0} is no longer submitted; it cannot be paid.").format(invoice))
 
 
 def invoice_chain(invoice):
@@ -174,11 +195,22 @@ def check_invoice_matches(invoice, claim):
 def check_tds_and_charges(invoice, claim):
 	if claim.tds_section and (not invoice.apply_tds or any(not row.apply_tds for row in invoice.items)):
 		frappe.throw(_("Purchase Invoice {0} must withhold TDS ({1}) as Examiner Remuneration Claim {2} does.").format(invoice.name, claim.tds_section, claim.name))
+	taxes = tax_accounts(invoice.company)
 	for row in invoice.taxes:
-		if row.is_tax_withholding_account or row.get("gst_tax_type") or row.add_deduct_tax == "Deduct":
+		if row.is_tax_withholding_account or row.add_deduct_tax == "Deduct" or row.account_head in taxes:
 			continue
 		if flt(row.base_tax_amount):
 			frappe.throw(_("Row {0}: Purchase Invoice {1} of Examiner Remuneration Claim {2} cannot add a charge ({3}).").format(row.idx, invoice.name, claim.name, row.account_head))
+
+
+def tax_accounts(company):
+	"""The company's Tax ledgers and the GST accounts of GST Settings (GST is a tax even without a GSTIN)."""
+	accounts = set(frappe.get_all("Account", {"company": company, "account_type": "Tax"}, pluck="name"))
+	if frappe.db.exists("DocType", "GST Account"):
+		fields = ["cgst_account", "sgst_account", "igst_account", "cess_account", "cess_non_advol_account"]
+		for row in frappe.get_all("GST Account", {"parenttype": "GST Settings", "company": company}, fields, as_list=True):
+			accounts |= {account for account in row if account}
+	return accounts
 
 
 def refuse_invoice_cancel(invoice, method=None):
