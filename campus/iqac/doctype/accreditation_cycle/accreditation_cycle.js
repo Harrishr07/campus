@@ -26,7 +26,24 @@ frappe.ui.form.on("Accreditation Cycle", {
 			);
 		}
 		const next = { Collecting: __("Move to Validating"), Validating: __("Move to IQAC Review"), Approved: __("Mark Submitted") }[status];
-		if (next) frm.add_custom_button(next, () => call("advance_cycle", { cycle_name: frm.doc.name }));
+		if (status === "Validating") {
+			frm.add_custom_button(__("Run Validation"), () =>
+				call("run_validation", { cycle: frm.doc.name }, (run) => frappe.set_route("Form", "Validation Run", run))
+			);
+			frm.add_custom_button(__("Readiness"), () => frappe.set_route("query-report", "Cycle Readiness", { cycle: frm.doc.name }));
+		}
+		if (status === "Validating") {
+			frm.add_custom_button(next, () =>
+				frappe.xcall("campus.iqac.api.validation_counts", { cycle: frm.doc.name }).then((found) => {
+					if (!found.warnings || found.blocking) return call("advance_cycle", { cycle_name: frm.doc.name });
+					frappe.prompt(
+						{ fieldname: "comment", fieldtype: "Small Text", label: __("Comment on the {0} warning(s)", [found.warnings]), reqd: 1 },
+						(values) => call("advance_cycle", { cycle_name: frm.doc.name, comment: values.comment }),
+						__("Validation Warnings")
+					);
+				})
+			);
+		} else if (next) frm.add_custom_button(next, () => call("advance_cycle", { cycle_name: frm.doc.name }));
 		if (["Validating", "IQAC Review"].includes(status)) {
 			frm.add_custom_button(__("Reopen for Collecting"), () => call("reopen_cycle", { cycle_name: frm.doc.name }));
 		}

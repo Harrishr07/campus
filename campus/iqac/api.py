@@ -3,7 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import request_approval
-from campus.iqac import compute, evidence, metric_values
+from campus.iqac import compute, evidence, metric_values, validation
 from campus.iqac.access import ROLES
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
@@ -23,9 +23,22 @@ def compute_all(cycle):
 
 
 @frappe.whitelist(methods=["POST"])
-def advance_cycle(cycle_name):
-	"""Collecting -> Validating -> IQAC Review, and Approved -> Submitted."""
-	lifecycle.advance(cycle_name)
+def advance_cycle(cycle_name, comment=None):
+	"""Collecting -> Validating -> IQAC Review, and Approved -> Submitted; the step out of Validating needs no blocking
+	validation failure and, with warnings, a comment."""
+	lifecycle.advance(cycle_name, comment)
+
+
+@frappe.whitelist(methods=["POST"])
+def run_validation(cycle):
+	"""Check the cycle against its framework's Validation Rules and store a Validation Run; returns its name."""
+	return validation.run(cycle)
+
+
+@frappe.whitelist()
+def validation_counts(cycle):
+	"""{blocking, warnings} failures of the cycle now."""
+	return validation.summary(cycle)
 
 
 @frappe.whitelist(methods=["POST"])

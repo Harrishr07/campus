@@ -1,0 +1,28 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "creation": "2026-10-09 20:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {"fieldname": "cycle", "label": "Accreditation Cycle", "fieldtype": "Link", "options": "Accreditation Cycle", "reqd": 1}
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Cycle Readiness",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Accreditation Cycle",
+ "report_name": "Cycle Readiness",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "IQAC Coordinator"},
+  {"role": "Principal"}
+ ]
+}

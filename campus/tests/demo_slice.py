@@ -459,3 +459,31 @@ def compute_aqar_cycle():
 		"Accreditation Cycle", {"framework": FRAMEWORK, "company": demo.ENGINEERING, "academic_year": YEAR}, {}
 	)
 	compute.compute_cycle(cycle)
+	seed_validation_problems(cycle)
+
+
+# --- Pre-validation: three rules and the three problems they flag (P3-T05) --------------------
+
+VALIDATION_RULES = [  # (rule type, node code, severity, extra values)
+	("Required Evidence", "2.6.3", "Blocking", {"slot_name": "Data Template", "message": "Attach the Data Template for 2.6.3 (demo rule)."}),
+	("Word Limit", "4.1.1", "Warning", {"limit": 25, "message": "The 4.1.1 answer is over the word limit (demo rule)."}),
+	("Comparison", "2.1.2", "Blocking", {"operator": "<=", "compare_node": "EP-4.1", "message": "2.1.2 must not exceed 4.1 (demo rule)."}),
+]  # fmt: skip
+
+
+def seed_validation_rules(framework):
+	for rule_type, code, severity, extra in VALIDATION_RULES:
+		node = f"{framework}-{code}"
+		values = {**extra, "compare_node": extra.get("compare_node") and f"{framework}-{extra['compare_node']}"}
+		demo.get_or_insert(
+			"Validation Rule", {"framework": framework, "rule_type": rule_type, "node": node}, {"severity": severity, **values}
+		)
+
+
+def seed_validation_problems(cycle):
+	"""The demo's three problems: no evidence for 2.6.3, a 30-word 4.1.1 answer (limit 25), 2.1.2 = 85 above 4.1 = 40."""
+	framework = frappe.db.get_value("Accreditation Cycle", cycle, "framework")
+	seed_validation_rules(framework)
+	answers = {"2.1.2": {"manual_value": 85}, "EP-4.1": {"manual_value": 40}, "4.1.1": {"narrative": "<p>" + " ".join(["word"] * 30) + "</p>"}}
+	for code, values in answers.items():
+		demo.get_or_insert("Metric Value", {"cycle": cycle, "node": f"{framework}-{code}"}, values)

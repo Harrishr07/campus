@@ -30,13 +30,18 @@ def authorised(name):
 	return cycle
 
 
-def advance(name):
-	"""Collecting -> Validating -> IQAC Review, and Approved -> Submitted."""
+def advance(name, comment=None):
+	"""Collecting -> Validating -> IQAC Review, and Approved -> Submitted. Leaving Validating passes the validation gate:
+	blocking failures stop it, warnings need a `comment`."""
 	cycle = authorised(name)
 	if cycle.status == "IQAC Review":
 		frappe.throw(_("{0} is approved only through its approval; use Request Approval.").format(frappe.bold(name)))
 	if cycle.status not in FORWARD:
 		frappe.throw(_("{0} is {1}; there is no next step.").format(frappe.bold(name), _(cycle.status)))
+	if cycle.status == "Validating":
+		from campus.iqac.validation import gate
+
+		gate(cycle, comment)
 	move(cycle, FORWARD[cycle.status])
 
 
