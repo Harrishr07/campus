@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-10-10 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "budget_head",
+  "is_capital",
+  "sanctioned_amount",
+  "spent_before",
+  "spent_in_period",
+  "spent_to_date",
+  "balance",
+  "currency"
+ ],
+ "fields": [
+  {
+   "fieldname": "budget_head",
+   "fieldtype": "Link",
+   "label": "Budget Head",
+   "options": "Grant Budget Head",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "is_capital",
+   "fieldtype": "Check",
+   "label": "Capital",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sanctioned_amount",
+   "fieldtype": "Currency",
+   "label": "Sanctioned",
+   "in_list_view": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "spent_before",
+   "fieldtype": "Currency",
+   "label": "Spent Before the Period",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "spent_in_period",
+   "fieldtype": "Currency",
+   "label": "Spent in the Period",
+   "in_list_view": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "spent_to_date",
+   "fieldtype": "Currency",
+   "label": "Spent to Date",
+   "in_list_view": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance",
+   "fieldtype": "Currency",
+   "label": "Balance",
+   "in_list_view": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "hidden": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-10 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Utilisation Certificate Head",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

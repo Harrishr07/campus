@@ -1,0 +1,19 @@
+{
+ "creation": "2026-10-10 09:00:00.000000",
+ "custom_format": 1,
+ "default_print_language": "en",
+ "disabled": 0,
+ "doc_type": "Utilisation Certificate",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font_size": 12,
+ "html": "<div class=\"oc-uc\">\n<p style=\"text-align:center;font-size:11px;color:#888\">{{ _(\"Placeholder layout in the style of GFR 12-A, until the agency's format is supplied. Set the scheme's or agency's UC Format to use another print format.\") }}</p>\n<h3 style=\"text-align:center\">{{ doc.company }}</h3>\n<h4 style=\"text-align:center\">{{ _(\"Statement of Expenditure\") }} <small>({{ _(\"placeholder\") }})</small></h4>\n<table class=\"table table-bordered\" style=\"width:100%\">\n<tr><th style=\"width:35%\">{{ _(\"Sanction\") }}</th><td>{{ doc.sanction }} ({{ _(\"order\") }} {{ doc.sanction_order_no or \"\" }})</td></tr>\n<tr><th>{{ _(\"Project\") }}</th><td>{{ doc.title or \"\" }}</td></tr>\n<tr><th>{{ _(\"Funding Agency / Scheme\") }}</th><td>{{ doc.funding_agency or \"\" }} / {{ doc.funding_scheme or \"\" }}</td></tr>\n<tr><th>{{ _(\"Principal Investigator\") }}</th><td>{{ doc.pi_name or \"\" }}</td></tr>\n<tr><th>{{ _(\"Period\") }}</th><td>{{ frappe.format(doc.from_date, {\"fieldtype\": \"Date\"}) }} {{ _(\"to\") }} {{ frappe.format(doc.to_date, {\"fieldtype\": \"Date\"}) }} ({{ _(\"version\") }} {{ doc.version }})</td></tr>\n</table>\n<table class=\"table table-bordered\" style=\"width:100%\">\n<thead><tr><th>{{ _(\"Head\") }}</th><th style=\"text-align:right\">{{ _(\"Sanctioned\") }}</th><th style=\"text-align:right\">{{ _(\"Spent before the period\") }}</th><th style=\"text-align:right\">{{ _(\"Spent in the period\") }}</th><th style=\"text-align:right\">{{ _(\"Spent to date\") }}</th><th style=\"text-align:right\">{{ _(\"Balance\") }}</th></tr></thead>\n<tbody>{% for row in doc.heads %}<tr><td>{{ row.budget_head }}{% if row.is_capital %} ({{ _(\"capital\") }}){% endif %}</td>\n<td style=\"text-align:right\">{{ frappe.format(row.sanctioned_amount, {\"fieldtype\": \"Currency\"}) }}</td><td style=\"text-align:right\">{{ frappe.format(row.spent_before, {\"fieldtype\": \"Currency\"}) }}</td>\n<td style=\"text-align:right\">{{ frappe.format(row.spent_in_period, {\"fieldtype\": \"Currency\"}) }}</td><td style=\"text-align:right\">{{ frappe.format(row.spent_to_date, {\"fieldtype\": \"Currency\"}) }}</td>\n<td style=\"text-align:right\">{{ frappe.format(row.balance, {\"fieldtype\": \"Currency\"}) }}</td></tr>{% endfor %}</tbody>\n</table>\n<table style=\"width:100%;margin-top:48px\"><tr>\n<td style=\"text-align:center\">{{ _(\"Principal Investigator\") }}<br>{{ doc.pi_name or \"\" }}<br><small>{{ doc.pi_certified_by or \"\" }}</small></td>\n<td style=\"text-align:center\">{{ _(\"Accounts Officer\") }}<br><small>{{ doc.accounts_certified_by or \"\" }}</small></td>\n<td style=\"text-align:center\">{{ _(\"Principal / Head of Institution\") }}<br><small>{{ doc.principal_certified_by or \"\" }}</small></td>\n</tr></table>\n{% if doc.docstatus != 1 %}<p style=\"text-align:center;color:#c00\"><strong>{{ _(\"DRAFT - NOT CERTIFIED\") }}</strong></p>{% endif %}\n</div>\n{{ oc_qr_block(doc) }}\n",
+ "idx": 0,
+ "modified": "2026-10-10 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Statement of Expenditure",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "standard": "Yes"
+}

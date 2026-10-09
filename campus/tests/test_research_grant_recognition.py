@@ -188,6 +188,29 @@ class TestGrantRecognition(SanctionFixtures):
 		self.recognition([sanction], from_date=add_days(today(), 1), to_date=add_days(today(), 1))
 		self.assertEqual(self.balance(self.income, sanction), 1700)
 
+	def test_a_credit_note_in_a_later_period_reverses_income_with_flipped_rows(self):
+		sanction = self.submitted_sanction()
+		self.receipt(sanction).submit()
+		self.spend(sanction, self.consumables_account, 4000, self.consumables, posting_date=add_days(today(), -2))
+		self.recognition([sanction], to_date=add_days(today(), -1))
+		credit = frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"accounts": [
+					{"account": self.consumables_account, "credit_in_account_currency": 1500, "cost_center": sanction.cost_center,
+					 "project": sanction.project, BUDGET_HEAD_FIELD: self.consumables},
+					{"account": self.bank, "debit_in_account_currency": 1500, "cost_center": sanction.cost_center},
+				],
+			}  # fmt: skip
+		).insert()
+		credit.submit()  # e.g. a supplier's credit note for returned consumables
+		doc = self.recognition([sanction], from_date=today(), to_date=today())
+		self.assertEqual(doc.sanctions[0].revenue_amount, -1500)
+		rows = {(r.account, r.debit, r.credit) for r in frappe.get_doc("Journal Entry", doc.journal_entry).accounts}
+		self.assertEqual(rows, {(self.income, 1500, 0), (sanction.liability_account, 0, 1500)})
+		self.assertEqual(self.balance(self.income, sanction), 2500)
+		self.assertEqual(self.balance(sanction.liability_account, sanction), 510000 - 2500)
+
 	# acceptance 2: idempotent per period
 	def test_running_twice_for_the_same_period_posts_nothing_new(self):
 		sanction = self.submitted_sanction()
@@ -303,6 +326,7 @@ class TestGrantRecognition(SanctionFixtures):
 		interest_income = make_account(COLLEGE, ABBR, "RSA Interest Income", "Indirect Income")
 		frappe.db.set_value("Research Settings", COLLEGE, {"interest_treatment": "Interest Income", "interest_income_account": interest_income})
 		frappe.clear_document_cache("Research Settings", COLLEGE)
+		self.addCleanup(frappe.clear_document_cache, "Research Settings", COLLEGE)  # the rollback restores the row, not the cache
 		sanction = self.submitted_sanction()
 		self.receipt(sanction).submit()
 		doc = self.interest(sanction, 1000)

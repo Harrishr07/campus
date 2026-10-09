@@ -1,0 +1,55 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "creation": "2026-10-10 09:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "company",
+   "label": "College",
+   "fieldtype": "Link",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sanction",
+   "label": "Sanction",
+   "fieldtype": "Link",
+   "options": "Sanction"
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "\nOverdue\nDue\nNot Yet Due\nSubmitted\nSource Changed"
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2026-10-10 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Utilisation Certificate Status",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Utilisation Certificate",
+ "report_name": "Utilisation Certificate Status",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  }
+ ]
+}

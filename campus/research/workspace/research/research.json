@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 7,
+   "link_count": 8,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -173,10 +173,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Utilisation Certificate",
+   "link_count": 0,
+   "link_to": "Utilisation Certificate",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 1,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -187,6 +198,28 @@
    "label": "Research Proposal Pipeline",
    "link_count": 0,
    "link_to": "Research Proposal Pipeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Utilisation Certificate Status",
+   "link_count": 0,
+   "link_to": "Utilisation Certificate Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Grant Ledger by Head",
+   "link_count": 0,
+   "link_to": "Grant Ledger by Head",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -211,7 +244,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 22:00:00.000000",
+ "modified": "2026-10-10 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",

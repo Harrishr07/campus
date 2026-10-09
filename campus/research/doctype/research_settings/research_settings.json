@@ -14,7 +14,9 @@
   "interest_treatment",
   "interest_income_account",
   "pfms_section",
-  "pfms_unique_agency_code"
+  "pfms_unique_agency_code",
+  "uc_section",
+  "uc_due_days"
  ],
  "fields": [
   {
@@ -92,11 +94,23 @@
    "fieldname": "pfms_unique_agency_code",
    "fieldtype": "Data",
    "label": "PFMS Unique Agency Code"
+  },
+  {
+   "fieldname": "uc_section",
+   "fieldtype": "Section Break",
+   "label": "Utilisation Certificates"
+  },
+  {
+   "fieldname": "uc_due_days",
+   "fieldtype": "Int",
+   "label": "UC Due Days",
+   "non_negative": 1,
+   "description": "Days after each fiscal year's end (or the sanction's end) a Utilisation Certificate is due. Placeholder until the agency's terms are known (GFR 2017 allows up to 12 months)."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-10 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research Settings",

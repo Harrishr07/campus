@@ -121,8 +121,83 @@ Each sanction is recognised once per period end. A sanction already recognised u
 new, is dropped from the run. If none is left, the run is refused, so running a period twice posts nothing.
 Cancelling reverses the Journal Entry and frees the period. Only a sanction's latest recognition can be cancelled.
 
+## Utilisation Certificate and Statement of Expenditure (P3-T17, M08-06, blueprint D9)
+
+**Utilisation Certificate** (Research > Transactions): pick the sanction and the period (inside the sanction
+period). Saving the draft reads the figures from the general ledger:
+
+- **Opening unspent balance**: what came into the sanction's liability before the period, less what was spent
+  before it.
+- **Grants received**: Grant Receipts in the period. **Interest earned**: Grant Interest credited to the liability
+  (Grant Liability treatment). Interest treated as income is the college's, so it is not on the UC.
+- **Refunds and other adjustments**: anything else posted to the liability, such as an unspent balance refunded to
+  the agency (shown as negative). Grant Income Recognition entries are left out, because they only move money
+  already spent.
+- **Expenditure by head**: for each budget head, debit less credit on the head's accounts on the sanction's cost
+  centre. Capital heads count at cost; depreciation is not expenditure.
+- **Closing unspent balance** = total available − expenditure in the period. This equals everything received less
+  everything spent up to the period end.
+
+The **Expenditure by Head** table is also the **Statement of Expenditure**: sanctioned, spent before the period,
+spent in it, spent to date and balance, per head. Two heads of a sanction can't share an account, because the
+ledger couldn't be split between them.
+
+**Unreconciled entries**: spending on the sanction's project or cost centre that its heads don't account for, up to
+the period end. Examples: an expense ledger outside every head, or the project under another cost centre. These
+come from vouchers Campus doesn't tag, such as a Stock Entry. The form shows how many there are and their amount.
+The certificate can't be approved until they are posted to a head or moved off the project.
+
+**Approval** runs through the approval engine under the seeded policy "Utilisation Certificate Approval": the PI
+first (the PI's user, from the Employee record), then Accounts (an Accounts Manager of the college), then the
+Principal. Let Accounts prepare the certificate, because the person who prepares it can't approve it. A UC can't be
+submitted without approval. The PI can read their own certificates and no one else's.
+
+On the final approval, Campus locks the sanction and re-reads the ledger. The approval is refused if:
+
+- there are unreconciled entries
+- the figures have changed since the certificate was sent for approval (return it and save it again)
+- another approved UC of the sanction covers part of the period
+
+When approval succeeds, Campus:
+
+- records who certified at each level
+- stores a snapshot of the figures
+- issues the printed certificate as a Verifiable Document, with a QR code and a /verify code
+
+**Prints**: "Utilisation Certificate" is a placeholder layout in the style of GFR 12-A, used until the agency's
+format is supplied. "Statement of Expenditure" gives the head-wise statement. The **UC Format** of the Funding
+Scheme, else of the Funding Agency, names the print format the certificate is issued in. It can be any print format
+of Utilisation Certificate, so an agency's own layout is a new print format, not a code change.
+
+**Source changed**: any ledger entry on the sanction's liability, cost centre or project dated on or before an
+approved UC's period end (a back-dated voucher, or a cancellation) recomputes the UC. If the figures move, the UC is
+marked **Source Changed** and the approved figures stay as they were. **Recheck Source** recomputes it and clears
+the mark when the figures match again. To revise a certificate, cancel it (its Verifiable Document is revoked) and
+amend it. The amendment is the next **version** and needs approval again.
+
+**Reports**:
+
+- **Utilisation Certificate Status**: one row per fiscal year of each sanction, cut to the sanction's dates. It shows
+  the due date (period end + **UC Due Days** in Research Settings, a placeholder until the agency's terms are known)
+  and a status: Submitted, Source Changed, Not Yet Due, Due or Overdue.
+- **Grant Ledger by Head**: the entries behind each head for a period, with the opening, a running balance and the
+  period total that the UC shows.
+
 ## Deferred
 
 - Re-opening a Closed Purchase Order with capital head lines does not re-run the capital check. Closing frees the
   unbilled part, so re-opening gives it back without a check. Until this is covered, re-open such an order only if
   the head still has room, or raise a new order. (P3-T15)
+- Disposing of a grant-funded asset credits its Fixed Asset ledger on the sanction's cost centre. Grant Income
+  Recognition then reads it like a purchase return, and so does the UC's capital head expenditure. Until disposals are
+  handled, book the disposal's grant share by a manual journal. (P3-T16)
+- Recognition Journal Entry rows don't carry reference_type / reference_name to the Grant Income Recognition.
+  ERPNext's Reference Type is a fixed list, and extending it would change Journal Entry for every app. The run's
+  `journal_entry` link and the entry's remark name it instead. (P3-T16)
+- Grant Income Recognition still reads the GL with locking reads under the sanction lock. The coordinator suggested
+  dropping them; they are kept until a contention problem shows up. (P3-T16)
+- A GL entry committed at the same moment as a UC's final approval may land after the approval's ledger read and
+  before the UC is visible as approved, and then not flag it. Use Recheck Source on a UC approved during busy
+  posting. (P3-T17)
+- The agencies' official UC / SOE formats (GFR 12-A, 12-C, DST, SERB, UGC) are not built yet. Add each one as a print
+  format of Utilisation Certificate and name it in the scheme's or agency's UC Format. (P3-T17)

@@ -184,6 +184,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Utilisation Certificate",
+   "link_to": "Utilisation Certificate",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "bar-chart",
@@ -201,6 +212,28 @@
    "keep_closed": 0,
    "label": "Research Proposal Pipeline",
    "link_to": "Research Proposal Pipeline",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Utilisation Certificate Status",
+   "link_to": "Utilisation Certificate Status",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Grant Ledger by Head",
+   "link_to": "Grant Ledger by Head",
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
@@ -228,7 +261,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 22:00:00.000000",
+ "modified": "2026-10-10 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",

@@ -481,6 +481,10 @@ for _dt in ("Valuation Allocation", "Valuation Entry"):
 	permission_query_conditions[_dt] = f"{_valuation}.examiner_query"
 	has_permission[_dt] = f"{_valuation}.examiner_has_permission"
 doc_events["DocShare"]["validate"] = [doc_events["DocShare"]["validate"], f"{_valuation}.block_map_share"]
+# P3-T17: an approved Utilisation Certificate is rechecked when a ledger entry can move it; the PI reads their own
+doc_events["GL Entry"] = {"on_submit": "campus.research.utilisation.note_ledger_change"}
+permission_query_conditions["Utilisation Certificate"] = "campus.research.utilisation.permission_query"
+has_permission["Utilisation Certificate"] = "campus.research.utilisation.has_permission"
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.
