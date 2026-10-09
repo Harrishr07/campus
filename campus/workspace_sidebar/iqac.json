@@ -63,6 +63,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Validation Rule",
+   "link_to": "Validation Rule",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "clipboard-list",
@@ -118,6 +129,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Validation Run",
+   "link_to": "Validation Run",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "sheet",
@@ -138,9 +160,20 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Cycle Readiness",
+   "link_to": "Cycle Readiness",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-09 19:00:00.000000",
+ "modified": "2026-10-09 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "IQAC",
