@@ -87,3 +87,16 @@ Not yet: scoping the reports to a department through User Permissions (they use 
 
 ## Payroll (M07-07)
 Aided and self-financing payroll on HRMS: see [payroll.md](payroll.md).
+
+## Faculty portal (P2-T11)
+
+Teachers with an active Employee (User ID set) open `/campus-portal/faculty` on a phone. Everything is checked on the server against the session user; desk roles such as Academics User widen nothing here.
+
+1. **My timetable**: the week's own periods (Course Schedules naming the teacher's Instructor, from the published Timetable) and periods of a Confirmed Substitution.
+2. **Attendance**: open a period; everyone is present, tick only the absentees and save (one request, also for 60 students; saving again corrects only the changed students). Allowed for the teacher's own periods or offerings, and for the substitute on exactly the substituted period; never for a future period.
+3. **CIA marks**: the Mark Sheet Entries of offerings the teacher instructs (Student Group instructor). Question-wise marks under the CIA Schedule (or the CIA column without one); the sheet's own rules apply, so after the entry deadline the page is read-only and edits need an approved CIA Unlock Request.
+4. **Course plan** (read-only): per own offering, the curriculum periods a week, periods scheduled and held, and the course's topics. There is no lesson-plan DocType yet.
+5. **Leave**: an Open HRMS Leave Application for the teacher themself (needs the HRMS Employee role and a leave approver on the Employee or Department), and their applications.
+6. **My students**: the teacher's mentees (read-only).
+
+Not yet: a link from the student dashboard to the faculty pages, a lesson-plan DocType, leave balance on the page.

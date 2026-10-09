@@ -1,5 +1,8 @@
 """M07-03 A substitute marks attendance for the substituted period, and only that period.
 
+`mark_period` is the one server-side writer of period attendance: the substitute's grant (below) and the faculty
+portal's own-period check (campus.faculty.portal) both authorise first and then call it.
+
 The grant is the Confirmed Substitution itself: it names one Course Schedule and one user. The Student Attendance records
 are written by the server for exactly that schedule, for students of its Student Group; the substitute's roles never
 change, so nothing else is opened to them. Teachers who already hold the attendance role (Academics User) can mark
@@ -28,6 +31,12 @@ def mark(substitution, present=None, absent=None):
 	course_schedule = frappe.db.get_value("Substitution", substitution, "course_schedule")
 	if not course_schedule or granting_substitution(frappe.session.user, course_schedule) != substitution:
 		frappe.throw(_("You are not the confirmed substitute for this period."), frappe.PermissionError)
+	return mark_period(course_schedule, present, absent)
+
+
+def mark_period(course_schedule, present, absent):
+	"""Write Present / Absent for students of the period's Student Group (the caller has authorised the period)."""
+	frappe.db.get_value("Course Schedule", course_schedule, "name", for_update=True)  # one marking of a period at a time
 	schedule = frappe.db.get_value("Course Schedule", course_schedule, ["student_group", "schedule_date"], as_dict=True)
 	if getdate(schedule.schedule_date) > getdate(today()):
 		frappe.throw(_("Attendance cannot be marked for a period that has not happened yet."))
@@ -44,7 +53,9 @@ def mark(substitution, present=None, absent=None):
 def record(student, student_name, status, course_schedule, schedule):
 	"""Create the attendance, or correct an existing submitted one of this student and period: a different status
 	cancels it and writes a new record (same grant, same checks); the same status changes nothing."""
-	existing = frappe.db.get_value("Student Attendance", {"student": student, "course_schedule": course_schedule, "docstatus": 1}, ["name", "status"], as_dict=True)
+	existing = frappe.db.get_value(
+		"Student Attendance", {"student": student, "course_schedule": course_schedule, "docstatus": 1}, ["name", "status"], as_dict=True, for_update=True
+	)  # a locking read: the period lock above is held
 	if existing and existing.status == status:
 		return existing.name
 	if existing:

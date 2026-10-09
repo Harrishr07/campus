@@ -5,8 +5,9 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
-from campus.examinations.access import students_of  # noqa: F401  (public API)
+from campus.examinations.access import instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses  # noqa: F401  (public API)
+from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
 
 # Exam registration and its fee are imported where used: they import campus_finance.api, which imports this module.
@@ -119,3 +120,10 @@ def refresh_student_result(student, exam_session):
 	cancelled exam withdrawal changes a course's code). Refused once the session is Published."""
 	if frappe.db.exists(results.RESULT, {"student": student, "exam_session": exam_session}):
 		results.compute_student_result(student, exam_session)
+
+
+def cia_lock_state(cia_schedule):
+	"""Open before the CIA entry deadline, Unlocked inside an approved unlock window, else Locked."""
+	from campus.examinations import cia
+
+	return cia.lock_state(cia_schedule)

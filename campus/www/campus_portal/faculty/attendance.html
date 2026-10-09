@@ -1,0 +1,32 @@
+{% extends "campus/www/campus_portal/faculty/_base.html" %}
+{% block faculty_body %}
+<h2>{{ _("Attendance") }}</h2>
+{% if not roll %}
+{% if not today %}<p class="cp-empty">{{ _("No periods today. Open a period from My timetable.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for p in today %}
+	<li><a href="?course_schedule={{ p.course_schedule|urlencode }}">{{ p.from_time|string|e }} {{ p.course|e }} &middot; {{ p.student_group|e }}</a>
+		{% if p.marked %}<span class="cp-badge">{{ _("Marked") }}</span>{% endif %}</li>
+	{% endfor %}
+</ul>
+{% else %}
+{% set p = roll.period %}
+<p><strong>{{ p.course|e }}</strong> &middot; {{ p.student_group|e }}<br>
+	{{ frappe.utils.formatdate(p.schedule_date) }} {{ p.from_time|string|e }}-{{ p.to_time|string|e }}
+	{% if roll.grant == "Substitution" %}<span class="cp-badge">{{ _("Substitution") }}</span>{% endif %}</p>
+<form class="cp-form cp-attendance" data-attendance>
+	<input type="hidden" name="course_schedule" value="{{ p.course_schedule|e }}">
+	<p>{{ _("Everyone is present. Tick only the absentees.") }}
+		<span class="cp-badge" data-count data-label-present="{{ _('Present')|e }}" data-label-absent="{{ _('Absent')|e }}"></span></p>
+	<ul class="cp-list">
+		{% for s in roll.students %}
+		<li><label class="cp-check"><input type="checkbox" name="absent" value="{{ s.student|e }}" {% if s.status == "Absent" %}checked{% endif %}>
+			<span>{{ s.roll or "" }} {{ s.student_name|e }} <small>{{ s.student|e }}</small></span>
+			{% if s.status %}<small class="cp-badge">{{ _(s.status) }}</small>{% endif %}</label></li>
+		{% endfor %}
+	</ul>
+	<button class="cp-btn" type="submit">{{ _("Save attendance") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% endif %}
+{% endblock %}

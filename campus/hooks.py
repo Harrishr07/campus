@@ -472,6 +472,11 @@ website_route_rules = [
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
 		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation")
 	),
+	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
+	*(
+		{"from_route": f"/campus-portal/faculty/{page.replace('_', '-')}", "to_route": f"campus_portal/faculty/{page}"}
+		for page in ("attendance", "cia", "course_plan", "leave", "mentees")
+	),
 ]
 
 # Message Logs are an audit trail: they must not block deleting the documents they refer to.
