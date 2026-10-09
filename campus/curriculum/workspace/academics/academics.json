@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 8,
+   "link_count": 13,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -110,10 +110,65 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Department Mission",
+   "link_count": 0,
+   "link_to": "Department Mission",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Educational Objective",
+   "link_count": 0,
+   "link_to": "Program Educational Objective",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Outcome",
+   "link_count": 0,
+   "link_to": "Program Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Specific Outcome",
+   "link_count": 0,
+   "link_to": "Program Specific Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Outcome",
+   "link_count": 0,
+   "link_to": "Course Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -162,10 +217,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CO-PO Matrix",
+   "link_count": 0,
+   "link_to": "CO-PO Matrix",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 1,
+   "link_count": 2,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -179,9 +245,20 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "CO-PO Matrix",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "CO-PO Coverage",
+   "link_count": 0,
+   "link_to": "CO-PO Coverage",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-09 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Academics",

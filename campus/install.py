@@ -9,6 +9,7 @@ from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
 from campus.campus_platform.verification import ensure_verification_role
+from campus.curriculum.outcomes import seed_co_po_matrix_policy
 from campus.curriculum.setup import setup_curriculum
 from campus.examinations.question_paper_setup import setup_question_papers
 from campus.examinations.remuneration_payment import setup_remuneration
@@ -59,6 +60,7 @@ def after_install():
 	setup_student_services()
 	setup_faculty()
 	seed_course_allocation_policy()
+	seed_co_po_matrix_policy()
 	setup_academic_governance()
 	setup_remuneration()
 	seed_framework()
@@ -88,6 +90,7 @@ def after_migrate():
 	setup_student_services()
 	setup_faculty()
 	seed_course_allocation_policy()
+	seed_co_po_matrix_policy()
 	setup_academic_governance()
 	setup_remuneration()
 	seed_framework()

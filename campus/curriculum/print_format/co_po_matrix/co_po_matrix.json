@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "CO-PO Matrix",
+ "doc_type": "CO-PO Matrix",
+ "module": "Curriculum",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "{%- set g = co_po_grid(doc) -%}\n<h3 style=\"text-align:center\">{{ _(\"CO-PO / PSO Mapping Matrix\") }}</h3>\n<p style=\"text-align:center\">{{ doc.course }} &middot; {{ doc.curriculum }} &middot; {{ _(\"Regulation\") }} {{ doc.regulation }}{% if doc.docstatus == 1 %} &middot; {{ _(\"Approved\") }}{% else %} &middot; {{ _(\"Draft\") }}{% endif %}</p>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"CO\") }}</th>{% for code in g.outcomes %}<th class=\"text-center\">{{ code }}</th>{% endfor %}</tr></thead>\n  <tbody>\n  {% for row in g.rows %}\n    <tr><td>{{ row.co_code }}</td>{% for cell in row.cells %}<td class=\"text-center\">{{ cell if cell else \"-\" }}</td>{% endfor %}</tr>\n  {% endfor %}\n    <tr><th>{{ _(\"Average\") }}</th>{% for avg in g.averages %}<th class=\"text-center\">{{ avg if avg != \"\" else \"-\" }}</th>{% endfor %}</tr>\n  </tbody>\n</table>\n<p class=\"small\">{{ _(\"Correlation: 1 low, 2 medium, 3 high, - none.\") }}{% if doc.approving_resolution %} {{ _(\"BoS resolution\") }}: {{ doc.approving_resolution }}{% endif %}</p>\n",
+ "creation": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}
