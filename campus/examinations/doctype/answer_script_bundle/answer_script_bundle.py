@@ -46,7 +46,8 @@ class AnswerScriptBundle(Document):
 			frappe.throw(_("A script is listed twice."))
 		if len(numbers) > cint(self.expected_count):
 			frappe.throw(_("The bundle lists more scripts than expected."))
-		unknown = set(numbers) - set(dummy_numbers.numbers_of(self.exam_session, self.course))
+		kept = set() if self.is_new() else {s.dummy_number for s in self.get_doc_before_save().scripts}
+		unknown = set(numbers) - kept - set(dummy_numbers.numbers_of(self.exam_session, self.course))  # kept may be void now
 		if unknown:
 			frappe.throw(_("Not scripts of this course in this session: {0}").format(", ".join(sorted(unknown))))
 		elsewhere = frappe.get_all(

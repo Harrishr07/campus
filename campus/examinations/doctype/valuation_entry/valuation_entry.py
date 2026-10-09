@@ -19,6 +19,7 @@ class ValuationEntry(Document):
 		if not alloc.examiner or alloc.examiner != frappe.session.user:
 			raise frappe.PermissionError(_("Only the allocated examiner enters these marks."))
 		self.update({f: alloc.get(f) for f in ("valuation_round", "exam_session", "course", "bundle", "examiner")})
+		alloc.check_course_teacher()  # the rule or the teaching may have changed since the allocation
 		if self.dummy_number not in {s.dummy_number for s in alloc.scripts}:
 			frappe.throw(_("Script {0} is not in this allocation.").format(self.dummy_number))
 		script = valuation.lock_script(self)  # the round and result-lock checks below run one at a time per script

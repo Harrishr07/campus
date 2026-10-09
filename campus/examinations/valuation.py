@@ -97,7 +97,7 @@ def check_script(entry, row):
 		frappe.throw(_("The marks of script {0} are locked: its result has been run.").format(entry.dummy_number))
 	ese_max = ese_max_of(row)
 	if flt(entry.total) > ese_max:
-		frappe.throw(_("The total {0} is above the ESE maximum {1}.").format(entry.total, ese_max))
+		frappe.throw(_("Script {0}: the total is above the ESE maximum.").format(entry.dummy_number))
 
 
 def result_locked(row):

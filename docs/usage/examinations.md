@@ -112,7 +112,7 @@ An invigilator (Academics User) files the report: student, course (must be one t
 6. **Final ESE mark.**
    - The rule set's **Final ESE Mark** decides. With two valuations it is their average. With three it is either "Average of Closest Two" or "Average of Third and Nearer". Ties go to the higher pair, and the result is rounded half up to a whole mark.
    - The mark is kept on the Dummy Number Map. An examiner's submit never changes a mark sheet.
-   - Once every allocation of the course is **Completed**, Exam Confidential runs `campus.examinations.valuation_write_back.write_back_pending` (POST) with the session and course. This bulk job writes each final mark to the student's Mark Sheet Entry row as ESE and flags it **ESE from Valuation**, so it cannot be edited on the sheet.
+   - Once every allocation of the course is **Completed** and every live script of the course is finalised (a partial write-back would let the few changed rows be tied to the few valued scripts), Exam Confidential runs `campus.examinations.valuation_write_back.write_back_pending` (POST) with the session and course. This bulk job writes each final mark to the student's Mark Sheet Entry row as ESE and flags it **ESE from Valuation**, so it cannot be edited on the sheet.
    - Some scripts are skipped, with the reason shown in **Write-back Issue** on the map: a student absent on the sheet or in the hall (the absent mark is kept), a result that has already been run, or a sheet that refuses the mark. Run the job again after fixing the cause.
    - Once the student's result has been run, or the session is published, the script's marks are locked.
 

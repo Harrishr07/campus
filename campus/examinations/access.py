@@ -2,7 +2,9 @@
 
 Marks (and the offering's CIA Schedule and CIA Unlock Requests): COE and System Manager, and the
 instructors of the offering (Student Group instructor -> Instructor.employee -> Employee.user_id); other
-staff roles read all, an HOD reads the offerings of the department's programmes. The session status and
+staff roles read all, an HOD reads the offerings of the department's programmes. Mark Sheet Entry (M06-04
+hardening) is narrower: only COE, System Manager and Dean Academics read every sheet; Academics Users,
+instructors and HODs read the sheets of the offerings they teach or their department's. The session status and
 CIA lock rules are the controllers'. Results: staff roles, else the student and guardians linked to the student,
 and only once the session is Published and now >= publish_at.
 """
@@ -15,6 +17,11 @@ MARKS_ROLES = (COE_ROLE, "System Manager")
 STAFF_ROLES = (COE_ROLE, "System Manager", "Dean Academics", "Academics User")
 READ_TYPES = ("read", "print", "email", "export", "report", "select")
 OFFERING_SCOPED = ("Mark Sheet Entry", "CIA Schedule", "CIA Unlock Request")
+SHEET_READ_ALL_ROLES = (COE_ROLE, "System Manager", "Dean Academics")
+
+
+def read_all_roles(doctype):
+	return SHEET_READ_ALL_ROLES if doctype == "Mark Sheet Entry" else STAFF_ROLES
 
 
 def has_any_role(user, roles):
@@ -52,7 +59,7 @@ def hod_offerings(user):
 def offering_permission_query(user=None, doctype="Mark Sheet Entry"):
 	"""Lists of OFFERING_SCOPED doctypes: staff see all; instructors their offerings, HODs their department's."""
 	user = user or frappe.session.user
-	if has_any_role(user, STAFF_ROLES):
+	if has_any_role(user, read_all_roles(doctype)):
 		return ""
 	offerings = ", ".join(frappe.db.escape(o) for o in {*instructed_offerings(user), *hod_offerings(user)})
 	return f"`tab{doctype}`.course_offering in ({offerings})"
@@ -63,7 +70,7 @@ def offering_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if has_any_role(user, MARKS_ROLES):
 		return True
-	if ptype in READ_TYPES and has_any_role(user, STAFF_ROLES):
+	if ptype in READ_TYPES and has_any_role(user, read_all_roles(doc.doctype)):
 		return True
 	offering = offering_of(doc)
 	if offering and user in instructor_users(offering):

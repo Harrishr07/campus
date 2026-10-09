@@ -41,6 +41,7 @@ def generate(exam_session, course):
 		void = int(row.student not in present)
 		if void != row.void:
 			frappe.db.set_value(DUMMY_NUMBER_MAP, row.name, "void", void)
+			refresh_allocations_of(frappe.db.get_value(DUMMY_NUMBER_MAP, row.name, "dummy_number"))
 	numbered = {row.student for row in rows}
 	students = [s for s in sorted(present) if s not in numbered]
 	taken = set(frappe.get_all(DUMMY_NUMBER_MAP, pluck="dummy_number"))
@@ -62,6 +63,14 @@ def insert_number(exam_session, course, student, number, taken, attempts=5):
 			taken.add(number)
 			number = valuation_rules.dummy_numbers(1, taken)[0]
 	frappe.throw(_("No free dummy number could be drawn. Please try again."))
+
+
+def refresh_allocations_of(dummy_number):
+	"""A voided (or restored) script changes whether its allocations are Completed."""
+	from campus.examinations.valuation import refresh_allocation_status
+
+	for allocation in frappe.get_all("Valuation Allocation Script", {"dummy_number": dummy_number, "parenttype": "Valuation Allocation"}, pluck="parent"):
+		refresh_allocation_status(allocation)
 
 
 def present_students(exam_session, course):

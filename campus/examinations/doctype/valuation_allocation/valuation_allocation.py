@@ -84,7 +84,9 @@ class ValuationAllocation(Document):
 		if not self.examiner:
 			return "Unassigned"
 		valued = set(frappe.get_all("Valuation Entry", {"allocation": self.name, "docstatus": 1}, pluck="dummy_number"))
-		return "Completed" if self.scripts and all(s.dummy_number in valued for s in self.scripts) else "Allocated"
+		void = set(frappe.get_all("Dummy Number Map", {"dummy_number": ["in", [s.dummy_number for s in self.scripts] or [""]], "void": 1}, pluck="dummy_number"))
+		due = [s.dummy_number for s in self.scripts if s.dummy_number not in void]  # a void script is never valued
+		return "Completed" if self.scripts and all(d in valued for d in due) else "Allocated"
 
 
 def course_teachers(exam_session, course):

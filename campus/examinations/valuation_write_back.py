@@ -1,7 +1,8 @@
 """M06-04 Final ESE marks from the Dummy Number Map to the Mark Sheet Entry, by Exam Confidential.
 
 `write_back_pending` queues a bulk run (campus_platform bulk runner) for one session and course once every
-valuation allocation of the course is Completed. The job runs as the Exam Confidential user who started it,
+valuation allocation of the course is Completed and every live script of the course has its final mark: a
+partial write-back would let anyone watching the sheets tie the few changed rows to the few valued scripts. The job runs as the Exam Confidential user who started it,
 so no examiner ever authors a mark-sheet change. A script is skipped, with the reason kept on its map row,
 when the student is absent on the mark sheet or in the exam hall (an absent mark is never cleared), when the
 result has been run, or when the sheet refuses the mark (e.g. the session is not in Marks Entry). The job
@@ -30,6 +31,8 @@ def write_back_pending(exam_session, course):
 	statuses = frappe.get_all("Valuation Allocation", {"exam_session": exam_session, "course": course}, pluck="status")
 	if not statuses or any(status != "Completed" for status in statuses):
 		frappe.throw(_("Every valuation allocation of {0} must be Completed before its marks are written.").format(course))
+	if frappe.db.exists(DUMMY_NUMBER_MAP, {"exam_session": exam_session, "course": course, "void": 0, "finalised": 0}):
+		frappe.throw(_("Every script of {0} must be bundled and finalised before its marks are written.").format(course))
 	if live_run(RUN_TYPE, exam_session=exam_session, course=course):
 		frappe.throw(_("A write-back of {0} is still running.").format(course))
 	names = frappe.get_all(

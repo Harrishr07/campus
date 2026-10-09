@@ -70,7 +70,7 @@ class ValuationFixture(ExamFixture):
 	def dummy_of(self, student):
 		return frappe.db.get_value(MAP, {"exam_session": self.session.name, "student": student}, "dummy_number")
 
-	def bundle(self, dummies=None, expected=None, received=1):
+	def bundle(self, dummies=None, expected=None, received=1, maxima=(30, 30)):
 		dummies = dummies or [self.d22, self.d26]
 		expected = expected or len(dummies)
 		frappe.set_user(COE_USER)
@@ -79,7 +79,7 @@ class ValuationFixture(ExamFixture):
 				"doctype": "Answer Script Bundle", "exam_session": self.session.name, "course": COURSE, "packet_no": "P1",
 				"expected_count": expected, "status": "Complete" if received and expected == len(dummies) else "Open",
 				"scripts": [{"dummy_number": d, "received": received} for d in dummies],
-				"questions": [{"question": "Q1", "max_marks": 30}, {"question": "Q2", "max_marks": 30}],
+				"questions": [{"question": f"Q{i}", "max_marks": m} for i, m in enumerate(maxima, 1)],
 			}
 		).insert()  # fmt: skip
 		frappe.set_user("Administrator")
@@ -114,11 +114,20 @@ class ValuationFixture(ExamFixture):
 		return bundle
 
 	def valued_d26(self):
-		"""A bundle of d26 alone, valued 40 and 48: final 44, every allocation Completed."""
+		"""A bundle of d26 alone, valued 40 and 48 (final 44): d22 is left unbundled."""
 		bundle = self.bundle([self.d26])
 		first, second = self.allocate(bundle, 1, VAL1), self.allocate(bundle, 2, VAL2)
 		self.value(first, self.d26, 20, 20, VAL1)
 		self.value(second, self.d26, 20, 28, VAL2)
+		return bundle
+
+	def valued_all(self):
+		"""Both scripts in one bundle, within the threshold: d22 40/46 (final 43), d26 40/48 (final 44)."""
+		bundle = self.bundle()
+		first, second = self.allocate(bundle, 1, VAL1), self.allocate(bundle, 2, VAL2)
+		for dummy, v2 in ((self.d22, 46), (self.d26, 48)):
+			self.value(first, dummy, 20, 20, VAL1)
+			self.value(second, dummy, 20, v2 - 20, VAL2)
 		return bundle
 
 	def sheet_of(self, student):
@@ -326,9 +335,55 @@ class TestThirdValuation(ValuationFixture):
 			self.value(first, self.d22, 31, 0, VAL1)
 
 
+class TestEntryChecks(ValuationFixture):
+	def test_the_ese_maximum_message_names_no_maximum(self):
+		bundle = self.bundle(maxima=(40, 40))
+		first = self.allocate(bundle, 1, VAL1)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.value(first, self.d22, 40, 30, VAL1)  # 70 > the ESE maximum 60
+		self.assertNotIn("60", str(caught.exception))
+
+	def test_the_course_teacher_rule_is_checked_again_at_entry(self):
+		rule_sets = frappe.get_all("Exam Rule Set", {"regulation": ["in", [
+			frappe.db.get_value("Student", s.name, "oc_regulation") for s in (self.s22, self.s26)]]}, pluck="name")  # fmt: skip
+		for name in rule_sets:
+			frappe.db.set_value("Exam Rule Set", name, "allow_course_teacher_as_examiner", 1)
+		frappe.get_doc("User", FACULTY).add_roles("Examiner")
+		bundle = self.bundle()
+		employee = frappe.db.get_value("Employee", {"user_id": FACULTY})
+		first = self.allocate(bundle, 1, None, examiner_type="Internal", employee=employee)
+		for name in rule_sets:
+			frappe.db.set_value("Exam Rule Set", name, "allow_course_teacher_as_examiner", 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "teaches"):
+			self.value(first, self.d22, 20, 20, FACULTY)
+
+
+class TestMarkSheetScope(ValuationFixture):
+	ACADEMICS = "exam-academics@example.com"
+	DEAN = "exam-dean@example.com"
+
+	def sheet(self, course):
+		return frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": self.offerings22[course]})
+
+	def test_academics_users_and_instructors_read_only_their_offerings(self):
+		make_login(self.ACADEMICS, "Academics User")
+		make_login(self.DEAN, "Dean Academics")
+		taught, other = self.sheet(COURSE), self.sheet("EXM LB")
+		self.assertTrue(frappe.has_permission("Mark Sheet Entry", "read", doc=taught, user=FACULTY))
+		self.assertFalse(frappe.has_permission("Mark Sheet Entry", "read", doc=other, user=FACULTY))
+		self.assertFalse(frappe.has_permission("Mark Sheet Entry", "read", doc=taught, user=self.ACADEMICS))
+		frappe.set_user(self.ACADEMICS)
+		self.assertEqual(frappe.get_list("Mark Sheet Entry", pluck="name"), [])
+		frappe.set_user(FACULTY)
+		self.assertNotIn(other, frappe.get_list("Mark Sheet Entry", pluck="name"))
+		frappe.set_user(self.DEAN)
+		self.assertTrue({taught, other} <= set(frappe.get_list("Mark Sheet Entry", pluck="name")))
+		self.assertTrue(frappe.has_permission("CIA Schedule", "read", user=self.ACADEMICS))  # only the sheets narrow
+
+
 class TestFinalMarkLock(ValuationFixture):
 	def test_a_valued_ese_cannot_be_overwritten_on_the_mark_sheet(self):
-		self.valued_d26()
+		self.valued_all()
 		self.write_back()
 		name = frappe.db.get_value("Mark Sheet Entry Row", {"student": self.s26.name, "parent": ["in", self.sheets()]}, "parent")
 		sheet = frappe.get_doc("Mark Sheet Entry", name)
@@ -409,13 +464,44 @@ class TestExaminerPortal(ValuationFixture):
 
 class TestWriteBack(ValuationFixture):
 	def test_the_examiners_request_writes_no_mark_sheet_and_the_job_does(self):
-		self.valued_d26()
+		self.valued_all()
 		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
 		self.assertNotIn(frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"), (VAL1, VAL2))
-		self.assertEqual(self.write_back(), 1)
-		self.assertEqual(self.sheet_ese(self.s26.name), (44, 1))
+		self.assertEqual(self.write_back(), 2)
+		self.assertEqual((self.sheet_ese(self.s22.name), self.sheet_ese(self.s26.name)), ((43, 1), (44, 1)))
 		self.assertEqual(frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"), CONFIDENTIAL_USER)
 		self.assertEqual(self.write_back(), 0)  # nothing left pending
+
+	def test_an_unbundled_script_blocks_the_write_back(self):  # else the one written row names its student
+		self.valued_d26()
+		with self.assertRaisesRegex(frappe.ValidationError, "finalised"):
+			self.write_back()
+		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
+
+	def test_a_bundle_valued_in_round_1_only_blocks_the_write_back(self):
+		bundle = self.bundle()
+		first = self.allocate(bundle, 1, VAL1)
+		for dummy in (self.d22, self.d26):
+			self.value(first, dummy, 20, 20, VAL1)
+		self.assertEqual(frappe.db.get_value("Valuation Allocation", first.name, "status"), "Completed")
+		with self.assertRaisesRegex(frappe.ValidationError, "finalised"):
+			self.write_back()
+
+	def test_a_script_voided_after_bundling_does_not_block_completion(self):
+		bundle = self.bundle()
+		first, second = self.allocate(bundle, 1, VAL1), self.allocate(bundle, 2, VAL2)
+		self.value(first, self.d22, 20, 20, VAL1)
+		self.value(second, self.d22, 20, 26, VAL2)
+		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1)
+		self.generate()  # d26 is void now
+		statuses = frappe.get_all("Valuation Allocation", {"bundle": bundle.name}, pluck="status")
+		self.assertEqual(statuses, ["Completed", "Completed"])
+		self.assertEqual(self.write_back(), 1)
+		self.assertEqual(self.sheet_ese(self.s22.name), (43, 1))
+		frappe.set_user(COE_USER)
+		bundle.reload()
+		bundle.append("movements", {"from_location": "Camp", "to_location": "Exam cell"})
+		bundle.save()  # a bundle holding a void script can still log its movements
 
 	def test_the_write_back_waits_for_every_allocation_of_the_course(self):
 		self.double_valued()  # d22 is on an Unassigned third valuation
@@ -424,7 +510,7 @@ class TestWriteBack(ValuationFixture):
 		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
 
 	def test_only_exam_confidential_runs_the_write_back_and_only_by_post(self):
-		self.valued_d26()
+		self.valued_all()
 		for user in (COE_USER, VAL1, SYSTEM_MANAGER):
 			frappe.set_user(user)
 			with self.assertRaises(frappe.PermissionError):
@@ -432,16 +518,16 @@ class TestWriteBack(ValuationFixture):
 		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[valuation_write_back.write_back_pending], ["POST"])
 
 	def test_an_absent_mark_on_the_sheet_is_never_cleared(self):
-		self.valued_d26()
+		self.valued_all()
 		row = frappe.db.get_value("Mark Sheet Entry Row", {"student": self.s26.name, "parent": self.sheet_of(self.s26.name)})
 		frappe.db.set_value("Mark Sheet Entry Row", row, {"absent": 1, "ese": 0})
-		self.assertEqual(self.write_back(), 1)  # queued, then skipped
+		self.assertEqual(self.write_back(), 2)  # both queued, d26 skipped
 		self.assertEqual(frappe.db.get_value("Mark Sheet Entry Row", row, ["absent", "ese", "ese_from_valuation"]), (1, 0, 0))
 		self.assertEqual(self.final_of(self.d26), (1, 44, 0))
 		self.assertIn("absent", frappe.db.get_value(MAP, {"dummy_number": self.d26}, "write_back_issue"))
 
 	def test_an_absent_seat_is_never_overwritten(self):
-		self.valued_d26()
+		self.valued_all()
 		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1)
 		self.write_back()
 		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
