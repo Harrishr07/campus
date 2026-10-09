@@ -12,5 +12,7 @@ class RegulatorSubmission(Document):
 
 		kind = frappe.get_cached_doc("Regulator Submission Type", self.submission_type)
 		self.due_date = regulator.due_date(kind.due_basis, self.period_end, kind.due_month, kind.due_day, kind.days_after)
+		if self.owner_employee and frappe.db.get_value("Employee", self.owner_employee, "company") != self.company:
+			frappe.throw(_("The owner must be an employee of {0}.").format(frappe.bold(self.company)))
 		if self.status in ("Submitted", "Acknowledged") and not self.submitted_on:
 			frappe.throw(_("Enter the date the return was submitted."))

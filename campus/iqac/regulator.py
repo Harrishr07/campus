@@ -90,4 +90,7 @@ def notify(submission, on_date, kind, days):
 	year, week, _day = on_date.isocalendar()
 	context = {"days": days, "dedupe_token": f"{year}-W{week}"}
 	send(OVERDUE_EVENT, submission, [owner], context=context)
-	send(ESCALATION_EVENT, submission, [f"User:{user}" for user in principals(submission)], context=context)
+	heads = principals(submission)
+	if not heads:  # nobody to escalate to: say so, the run goes on
+		frappe.logger("campus").warning(f"Regulator Submission {submission.name}: overdue, but {submission.company} has no Principal position holder")
+	send(ESCALATION_EVENT, submission, [f"User:{user}" for user in heads], context=context)

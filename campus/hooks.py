@@ -399,12 +399,12 @@ scheduler_events = {
 		"campus.examinations.question_paper_files.sweep_plaintext",
 		"campus.research.proposals.send_deadline_reminders",
 		"campus.iqac.feedback_invites.send_reminders",
+		"campus.iqac.regulator.send_reminders",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
 		"campus.student_services.grievances.escalate_overdue",
 		"campus.admissions.allotment_import.reconcile_finished_imports",
-		"campus.iqac.regulator.send_reminders",
 		"campus.examinations.cia.lock_due_schedules",
 	],
 	"weekly": [

@@ -15,6 +15,7 @@ from campus.tests.factories import make_company
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "IQAC Ops College"
+OTHER_COLLEGE = "IQAC Ops Other College"
 
 
 class TestDueRule(UnitTestCase):
@@ -60,6 +61,15 @@ class TestCompliance(UnitTestCase):
 		self.assertEqual(committees.meeting_status(2, 2), "Compliant")
 		self.assertEqual(committees.meeting_status(2, 3), "Compliant")
 		self.assertEqual(committees.meeting_status(0, 0), "No minimum set")
+
+	def test_the_yearly_minimum_is_prorated_to_the_period(self):
+		self.assertEqual(committees.meetings_required(2, "2025-04-01", "2026-03-31"), 2)
+		self.assertEqual(committees.meetings_required(4, "2025-04-01", "2025-09-30"), 2)
+		self.assertEqual(committees.meetings_required(2, "2025-04-01", "2025-04-01"), 1)  # any part of a year needs one
+		self.assertEqual(committees.meetings_required(0, "2025-04-01", "2026-03-31"), 0)
+		self.assertEqual(committees.meetings_required(2, "2024-04-01", "2026-03-31"), 4)
+		with self.assertRaises(frappe.ValidationError):
+			committees.meetings_required(2, "2026-03-31", "2025-04-01")
 
 
 class TestIQACOperations(CampusTestCase):
@@ -220,6 +230,49 @@ class TestIQACOperations(CampusTestCase):
 		keys = {(l.event_key, l.recipient.split(":")[-1]) for l in self.logs(submission)}
 		self.assertIn(("regulator_submission.overdue", self.employee), keys)
 		self.assertIn(("regulator_submission.escalation", principal), keys)
+
+	def test_overdue_is_sent_once_a_week(self):
+		submission = self.make_submission(due_in=-3)
+		overdue = lambda: [l for l in self.logs(submission) if l.event_key == "regulator_submission.overdue"]  # noqa: E731
+		with patch("campus.iqac.regulator.principals", return_value=[]):
+			regulator.send_reminders(today())
+			regulator.send_reminders(today())  # the next hourly or daily run in the same ISO week
+			self.assertEqual(len(overdue()), 1)
+			regulator.send_reminders(add_days(today(), 7))  # a new week
+			self.assertEqual(len(overdue()), 2)
+
+	def test_the_principal_of_the_submissions_college_only_is_escalated_to(self):
+		from campus.campus_platform.positions import ensure_seed_positions
+
+		ensure_seed_positions()
+		make_company(OTHER_COLLEGE, "IOO")
+		holders = {}
+		for company, email in ((COLLEGE, "principal.ops-own@example.com"), (OTHER_COLLEGE, "principal.ops-other@example.com")):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc({"doctype": "User", "email": email, "first_name": "Principal", "send_welcome_email": 0}).insert()
+			frappe.get_doc(
+				{"doctype": "Position Holder", "position": "PRINCIPAL", "scope_value": company, "user": email, "from_date": add_days(today(), -30)}
+			).insert()
+			holders[company] = email
+		submission = self.make_submission(due_in=-3)
+		self.assertEqual(regulator.principals(submission), [holders[COLLEGE]])
+		regulator.send_reminders(today())
+		escalated = {l.recipient.split(":")[-1] for l in self.logs(submission) if l.event_key == "regulator_submission.escalation"}
+		self.assertEqual(escalated, {holders[COLLEGE]})
+
+	def test_an_overdue_return_with_no_principal_is_logged(self):
+		submission = self.make_submission(due_in=-3)
+		with patch("campus.iqac.regulator.principals", return_value=[]), patch("frappe.logger") as logger:
+			regulator.send_reminders(today())
+		warned = " ".join(str(c) for c in logger.return_value.warning.call_args_list)
+		self.assertIn(submission.name, warned)
+
+	def test_the_owner_must_be_an_employee_of_the_college(self):
+		make_company(OTHER_COLLEGE, "IOO")
+		outsider = self.make_employee()
+		frappe.db.set_value("Employee", outsider, "company", OTHER_COLLEGE)
+		with self.assertRaisesRegex(frappe.ValidationError, "employee of"):
+			self.make_submission(owner_employee=outsider)
 
 	# MoU
 	def test_mou_period_and_activities(self):
