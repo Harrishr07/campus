@@ -86,8 +86,12 @@ def pending_bridge_courses(student):
 
 
 def refresh_result(student, exam_session):
-	"""Recompute the student's Student Result of the session, if the Result Run has made one."""
+	"""Recompute the student's Student Result of the session, if the Result Run has made one; never for a student
+	on a break of study (the Result Run skips them too)."""
 	from campus.examinations.api import refresh_student_result
+
+	if on_break(student):
+		return
 
 	refresh_student_result(student, exam_session)
 
@@ -124,10 +128,26 @@ def academic_year_of(day):
 	return rows[0] if rows else None
 
 
-def academic_year_starting(day):
-	"""Name of the Academic Year starting on `day`, or None."""
-	rows = frappe.get_all("Academic Year", {"year_start_date": day}, pluck="name", order_by="creation asc", limit=1)
-	return rows[0] if rows else None
+def cohort_academic_year(batch, batch_start, cohort_year):
+	"""Name of the Academic Year of the cohort admitted in `cohort_year` (by start year; see
+	withdrawal_rules.pick_cohort_year). Throws when none exists or the choice is ambiguous."""
+	candidates = frappe.get_all(
+		"Academic Year",
+		{"year_start_date": ["between", [f"{cohort_year}-01-01", f"{cohort_year}-12-31"]]},
+		["name", "year_start_date"],
+	)
+	found = withdrawal_rules.pick_cohort_year(
+		[(row.name, row.year_start_date) for row in candidates], batch, batch_start.year, cohort_year
+	)
+	if not found:
+		frappe.throw(_("No Academic Year starts in {0}, the admission year of the cohort joined.").format(cohort_year))
+	if found == withdrawal_rules.AMBIGUOUS:
+		frappe.throw(
+			_("More than one Academic Year starts in {0} ({1}); name the cohort's year like the batch {2}.").format(
+				cohort_year, ", ".join(sorted(row.name for row in candidates)), frappe.bold(batch)
+			)
+		)
+	return found
 
 
 def on_break(student):

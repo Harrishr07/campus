@@ -282,6 +282,15 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		self.assertNotIn(self.s22.name, students)
 		self.assertIn(self.s26.name, students)
 
+	def test_a_result_refresh_skips_a_student_on_break(self):
+		self.run_session()
+		self.approve_fully(self.withdrawal(self.s22, ["EXM LB"]))
+		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Break of Study")
+		name = f"SR-{self.session.name}-{self.s22.name}"
+		before = frappe.db.get_value("Student Result", name, "modified")
+		frappe.get_doc(WITHDRAWAL, {"student": self.s22.name, "docstatus": 1}).cancel()
+		self.assertEqual(frappe.db.get_value("Student Result", name, "modified"), before)
+
 
 class TestUnmigratedSite(StudentRecordsFixture):
 	"""The shared tree runs on sites that have not synced these DocTypes yet: the exam hooks must be no-ops."""

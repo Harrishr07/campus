@@ -14,7 +14,7 @@ batch of that cohort apply.
 """
 
 REPEAT, LATE = "repeat", "late"
-EXCEEDS, BAD_DATES = "exceeds", "bad dates"
+EXCEEDS, BAD_DATES, AMBIGUOUS = "exceeds", "bad dates", "ambiguous"
 WITHDRAWN = "WD"  # the Student Result Course result of a withdrawn course (its grade is the regulation's code)
 YEAR_DAYS = 366  # the longest calendar year: a break of exactly one calendar year always fits
 
@@ -70,3 +70,20 @@ def rejoin_cohort_year(batch_year, break_start_year, rejoin_year):
 	if completed < 0:
 		return None
 	return rejoin_year - completed
+
+
+def pick_cohort_year(candidates, batch_name, batch_year, cohort_year):
+	"""The Academic Year of the cohort among `candidates` [(name, start date)] starting in `cohort_year`.
+
+	The name following the batch's own naming (its year replaced by the cohort year) wins; otherwise, when all
+	start on one day, the earliest name; otherwise AMBIGUOUS. None when there is no candidate.
+	"""
+	if not candidates:
+		return None
+	names = sorted(name for name, _start in candidates)
+	patterned = batch_name.replace(str(batch_year), str(cohort_year)) if str(batch_year) in batch_name else None
+	if patterned in names:
+		return patterned
+	if len({start for _name, start in candidates}) > 1:
+		return AMBIGUOUS
+	return names[0]

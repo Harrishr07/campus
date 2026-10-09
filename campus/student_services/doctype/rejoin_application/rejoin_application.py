@@ -18,7 +18,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.permissions import has_user_permission
-from frappe.utils import add_years, getdate
+from frappe.utils import getdate
 
 from campus.campus_platform.api import ApprovableDocument, apply_regulation_change, get_regulation, resolve_regulation
 from campus.student_services import student_records, withdrawal_rules
@@ -49,7 +49,9 @@ class RejoinApplication(ApprovableDocument, Document):
 			frappe.throw(_("Break of Study {0} already has a rejoin.").format(frappe.bold(self.break_of_study)))
 		now = self.placement(study_break)
 		if any(now[field] != self.get(field) for field in PLACEMENT_FIELDS):
-			frappe.throw(_("The regulation or batch of this rejoin has changed since it was saved; save it again."))
+			frappe.throw(
+				_("The regulation or batch of this rejoin has changed since it was saved: return the approval and restart it (save, then request approval again).")
+			)
 
 	def on_submit(self):
 		if self.to_regulation != get_regulation(self.student):
@@ -93,12 +95,7 @@ class RejoinApplication(ApprovableDocument, Document):
 		)
 		if cohort is None:
 			frappe.throw(_("The break starts before the admission of {0}.").format(frappe.bold(self.student)))
-		cohort_start = add_years(batch_start, cohort - batch_start.year)  # the batch's own start day, in the cohort year
-		to_batch = student_records.academic_year_starting(cohort_start)
-		if not to_batch:
-			frappe.throw(
-				_("No Academic Year starts on {0}, the admission of the cohort joined.").format(frappe.format(cohort_start, "Date"))
-			)
+		to_batch = student_records.cohort_academic_year(from_batch, batch_start, cohort)
 		to_regulation = resolve_regulation(self.company, self.program, to_batch)
 		if not to_regulation:
 			frappe.throw(_("No Effective regulation covers {0} for the {1} batch.").format(frappe.bold(self.program), frappe.bold(to_batch)))

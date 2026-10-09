@@ -25,6 +25,10 @@ def make_academic_year(year):
 		).insert()  # fmt: skip
 
 
+def start_of(academic_year):
+	return frappe.utils.getdate(frappe.db.get_value("Academic Year", academic_year, "year_start_date"))
+
+
 class TestRejoin(StudentRecordsFixture):
 	@classmethod
 	def setUpClass(cls):
@@ -56,10 +60,11 @@ class TestRejoin(StudentRecordsFixture):
 		old = frappe.db.get_value("Student", self.s22.name, "oc_regulation")
 		doc = self.rejoin(self.two_year_break(self.s22))
 		self.assertEqual((doc.from_regulation, doc.to_regulation), (old, self.r2024))
-		self.assertEqual((doc.from_batch, doc.to_batch), (year_name("2022"), year_name("2024")))
+		self.assertEqual(doc.from_batch, year_name("2022"))
+		self.assertEqual(start_of(doc.to_batch).year, 2024)  # any 2024 year on the site (demo years share dates)
 		self.approve_fully(doc)
 		student = frappe.get_doc("Student", self.s22.name)
-		self.assertEqual((student.oc_regulation, student.oc_batch), (self.r2024, year_name("2024")))
+		self.assertEqual((student.oc_regulation, student.oc_batch), (self.r2024, doc.to_batch))
 		self.assertEqual(student.oc_academic_status, "Active")
 		history = student.oc_regulation_history[-1]
 		self.assertEqual((history.from_regulation, history.to_regulation), (old, self.r2024))
@@ -121,3 +126,15 @@ class TestRejoin(StudentRecordsFixture):
 		study_break = self.approve_fully(self.study_break(self.s26, "2025-06-01", "2026-05-31"))  # batch 2026
 		with self.assertRaisesRegex(frappe.ValidationError, "admission"):
 			self.rejoin(study_break)
+
+	def test_the_cohort_year_is_found_by_start_year_not_day(self):
+		# the only 2024 year starts in July, not on the batch's 1 June
+		frappe.db.set_value("Academic Year", year_name("2024"), "year_start_date", "2024-07-01")
+		doc = self.rejoin(self.two_year_break(self.s22, start="2024-07-15"))
+		self.assertEqual((doc.to_batch, doc.to_regulation), (year_name("2024"), self.r2024))
+
+	def test_a_tampered_regulation_asks_to_return_and_restart(self):
+		doc = self.rejoin(self.two_year_break(self.s22))
+		frappe.db.set_value(REJOIN, doc.name, "to_batch", year_name("2023"))
+		with self.assertRaisesRegex(frappe.ValidationError, "return the approval and restart"):
+			self.approve_fully(doc)

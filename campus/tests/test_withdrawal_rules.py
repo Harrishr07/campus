@@ -130,3 +130,25 @@ class TestBreakOverlap(UnitTestCase):
 		self.assertTrue(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2024, 12, 31), d(2025, 1, 31)))
 		self.assertFalse(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2025, 1, 1), d(2025, 1, 31)))
 		self.assertFalse(wr.ranges_overlap(d(2025, 1, 1), d(2025, 1, 31), d(2024, 6, 1), d(2024, 12, 31)))
+
+
+class TestCohortAcademicYear(UnitTestCase):
+	"""The cohort's Academic Year is found by start year; the batch's naming pattern breaks ties."""
+
+	def test_the_batch_naming_pattern_wins(self):
+		candidates = [("2024-25", date(2024, 6, 1)), ("RT-2024", date(2024, 6, 1)), ("AY 2024", date(2024, 7, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "RT-2022", 2022, 2024), "RT-2024")
+
+	def test_one_start_date_takes_the_earliest_name(self):
+		candidates = [("B-2024", date(2024, 6, 1)), ("A-2024", date(2024, 6, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "Batch 22", 2022, 2024), "A-2024")
+
+	def test_different_start_dates_without_the_pattern_are_ambiguous(self):
+		candidates = [("B-2024", date(2024, 6, 1)), ("A-2024", date(2024, 7, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "Batch 22", 2022, 2024), wr.AMBIGUOUS)
+
+	def test_a_single_year_is_taken_whatever_its_day(self):
+		self.assertEqual(wr.pick_cohort_year([("AY24", date(2024, 7, 15))], "RT-2022", 2022, 2024), "AY24")
+
+	def test_no_year_gives_none(self):
+		self.assertIsNone(wr.pick_cohort_year([], "RT-2022", 2022, 2024))
