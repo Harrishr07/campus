@@ -2,13 +2,14 @@
 
 The closure names the final Utilisation Certificate: an approved (submitted) UC of the sanction, its latest. On submit,
 under a lock on the sanction, it is refused while any ledger entry on the sanction's liability or cost centre is dated
-after the final UC's period end, or while the UC's figures no longer match the ledger (locking re-reads). The unspent
-balance is the final UC's closing unspent. It leaves the "Grant Received in Advance" liability by a Journal Entry
+after the final UC's period end, or while the UC's figures no longer match the ledger (locking re-reads). Grant income
+must be recognised to that period end (the liability then holds exactly the unspent balance). The unspent balance is
+the final UC's closing unspent. It leaves the "Grant Received in Advance" liability by a Journal Entry
 dated after the final UC's period:
 - Refund to Agency: to the bank or cash ledger the refund is paid from (a Funding Agency is not an ERPNext party);
 - Retain per Agency Letter: to the ledger the agency letter names (its number, date and attachment are required).
 Nothing is posted when nothing is unspent. The Project is then Completed and the sanction closed: no further spending
-(campus.research.budget_control), receipts or project staff appointments. Cancelling reverses all of it.
+(campus.research.budget_control), receipts or project staff appointments. Cancelling reverses all of it (the Project gets its earlier status back).
 Asset handover to the department is deferred (docs/usage/research.md)."""
 
 import json
@@ -16,6 +17,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import flt, getdate
 
 from campus.research.api import check_sanction_open
@@ -58,7 +60,9 @@ class ProjectClosure(Document):
 				)
 			)
 		self.unspent_balance = flt(figures.closing_unspent, 2)
+		self.check_recognised(sanction, uc.to_date)
 		self.check_treatment()
+		self.previous_project_status = frappe.db.get_value("Project", self.project, "status")
 		if self.unspent_balance > 0:
 			self.journal_entry = self.make_journal_entry(sanction)
 
@@ -68,12 +72,12 @@ class ProjectClosure(Document):
 
 	def on_cancel(self):
 		frappe.db.get_value("Sanction", self.sanction, "name", for_update=True)
+		frappe.db.set_value("Sanction", self.sanction, "project_closure", None)  # open again before its refund is reversed
 		if self.journal_entry and frappe.db.get_value("Journal Entry", self.journal_entry, "docstatus") == 1:
 			entry = frappe.get_doc("Journal Entry", self.journal_entry)
 			entry.flags.ignore_permissions = True
 			entry.cancel()
-		frappe.db.set_value("Project", self.project, "status", "Open")
-		frappe.db.set_value("Sanction", self.sanction, "project_closure", None)
+		frappe.db.set_value("Project", self.project, "status", self.previous_project_status or "Open")
 
 	def get_sanction(self, for_update=False):
 		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
@@ -117,6 +121,23 @@ class ProjectClosure(Document):
 					)
 				)
 
+	def check_recognised(self, sanction, to_date):
+		"""Grant income must be recognised to the final UC's period end, so the liability holds exactly the unspent balance
+		and is left at zero by the closure (locking read on the indexed liability account)."""
+		gl = frappe.qb.DocType("GL Entry")
+		balance = (
+			frappe.qb.from_(gl).select(Coalesce(Sum(gl.credit - gl.debit), 0))
+			.where((gl.account == sanction.liability_account) & (gl.is_cancelled == 0) & (gl.posting_date <= to_date))
+			.for_update().run()
+		)[0][0]  # fmt: skip
+		if flt(balance, 2) != flt(self.unspent_balance, 2):
+			frappe.throw(
+				_("The grant liability of Sanction {0} holds {1} against an unspent balance of {2}: run Grant Income Recognition to {3} first.").format(
+					self.sanction, frappe.format(balance, "Currency"), frappe.format(self.unspent_balance, "Currency"),
+					frappe.format(to_date, "Date"),
+				)
+			)  # fmt: skip
+
 	def check_treatment(self):
 		if self.treatment == REFUND:
 			if self.unspent_balance > 0:
@@ -138,9 +159,10 @@ class ProjectClosure(Document):
 		account = frappe.db.get_value("Account", self.retained_to, ["company", "is_group", "root_type"], as_dict=True) if self.retained_to else None
 		if (
 			not account or account.company != self.company or account.is_group
-			or account.root_type not in ("Liability", "Income", "Equity") or self.retained_to == self.liability_account
+			or account.root_type not in ("Liability", "Income", "Equity")
+			or frappe.db.exists("Sanction", {"liability_account": self.retained_to})
 		):  # fmt: skip
-			frappe.throw(_("Retained To must be a liability, income or equity ledger of {0}, other than the grant liability.").format(self.company))
+			frappe.throw(_("Retained To must be a liability, income or equity ledger of {0}, not a sanction's grant liability.").format(self.company))
 
 	def make_journal_entry(self, sanction):
 		refund = self.treatment == REFUND

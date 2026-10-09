@@ -270,6 +270,11 @@ for _dt in ("Payment Entry", "Purchase Invoice"):  # P3-T18: a payment exported 
 	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.research.pfms.refuse_exported_cancel"]
 	_on = doc_events[_dt].get("on_cancel")
 	doc_events[_dt]["on_cancel"] = [*([_on] if isinstance(_on, str) else _on or []), "campus.research.pfms.allow_withdrawn_cancel"]
+for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Claim"):  # P3-T19: a closed sanction's lines stay
+	_before = doc_events.setdefault(_dt, {}).get("before_cancel")
+	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), f"{_budget_control}.refuse_cancel_on_closed"]
+_validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
+doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
 
 # Scheduled Tasks
 # ---------------

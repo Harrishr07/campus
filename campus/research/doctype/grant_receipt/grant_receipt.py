@@ -4,7 +4,7 @@ project and cost centre (blueprint D9: a receipt is never income; income is reco
 A Journal Entry is used rather than a Payment Entry because a Funding Agency is not an ERPNext party.
 
 An instalment can't be received beyond its amount; the check runs under a lock on the sanction, and the entry is built
-from the sanction's set-up as re-read under that lock. A closed sanction (Project Closure) receives nothing more."""
+from the sanction's set-up as re-read under that lock. A closed sanction (Project Closure) receives nothing more, and its receipts can't be cancelled."""
 
 import frappe
 from frappe import _
@@ -49,6 +49,9 @@ class GrantReceipt(Document):
 
 	def on_submit(self):
 		update_received(self.sanction)
+
+	def before_cancel(self):
+		check_sanction_open(self.sanction, self.get_sanction(for_update=True).project_closure)
 
 	def on_cancel(self):
 		if self.journal_entry:

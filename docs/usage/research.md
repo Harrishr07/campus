@@ -257,9 +257,13 @@ Once per college:
 
 A **Project Staff Appointment** (sanction, employee, designation, from date, salary structure, base) checks the
 employee, the period and that the salary posts to a head of the sanction. On submit it:
-- sets the Employee's contract end date to the sanction end, and their designation;
+- sets the Employee's contract end date and relieving date to the sanction end, and their designation (cancelling
+  the appointment restores all three). Payroll prorates the last month and pays nothing after the sanction end;
 - submits a Salary Structure Assignment from the from date, with the sanction's cost centre as the only (100%)
   payroll cost centre.
+
+Every earning on the structure, and any component posting to an expense account (an employer contribution), must post
+to the account of one revenue head of the sanction.
 
 Payroll Entry then accrues the salary on the sanction's cost centre. The accrual's salary rows take the head their
 account maps to (Manpower) and the sanction's project. They count against the head's Budget and the sanction period,
@@ -272,6 +276,8 @@ lock on the sanction:
 - It is refused while any ledger entry on the sanction's liability or cost centre is dated after the final UC's
   period end. Certify that spending in a final UC first.
 - It is refused while the final UC's figures no longer match the ledger. Revise the UC first.
+- It is refused until Grant Income Recognition has run to the final UC's period end: the liability must hold exactly
+  the unspent balance, so the closure leaves it at zero.
 - The **unspent balance** (the UC's closing unspent) leaves the grant liability by a Journal Entry:
   - **Refund to Agency**: credited to the bank or cash ledger in **Paid From**, with the UTR / cheque number and date.
   - **Retain per Agency Letter**: credited to the **Retained To** ledger (liability, income or equity). The agency
@@ -279,9 +285,15 @@ lock on the sanction:
   - Nothing is posted when nothing is unspent.
 - The Project is set to Completed and the sanction to closed (its **Project Closure** field).
 
-A closed sanction refuses new spending lines (purchase, journal, expense claim, payroll), Grant Receipts and project
-staff appointments. A spending voucher's submit re-reads the closure under the sanction lock, so a closure and a
-posting can't pass each other. Cancelling the closure cancels the refund entry, reopens the Project and the sanction.
+A closed sanction refuses:
+- new spending lines (purchase, journal, expense claim, payroll) and Payment Entry deductions on its project or cost
+  centre;
+- cancelling its purchase orders, invoices, journal entries, expense claims, Grant Receipts and Grant Interest;
+- Grant Receipts, Grant Interest, project staff appointments, extensions, re-appropriations and new UCs.
+
+A voucher's submit or cancel locks the sanctions it touches (in name order) and re-reads the closure, so a closure and a
+posting can't pass each other. **Retained To** can't be any sanction's grant liability. Cancelling the closure reopens
+the sanction, cancels the refund entry and gives the Project its earlier status back.
 
 ## Deferred
 
@@ -311,8 +323,9 @@ posting can't pass each other. Cancelling the closure cancels the refund entry, 
 - PFMS export: payments made by Journal Entry and Expense Claim reimbursements are not exported. The official EAT layout,
   UC upload and the PFMS API adapter wait for the spec and agency access. (P3-T18)
 - Project closure: the asset handover to the department (Asset Movement) is not part of the closure yet. Move the
-  project's assets with an Asset Movement before closing. Closing doesn't end the project staff's Salary Structure
-  Assignments either: after closure their payroll accrual is refused, so relieve them (Employee relieving date) or
-  move them to another sanction first. (P3-T19)
-- Extending a sanction does not move its project staff's contract end dates. Update them on the Employee. No
+  project's assets with an Asset Movement before closing. Payroll stops at the sanction end through
+  the staff's relieving date. A sanction closed before its end date leaves later months payable to HRMS, and their
+  accrual is then refused, so relieve or move the staff before closing early. (P3-T19)
+- Extending a sanction does not move its project staff's contract end and relieving dates. Update them on the
+  Employee. No
   fellowship Salary Structure is seeded, because the rates differ by agency and scheme. (P3-T19)

@@ -16,7 +16,9 @@ part of its open Purchase Orders, all net of taxes (non-recoverable tax capitali
 scheme's Budget Action decides Stop or Warn.
 
 A payroll accrual's salary rows on a sanction (project staff, P3-T19) take the head their account maps to. A closed
-sanction (Project Closure) takes no further lines."""
+sanction (Project Closure) takes no further lines: none are submitted or cancelled on it, and a Payment Entry
+deduction on its project or cost centre is refused too. On submit and cancel the sanctions a document touches are
+locked in name order before their closure is read."""
 
 import frappe
 from frappe import _
@@ -48,8 +50,56 @@ def setup_budget_head_fields():
 # line validation (validate of the four doctypes)
 def validate_lines(doc, method=None):
 	sanctions = {}
+	if doc.docstatus == 1:  # submitting: lock every sanction the lines touch, in one order, before reading closures
+		for name, closure in locked_closures(doc, sanction_rows(doc)).items():
+			sanctions[("closure", name)] = closure
 	for row in doc.get(LINE_TABLES[doc.doctype]):
 		Line(doc, row, sanctions).validate()
+
+
+def sanction_rows(doc):
+	"""The rows the line rules apply to: Journal Entry rows only when they post spending or name a head."""
+	rows = doc.get(LINE_TABLES[doc.doctype]) or []
+	if doc.doctype != "Journal Entry":
+		return rows
+	return [row for row in rows if row.get(BUDGET_HEAD_FIELD) or is_spending_account(row.account)]
+
+
+def touched_sanctions(doc, rows):
+	"""Names of the submitted sanctions whose project or cost centre the rows (or the document's project) are on."""
+	names = set()
+	for row in rows:
+		for field, value in (("project", row.get("project") or doc.get("project")), ("cost_center", row.get("cost_center"))):
+			name = value and frappe.db.get_value("Sanction", {field: value, "docstatus": 1})
+			if name:
+				names.add(name)
+	return sorted(names)
+
+
+def locked_closures(doc, rows):
+	"""{sanction: its Project Closure or None}, each sanction row locked, in name order (one lock order everywhere)."""
+	return {
+		name: frappe.db.get_value("Sanction", name, "project_closure", for_update=True) for name in touched_sanctions(doc, rows)
+	}
+
+
+def refuse_cancel_on_closed(doc, method=None):
+	"""before_cancel of Purchase Order, Purchase Invoice, Journal Entry and Expense Claim: a closed sanction's ledger
+	doesn't change, so its lines can't be cancelled either."""
+	for name, closure in locked_closures(doc, sanction_rows(doc)).items():
+		check_sanction_open(name, closure)
+
+
+def validate_payment_deductions(doc, method=None):
+	"""validate of Payment Entry: a deduction (write-off, charges) on a closed sanction's project or cost centre is
+	refused; on submit the sanctions are locked first."""
+	rows = doc.get("deductions") or []
+	if doc.docstatus == 1:
+		closures = locked_closures(doc, rows)
+	else:
+		closures = {name: frappe.db.get_value("Sanction", name, "project_closure") for name in touched_sanctions(doc, rows)}
+	for name, closure in closures.items():
+		check_sanction_open(name, closure)
 
 
 class Line:

@@ -17,6 +17,7 @@ from frappe.utils import getdate
 
 from campus.campus_platform import verification
 from campus.campus_platform.api import ApprovableDocument, is_approved, latest_request
+from campus.research.api import check_sanction_open
 from campus.research.grant_recognition import lock_sanction
 from campus.research.utilisation import (
 	FIGURE_FIELDS,
@@ -86,11 +87,13 @@ class UtilisationCertificate(ApprovableDocument, Document):
 		sanction = frappe.db.get_value(
 			"Sanction", self.sanction,
 			["docstatus", "title", "company", "funding_agency", "funding_scheme", "sanction_order_no", "principal_investigator",
-			 "pi_name", "project", "cost_center", "liability_account", "start_date", "end_date"],
+			 "pi_name", "project", "cost_center", "liability_account", "start_date", "end_date", "project_closure"],
 			as_dict=True,
 		)  # fmt: skip
 		if not sanction or sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted.").format(self.sanction))
+		if self.docstatus == 0:  # a closed sanction gets no new certificates
+			check_sanction_open(self.sanction, sanction.project_closure)
 		for field in ("title", "company", "funding_agency", "funding_scheme", "sanction_order_no", "principal_investigator",
 			"pi_name", "project", "cost_center", "liability_account"):  # fmt: skip
 			self.set(field, sanction[field])

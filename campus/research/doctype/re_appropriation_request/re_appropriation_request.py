@@ -9,6 +9,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from campus.research.api import check_sanction_open
 from campus.research.budget_control import head_overspend
 from campus.research.budget_sync import locked_sanction, sync_budgets
 from campus.research.doctype.sanction.sanction import Sanction
@@ -16,9 +17,12 @@ from campus.research.doctype.sanction.sanction import Sanction
 
 class ReappropriationRequest(Document):
 	def validate(self):
-		sanction = frappe.db.get_value("Sanction", self.sanction, ["docstatus", "company", "funding_scheme", "currency"], as_dict=True)
+		sanction = frappe.db.get_value(
+			"Sanction", self.sanction, ["docstatus", "company", "funding_scheme", "currency", "project_closure"], as_dict=True
+		)
 		if not sanction or sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to re-appropriate its heads.").format(self.sanction))
+		check_sanction_open(self.sanction, sanction.project_closure)
 		self.company, self.currency = sanction.company, sanction.currency
 		if self.from_head == self.to_head:
 			frappe.throw(_("The from and to heads are the same."))
@@ -41,8 +45,10 @@ class ReappropriationRequest(Document):
 
 	def move(self, source, target):
 		# one change to the heads at a time; the locking read sees a sanction cancelled meanwhile
-		if frappe.db.get_value("Sanction", self.sanction, "docstatus", for_update=True) != 1:
+		docstatus, closure = frappe.db.get_value("Sanction", self.sanction, ["docstatus", "project_closure"], for_update=True)
+		if docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to re-appropriate its heads.").format(self.sanction))
+		check_sanction_open(self.sanction, closure)
 		self.check_available(source, for_update=True)
 		self.add_to_head(source, -flt(self.amount))
 		self.add_to_head(target, flt(self.amount))

@@ -13,7 +13,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, getdate
 
-from campus.research.api import head_accounts, validate_scheme_usable
+from campus.research.api import check_sanction_open, head_accounts, validate_scheme_usable
 from campus.research.budget_sync import sync_budgets
 from campus.research.grant_setup import GrantSetup
 
@@ -45,7 +45,9 @@ class Sanction(Document):
 		self.check_permission("submit")
 		if self.docstatus != 1:
 			frappe.throw(_("Only a submitted sanction can be extended."))
-		current = getdate(frappe.db.get_value(self.doctype, self.name, "end_date", for_update=True))
+		current, closure = frappe.db.get_value(self.doctype, self.name, ["end_date", "project_closure"], for_update=True)
+		check_sanction_open(self.name, closure)
+		current = getdate(current)
 		revised = getdate(revised_end_date)
 		if revised <= current:
 			frappe.throw(_("The revised end date must be after the current end date {0}.").format(frappe.format(current, "Date")))

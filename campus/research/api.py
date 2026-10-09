@@ -91,10 +91,10 @@ def interest_treatment(company, agency):
 
 
 def check_sanction_open(sanction, project_closure):
-	"""Throw when the sanction is closed (P3-T19): a closed project takes no further spending, receipts or staff."""
+	"""Throw when the sanction is closed (P3-T19): a closed project's ledger and set-up don't change any more."""
 	if project_closure:
 		frappe.throw(
-			_("Sanction {0} is closed by Project Closure {1}: nothing more can be spent, received or appointed on it.").format(
+			_("Sanction {0} is closed by Project Closure {1}: nothing more can be spent, received, cancelled or appointed on it.").format(
 				sanction, project_closure
 			),
 			title=_("Sanction Closed"),

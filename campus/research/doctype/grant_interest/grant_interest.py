@@ -2,16 +2,16 @@
 Journal Entry debiting the bank / cash account and crediting, per the agency's or college's interest treatment
 (campus.research.api.interest_treatment), the sanction's "Grant Received in Advance" liability (the default: the
 interest is refundable or adds to the grant) or the college's Interest Income Account. The sanction's set-up is re-read
-under a lock on it."""
+under a lock on it. A closed sanction (Project Closure) takes no interest, and its interest can't be cancelled."""
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from campus.research.api import interest_treatment
+from campus.research.api import check_sanction_open, interest_treatment
 
-SANCTION_FIELDS = ["docstatus", "company", "funding_agency", "liability_account", "cost_center", "project"]
+SANCTION_FIELDS = ["docstatus", "company", "funding_agency", "liability_account", "cost_center", "project", "project_closure"]
 
 
 class GrantInterest(Document):
@@ -28,6 +28,9 @@ class GrantInterest(Document):
 		self.set_credited_to(sanction)
 		self.journal_entry = self.make_journal_entry(sanction)
 
+	def before_cancel(self):
+		check_sanction_open(self.sanction, self.get_sanction(for_update=True).project_closure)
+
 	def on_cancel(self):
 		if self.journal_entry and frappe.db.get_value("Journal Entry", self.journal_entry, "docstatus") == 1:
 			entry = frappe.get_doc("Journal Entry", self.journal_entry)
@@ -38,6 +41,8 @@ class GrantInterest(Document):
 		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
 		if not sanction or sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to record interest on it.").format(self.sanction))
+		if self.docstatus != 2:
+			check_sanction_open(self.sanction, sanction.project_closure)
 		return sanction
 
 	def set_credited_to(self, sanction):
