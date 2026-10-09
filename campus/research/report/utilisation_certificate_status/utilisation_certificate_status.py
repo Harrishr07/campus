@@ -22,7 +22,7 @@ def execute(filters=None):
 	for sanction in frappe.get_list("Sanction", query, SANCTION_FIELDS, order_by="start_date asc, name asc"):
 		rows.extend(sanction_rows(sanction, filters.company, due_days))
 	if filters.status:
-		rows = [row for row in rows if row["status"] == filters.status]
+		rows = [row for row in rows if row["status"] == _(filters.status)]
 	return columns(), rows
 
 
@@ -35,7 +35,7 @@ def sanction_rows(sanction, company, due_days):
 			{
 				"sanction": sanction.name, "title": sanction.title, "funding_agency": sanction.funding_agency,
 				"pi_name": sanction.pi_name, "from_date": start, "to_date": end, "due_date": due_date,
-				"status": status(certificate, end, due_date), "certificate": certificate and certificate.name,
+				"status": _(status(certificate, end, due_date)), "certificate": certificate and certificate.name,
 			}  # fmt: skip
 		)
 	return rows

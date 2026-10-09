@@ -129,7 +129,9 @@ period). Saving the draft reads the figures from the general ledger:
 - **Opening unspent balance**: what came into the sanction's liability before the period, less what was spent
   before it.
 - **Grants received**: Grant Receipts in the period. **Interest earned**: Grant Interest credited to the liability
-  (Grant Liability treatment). Interest treated as income is the college's, so it is not on the UC.
+  (Grant Liability treatment). Interest treated as income is the college's, so it is not on the UC. Under GFR, interest
+  on central government grants belongs to the government and must be shown on the UC, so keep the Grant Liability
+  treatment for those agencies.
 - **Refunds and other adjustments**: anything else posted to the liability, such as an unspent balance refunded to
   the agency (shown as negative). Grant Income Recognition entries are left out, because they only move money
   already spent.
@@ -149,12 +151,15 @@ The certificate can't be approved until they are posted to a head or moved off t
 
 **Approval** runs through the approval engine under the seeded policy "Utilisation Certificate Approval": the PI
 first (the PI's user, from the Employee record), then Accounts (an Accounts Manager of the college), then the
-Principal. Let Accounts prepare the certificate, because the person who prepares it can't approve it. A UC can't be
+Principal. Let Accounts prepare the certificate, because the person who prepares it can't approve it. One person
+certifies at one level only: someone who approved an earlier level (say the PI, who also holds Accounts Manager)
+can't approve a later one, and the certificate is refused if the same user appears at two levels. A UC can't be
 submitted without approval. The PI can read their own certificates and no one else's.
 
 On the final approval, Campus locks the sanction and re-reads the ledger. The approval is refused if:
 
-- there are unreconciled entries
+- there are unreconciled entries (the read on the sanction's cost centre is a locking one; the read for the project
+  under other cost centres is not, because GL Entry has no index on project)
 - the figures have changed since the certificate was sent for approval (return it and save it again)
 - another approved UC of the sanction covers part of the period
 
@@ -198,6 +203,13 @@ amend it. The amendment is the next **version** and needs approval again.
   dropping them; they are kept until a contention problem shows up. (P3-T16)
 - A GL entry committed at the same moment as a UC's final approval may land after the approval's ledger read and
   before the UC is visible as approved, and then not flag it. Use Recheck Source on a UC approved during busy
-  posting. (P3-T17)
+  posting, which recovers it. (P3-T17)
 - The agencies' official UC / SOE formats (GFR 12-A, 12-C, DST, SERB, UGC) are not built yet. Add each one as a print
   format of Utilisation Certificate and name it in the scheme's or agency's UC Format. (P3-T17)
+- Source Changed follows GL entries only. A change outside the ledger (a head's account mapping, an account's type)
+  can move an approved UC's figures without flagging it. After such a change, use Recheck Source on the sanction's
+  approved UCs. A UC that can't be recomputed after a posting is marked Source Changed and the error is logged.
+  (P3-T17)
+- The project-side unreconciled read at final approval is not a locking read, so untagged spending posted on the
+  project under another cost centre at the same moment as the approval can slip past the gate. The posting then
+  flags the UC Source Changed, or Recheck Source catches it. (P3-T17 fix 1)

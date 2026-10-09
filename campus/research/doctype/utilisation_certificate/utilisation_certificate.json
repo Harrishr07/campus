@@ -294,21 +294,24 @@
    "fieldtype": "Link",
    "label": "Certified by PI",
    "options": "User",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "accounts_certified_by",
    "fieldtype": "Link",
    "label": "Certified by Accounts",
    "options": "User",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "principal_certified_by",
    "fieldtype": "Link",
    "label": "Certified by Principal",
    "options": "User",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "column_break_4",
@@ -377,7 +380,7 @@
  "index_web_pages_for_search": 0,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-10 09:00:00.000000",
+ "modified": "2026-10-11 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Utilisation Certificate",

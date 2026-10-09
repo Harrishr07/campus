@@ -66,6 +66,7 @@ class UtilisationCertificate(ApprovableDocument, Document):
 			)
 		self.snapshot, self.source_changed, self.source_changed_on = snapshot(figures), 0, None
 		self.set_certifiers()
+		self.check_distinct_certifiers()
 
 	def on_submit(self):
 		self.db_set("verification_code", verification.issue(self, self.print_format).code)
@@ -141,6 +142,23 @@ class UtilisationCertificate(ApprovableDocument, Document):
 		)  # fmt: skip
 		if other:
 			frappe.throw(_("Utilisation Certificate {0} of Sanction {1} already covers part of this period.").format(other[0], self.sanction))
+
+	def approval_excluded_users(self):
+		"""Who already approved an earlier level of the pending approval: one person certifies at one level only."""
+		latest = None if self.is_new() else latest_request(self)
+		if not latest or latest.status != "Pending":
+			return []
+		request = frappe.get_doc("Approval Request", latest.name)
+		return [
+			action.approver for action in request.actions
+			if action.cycle == request.cycle and action.action == "Approve" and action.level < request.current_level
+		]  # fmt: skip
+
+	def check_distinct_certifiers(self):
+		certifiers = [self.get(field) for field in LEVEL_FIELDS.values() if self.get(field)]
+		twice = sorted({user for user in certifiers if certifiers.count(user) > 1})
+		if twice:
+			frappe.throw(_("{0} can't certify {1} at more than one level.").format(", ".join(twice), self.name))
 
 	def set_certifiers(self):
 		"""Who approved each level in the approval that is submitting the UC."""

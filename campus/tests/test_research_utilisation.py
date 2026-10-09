@@ -256,6 +256,34 @@ class TestUtilisationCertificate(SanctionFixtures):
 		self.assertEqual((record.reference_name, record.status), (uc.name, "Valid"))
 		self.assertEqual(record.print_format, "Utilisation Certificate")
 
+	def test_one_user_cannot_certify_at_two_levels(self):
+		pi = frappe.get_doc("User", PI_USER)
+		pi.add_roles("Accounts Manager")  # the PI is also in Accounts
+		self.addCleanup(lambda: frappe.get_doc("User", PI_USER).remove_roles("Accounts Manager"))
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.certificate(sanction)
+		request = request_approval(DOCTYPE, uc.name)
+		frappe.set_user(PI_USER)
+		approve(request, None)  # level 1, as the PI
+		with self.assertRaises(frappe.PermissionError):
+			approve(request, None)  # level 2, as Accounts
+		frappe.set_user("Administrator")
+		for user in (ACCOUNTS_USER, PRINCIPAL_USER):
+			frappe.set_user(user)
+			approve(request, None)
+			frappe.set_user("Administrator")
+		uc.reload()
+		self.assertEqual((uc.docstatus, uc.pi_certified_by, uc.accounts_certified_by), (1, PI_USER, ACCOUNTS_USER))
+
+	def test_the_certifiers_must_be_different_users(self):
+		uc = self.certificate(self.submitted_sanction())
+		uc.pi_certified_by, uc.accounts_certified_by, uc.principal_certified_by = PI_USER, ACCOUNTS_USER, PI_USER
+		with self.assertRaisesRegex(frappe.ValidationError, PI_USER):
+			uc.check_distinct_certifiers()
+		uc.principal_certified_by = PRINCIPAL_USER
+		uc.check_distinct_certifiers()
+
 	def test_a_direct_submit_without_approval_is_refused(self):
 		sanction = self.submitted_sanction()
 		uc = self.certificate(sanction)
@@ -312,6 +340,19 @@ class TestUtilisationCertificate(SanctionFixtures):
 		uc = self.certificate(sanction)
 		self.assertEqual((uc.unreconciled_entries, uc.unreconciled_amount), (1, 300))
 
+	def test_the_final_unreconciled_read_locks_only_the_cost_centre_branch(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		with patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql:
+			utilisation_figures(sanction.name, self.period_start, today(), lock=True)
+		unreconciled = [str(c.args[0]) for c in sql.call_args_list if "`tabGL Entry`" in str(c.args[0]) and "`tabAccount`" in str(c.args[0])]
+		by_project = [q for q in unreconciled if "`project`" in q]
+		self.assertEqual(len(by_project), 1)
+		self.assertNotIn("FOR UPDATE", by_project[0].upper())  # no index on project: never a locking scan
+		by_cost_center = [q for q in unreconciled if "`project`" not in q]
+		self.assertEqual(len(by_cost_center), 1)
+		self.assertIn("FOR UPDATE", by_cost_center[0].upper())
+
 	def test_figures_moved_during_approval_refuse_the_final_approval(self):
 		sanction = self.submitted_sanction()
 		self.funded(sanction)
@@ -342,6 +383,15 @@ class TestUtilisationCertificate(SanctionFixtures):
 		entry.cancel()
 		self.assertTrue(uc.recheck_source() is False)  # back to the approved figures
 		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 0)
+
+	def test_cancelling_an_in_period_voucher_after_approval_flags_source_changed(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		entry = self.spend(sanction, self.travel_account, 600, self.travel, posting_date=add_days(self.period_start, 11))
+		uc = self.approved(sanction)
+		self.assertEqual(uc.source_changed, 0)
+		entry.cancel()
+		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
 
 	def test_entry_before_the_period_moves_the_opening_and_flags_too(self):
 		sanction = self.submitted_sanction()
@@ -374,6 +424,14 @@ class TestUtilisationCertificate(SanctionFixtures):
 			self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
 		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
 
+	def test_a_ledger_entry_is_never_blocked_by_an_unexpected_recompute_error(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		with patch("campus.research.utilisation.utilisation_figures", side_effect=KeyError("corrupt snapshot")):
+			self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
+		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+
 	# versions
 	def test_a_revised_certificate_is_a_new_version_and_periods_do_not_overlap(self):
 		sanction = self.submitted_sanction()
@@ -385,6 +443,7 @@ class TestUtilisationCertificate(SanctionFixtures):
 		frappe.db.rollback(save_point="uc_overlap")
 		first.cancel()
 		self.assertEqual(frappe.db.get_value("Verifiable Document", {"code": first.verification_code}, "status"), "Revoked")
+		self.assertFalse(frappe.copy_doc(first, ignore_no_copy=False).pi_certified_by)  # an amendment starts uncertified
 		revised = frappe.copy_doc(first)
 		revised.amended_from, revised.docstatus = first.name, 0
 		revised.insert()

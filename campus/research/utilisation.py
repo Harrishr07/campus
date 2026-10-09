@@ -45,8 +45,9 @@ def utilisation_figures(sanction, from_date, to_date, lock=False):
 	sanction = frappe.db.get_value("Sanction", sanction, SANCTION_FIELDS, as_dict=True)
 	before = add_days(from_date, -1)
 	inflow_before, inflow = liability_inflows(sanction, from_date, to_date, lock)
-	heads = head_figures(sanction, before, to_date, lock)
-	unreconciled = unreconciled_entries(sanction, to_date, lock)
+	heads_by_name = sanction_heads(sanction)
+	heads = head_figures(sanction, heads_by_name, before, to_date, lock)
+	unreconciled = unreconciled_entries(sanction, heads_by_name, to_date, lock)
 	figures = frappe._dict(
 		opening_unspent=flt(sum(inflow_before.values()) - sum(h.spent_before for h in heads), 2),
 		grants_received=inflow["receipt"], interest_earned=inflow["interest"], other_adjustments=inflow["other"],
@@ -66,7 +67,7 @@ def liability_inflows(sanction, from_date, to_date, lock=False):
 	for doctype, kind in (("Grant Receipt", "receipt"), ("Grant Interest", "interest")):
 		for entry in frappe.get_all(doctype, {"sanction": sanction.name, "journal_entry": ["is", "set"]}, pluck="journal_entry"):
 			kinds[entry] = kind
-	recognitions = set(frappe.get_all("Grant Income Recognition", {"company": sanction.company, "journal_entry": ["is", "set"]}, pluck="journal_entry"))
+	recognitions = recognition_entries(sanction.name)
 	gl = frappe.qb.DocType("GL Entry")
 	query = (
 		frappe.qb.from_(gl)
@@ -81,6 +82,17 @@ def liability_inflows(sanction, from_date, to_date, lock=False):
 		bucket = before if getdate(posting_date) < getdate(from_date) else during
 		bucket[kinds.get(voucher, "other")] += flt(amount)
 	return {k: flt(v, 2) for k, v in before.items()}, {k: flt(v, 2) for k, v in during.items()}
+
+
+def recognition_entries(sanction):
+	"""Journal Entries of the Grant Income Recognitions that included `sanction`."""
+	row, doc = frappe.qb.DocType("Grant Income Recognition Sanction"), frappe.qb.DocType("Grant Income Recognition")
+	return set(
+		frappe.qb.from_(doc).join(row).on(row.parent == doc.name)
+		.select(doc.journal_entry)
+		.where((row.sanction == sanction) & (row.parenttype == "Grant Income Recognition") & doc.journal_entry.isnotnull())
+		.run(pluck=True)
+	)  # fmt: skip
 
 
 def sanction_heads(sanction):
@@ -106,9 +118,9 @@ def sanction_heads(sanction):
 	return heads
 
 
-def head_figures(sanction, before, to_date, lock=False):
+def head_figures(sanction, heads, before, to_date, lock=False):
 	rows = []
-	for head, values in sanction_heads(sanction).items():
+	for head, values in heads.items():
 		spent_before = posted(sanction.cost_center, values.accounts, before, lock)
 		spent_to_date = posted(sanction.cost_center, values.accounts, to_date, lock)
 		rows.append(
@@ -121,34 +133,44 @@ def head_figures(sanction, before, to_date, lock=False):
 	return rows
 
 
-def unreconciled_entries(sanction, to_date, lock=False):
+def unreconciled_entries(sanction, heads, to_date, lock=False):
 	"""[{voucher_type, voucher_no, account, amount}] of spending on the sanction's project or cost centre up to
-	`to_date` that is not on one of its head accounts on its cost centre."""
+	`to_date` that is not on one of its head accounts on its cost centre.
+
+	Two reads: on the cost centre (indexed, locked when `lock`), and on the project under any other cost centre. GL
+	Entry has no index on project, so that read is never a locking one: it would lock most of the college's ledger."""
 	accounts = set()
-	for values in sanction_heads(sanction).values():
+	for values in heads.values():
 		accounts |= values.accounts
+	gl = frappe.qb.DocType("GL Entry")
+	on_cost_center = gl.cost_center == sanction.cost_center
+	off_heads = ~gl.account.isin(list(accounts)) if accounts else gl.account.isnotnull()
+	locked = unreconciled_query(sanction, to_date, on_cost_center & off_heads)
+	elsewhere = unreconciled_query(
+		sanction, to_date, (gl.project == sanction.project) & (gl.cost_center.isnull() | (gl.cost_center != sanction.cost_center))
+	)
+	totals = {}
+	for row in (locked.for_update() if lock else locked).run(as_dict=True) + elsewhere.run(as_dict=True):
+		key = (row.voucher_type, row.voucher_no, row.account)
+		totals[key] = totals.get(key, 0) + flt(row.amount)
+	return [
+		frappe._dict(voucher_type=key[0], voucher_no=key[1], account=key[2], amount=amount)
+		for key, amount in sorted(totals.items(), key=lambda item: item[0][1])
+		if flt(amount, 2)
+	]
+
+
+def unreconciled_query(sanction, to_date, condition):
 	gl, account = frappe.qb.DocType("GL Entry"), frappe.qb.DocType("Account")
 	spending = (account.account_type == "Fixed Asset") | (
 		(account.root_type == "Expense") & Coalesce(account.account_type, "").notin(NON_SPENDING_EXPENSE_TYPES)
 	)
-	on_heads = gl.cost_center == sanction.cost_center
-	if accounts:
-		on_heads = on_heads & gl.account.isin(list(accounts))
-	else:
-		on_heads = on_heads & (gl.account == "")
-	query = (
+	return (
 		frappe.qb.from_(gl).join(account).on(account.name == gl.account)
 		.select(gl.voucher_type, gl.voucher_no, gl.account, Sum(gl.debit - gl.credit).as_("amount"))
-		.where(
-			(gl.company == sanction.company) & (gl.is_cancelled == 0) & (gl.posting_date <= to_date)
-			& ((gl.cost_center == sanction.cost_center) | (gl.project == sanction.project))
-			& spending & ~on_heads
-		)
+		.where((gl.company == sanction.company) & (gl.is_cancelled == 0) & (gl.posting_date <= to_date) & spending & condition)
 		.groupby(gl.voucher_type, gl.voucher_no, gl.account)
-		.orderby(gl.voucher_no)
 	)  # fmt: skip
-	rows = (query.for_update() if lock else query).run(as_dict=True)
-	return [row for row in rows if flt(row.amount, 2)]
 
 
 # snapshot and source changed
@@ -198,8 +220,15 @@ def note_ledger_change(doc, method=None):
 		uc = frappe.get_doc(UC_DOCTYPE, name)
 		try:
 			changed = source_moved(uc)
-		except frappe.ValidationError:  # e.g. a head mapping changed since: never block the posting, flag the UC
+		except Exception as error:  # a head mapping changed since, a corrupt snapshot...: never block the posting
 			frappe.clear_last_message()
+			frappe.log_error(
+				title=_("Utilisation Certificate recheck failed"),
+				message=_("{0} could not be recomputed after GL Entry {1} ({2}); it is marked Source Changed.").format(
+					name, doc.name, type(error).__name__
+				),
+				reference_doctype=UC_DOCTYPE, reference_name=name,
+			)  # fmt: skip
 			changed = True
 		mark_source(uc, changed)
 
