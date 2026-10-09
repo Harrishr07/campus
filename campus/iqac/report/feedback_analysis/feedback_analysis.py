@@ -1,15 +1,17 @@
 """M01-05 / M07-04 Feedback Analysis: ratings per question, per course offering or per faculty, k-anonymous.
 
-Only campaigns the user may read (company User Permissions apply) are counted. A group answered by fewer respondents
-than Campus Settings > Feedback Minimum Group Size is left out, and the report says how many were. Free-text answers
-are counted, never listed.
+Only closed campaigns (window ended before today) the user may read (company User Permissions apply) are counted, so a
+figure never moves while answers come in. Every (campaign, group) cell answered by fewer respondents than Campus
+Settings > Feedback Minimum Group Size is dropped before cells are pooled into a row, so a small campaign never shows as
+the difference between two filters; the report says how many cells were left out. Free-text answers are counted, never
+listed.
 """
 
 from collections import Counter, defaultdict
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, today
 
 from campus.campus_platform.company_scope import permitted_companies
 from campus.iqac.access import READERS
@@ -25,17 +27,28 @@ def execute(filters=None):
 	if not filters.company or (permitted is not None and filters.company not in permitted):
 		frappe.throw(_("Choose a college you are permitted for."), frappe.PermissionError)
 	group_by = filters.group_by or "Question"
-	groups = grouped(answers(filters), GROUPS[group_by])
+	if group_by not in GROUPS:
+		frappe.throw(_("Group By must be one of {0}.").format(", ".join(GROUPS)))
 	least = minimum_group_size()
-	rows = [row(group_by, items) for items in groups.values()]
-	shown = [r for r in rows if r["responses"] >= least]
-	hidden = len(rows) - len(shown)
+	kept, hidden = large_cells(answers(filters), GROUPS[group_by], least)
+	rows = [row(group_by, items) for items in grouped(kept, GROUPS[group_by]).values()]
 	message = _("{0} group(s) with fewer than {1} responses (the minimum group size) are not shown.").format(hidden, least) if hidden else None
-	return columns(group_by), shown, message
+	return columns(group_by), rows, message
+
+
+def large_cells(items, keys, least):
+	"""The answers of the (campaign, group) cells with at least `least` responses, and how many cells were dropped."""
+	kept, hidden = [], 0
+	for cell in grouped(items, tuple(dict.fromkeys(("campaign", *keys)))).values():
+		if len({i.response for i in cell}) >= least:
+			kept += cell
+		else:
+			hidden += 1
+	return kept, hidden
 
 
 def answers(filters):
-	campaign_filters = {"company": filters.company}
+	campaign_filters = {"company": filters.company, "end_date": ["<", today()]}
 	for field in ("campaign", "academic_year", "course_offering", "instructor"):
 		if filters.get(field):
 			campaign_filters["name" if field == "campaign" else field] = filters.get(field)

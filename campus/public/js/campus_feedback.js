@@ -19,6 +19,11 @@
 			body.append("signature", form.dataset.signature);
 		}
 		cpPost("campus.iqac.feedback.submit_response", body, form.querySelector(".cp-message"),
-			form.querySelector("button[type=submit]"), function () { window.location.reload(); });
+			form.querySelector("button[type=submit]"), function () {
+				var note = document.createElement("p");
+				note.className = "cp-empty";
+				note.textContent = form.dataset.thanks;
+				form.replaceWith(note);  // no reload: nothing more is requested after the answer
+			});
 	});
 })();

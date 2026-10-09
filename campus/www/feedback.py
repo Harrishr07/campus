@@ -29,16 +29,17 @@ def get_context(context):
 	campaign = frappe.db.exists("Feedback Campaign", name) and frappe.get_doc("Feedback Campaign", name)
 	if not campaign:
 		return
+	addressed = feedback.respondents(campaign)
 	try:
-		key = feedback.respondent_key(campaign, member or None, signature or None)
+		keys = feedback.respondent_keys(campaign, addressed, member or None, signature or None)
 	except frappe.PermissionError:
 		frappe.clear_last_message()
 		return
 	context.title, context.campaign = campaign.campaign_title, campaign.name
 	context.is_anonymous = campaign.is_anonymous
-	if feedback.has_responded(campaign.name, key):
+	if any(feedback.has_responded(campaign.name, key) for key in keys):
 		context.state = "answered"
-	elif not feedback.is_open(campaign):
+	elif not feedback.is_open(campaign) or (campaign.is_anonymous and len(set(addressed)) < feedback.minimum_group_size()):
 		context.state = "closed"
 	else:
 		context.state = "open"

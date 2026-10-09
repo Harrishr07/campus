@@ -19,7 +19,7 @@ from datetime import datetime, time
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Avg, Count
+from frappe.query_builder.functions import Count, Sum
 from frappe.utils import cint, flt, getdate, today
 from frappe.utils.password import get_encryption_key
 
@@ -30,6 +30,8 @@ EXTERNAL = ("Alumni", "Employers")
 LIKERT = range(1, 6)
 TEXT_LIMIT = 2000
 ANONYMOUS_OWNER = "Guest"
+SAVEPOINT = "feedback_response"
+CO_AUDIENCE = "Course Offering Students"
 
 
 # Keys, tokens and signatures
@@ -81,19 +83,33 @@ def offering_teachers(offering):
 	return [f"Employee:{name}" for name in sorted(active)]
 
 
-def respondent_key(campaign, member=None, signature=None):
-	"""The key the caller answers as: an invited member by a valid signed link, else a record of the session user."""
+def not_available():
+	"""The one refusal for an unknown campaign, a bad link and a caller the campaign does not address."""
+	frappe.throw(_("This feedback is not available to you."), frappe.PermissionError)
+
+
+def respondent_keys(campaign, addressed, member=None, signature=None):
+	"""Every key the caller answers as among `addressed`: an invited member by a valid signed link, else each record of
+	the session user (all are claimed, so nobody answers again under another of their records)."""
 	if member or signature:
 		key = f"External Member:{member}"
-		if campaign.audience not in EXTERNAL or key not in respondents(campaign) or not valid_signature(campaign.name, key, signature):
-			frappe.throw(_("This feedback link is not valid."), frappe.PermissionError)
-		return key
-	if frappe.session.user == "Guest":
-		frappe.throw(_("Please log in to give feedback."), frappe.PermissionError)
-	matches = sorted(recipient_keys_for_user(frappe.session.user) & set(respondents(campaign)))
+		if campaign.audience not in EXTERNAL or key not in addressed or not valid_signature(campaign.name, key, signature):
+			not_available()
+		return [key]
+	matches = sorted(recipient_keys_for_user(frappe.session.user) & set(addressed))
 	if not matches:
-		frappe.throw(_("This feedback is not addressed to you."), frappe.PermissionError)
-	return matches[0]
+		not_available()
+	return matches
+
+
+def check_audience_size(campaign, addressed):
+	"""An anonymous campaign addressing fewer people than the minimum group size could be traced through the offering
+	and instructor its responses keep, so it takes no answers or invitations."""
+	least = minimum_group_size()
+	if cint(campaign.is_anonymous) and len(set(addressed)) < least:
+		frappe.throw(
+			_("The audience of this anonymous campaign is too small (fewer than {0}) to keep answers anonymous. Widen the audience or make the campaign named.").format(least)
+		)
 
 
 def is_open(campaign, day=None):
@@ -110,8 +126,10 @@ def open_campaigns_for(user=None):
 		campaign = frappe.get_doc("Feedback Campaign", row.name)
 		if campaign.audience in EXTERNAL:
 			continue
-		mine = sorted(keys & set(respondents(campaign)))
-		if mine and not has_responded(campaign.name, mine[0]):
+		addressed = respondents(campaign)
+		mine = sorted(keys & set(addressed))
+		too_small = cint(campaign.is_anonymous) and len(set(addressed)) < minimum_group_size()
+		if mine and not too_small and not any(has_responded(campaign.name, key) for key in mine):
 			result.append(frappe._dict(name=campaign.name, campaign_title=campaign.campaign_title, end_date=campaign.end_date))
 	return result
 
@@ -121,21 +139,52 @@ def open_campaigns_for(user=None):
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_response(campaign, answers, member=None, signature=None):
-	"""Record the caller's answers ({question row name: value}, JSON) to an open campaign, once per respondent."""
-	campaign = frappe.get_doc("Feedback Campaign", campaign)  # respondents cannot read campaigns; checked below
+	"""Record the caller's answers ({question row name: value}, JSON) to an open campaign, once per respondent.
+
+	A refusal is a ValidationError / PermissionError with a message that names no answer. Any other failure is undone to
+	a savepoint, logged by its class name only (never a traceback, whose frames hold the answers and the respondent) and
+	reported as one generic ValidationError raised outside the handler, so no exception chain carries it either."""
+	failed = None
+	frappe.db.savepoint(SAVEPOINT)
+	try:
+		return record_response(campaign, answers, member, signature)
+	except (frappe.ValidationError, frappe.PermissionError):
+		frappe.db.rollback(save_point=SAVEPOINT)  # e.g. a second key already claimed: nothing of this attempt stays
+		raise
+	except Exception as error:
+		failed = type(error).__name__
+		frappe.db.rollback(save_point=SAVEPOINT)
+	frappe.log_error(_("Feedback response failed"), failed)
+	frappe.throw(_("Your feedback could not be recorded. Please try again later."))
+
+
+def record_response(name, answers, member, signature):
+	if frappe.session.user == "Guest" and not (member or signature):
+		frappe.throw(_("Please log in to give feedback."), frappe.PermissionError)
+	if not frappe.db.exists("Feedback Campaign", name):
+		not_available()
+	campaign = frappe.get_doc("Feedback Campaign", name)  # respondents cannot read campaigns; checked next
+	addressed = respondents(campaign)
+	keys = respondent_keys(campaign, addressed, member, signature)
+	check_audience_size(campaign, addressed)
 	if not is_open(campaign):
 		frappe.throw(_("This feedback is not open."))
-	key = respondent_key(campaign, member, signature)
 	rows = answer_rows(frappe.get_doc("Feedback Form", campaign.form), answers)
-	claim_token(campaign, key)
-	return store_response(campaign, key, rows)
+	for key in keys:
+		claim_token(campaign, key)
+	return store_response(campaign, keys[0], rows)
 
 
 def answer_rows(form, answers):
 	"""Answer rows for the form's questions, checked: Likert 1-5, a listed option, text within the limit, required answered."""
 	from campus.iqac.doctype.feedback_form.feedback_form import choice_options
 
-	values = json.loads(answers) if isinstance(answers, str) else (answers or {})
+	try:
+		values = json.loads(answers) if isinstance(answers, str) else answers
+	except ValueError:
+		values = None
+	if not isinstance(values, dict):
+		frappe.throw(_("The answers are not in the expected form."))
 	rows = []
 	for question in form.questions:
 		value = values.get(question.name)
@@ -211,28 +260,44 @@ def minimum_group_size():
 
 
 def indirect_co_scores(offering):
-	"""{CO: {responses, average, percent, suppressed}} from the CO-tagged Likert answers of the offering's responses.
+	"""{CO: {responses, average, percent, suppressed}} from the CO-tagged Likert answers to the offering's closed
+	"Course Offering Students" campaigns.
 
-	average is the mean rating (1-5), percent that mean as a share of 5. A CO answered in fewer responses than the
-	minimum group size is suppressed: its figures are None."""
-	response, answer = frappe.qb.DocType(RESPONSE), frappe.qb.DocType(ANSWER)
-	count, mean = Count(response.name).distinct(), Avg(answer.rating)
-	rows = (
-		frappe.qb.from_(response)
-		.join(answer)
-		.on((answer.parent == response.name) & (answer.parenttype == RESPONSE))
-		.select(answer.course_outcome, count.as_("responses"), mean.as_("average"))
-		.where((response.course_offering == offering) & (answer.question_type == "Likert") & answer.rating.isnotnull())
-		.where(answer.course_outcome.isnotnull() & (answer.course_outcome != ""))
-		.groupby(answer.course_outcome)
-		.run(as_dict=True)
-	)
+	Each (campaign, CO) cell answered by fewer respondents than the minimum group size is dropped before the cells are
+	pooled, so no small campaign shows by difference. average is the mean rating (1-5), percent that mean as a share of
+	5; a CO with no cell left is suppressed (figures None)."""
 	least = minimum_group_size()
 	scores = {}
-	for row in rows:
-		if row.responses < least:
-			scores[row.course_outcome] = {"responses": None, "average": None, "percent": None, "suppressed": 1}
-		else:
-			average = flt(row.average, 2)
-			scores[row.course_outcome] = {"responses": row.responses, "average": average, "percent": flt(average / 5 * 100, 2), "suppressed": 0}
+	for co, cells in co_cells(offering).items():
+		kept = [cell for cell in cells if cell.responses >= least]
+		if not kept:
+			scores[co] = {"responses": None, "average": None, "percent": None, "suppressed": 1}
+			continue
+		average = flt(sum(c.total for c in kept) / sum(c.ratings for c in kept), 2)
+		scores[co] = {"responses": sum(c.responses for c in kept), "average": average, "percent": flt(average / 5 * 100, 2), "suppressed": 0}
 	return scores
+
+
+def co_cells(offering):
+	"""{CO: [(campaign, responses, ratings, total)]} for the offering's closed student campaigns."""
+	campaign, response, answer = frappe.qb.DocType("Feedback Campaign"), frappe.qb.DocType(RESPONSE), frappe.qb.DocType(ANSWER)
+	rows = (
+		frappe.qb.from_(response)
+		.join(campaign)
+		.on(campaign.name == response.campaign)
+		.join(answer)
+		.on((answer.parent == response.name) & (answer.parenttype == RESPONSE))
+		.select(
+			answer.course_outcome, response.campaign, Count(response.name).distinct().as_("responses"),
+			Count(answer.rating).as_("ratings"), Sum(answer.rating).as_("total"),
+		)
+		.where((response.course_offering == offering) & (campaign.audience == CO_AUDIENCE) & (campaign.end_date < today()))
+		.where((answer.question_type == "Likert") & answer.rating.isnotnull())
+		.where(answer.course_outcome.isnotnull() & (answer.course_outcome != ""))
+		.groupby(answer.course_outcome, response.campaign)
+		.run(as_dict=True)
+	)  # fmt: skip
+	cells = {}
+	for row in rows:
+		cells.setdefault(row.course_outcome, []).append(row)
+	return cells

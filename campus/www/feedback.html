@@ -11,7 +11,7 @@
 	<p class="cp-empty">{{ _("This feedback is not open.") }}</p>
 	{% else %}
 	{% if is_anonymous %}<p class="cp-who">{{ _("Your answers are anonymous: they are kept without your name, account or the time you answered.") }}</p>{% endif %}
-	<form class="cp-card cp-form" id="cp-feedback" data-campaign="{{ campaign|e }}" data-member="{{ member|e }}" data-signature="{{ signature|e }}">
+	<form class="cp-card cp-form" id="cp-feedback" data-campaign="{{ campaign|e }}" data-member="{{ member|e }}" data-signature="{{ signature|e }}" data-thanks="{{ _('Thank you: your feedback has been recorded.')|e }}">
 		{% for q in questions %}
 		<fieldset class="cp-question" data-question="{{ q.name|e }}" data-type="{{ q.question_type|e }}">
 			<legend>{{ loop.index }}. {{ q.question|e }}{% if q.is_required %} *{% endif %}</legend>

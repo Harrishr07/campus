@@ -21,6 +21,7 @@ HANDLER = "campus.iqac.feedback_invites.send_one"
 def send_invitations(campaign_name):
 	"""Queue the invitation of every respondent of the campaign; returns the Bulk Run name."""
 	campaign = frappe.get_doc("Feedback Campaign", campaign_name)
+	feedback.check_audience_size(campaign, feedback.respondents(campaign))
 	run = queue(campaign, INVITATION, "invitation")
 	if not run:
 		frappe.throw(_("Nobody is addressed by this campaign yet."))
@@ -50,8 +51,10 @@ def reminder_due(start_date, every_days, day):
 
 
 def queue(campaign, event_key, dedupe_token):
+	"""A bulk run sending `event_key` to the campaign's audience; None when nobody is addressed, or the campaign is
+	anonymous with an audience below the minimum group size (it takes no answers)."""
 	recipients = feedback.respondents(campaign)
-	if not recipients:
+	if not recipients or (campaign.is_anonymous and len(set(recipients)) < feedback.minimum_group_size()):
 		return None
 	parameters = {"campaign": campaign.name, "event_key": event_key, "dedupe_token": dedupe_token}
 	return run_bulk(f"{event_key} {campaign.name}", recipients, HANDLER, parameters=parameters)
