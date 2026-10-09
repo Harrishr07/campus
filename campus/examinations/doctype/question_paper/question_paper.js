@@ -12,10 +12,14 @@ frappe.ui.form.on("Question Paper", {
 			});
 			frm.add_custom_button(__("Record Print"), () => record_print(frm));
 		}
-		if (frm.doc.docstatus < 2 && frm.doc.moderation_status !== "Withdrawn") {
+		const may_withdraw = frappe.user.has_role("COE") || frappe.user.has_role("System Manager");
+		if (may_withdraw && frm.doc.docstatus < 2 && frm.doc.moderation_status !== "Withdrawn") {
 			frm.add_custom_button(__("Withdraw"), () =>
-				frappe.confirm(__("Withdraw this paper for good? It can never be downloaded again."), () =>
-					frappe.call({ method: `${QP_API}.withdraw`, args: { question_paper: frm.doc.name } }).then(() => frm.reload_doc())
+				frappe.prompt(
+					{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1 },
+					({ reason }) => frappe.call({ method: `${QP_API}.withdraw`, args: { question_paper: frm.doc.name, reason } })
+						.then(() => frm.reload_doc()),
+					__("Withdraw this paper for good? It can never be opened or downloaded again."), __("Withdraw")
 				));
 		}
 	},
