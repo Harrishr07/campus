@@ -115,3 +115,53 @@ An invigilator (Academics User) files the report: student, course (must be one t
    - Once every allocation of the course is **Completed**, Exam Confidential runs `campus.examinations.valuation_write_back.write_back_pending` (POST) with the session and course. This bulk job writes each final mark to the student's Mark Sheet Entry row as ESE and flags it **ESE from Valuation**, so it cannot be edited on the sheet.
    - Some scripts are skipped, with the reason shown in **Write-back Issue** on the map: a student absent on the sheet or in the hall (the absent mark is kept), a result that has already been run, or a sheet that refuses the mark. Run the job again after fixing the cause.
    - Once the student's result has been run, or the session is published, the script's marks are locked.
+
+# Examinations: confidential question papers (P2-T17)
+
+Only users with the **Exam Confidential** role see Question Bank Items, QP Setter Nominations, Question Papers and the QP Access Log. System Manager does not get access through its own role.
+
+## Set up
+- **Question Paper Settings** (System Manager):
+  - the download lead, at most 120 minutes before the slot;
+  - the slot length;
+  - the FN and AN start times.
+- **The key.** The question paper key encrypts every paper PDF. Keep it in the `CAMPUS_QP_KEY` environment variable, or in a file outside `sites/` named by `campus_qp_key_file` in site_config. Either way, backups do not carry it. A key left in site_config (`campus_qp_key`) works, but migrate warns about it. If the key is missing while sealed papers exist, migrate never generates a new one.
+- **The moderation policy.** "Question Paper Moderation" is seeded with Exam Confidential of the college as the approver.
+
+## Prepare (Exam Confidential)
+1. **QP Setter Nomination**: setters, scrutiniser and the date the paper is due.
+2. **Question Bank Items**: course, CO, Bloom level, marks, difficulty.
+3. **Question Paper**:
+   - the pattern: at least one CO row and one Bloom row, each with min-max % of the marks;
+   - the questions for sets A and B, and the PDF of each set. A PDF is encrypted when the paper is saved.
+   - Release At is always the slot start from the session's schedule.
+4. **Request Approval.** The paper is refused if it is off its blueprint. A moderator approves it. A moderator is never the requester, the owner, a nominated setter, or anyone who changed the questions, pattern or files.
+5. **Approval seals the paper.**
+   - It fixes the download window: from the lead before the slot start until the slot ends.
+   - It fixes each sealed file's name and SHA-256.
+   - Only one approved paper is allowed per session and course.
+
+## On exam day
+- Inside the window, Exam Confidential downloads each set from the form (**Download > Set A/B**). The PDF is watermarked with the user and the time, and is never cached.
+- Record the copies printed for each Exam Hall with **Record Print**. The **Question Paper Print Log** report shows the copies per hall.
+- Before the window, nobody can open a sealed paper, list it or download it. That includes System Manager.
+- While any sealed paper of a course is closed, **all** of that course's bank items are hidden and locked.
+
+## Withdraw
+- The COE or a System Manager of the paper's college can withdraw a paper at any time, and must give a reason.
+- A withdrawn sealed paper stays closed for good. It is never downloadable, and it can never be amended, copied or deleted.
+
+## Audit
+Every open, list, download, print and withdrawal is logged in the **QP Access Log**, allowed or denied, with the user, time and IP. The log rows cannot be changed or deleted.
+
+## Known residual (ruling O-1)
+A System Manager can still reach confidential data through configuration paths:
+- backups;
+- Jinja in Print Format;
+- Customize Form;
+- Server Scripts;
+- granting itself the role.
+
+Treat System Manager as equivalent to Administrator. Give that role only to people who may see exam papers.
+
+Notifications, Webhooks and Version history on these DocTypes are refused. Bank question text is not encrypted at rest (deferred).

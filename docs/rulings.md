@@ -102,3 +102,13 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 1 | TDS base (194J / new-Act professional fees) | the gross: honorarium + DA + TA (CBDT Circular 715 treats reimbursements billed with the fee as part of it) |
 | 2 | TA exemption | TA is left out of TDS only when "TA at Actuals" is ticked AND the travel bill is attached; DA is always taxed |
 | 3 | TDS section | always the Supplier's Tax Withholding Category (kept by Accounts); a claim is refused when the Supplier has none |
+
+### P2-T17 fix round 2: confidential question papers (coordinator rulings)
+| # | Item | Ruling |
+|---|------|--------|
+| 1 | System Manager configuration paths (backups, Jinja in Notification/Print Format/Webhook, Customize Form, Server Script, self-granted roles) | Known residual: System Manager is Administrator-equivalent for exam confidentiality. Guards added: no Version, Notification or Webhook on the confidential DocTypes |
+| 2 | Question paper key | Environment `CAMPUS_QP_KEY`, else a key file outside sites/ (`campus_qp_key_file`), else site_config `campus_qp_key` with a migrate warning. Never regenerated while sealed files exist |
+| 3 | Bank items while a sealed paper is closed | The whole bank of the course is hidden and locked (no oracle of which items are on the paper) |
+| 4 | Download lead | At most 120 minutes; release_at is always the slot start |
+| 5 | Withdrawal | COE or System Manager of the paper's company, with a reason; a withdrawn sealed paper stays closed for good |
+| 6 | Deferred | Encrypting Question Bank question text at rest; unsealing a paper for edits; portal access for setters |
