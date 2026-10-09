@@ -21,11 +21,11 @@ def setup_examinations():
 	setup_exam_halls()
 	seed_cia_unlock_policy()
 	seed_coe_policy(MALPRACTICE_POLICY, "Malpractice Report", MALPRACTICE_DECISION_FIELDS)
-	open_decision_to_approver()
 
 
 def open_decision_to_approver():
-	"""Sites seeded before the decision moved to the approver: let the seeded level edit it (a blank level only)."""
+	"""Sites seeded before the decision moved to the approver: let the seeded level edit it (a blank level only).
+	Run once by the patch open_malpractice_decision_to_approver."""
 	levels = frappe.get_all("Approval Level", {"parenttype": "Approval Policy", "parent": MALPRACTICE_POLICY}, ["name", "can_edit_fields"])
 	for level in levels:
 		if not level.can_edit_fields:

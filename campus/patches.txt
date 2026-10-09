@@ -18,3 +18,4 @@ campus.patches.reset_employee_profile_permlevel
 campus.patches.mark_confidential_body_types
 campus.patches.clear_stale_proposal_references
 campus.patches.drop_question_paper_versions
+campus.patches.open_malpractice_decision_to_approver

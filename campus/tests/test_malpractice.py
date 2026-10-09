@@ -120,6 +120,25 @@ class TestMalpractice(MalpracticeFixture):
 		amended.insert()
 		self.assertEqual(amended.evidence[0].file, report.evidence[0].file)
 
+	def test_amending_needs_amend_right_on_the_original_and_copies_no_evidence_otherwise(self):
+		frappe.set_user(INVIGILATOR)
+		original = self.report(decision="")
+		frappe.set_user("Administrator")
+		original = frappe.get_doc("Malpractice Report", original.name)
+		original.committee_decision = "Warning"
+		original.save()
+		self.approved(original).cancel()
+		url = original.evidence[0].file
+		frappe.set_user(OTHER_INVIGILATOR)  # Academics User: may create reports, holds no amend right
+		stolen = frappe.copy_doc(frappe.get_doc("Malpractice Report", original.name).as_dict() | {"docstatus": 0})
+		stolen.amended_from = original.name
+		with self.assertRaisesRegex(frappe.PermissionError, "amend"):
+			stolen.insert()
+		frappe.set_user("Administrator")
+		attached = frappe.get_all("File", {"file_url": url}, ["attached_to_doctype", "attached_to_name"])
+		self.assertEqual({(f.attached_to_doctype, f.attached_to_name) for f in attached}, {("Malpractice Report", original.name)})
+		self.assertFalse(frappe.get_all("File", {"attached_to_doctype": "Malpractice Report", "attached_to_name": ["!=", original.name], "owner": OTHER_INVIGILATOR}))
+
 	def test_evidence_must_be_a_private_file_of_this_report(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "private"):
 			self.report(evidence=self.evidence(private=0))

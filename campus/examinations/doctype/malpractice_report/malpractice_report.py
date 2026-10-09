@@ -29,6 +29,7 @@ EVIDENCE_FIELD = "evidence"
 class MalpracticeReport(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
+		self.check_amend_right()
 		self.company = frappe.db.get_value("Exam Session", self.exam_session, "company")
 		self.exam_registration = registration_name(self.exam_session, self.student)
 		if not frappe.db.exists("Exam Registration", self.exam_registration):
@@ -40,6 +41,12 @@ class MalpracticeReport(ApprovableDocument, Document):
 		for row in self.evidence:
 			self.validate_evidence(row)
 		self.track_decision()
+
+	def check_amend_right(self):
+		"""An amendment inherits the original's evidence (and Frappe copies its attachments after insert): only someone
+		who may amend the original may start one."""
+		if self.is_new() and self.amended_from and not frappe.has_permission(self.doctype, "amend", doc=self.amended_from):
+			frappe.throw(_("You may not amend {0}.").format(self.amended_from), frappe.PermissionError)
 
 	def validate_evidence(self, row):
 		files = frappe.get_all("File", {"file_url": row.file}, ["owner", "is_private", "attached_to_doctype", "attached_to_name"])
