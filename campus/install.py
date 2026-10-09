@@ -11,6 +11,7 @@ from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regu
 from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.setup import setup_curriculum
 from campus.examinations.question_paper_setup import setup_question_papers
+from campus.examinations.remuneration_payment import setup_remuneration
 from campus.examinations.setup import ensure_coe_role, setup_examinations
 from campus.faculty.setup import seed_course_allocation_policy, setup_faculty
 from campus.iqac.setup import ensure_iqac_role, seed_framework
@@ -49,6 +50,7 @@ def after_install():
 	setup_faculty()
 	seed_course_allocation_policy()
 	setup_academic_governance()
+	setup_remuneration()
 	seed_framework()
 
 
@@ -70,4 +72,5 @@ def after_migrate():
 	setup_faculty()
 	seed_course_allocation_policy()
 	setup_academic_governance()
+	setup_remuneration()
 	seed_framework()

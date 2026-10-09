@@ -1,0 +1,276 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-09 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "exam_session",
+  "company",
+  "posting_date",
+  "column_break_1",
+  "examiner_type",
+  "employee",
+  "external_member",
+  "examiner_name",
+  "examiner_user",
+  "section_break_items",
+  "items",
+  "total_amount",
+  "currency",
+  "section_break_payment",
+  "additional_salary",
+  "payroll_date",
+  "column_break_2",
+  "supplier",
+  "tds_section",
+  "purchase_invoice",
+  "tds_amount",
+  "net_payable",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "default": "EXR-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "EXR-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Internal",
+   "fieldname": "examiner_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Examiner Type",
+   "options": "Internal\nExternal",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='Internal'",
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "mandatory_depends_on": "eval:doc.examiner_type=='Internal'",
+   "options": "Employee"
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "external_member",
+   "fieldtype": "Link",
+   "label": "External Member",
+   "mandatory_depends_on": "eval:doc.examiner_type=='External'",
+   "options": "External Member"
+  },
+  {
+   "fieldname": "examiner_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Examiner Name",
+   "read_only": 1
+  },
+  {
+   "description": "Never approves this claim.",
+   "fieldname": "examiner_user",
+   "fieldtype": "Link",
+   "label": "Examiner User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_items",
+   "fieldtype": "Section Break",
+   "label": "Work"
+  },
+  {
+   "description": "Computed from the Valuation Allocations, QP Setter Nominations and Invigilation Roster of the session on every save; each source is claimed once.",
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Work",
+   "options": "Examiner Remuneration Claim Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_payment",
+   "fieldtype": "Section Break",
+   "label": "Payment"
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='Internal'",
+   "fieldname": "additional_salary",
+   "fieldtype": "Link",
+   "label": "Additional Salary",
+   "no_copy": 1,
+   "options": "Additional Salary",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='Internal'",
+   "fieldname": "payroll_date",
+   "fieldtype": "Date",
+   "label": "Payroll Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "tds_section",
+   "fieldtype": "Link",
+   "label": "TDS Section",
+   "options": "Tax Withholding Category",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "no_copy": 1,
+   "options": "Purchase Invoice",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "tds_amount",
+   "fieldtype": "Currency",
+   "label": "TDS Amount",
+   "no_copy": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.examiner_type=='External'",
+   "fieldname": "net_payable",
+   "fieldtype": "Currency",
+   "label": "Net Payable",
+   "no_copy": 1,
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Examiner Remuneration Claim",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Examiner Remuneration Claim",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "COE",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "submit": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "examiner_name",
+ "track_changes": 1
+}

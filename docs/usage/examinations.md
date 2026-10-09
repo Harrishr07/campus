@@ -116,6 +116,17 @@ An invigilator (Academics User) files the report: student, course (must be one t
    - Some scripts are skipped, with the reason shown in **Write-back Issue** on the map: a student absent on the sheet or in the hall (the absent mark is kept), a result that has already been run, or a sheet that refuses the mark. Run the job again after fixing the cause.
    - Once the student's result has been run, or the session is published, the script's marks are locked.
 
+## Examiner remuneration (P2-T23)
+1. **Remuneration Rate (COE or Accounts).** One record per activity, college and Effective From date: Valuation Round 1 / 2 / 3 (per script valued), QP Setting and QP Scrutiny (per paper), Invigilation (per duty). A new rate is a new record with a later date; work is priced by the version in force on its date. For external examiners set the **Service Item** (with its SAC code): it is the Purchase Invoice line.
+2. **Examiner Remuneration Claim (COE).** Choose the Exam Session and the examiner: Internal (Employee) or External (External Member, which needs a Supplier with a TDS category). Save: the work is filled in from the records and cannot be typed:
+   - each Completed Valuation Allocation of the examiner (scripts = submitted Valuation Entries);
+   - each QP Setter Nomination naming the employee as setter or scrutiniser, once the course's approved paper has been released;
+   - each invigilation duty in the session's roster up to the claim date.
+   Each piece of work can be in one live claim only (draft or submitted); cancelling a claim frees it. Work already claimed is left out, and a claim with nothing left is refused.
+3. **Approval.** Request Approval: Accounts Manager of the college approves by default. The examiner, the requester and the owner never approve. If the work or a rate changed after approval, the submit is refused: cancel and amend.
+4. **Payment.** On approval an internal examiner gets a submitted **Additional Salary** on the component **Campus Exam Remuneration** on the next payroll (the claim date, or the day after their last submitted slip). An external examiner gets a draft **Purchase Invoice** for the Supplier, with TDS by the Supplier's Tax Withholding Category; Accounts submits it, and the claim's TDS and Net Payable follow it. Cancelling the claim cancels the Additional Salary (refused once a submitted slip paid it) or deletes the draft invoice (refused once submitted).
+5. **Remuneration Register** (report): the claims of a college with amount, TDS, net payable and the payment document.
+
 # Examinations: confidential question papers (P2-T17)
 
 Only users with the **Exam Confidential** role see Question Bank Items, QP Setter Nominations, Question Papers and the QP Access Log. System Manager does not get access through its own role.
