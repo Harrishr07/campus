@@ -4,8 +4,8 @@ A Returned request is reused: requesting approval again starts a new cycle on th
 policy is re-selected, so changed values pick the right policy). A Rejected request is closed; a new
 request is created if the owner asks again.
 
-Separation of duties: the requester and the document owner are never approvers, and may not act on
-their own request, even as a delegate.
+Separation of duties: the requester and the document owner (and any users the document excludes through
+`approval_excluded_users()`) are never approvers, and may not act on their own request, even as a delegate.
 
 Approvers of a level are resolved when the level becomes current. If a later level resolves too few
 approvers, the approval that would move the request there fails with that error and the request stays
@@ -140,11 +140,13 @@ def registered_final_action(method):
 
 
 def requesters(request, doc=None):
-	"""Users who may not approve their own request: the requester and the document owner."""
-	owner = (
-		doc.owner if doc else frappe.db.get_value(request.reference_doctype, request.reference_name, "owner")
-	)
-	return {u for u in (request.requested_by, owner) if u}
+	"""Users who may not approve their own request: the requester, the document owner and any users the document
+	names in an `approval_excluded_users()` method (e.g. a question paper's setters and editors)."""
+	doc = doc or frappe.get_doc(request.reference_doctype, request.reference_name)
+	excluded = {request.requested_by, doc.owner}
+	if hasattr(doc, "approval_excluded_users"):
+		excluded |= set(doc.approval_excluded_users())
+	return {u for u in excluded if u}
 
 
 def add_action(request, action, level, on_behalf_of=None, comment=None, by=None):
