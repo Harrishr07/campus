@@ -272,6 +272,61 @@ class TestPfmsExport(SanctionFixtures):
 		self.assertFalse(batch.rows)  # the same money, now allocated to the invoice
 		self.assertEqual(batch.already_exported_count, 1)
 
+	def test_one_payment_for_two_sanctions_is_exported_for_each(self):
+		other = self.submitted_sanction()
+		mine, theirs = self.invoice(self.vendor, 1000), self.invoice(self.vendor, 500, sanction=other)
+		payment = get_payment_entry("Purchase Invoice", mine.name, bank_account=self.bank)
+		payment.append("references", {"reference_doctype": "Purchase Invoice", "reference_name": theirs.name, "allocated_amount": 500})
+		payment.update({"reference_no": "UTR-TWO", "reference_date": today(), "paid_amount": 1500, "received_amount": 1500})
+		payment.insert()
+		payment.submit()
+		self.assertEqual([r.reference_name for r in self.exported().rows], [mine.name])
+		batch = frappe.get_doc(
+			{"doctype": BATCH, "sanction": other.name, "export_type": "Expenditure", "from_date": self.period[0], "to_date": self.period[1]}
+		).insert()  # fmt: skip
+		self.assertEqual([(r.reference_name, r.amount) for r in batch.rows], [(theirs.name, 500)])
+
+	def mixed_payment(self):
+		"""1000 against an invoice of the sanction and 200 left unallocated on its project."""
+		invoice = self.invoice(self.vendor, 1000)
+		payment = get_payment_entry("Purchase Invoice", invoice.name, bank_account=self.bank)
+		payment.update(
+			{"reference_no": "UTR-MIX", "reference_date": today(), "paid_amount": 1200, "received_amount": 1200,
+			 "project": self.sanction_doc.project, "cost_center": self.sanction_doc.cost_center}
+		)  # fmt: skip
+		payment.references[0].allocated_amount = 1000
+		payment.insert()
+		payment.submit()
+		self.assertEqual(payment.unallocated_amount, 200)
+		return payment
+
+	def test_a_mixed_payment_exports_its_invoice_part_then_its_advance(self):
+		payment = self.mixed_payment()
+		self.assertEqual([r.amount for r in self.exported("Expenditure").rows], [1000])
+		advance = self.batch("Advance")
+		self.assertEqual([(r.voucher_no, r.amount) for r in advance.rows], [(payment.name, 200)])
+		advance.submit()
+		self.assertFalse(self.batch("Expenditure").rows)
+		self.assertFalse(self.batch("Advance").rows)
+
+	def test_a_mixed_payment_exports_its_advance_then_its_invoice_part(self):
+		payment = self.mixed_payment()
+		self.assertEqual([r.amount for r in self.exported("Advance").rows], [200])
+		expenditure = self.batch("Expenditure")
+		self.assertEqual([(r.voucher_no, r.amount) for r in expenditure.rows], [(payment.name, 1000)])
+		expenditure.submit()
+		self.assertFalse(self.batch("Advance").rows)
+		self.assertFalse(self.batch("Expenditure").rows)
+
+	def test_an_amendment_of_an_exported_payment_cannot_be_cancelled_either(self):
+		payment = self.pay(self.invoice(self.vendor, 1000))
+		batch = self.exported()
+		with patch("campus.research.pfms.refuse_exported_cancel"):
+			payment.cancel()
+		amended = self.amend(payment)
+		with self.assertRaisesRegex(frappe.ValidationError, batch.name):
+			frappe.get_doc("Payment Entry", amended.name).cancel()
+
 	def test_an_amended_payment_is_not_exported_again(self):
 		payment = self.pay(self.invoice(self.vendor, 1000))
 		self.exported()
@@ -325,6 +380,24 @@ class TestPfmsExport(SanctionFixtures):
 		key_reads = [i for i, q in enumerate(queries) if "`tabPFMS Export Batch Row`" in q and "export_key" in q and q.lstrip().upper().startswith("SELECT")]
 		self.assertTrue(key_reads)
 		self.assertTrue(any(i > sanction_lock and "FOR UPDATE" in queries[i].upper() for i in key_reads))
+
+	def test_submit_reads_the_payments_with_locking_reads_under_the_sanction_lock(self):
+		self.pay(self.invoice(self.vendor, 1000))
+		self.paid_invoice(self.vendor, 400)
+		batch = self.batch()
+		with patch("frappe.db.sql", wraps=frappe.db.sql) as sql:
+			batch.submit()
+		queries = [str(c.args[0]) for c in sql.call_args_list]
+		sanction_lock = next(i for i, q in enumerate(queries) if "`tabSanction`" in q and "FOR UPDATE" in q.upper())
+		after = [q.upper() for q in queries[sanction_lock + 1 :]]
+		selections = {
+			"allocated": [q for q in after if "JOIN `TABPAYMENT ENTRY REFERENCE`" in q],
+			"paid invoices": [q for q in after if "FROM `TABPURCHASE INVOICE`" in q and "`IS_PAID`" in q],
+		}
+		for name, reads in selections.items():
+			self.assertTrue(reads and all("FOR UPDATE" in q for q in reads), name)
+		unallocated = [q for q in after if "`UNALLOCATED_AMOUNT`" in q and "FROM `TABPAYMENT ENTRY`" in q]
+		self.assertTrue(unallocated and all("FOR UPDATE" in q for q in unallocated))
 
 	def test_cancelling_frees_the_rows_but_not_after_pfms_accepted_one(self):
 		payment = self.pay(self.invoice(self.vendor, 1000))

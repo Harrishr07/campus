@@ -215,13 +215,16 @@ left out for that reason. A batch with a row PFMS accepted can't be cancelled; c
 
 Exports are also counted per payment, so ERPNext rewriting a payment doesn't send the same money twice: an advance
 later reconciled to an invoice, a reference pointing back to an advance, or a voucher cancelled and amended (the
-amendment counts as its first version) exports nothing more. A payment whose lines now add up to more than was
-exported is excluded for review. An unallocated payment naming one sanction's project and another's cost centre is
+amendment counts as its first version) exports nothing more. The count is per sanction, so a payment that pays
+invoices of two sanctions is exported once in each. A line exported as such never goes again; the other lines of
+the same payment (say the unallocated remainder of a payment that also paid an invoice) are exported in their own
+batch. A line whose payment was exported before under different lines, but only partly, is excluded for review. An unallocated payment naming one sanction's project and another's cost centre is
 excluded until it is corrected.
 
 **Cancelling an exported payment**: a Payment Entry or Purchase Invoice in a submitted batch can't be cancelled
-until it is withdrawn from PFMS: PFMS reports its row failed (Import Status), or its batch is cancelled. The batch
-keeps the row as history.
+until it is withdrawn from PFMS: PFMS reports its row failed (Import Status), or its batch is cancelled. This holds
+for an amendment of an exported voucher too. A batch being submitted reads the payments with locking reads, so it
+waits for a cancel in progress and leaves the cancelled voucher out. The batch keeps the row as history.
 
 **The file**: the batch attaches the EAT bulk-upload CSV, laid out by its **PFMS Export Layout** (Research > Settings).
 A layout is a list of columns, each a header and a source (a payment or batch field, or a fixed value), plus the date

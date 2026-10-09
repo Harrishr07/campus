@@ -55,17 +55,22 @@ class PaymentSelection:
 
 	def run(self):
 		payments = self.payments()
-		exported = self.exported_amounts({p.payment_key for p in payments})
-		totals = {}
-		for payment in payments:  # every export type: a reconciled advance comes back as expenditure
-			totals[payment.payment_key] = totals.get(payment.payment_key, 0) + flt(payment.amount)
+		live = self.live_keys([p.export_key for p in payments])
+		cover = self.exported_amounts({p.payment_key for p in payments})
+		for payment in payments:  # every export type: a line exported as such covers itself, not the others
+			if payment.export_key in live and payment.payment_key in cover:
+				cover[payment.payment_key] = flt(cover[payment.payment_key] - flt(payment.amount), 2)
 		rows, already_exported = [], 0
 		for payment in (p for p in payments if p.export_type == self.export_type):
-			done = exported.get(payment.payment_key)
-			if done and flt(totals[payment.payment_key] - done, 2) <= 0:
+			if payment.export_key in live:
 				already_exported += 1
 				continue
-			reason = payment.get("reason") or (done and self.partly_exported(payment, done)) or self.vendor_problem(payment)
+			left = cover.get(payment.payment_key, 0)
+			if left > 0 and flt(left - flt(payment.amount), 2) >= 0:  # exported before under another line (rewritten)
+				cover[payment.payment_key] = flt(left - flt(payment.amount), 2)
+				already_exported += 1
+				continue
+			reason = payment.get("reason") or (left > 0 and self.partly_exported(payment, left)) or self.vendor_problem(payment)
 			if reason:
 				self.exclude(payment, reason)
 			else:
@@ -86,7 +91,7 @@ class PaymentSelection:
 
 	def allocated(self):
 		pe, ref = frappe.qb.DocType("Payment Entry"), frappe.qb.DocType("Payment Entry Reference")
-		lines = (
+		lines = self.read(
 			self.payment_query(pe).join(ref).on(ref.parent == pe.name)
 			.select(
 				ref.reference_doctype, ref.reference_name, ref.allocated_amount.as_("amount"),
@@ -96,7 +101,6 @@ class PaymentSelection:
 				(ref.parenttype == "Payment Entry") & ref.reference_doctype.isin(["Purchase Invoice", "Purchase Order"])
 				& (ref.allocated_amount > 0)
 			)
-			.run(as_dict=True)
 		)  # fmt: skip
 		documents = {}
 		for doctype in ("Purchase Invoice", "Purchase Order"):
@@ -114,11 +118,10 @@ class PaymentSelection:
 
 	def unallocated(self):
 		pe = frappe.qb.DocType("Payment Entry")
-		payments = (
+		payments = self.read(
 			self.payment_query(pe)
 			.select(pe.unallocated_amount.as_("amount"), pe.project, pe.cost_center)
 			.where((pe.unallocated_amount > 0) & ((pe.project == self.sanction.project) | (pe.cost_center == self.sanction.cost_center)))
-			.run(as_dict=True)
 		)  # fmt: skip
 		for payment in payments:
 			payment.update(voucher_type="Payment Entry", export_type="Advance", reason=self.other_sanction(payment))
@@ -140,14 +143,13 @@ class PaymentSelection:
 
 	def paid_invoices(self):
 		pi = frappe.qb.DocType("Purchase Invoice")
-		invoices = (
+		invoices = self.read(
 			frappe.qb.from_(pi)
 			.select(pi.name.as_("voucher_no"), pi.posting_date, pi.supplier, pi.paid_amount.as_("amount"))
 			.where(
 				(pi.docstatus == 1) & (pi.is_paid == 1) & (pi.is_return == 0) & (pi.company == self.sanction.company)
 				& (pi.paid_amount > 0) & pi.posting_date[self.from_date : self.to_date]
 			)
-			.run(as_dict=True)
 		)  # fmt: skip
 		shares = self.on_sanction("Purchase Invoice", {invoice.voucher_no for invoice in invoices})
 		payments = []
@@ -156,6 +158,11 @@ class PaymentSelection:
 				invoice.update(voucher_type="Purchase Invoice", export_type="Expenditure", party_bank_account=None, **shares[invoice.voucher_no])
 				payments.append(invoice)
 		return payments
+
+	def read(self, query):
+		"""Under the sanction lock, the vouchers are read with a locking read: a cancel in flight finishes (or waits)
+		first, so its docstatus is the one read here."""
+		return (query.for_update() if self.lock else query).run(as_dict=True)
 
 	def payment_query(self, pe):
 		return (
@@ -214,14 +221,26 @@ class PaymentSelection:
 			_(payment.voucher_type), payment.voucher_no, frappe.format(done, "Currency")
 		)
 
+	def live_keys(self, keys):
+		"""The export keys among `keys` held by a live (exported, not failed) row of any batch."""
+		if not keys:
+			return set()
+		row = frappe.qb.DocType("PFMS Export Batch Row")
+		query = frappe.qb.from_(row).select(row.export_key).where(row.export_key.isin(keys))
+		return set((query.for_update() if self.lock else query).run(pluck=True))
+
 	def exported_amounts(self, keys):
-		"""{payment_key: amount in live (exported, not failed) rows}."""
+		"""{payment_key: amount in live rows of this sanction's batches} (a payment can pay several sanctions)."""
 		if not keys:
 			return {}
-		row = frappe.qb.DocType("PFMS Export Batch Row")
+		row, batch = frappe.qb.DocType("PFMS Export Batch Row"), frappe.qb.DocType("PFMS Export Batch")
 		query = (
-			frappe.qb.from_(row).select(row.payment_key, Sum(row.amount))
-			.where(row.payment_key.isin(list(keys)) & row.export_key.isnotnull())
+			frappe.qb.from_(row).join(batch).on(batch.name == row.parent)
+			.select(row.payment_key, Sum(row.amount))
+			.where(
+				row.payment_key.isin(list(keys)) & row.export_key.isnotnull() & (row.parenttype == "PFMS Export Batch")
+				& (batch.sanction == self.sanction.name)
+			)
 			.groupby(row.payment_key)
 		)  # fmt: skip
 		return {key: flt(amount, 2) for key, amount in (query.for_update() if self.lock else query).run()}
@@ -267,11 +286,16 @@ def refuse_exported_cancel(doc, method=None):
 	"""Doc event (Payment Entry / Purchase Invoice before_cancel): a voucher PFMS has, or may have, paid is withdrawn
 	from PFMS first (its rows reported failed, or its batch cancelled)."""
 	row = frappe.qb.DocType("PFMS Export Batch Row")
+	first = first_versions([frappe._dict(voucher_type=doc.doctype, voucher_no=doc.name)])[(doc.doctype, doc.name)]
 	batches = (
 		frappe.qb.from_(row).select(row.parent)
 		.where(
 			row.export_key.isnotnull()
-			& (((row.voucher_type == doc.doctype) & (row.voucher_no == doc.name)) | ((row.reference_doctype == doc.doctype) & (row.reference_name == doc.name)))
+			& (
+				((row.voucher_type == doc.doctype) & (row.voucher_no == doc.name))
+				| ((row.reference_doctype == doc.doctype) & (row.reference_name == doc.name))
+				| (row.payment_key == payment_key(*first))  # an amendment of an exported voucher
+			)
 		)
 		.for_update().run(pluck=True)
 	)  # fmt: skip
