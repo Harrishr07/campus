@@ -462,6 +462,9 @@ has_permission = {
 	"File": "campus.examinations.question_papers.file_has_permission",
 }
 has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
+# P3-T03: a criterion owner sees and edits only the Metric Values under their criteria
+permission_query_conditions["Metric Value"] = "campus.iqac.access.permission_query"
+has_permission["Metric Value"] = "campus.iqac.access.has_permission"
 # Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
 doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
 _qp = "campus.examinations.question_papers"

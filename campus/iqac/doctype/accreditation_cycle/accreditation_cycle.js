@@ -1,11 +1,35 @@
 frappe.ui.form.on("Accreditation Cycle", {
 	refresh(frm) {
 		if (frm.is_new()) return;
-		frm.add_custom_button(__("Compute"), () =>
-			frappe.xcall("campus.iqac.api.compute_cycle", { cycle: frm.doc.name }).then((values) => {
-				frappe.show_alert({ message: __("{0} metric(s) computed", [values.length]), indicator: "green" });
-				frappe.set_route("List", "Metric Value", { cycle: frm.doc.name });
-			})
-		);
+		const status = frm.doc.status;
+		const call = (method, args, done) =>
+			frappe.xcall("campus.iqac.api." + method, args).then((result) => {
+				if (done) done(result);
+				else frm.reload_doc();
+			});
+		if (frm.doc.docstatus === 0) {
+			frm.add_custom_button(__("Compute"), () =>
+				call("compute_cycle", { cycle: frm.doc.name }, (values) => {
+					frappe.show_alert({ message: __("{0} metric(s) computed", [values.length]), indicator: "green" });
+					frappe.set_route("List", "Metric Value", { cycle: frm.doc.name });
+				})
+			);
+			frm.add_custom_button(__("Compute All (Background)"), () =>
+				call("compute_all", { cycle: frm.doc.name }, () =>
+					frappe.show_alert({ message: __("Computation queued; see Bulk Run"), indicator: "blue" })
+				)
+			);
+			frm.add_custom_button(__("Prepare Values"), () =>
+				call("prepare_values", { cycle_name: frm.doc.name }, (names) =>
+					frappe.show_alert({ message: __("{0} value(s) prepared", [names.length]), indicator: "green" })
+				)
+			);
+		}
+		const next = { Collecting: __("Move to Validating"), Validating: __("Move to IQAC Review"), Approved: __("Mark Submitted") }[status];
+		if (next) frm.add_custom_button(next, () => call("advance_cycle", { cycle_name: frm.doc.name }));
+		if (["Validating", "IQAC Review"].includes(status)) {
+			frm.add_custom_button(__("Reopen for Collecting"), () => call("reopen_cycle", { cycle_name: frm.doc.name }));
+		}
+		frm.page.set_indicator(__(status), { Collecting: "blue", Validating: "orange", "IQAC Review": "yellow", Approved: "green", Submitted: "green" }[status]);
 	},
 });

@@ -4,6 +4,7 @@ import inspect
 
 import frappe
 
+from campus.iqac.access import OWNER_ROLE
 from campus.iqac.aqar_seed import PLACEHOLDER, seed_nodes
 from campus.iqac.formula import referenced_keys
 from campus.iqac.registry import DESCRIPTIONS, REGISTRY, data_point_keys
@@ -16,10 +17,26 @@ FRAMEWORK_VALUES = {
 
 
 def ensure_iqac_role():
-	if not frappe.db.exists("Role", "IQAC Coordinator"):
-		frappe.get_doc({"doctype": "Role", "role_name": "IQAC Coordinator", "desk_access": 1}).insert(
-			ignore_permissions=True
-		)
+	for role in ("IQAC Coordinator", OWNER_ROLE):
+		if not frappe.db.exists("Role", role):
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+
+
+def seed_iqac_policies():
+	"""Approval policies for a cycle (the Principal of the college) and a Metric Override (its IQAC Coordinator), unless the
+	college has its own. Skipped while the position is not seeded."""
+	for document_type, position, title in (
+		("Accreditation Cycle", "PRINCIPAL", "Principal"),
+		("Metric Override", "IQAC-COORDINATOR", "IQAC Coordinator"),
+	):
+		if frappe.db.exists("Approval Policy", {"document_type": document_type}) or not frappe.db.exists("Position", position):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Approval Policy", "policy_name": f"{document_type} approval", "document_type": document_type,
+				"levels": [{"approver_type": "Position", "approver": position, "scope_field": "company", "title": title, "sla_hours": 48}],
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
 
 
 def sync_data_points():

@@ -6,7 +6,12 @@
  "field_order": [
   "framework",
   "company",
-  "academic_year"
+  "academic_year",
+  "column_break_status",
+  "status",
+  "section_break_owners",
+  "owners",
+  "amended_from"
  ],
  "fields": [
   {
@@ -38,11 +43,49 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Collecting\nValidating\nIQAC Review\nApproved\nSubmitted",
+   "default": "Collecting",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "Moves on with the Advance, Reopen and Request Approval actions; Approved is set by the final approval, which also locks every Metric Value."
+  },
+  {
+   "fieldname": "section_break_owners",
+   "fieldtype": "Section Break",
+   "label": "Criterion Owners"
+  },
+  {
+   "fieldname": "owners",
+   "fieldtype": "Table",
+   "label": "Owners",
+   "options": "Accreditation Cycle Owner",
+   "description": "Each owner gets a task for the criterion and may answer its metrics."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Accreditation Cycle",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "Accreditation Cycle",
@@ -58,7 +101,8 @@
    "create": 1,
    "delete": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "submit": 1
   },
   {
    "role": "IQAC Coordinator",
@@ -66,9 +110,22 @@
    "write": 1,
    "create": 1,
    "report": 1,
-   "export": 1
+   "export": 1,
+   "submit": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "IQAC Criterion Owner",
+   "read": 1,
+   "report": 1
   }
  ],
  "autoname": "ACY-.#####",
- "naming_rule": "Expression (old style)"
+ "naming_rule": "Expression (old style)",
+ "is_submittable": 1,
+ "track_changes": 1
 }

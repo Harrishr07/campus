@@ -131,6 +131,11 @@ class TestPublishLock(CampusTestCase):
 		self.framework.status = "Published"
 		self.framework.save()
 
+	def test_blank_code_and_version_are_stored_as_null_so_unversioned_frameworks_coexist(self):
+		for name in (f"{self.scratch} A", f"{self.scratch} B"):  # a form sends "" for a blank field
+			frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": name, "framework_code": "", "version": ""}).insert()
+			self.assertEqual(frappe.db.get_value("Accreditation Framework", name, ["framework_code", "version"]), (None, None))
+
 	def test_draft_is_editable_and_publishing_needs_nodes(self):
 		self.framework.description = "edited"
 		self.framework.save()

@@ -120,7 +120,7 @@ class TestSliceDemo(CampusTestCase):
 
 	def test_aqar_cycle_has_the_hand_counted_final_year_pass_percentage(self):
 		cycle = frappe.get_doc("Accreditation Cycle", {"framework": FRAMEWORK, "academic_year": demo_slice.YEAR})
-		metric = frappe.get_doc("Metric Value", {"cycle": cycle.name, "node": f"{FRAMEWORK}-2.6.3"})
+		metric = frappe.get_doc("Metric Value", f"{cycle.name}-2.6.3")  # the college row; department rows have their own names
 		# appeared: students 1, 2, 4, 5 (student 3 is all SA); passed: 1 and 4 (2 failed a course, 5 was absent in one)
 		self.assertEqual(metric.value, 50)
 		inputs = json.loads(metric.snapshot)["inputs"]
@@ -128,7 +128,7 @@ class TestSliceDemo(CampusTestCase):
 			[r["name"] for r in inputs["final_year_passed"]["records"]], sorted(self.result(n).name for n in (0, 3))
 		)
 		self.assertEqual(inputs["final_year_appeared"]["value"], 4)
-		admitted = frappe.get_doc("Metric Value", {"cycle": cycle.name, "node": f"{FRAMEWORK}-2.1.1"})
+		admitted = frappe.get_doc("Metric Value", f"{cycle.name}-2.1.1")
 		self.assertEqual(
 			admitted.value,
 			frappe.db.count("Program Enrollment", {"oc_company": demo.ENGINEERING, "academic_year": demo_slice.YEAR, "docstatus": 1}),

@@ -110,6 +110,10 @@
    "role": "IQAC Coordinator",
    "read": 1,
    "report": 1
+  },
+  {
+   "role": "IQAC Criterion Owner",
+   "read": 1
   }
  ],
  "autoname": "field:framework_name",

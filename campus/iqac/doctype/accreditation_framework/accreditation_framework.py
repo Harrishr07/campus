@@ -14,6 +14,8 @@ from campus.iqac.framework import status_of
 class AccreditationFramework(Document):
 	def validate(self):
 		self.status = self.status or "Draft"
+		if self.is_new() or self.get_doc_before_save().status == "Draft":  # a published framework is not touched
+			self.framework_code, self.version = self.framework_code or None, self.version or None  # "" would collide in the unique index
 		self.validate_dates()
 		self.validate_unique_version()
 		if not self.is_new():

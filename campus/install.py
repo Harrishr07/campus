@@ -14,7 +14,7 @@ from campus.examinations.question_paper_setup import setup_question_papers
 from campus.examinations.remuneration_payment import setup_remuneration
 from campus.examinations.setup import ensure_coe_role, setup_examinations
 from campus.faculty.setup import seed_course_allocation_policy, setup_faculty
-from campus.iqac.setup import ensure_iqac_role, seed_framework, sync_data_points
+from campus.iqac.setup import ensure_iqac_role, seed_framework, seed_iqac_policies, sync_data_points
 from campus.research.setup import setup_research
 from campus.student_services.setup import ensure_grievance_role, setup_student_services
 
@@ -54,6 +54,7 @@ def after_install():
 	setup_remuneration()
 	seed_framework()
 	sync_data_points()
+	seed_iqac_policies()
 	setup_research()
 
 
@@ -78,4 +79,5 @@ def after_migrate():
 	setup_remuneration()
 	seed_framework()
 	sync_data_points()
+	seed_iqac_policies()
 	setup_research()

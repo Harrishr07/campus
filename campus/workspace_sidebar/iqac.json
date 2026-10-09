@@ -96,6 +96,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Metric Override",
+   "link_to": "Metric Override",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "sheet",
@@ -118,7 +129,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "IQAC",
