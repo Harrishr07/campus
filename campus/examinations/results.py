@@ -17,7 +17,7 @@ from campus.campus_platform.api import get_regulation, get_rule
 from campus.examinations import rules, seating
 from campus.examinations.access import COE_ROLE
 from campus.examinations.courses import offering_course, student_limits
-from campus.student_services.api import eligibility_status, student_offerings, withdrawal_code
+from campus.student_services.api import eligibility_status, students_on_break, student_offerings, withdrawal_code
 
 RUN_TYPE = "Result Run"
 HANDLER = "campus.examinations.results.run_student"
@@ -40,15 +40,15 @@ def start_run(exam_session, program):
 
 
 def program_students(session, program):
+	"""Students enrolled in the program in the session's year, less those on a break of study (P2-T21)."""
 	year = frappe.db.get_value("Academic Term", session.academic_term, "academic_year")
-	return sorted(
-		frappe.get_all(
-			"Program Enrollment",
-			{"program": program, "academic_year": year, "docstatus": 1, "oc_company": session.company},
-			pluck="student",
-			distinct=True,
-		)
+	students = frappe.get_all(
+		"Program Enrollment",
+		{"program": program, "academic_year": year, "docstatus": 1, "oc_company": session.company},
+		pluck="student",
+		distinct=True,
 	)
+	return sorted(set(students) - students_on_break(students))
 
 
 def run_student(student, run):

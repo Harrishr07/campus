@@ -1,6 +1,7 @@
 """M06-01 Exam Withdrawal Application: a student withdraws from the examination of one or more registered courses.
 
-Rules (withdrawal_rules, values from the regulation's records):
+Only a course of the session's term (kind Current or Dropped) is withdrawn; an arrear or bridge course is not
+(thin cut, fix round 1 ruling). Rules (withdrawal_rules, values from the regulation's records):
 - once in the programme: a second approved withdrawal of the same programme is refused, nothing lifts this;
 - within the Exam Rule Set's window of days after the exam of each course; only the Principal's special case
   (with a reason, set by the PRINCIPAL position holder of the college) lifts the window.
@@ -43,6 +44,7 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
+		student_records.require_policy(self)
 		self.check_rules()
 
 	def on_submit(self):
@@ -70,8 +72,9 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 		if not registration:
 			frappe.throw(_("{0} is not registered for {1}.").format(frappe.bold(self.student), frappe.bold(self.exam_session)))
 		self.registration = registration.name
-		self.program = registration.program or (latest_enrollment(self.student) or {}).get("program")
-		self.department = student_records.student_department(self.program)
+		self.program, self.department = student_records.programme_and_department(
+			self.student, registration.program or (latest_enrollment(self.student) or {}).get("program")
+		)
 		self.window_days = student_records.rule_values(self.student).withdrawal_days
 		self.withdrawal_code = student_records.regulation_withdrawal_code(self.student)
 
@@ -80,20 +83,30 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 			frappe.throw(_("The results of {0} are published; a withdrawal can no longer change them.").format(frappe.bold(self.exam_session)))
 
 	def set_courses(self):
-		eligible = set(
-			frappe.get_all(
+		from campus.examinations.api import TERM_KINDS
+
+		registered = {
+			row.course: row
+			for row in frappe.get_all(
 				"Exam Registration Course",
-				{"parent": self.registration, "parenttype": "Exam Registration", "eligibility": "Eligible"},
-				pluck="course",
+				{"parent": self.registration, "parenttype": "Exam Registration"},
+				["course", "kind", "eligibility"],
 			)
-		)
+		}
 		seen = set()
 		for row in self.courses:
 			if row.course in seen:
 				frappe.throw(_("Row {0}: {1} is listed twice.").format(row.idx, frappe.bold(row.course)))
 			seen.add(row.course)
-			if row.course not in eligible:
+			course = registered.get(row.course)
+			if not course or course.eligibility != "Eligible":
 				frappe.throw(_("Row {0}: {1} is not registered (and eligible) in this session.").format(row.idx, frappe.bold(row.course)))
+			if course.kind not in TERM_KINDS:
+				frappe.throw(
+					_("Row {0}: {1} is not a course of the term ({2}); only those can be withdrawn.").format(
+						row.idx, frappe.bold(row.course), _(course.kind)
+					)
+				)
 			row.exam_date = frappe.db.get_value(
 				"Exam Schedule", {"parent": self.exam_session, "parenttype": "Exam Session", "course": row.course}, "exam_date"
 			)

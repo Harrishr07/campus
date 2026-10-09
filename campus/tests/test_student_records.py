@@ -1,6 +1,6 @@
 """M06-01, M05-03 integration tests: Exam Withdrawal Application (once per programme, window, Principal's special
 case, HOD -> Principal approval, WD/WC on the Student Result), Break of Study (limits, approval, academic status)
-and Rejoin Application (regulation in force through the P1-T05 history, bridge courses in the next registration)."""
+and the guard of the exam hooks on unmigrated sites. Rejoin: test_rejoin."""
 
 from unittest.mock import patch
 
@@ -8,12 +8,11 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform.approvals import approve, request_approval
-from campus.examinations import registration
+from campus.examinations import registration, results
 from campus.student_services import student_records_setup
 from campus.student_services.api import pending_bridge_courses, withdrawal_code
 from campus.tests.approval_fixtures import make_department
 from campus.tests.factories import make_user
-from campus.tests.test_regulation import year_name
 from campus.tests.test_results import COLLEGE, PROGRAM, ExamFixture, make_course
 
 CLERK, HOD_USER, PRINCIPAL_USER = "rec-clerk@example.com", "rec-hod@example.com", "rec-principal@example.com"
@@ -184,6 +183,38 @@ class TestExamWithdrawal(StudentRecordsFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "not registered"):
 			self.withdrawal(self.s22, [BRIDGE_COURSE])
 
+	def test_a_withdrawal_is_only_for_courses_of_the_term(self):
+		doc = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name})
+		doc.append("courses", {"course": "EXM PRE", "kind": "Arrear"})
+		doc.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "course of the term"):
+			self.withdrawal(self.s22, ["EXM PRE"])
+
+	def test_the_window_is_checked_again_at_final_approval(self):
+		doc = self.withdrawal(self.s22, ["EXM LB"])  # 3 days after the exam
+		frappe.set_user(CLERK)
+		request = request_approval(WITHDRAWAL, doc.name)
+		frappe.set_user(HOD_USER)
+		approve(request)
+		regulation = frappe.db.get_value("Student", self.s22.name, "oc_regulation")
+		frappe.db.set_value("Exam Rule Set", {"regulation": regulation}, "oc_withdrawal_days", 1)
+		frappe.set_user(PRINCIPAL_USER)
+		with self.assertRaisesRegex(frappe.ValidationError, "within 1 days"):
+			approve(request)
+
+	def test_a_programme_without_a_department_is_refused(self):
+		frappe.db.set_value("Program", PROGRAM, "department", None)
+		with self.assertRaisesRegex(frappe.ValidationError, "department"):
+			self.withdrawal(self.s22, ["EXM LB"])
+
+	def test_without_an_approval_policy_nothing_submits(self):
+		frappe.db.delete("Approval Policy", {"document_type": WITHDRAWAL})
+		doc = self.withdrawal(self.s22, ["EXM LB"])
+		frappe.set_user(CLERK)
+		with self.assertRaisesRegex(frappe.ValidationError, "Approval Policy"):
+			request_approval(WITHDRAWAL, doc.name)
+		self.assertEqual(frappe.db.get_value(WITHDRAWAL, doc.name, "docstatus"), 0)
+
 
 class TestBreakOfStudy(StudentRecordsFixture):
 	def status(self, student):
@@ -214,71 +245,42 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "1 year"):
 			self.study_break(self.s22, "2025-06-01", "2025-12-31")  # 214 + 214 days
 
+	def test_overlapping_breaks_are_refused(self):
+		self.approve_fully(self.study_break(self.s22, "2024-06-01", "2024-12-31"))
+		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Active")  # as if rejoined
+		with self.assertRaisesRegex(frappe.ValidationError, "overlaps"):
+			self.study_break(self.s22, "2024-10-01", "2024-11-30")
 
-class TestRejoin(StudentRecordsFixture):
-	def rejoin(self, study_break, year="2026", bridge=(BRIDGE_COURSE,)):
+	def test_cancelling_restores_the_previous_status(self):
+		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Long Absent")
+		doc = self.approve_fully(self.study_break(self.s22, "2025-06-01", "2025-12-31"))
+		self.assertEqual((doc.previous_status, self.status(self.s22)), ("Long Absent", "Break of Study"))
+		doc.cancel()
+		self.assertEqual(self.status(self.s22), "Long Absent")
+
+	def test_a_student_without_a_programme_is_refused(self):
+		frappe.db.delete("Program Enrollment", {"student": self.s22.name})
+		with self.assertRaisesRegex(frappe.ValidationError, "programme"):
+			self.study_break(self.s22, "2025-06-01", "2025-12-31")
+
+	def test_without_an_approval_policy_nothing_submits(self):
+		frappe.db.delete("Approval Policy", {"document_type": BREAK})
+		doc = self.study_break(self.s22, "2025-06-01", "2025-12-31")
 		frappe.set_user(CLERK)
-		doc = frappe.get_doc(
-			{
-				"doctype": REJOIN, "break_of_study": study_break.name, "rejoin_date": "2026-06-15",
-				"academic_year": year_name(year), "bridge_courses": [{"course": c} for c in bridge],
-			}
-		).insert()  # fmt: skip
-		frappe.set_user("Administrator")
-		return doc
+		with self.assertRaisesRegex(frappe.ValidationError, "Approval Policy"):
+			request_approval(BREAK, doc.name)
+		self.assertEqual(self.status(self.s22), "Active")
 
-	def on_break(self, student):
-		return self.approve_fully(self.study_break(student, "2025-06-01", "2026-05-31"))
-
-	def setUp(self):
-		super().setUp()
-		make_course(BRIDGE_COURSE)
-
-	def test_rejoining_moves_the_student_to_the_regulation_in_force(self):
-		old = frappe.db.get_value("Student", self.s22.name, "oc_regulation")
-		doc = self.rejoin(self.on_break(self.s22))
-		self.assertEqual(doc.from_regulation, old)
-		self.assertTrue(doc.to_regulation.startswith("R2026-EXM"))
-		self.approve_fully(doc)
-		student = frappe.get_doc("Student", self.s22.name)
-		self.assertEqual((student.oc_regulation, student.oc_academic_status), (doc.to_regulation, "Active"))
-		history = student.oc_regulation_history[-1]
-		self.assertEqual((history.from_regulation, history.to_regulation), (old, doc.to_regulation))
-		self.assertIn(doc.name, history.reason)
-		self.assertIn(BRIDGE_COURSE, history.bridge_courses_note)
-
-	def test_bridge_courses_are_added_to_the_next_registration(self):
-		self.approve_fully(self.rejoin(self.on_break(self.s22)))
-		self.assertEqual(pending_bridge_courses(self.s22.name), [BRIDGE_COURSE])
-		frappe.get_doc(
-			{"doctype": "Attendance Eligibility Run", "company": COLLEGE, "academic_term": self.term, "locked": 1,
-				"rows": [{"student": self.s22.name, "status": "Eligible"}]}
-		).insert()  # fmt: skip
-		name = registration.register(self.s22.name, self.session.name)
-		rows = {r.course: (r.kind, r.eligibility) for r in frappe.get_doc("Exam Registration", name).courses}
-		self.assertEqual(rows[BRIDGE_COURSE], ("Bridge", "Eligible"))
-		self.assertEqual(rows["EXM TH"], ("Current", "Eligible"))
-		frappe.get_doc(
-			{"doctype": "Student Result", "student": self.s22.name, "exam_session": self.pre_session.name, "company": COLLEGE,
-				"courses": [{"course": BRIDGE_COURSE, "credits": 3, "result": "Pass", "grade": "A"}]}
-		).insert()  # fmt: skip
-		self.assertEqual(pending_bridge_courses(self.s22.name), [])  # sat once: arrears rules take over
-
-	def test_a_rejoin_needs_an_approved_break_and_only_one_per_break(self):
-		draft = self.study_break(self.s22, "2025-06-01", "2026-05-31")
-		with self.assertRaisesRegex(frappe.ValidationError, "approved"):
-			self.rejoin(draft)
-		self.approve_fully(draft)
-		self.approve_fully(self.rejoin(draft))
-		with self.assertRaisesRegex(frappe.ValidationError, "already"):
-			self.rejoin(draft)
-
-	def test_a_rejoin_on_the_same_regulation_keeps_it_without_a_history_row(self):
-		before = len(frappe.get_doc("Student", self.s26.name).oc_regulation_history)
-		doc = self.approve_fully(self.rejoin(self.on_break(self.s26), bridge=()))
-		self.assertEqual(doc.from_regulation, doc.to_regulation)
-		student = frappe.get_doc("Student", self.s26.name)
-		self.assertEqual((len(student.oc_regulation_history), student.oc_academic_status), (before, "Active"))
+	def test_students_on_break_are_skipped_by_registration_and_the_result_run(self):
+		self.assertIn(self.s22.name, results.program_students(self.session, PROGRAM))
+		self.approve_fully(self.study_break(self.s22, "2025-06-01", "2025-12-31"))
+		before = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}).modified
+		self.assertIsNone(registration.register(self.s22.name, self.session.name))
+		after = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}).modified
+		self.assertEqual(before, after)
+		students = results.program_students(self.session, PROGRAM)
+		self.assertNotIn(self.s22.name, students)
+		self.assertIn(self.s26.name, students)
 
 
 class TestUnmigratedSite(StudentRecordsFixture):

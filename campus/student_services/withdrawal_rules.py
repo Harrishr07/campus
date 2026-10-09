@@ -6,7 +6,11 @@ once-per-programme. The result code is the regulation's own withdrawal code (WD 
 from its Grading Scheme codes.
 
 Break of study: the regulation's maximum years, plus its exceptional years when the break is marked
-exceptional, over all of the student's breaks together.
+exceptional, over all of the student's breaks together; breaks never overlap.
+
+Rejoin (coordinator ruling, fix round 1): the student joins the cohort that is now where they left off, i.e. the
+cohort admitted in the rejoin year less the years they had completed when the break started; the regulation and
+batch of that cohort apply.
 """
 
 REPEAT, LATE = "repeat", "late"
@@ -50,3 +54,19 @@ def break_refusal(used_days, requested_days, max_years, exceptional_years, excep
 	if used_days + requested_days > years * YEAR_DAYS:
 		return EXCEEDS
 	return None
+
+
+def ranges_overlap(from_a, to_a, from_b, to_b):
+	"""True when two date ranges (both ends inclusive) share a day."""
+	return from_a <= to_b and from_b <= to_a
+
+
+def rejoin_cohort_year(batch_year, break_start_year, rejoin_year):
+	"""Admission year of the cohort a rejoining student joins; None when the break starts before admission.
+
+	Years are academic-year start years: the batch, the academic year the break starts in and the rejoin year.
+	"""
+	completed = break_start_year - batch_year
+	if completed < 0:
+		return None
+	return rejoin_year - completed

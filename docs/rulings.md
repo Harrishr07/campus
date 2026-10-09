@@ -112,3 +112,17 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 4 | Download lead | At most 120 minutes; release_at is always the slot start |
 | 5 | Withdrawal | COE or System Manager of the paper's company, with a reason; a withdrawn sealed paper stays closed for good |
 | 6 | Deferred | Encrypting Question Bank question text at rest; unsealing a paper for edits; portal access for setters |
+
+### P2-T21 fix round 1: withdrawal, break of study, rejoin (coordinator rulings)
+| # | Item | Ruling |
+|---|------|--------|
+| 1 | Regulation of a rejoining student | the regulation of the cohort joined: admitted in the rejoin year less the years completed when the break started; the student's batch moves to that cohort |
+| 2 | Withdrawal courses | courses of the term only (Current, Dropped); an arrear or bridge course is not withdrawn (thin cut) |
+| 3 | Bridge courses | registered (kind Bridge, attendance applies) only when offered in the term; unoffered ones stay pending, not registered or charged |
+| 4 | Students on a break | exam registration and the Result Run skip a student whose academic status is Break of Study |
+| 5 | No Approval Policy | withdrawal, break and rejoin are never submitted without one (fail closed) |
+
+### Pending confirmation (P2-T21)
+| # | Item | Implemented |
+|---|------|-------------|
+| 1 | Withdrawal window: before or after the exam | after: an application up to the Exam Rule Set's days (10) after the course's exam date is in time, per the P2-T21 acceptance criterion; any time before the exam is in time. The AU text reads "within 10 days prior to the commencement of the examination" |

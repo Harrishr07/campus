@@ -15,6 +15,8 @@
   "department",
   "from_regulation",
   "to_regulation",
+  "from_batch",
+  "to_batch",
   "section_bridge",
   "bridge_courses",
   "amended_from"
@@ -102,7 +104,22 @@
    "label": "To Regulation",
    "options": "Regulation",
    "read_only": 1,
-   "description": "The regulation in force for the programme in the rejoin year."
+   "description": "The regulation of the cohort joined (To Batch)."
+  },
+  {
+   "fieldname": "from_batch",
+   "fieldtype": "Link",
+   "label": "From Batch",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_batch",
+   "fieldtype": "Link",
+   "label": "To Batch",
+   "options": "Academic Year",
+   "read_only": 1,
+   "description": "The cohort joined: admitted in the rejoin year less the years completed before the break."
   },
   {
    "fieldname": "section_bridge",
@@ -128,7 +145,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-09 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Rejoin Application",

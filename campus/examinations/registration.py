@@ -6,8 +6,10 @@ Courses of a student in a session (registrable_courses):
   Internal Only courses (no end-semester exam) are left out;
 - arrears: courses whose latest published outcome is U, AB or WD (arrears.reappearance_courses) and that the
   student does not take this term. They carry no offering;
-- bridge courses still owed after an approved Rejoin Application (student_services.api.pending_bridge_courses),
-  kind Bridge, with no offering either.
+- an offered course that is a bridge course still owed after an approved Rejoin Application
+  (student_services.api.pending_bridge_courses) has kind Bridge; an unoffered one is not registered (it stays
+  pending on the student's record).
+A student on a break of study is not registered (student_services.api.on_break).
 Attendance comes from the locked Attendance Eligibility Run (student_services.api.attendance_snapshot). A
 student with courses of the term but no snapshot row fails (the bulk run records the error) instead of passing.
 
@@ -27,8 +29,8 @@ from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import REAPPEAR, reappearance_courses
 from campus.examinations.courses import offering_course
 from campus.examinations.doctype.exam_registration.exam_registration import registration_name
-from campus.examinations.registration_rules import ARREAR, BRIDGE, CURRENT, DROPPED, TERM_KINDS
-from campus.student_services.api import attendance_snapshot, pending_bridge_courses, student_offerings
+from campus.examinations.registration_rules import ARREAR, ATTENDED_KINDS, BRIDGE, CURRENT, DROPPED
+from campus.student_services.api import attendance_snapshot, on_break, pending_bridge_courses, student_offerings
 
 DOCTYPE, SESSION = "Exam Registration", "Exam Session"
 RUN_TYPE = "Exam Registration"
@@ -96,6 +98,8 @@ def register(student, exam_session):
 	)
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session takes no registrations."))
+	if on_break(student):
+		return None
 	courses = registrable_courses(student, session.academic_term)
 	if not courses:
 		return None
@@ -124,17 +128,15 @@ def register(student, exam_session):
 
 def registrable_courses(student, academic_term):
 	"""[{course, course_offering, kind}] of the student in the term (see the module docstring)."""
-	kinds = registered_kinds(student, academic_term)
+	kinds, bridge = registered_kinds(student, academic_term), set(pending_bridge_courses(student))
 	rows = []
 	for offering in student_offerings(student, academic_term):
 		if not offering_course(offering.name)["course_type"]:  # Internal Only: no end-semester exam
 			continue
-		kind = REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
+		kind = BRIDGE if offering.course in bridge else REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
 		rows.append({"course": offering.course, "course_offering": offering.name, "kind": kind})
 	taken = {row["course"] for row in rows}
-	rows += [{"course": c, "kind": ARREAR} for c in reappearance_courses(student) if c not in taken]
-	taken |= {row["course"] for row in rows}
-	return rows + [{"course": c, "kind": BRIDGE} for c in pending_bridge_courses(student) if c not in taken]
+	return rows + [{"course": c, "kind": ARREAR} for c in reappearance_courses(student) if c not in taken]
 
 
 def registered_kinds(student, academic_term):
@@ -153,7 +155,7 @@ def registered_kinds(student, academic_term):
 
 def attendance_status(student, session, courses):
 	"""The snapshot status when the student takes courses this term; None for arrears only."""
-	if not any(row["kind"] in TERM_KINDS for row in courses):
+	if not any(row["kind"] in ATTENDED_KINDS for row in courses):
 		return None
 	status = attendance_snapshot(student, session.academic_term, session.company)
 	if not status:

@@ -17,6 +17,7 @@
   "reason",
   "exceptional",
   "exceptional_reason",
+  "previous_status",
   "amended_from"
  ],
  "fields": [
@@ -110,6 +111,14 @@
    "mandatory_depends_on": "exceptional"
   },
   {
+   "fieldname": "previous_status",
+   "fieldtype": "Data",
+   "label": "Status Before the Break",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Restored when the student rejoins or the break is cancelled."
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -121,7 +130,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-09 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Break of Study",

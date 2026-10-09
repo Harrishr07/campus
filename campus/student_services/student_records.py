@@ -8,10 +8,11 @@ through campus.student_services.api; this module reaches examinations only lazil
 import frappe
 from frappe import _
 
-from campus.campus_platform.api import get_rule, resolve_position
+from campus.campus_platform.api import find_policy, get_rule, resolve_position
 from campus.student_services import withdrawal_rules
 
 RULE_SET = "Exam Rule Set"
+ON_BREAK = "Break of Study"  # the academic status an approved Break of Study sets
 
 
 def rule_values(student):
@@ -95,5 +96,47 @@ def is_principal(company, user=None):
 	return (user or frappe.session.user) in resolve_position("PRINCIPAL", company)
 
 
-def student_department(program):
-	return program and frappe.db.get_value("Program", program, "department")
+def programme_and_department(student, program):
+	"""(program, department) with both required: the HOD of the department recommends every record."""
+	if not program:
+		frappe.throw(_("{0} has no programme enrolment.").format(frappe.bold(student)))
+	department = frappe.db.get_value("Program", program, "department")
+	if not department:
+		frappe.throw(_("Set the department of programme {0}: its HOD recommends this record.").format(frappe.bold(program)))
+	return program, department
+
+
+def require_policy(doc):
+	"""Fail closed: these records are submitted only through their HOD -> Principal approval."""
+	if not find_policy(doc):
+		frappe.throw(_("No Approval Policy is set for {0}; it cannot be submitted without approval.").format(_(doc.doctype)))
+
+
+def academic_year_of(day):
+	"""The Academic Year (name, year_start_date) containing `day`, or None."""
+	rows = frappe.get_all(
+		"Academic Year",
+		{"year_start_date": ["<=", day], "year_end_date": [">=", day]},
+		["name", "year_start_date"],
+		order_by="year_start_date desc",
+		limit=1,
+	)
+	return rows[0] if rows else None
+
+
+def academic_year_starting(day):
+	"""Name of the Academic Year starting on `day`, or None."""
+	rows = frappe.get_all("Academic Year", {"year_start_date": day}, pluck="name", order_by="creation asc", limit=1)
+	return rows[0] if rows else None
+
+
+def on_break(student):
+	"""True when the student's academic status is Break of Study (exam registration skips them)."""
+	return frappe.db.get_value("Student", student, "oc_academic_status") == ON_BREAK
+
+
+def students_on_break(students):
+	"""The subset of `students` on a break of study (the Result Run skips them)."""
+	if not students:
+		return set()
+	return set(frappe.get_all("Student", {"name": ["in", list(students)], "oc_academic_status": ON_BREAK}, pluck="name"))

@@ -1,10 +1,12 @@
 """M05-03 Break of Study: an authorised break in a student's programme.
 
 All of the student's approved breaks together may last at most the Exam Rule Set's maximum years, plus its
-exceptional years when this break is marked exceptional (with a reason). A student already on a break cannot
-start another. Approval runs through the approval engine (seeded policy: HOD recommendation, then Principal
-approval); final approval submits it and sets the student's academic status to Break of Study. Cancelling sets
-it back to Active. The student returns through a Rejoin Application.
+exceptional years when this break is marked exceptional (with a reason). Breaks never overlap, and a student
+already on a break cannot start another. Approval runs through the approval engine (seeded policy: HOD
+recommendation, then Principal approval); with no policy the break is never submitted (fail closed). Final
+approval submits it, keeps the student's academic status in `previous_status` and sets it to Break of Study;
+exam registration and the Result Run then skip the student. Cancelling restores the previous status; so does
+the student's Rejoin Application.
 """
 
 import frappe
@@ -17,7 +19,7 @@ from campus.campus_platform.api import ApprovableDocument, latest_enrollment
 from campus.student_services import student_records, withdrawal_rules
 
 DOCTYPE = "Break of Study"
-ON_BREAK, ACTIVE = "Break of Study", "Active"
+ON_BREAK, ACTIVE = student_records.ON_BREAK, "Active"
 
 
 class BreakofStudy(ApprovableDocument, Document):
@@ -28,21 +30,23 @@ class BreakofStudy(ApprovableDocument, Document):
 			frappe.throw(_("Give the reason for the exceptional break."))
 		if not self.exceptional:
 			self.exceptional_reason = None
-		self.check_limit(self.used_days())
+		self.check_others(self.other_breaks())
 
 	def before_submit(self):
 		super().before_submit()
-		frappe.db.get_value("Student", self.student, "name", for_update=True)  # one break submit at a time per student
-		self.check_limit(self.used_days(lock=True))
-		if frappe.db.get_value("Student", self.student, "oc_academic_status", for_update=True) == ON_BREAK:
+		student_records.require_policy(self)
+		status = frappe.db.get_value("Student", self.student, "oc_academic_status", for_update=True)  # one at a time
+		if status == ON_BREAK:
 			self.throw_on_break()
+		self.check_others(self.other_breaks(lock=True))
+		self.previous_status = status or ACTIVE
 
 	def on_submit(self):
 		frappe.db.set_value("Student", self.student, "oc_academic_status", ON_BREAK)
 
 	def on_cancel(self):
 		if frappe.db.get_value("Student", self.student, "oc_academic_status") == ON_BREAK:
-			frappe.db.set_value("Student", self.student, "oc_academic_status", ACTIVE)
+			frappe.db.set_value("Student", self.student, "oc_academic_status", self.previous_status or ACTIVE)
 
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)
@@ -51,9 +55,16 @@ class BreakofStudy(ApprovableDocument, Document):
 		if self.docstatus == 0 and student.oc_academic_status == ON_BREAK:
 			self.throw_on_break()
 		self.company = student.oc_company
-		self.program = (latest_enrollment(self.student) or {}).get("program")
-		self.department = student_records.student_department(self.program)
+		self.program, self.department = student_records.programme_and_department(
+			self.student, (latest_enrollment(self.student) or {}).get("program")
+		)
 		self.break_days = withdrawal_rules.break_days(getdate(self.from_date), getdate(self.to_date))
+
+	def check_others(self, others):
+		for other in others:
+			if withdrawal_rules.ranges_overlap(getdate(self.from_date), getdate(self.to_date), other.from_date, other.to_date):
+				frappe.throw(_("This break overlaps the approved break {0}.").format(frappe.bold(other.name)))
+		self.check_limit(sum(cint(other.break_days) for other in others))
 
 	def check_limit(self, used_days):
 		rule = student_records.rule_values(self.student)
@@ -70,15 +81,15 @@ class BreakofStudy(ApprovableDocument, Document):
 				)
 			)
 
-	def used_days(self, lock=False):
-		"""Days of the student's other approved breaks (a locking read when `lock`)."""
+	def other_breaks(self, lock=False):
+		"""The student's other approved breaks (a locking read when `lock`)."""
 		other = frappe.qb.DocType(DOCTYPE)
 		query = (
 			frappe.qb.from_(other)
-			.select(other.break_days)
+			.select(other.name, other.from_date, other.to_date, other.break_days)
 			.where((other.student == self.student) & (other.docstatus == 1) & (other.name != (self.name or "")))
 		)
-		return sum(cint(days) for days in (query.for_update() if lock else query).run(pluck=True))
+		return (query.for_update() if lock else query).run(as_dict=True)
 
 	def throw_on_break(self):
 		frappe.throw(_("{0} is already on a break of study; record the rejoin first.").format(frappe.bold(self.student)))

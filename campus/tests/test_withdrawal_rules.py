@@ -99,8 +99,34 @@ class TestBreakOfStudy(UnitTestCase):
 
 
 class TestBridgeKind(UnitTestCase):
-	def test_a_bridge_course_is_eligible_like_an_arrear(self):
-		bridge = registration_rules.BRIDGE
-		self.assertEqual(registration_rules.course_eligibility(bridge, shortage=True), registration_rules.ELIGIBLE)
-		self.assertEqual(registration_rules.course_eligibility(bridge, False, detained=True), registration_rules.ELIGIBLE)
-		self.assertEqual(registration_rules.course_eligibility(bridge, False, debarred=True), registration_rules.DEBARRED)
+	"""An offered bridge course is attended in the term: it is barred like a current course."""
+
+	def test_a_bridge_course_is_eligible_like_a_current_course(self):
+		bridge, rr = registration_rules.BRIDGE, registration_rules
+		self.assertEqual(rr.course_eligibility(bridge, shortage=False), rr.ELIGIBLE)
+		self.assertEqual(rr.course_eligibility(bridge, shortage=True), rr.SHORTAGE)
+		self.assertEqual(rr.course_eligibility(bridge, False, detained=True), rr.DETAINED)
+		self.assertEqual(rr.course_eligibility(bridge, False, debarred=True), rr.DEBARRED)
+
+	def test_a_bridge_course_is_not_a_withdrawable_term_course(self):
+		self.assertNotIn(registration_rules.BRIDGE, registration_rules.TERM_KINDS)
+		self.assertIn(registration_rules.BRIDGE, registration_rules.ATTENDED_KINDS)
+
+
+class TestRejoinCohort(UnitTestCase):
+	def test_the_cohort_is_the_rejoin_year_less_the_years_completed(self):
+		self.assertEqual(wr.rejoin_cohort_year(2022, 2024, 2026), 2024)  # two years done, back after two
+		self.assertEqual(wr.rejoin_cohort_year(2022, 2023, 2024), 2023)
+		self.assertEqual(wr.rejoin_cohort_year(2026, 2026, 2027), 2027)  # broke off in the first year
+
+	def test_a_break_before_admission_has_no_cohort(self):
+		self.assertIsNone(wr.rejoin_cohort_year(2026, 2025, 2026))
+
+
+class TestBreakOverlap(UnitTestCase):
+	def test_ranges_overlap_inclusively(self):
+		d = date
+		self.assertTrue(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2024, 10, 1), d(2024, 11, 30)))
+		self.assertTrue(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2024, 12, 31), d(2025, 1, 31)))
+		self.assertFalse(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2025, 1, 1), d(2025, 1, 31)))
+		self.assertFalse(wr.ranges_overlap(d(2025, 1, 1), d(2025, 1, 31), d(2024, 6, 1), d(2024, 12, 31)))
