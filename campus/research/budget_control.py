@@ -9,7 +9,7 @@ period. A head can't be named on a line outside a sanction. Journal Entry rows a
 Revenue heads are controlled by the sanction's ERPNext Budgets (grant_setup / budget_sync). A revenue line is refused
 in a year no Budget covers. Capital heads have no ERPNext Budget (ERPNext budgets only income and expense), so their
 limits are enforced here when a Purchase Order, Purchase Invoice or Journal Entry is submitted, when a submitted order's
-items are updated and when a credit to the head (a debit note, a crediting journal) is cancelled, under a lock on the
+items are updated (counting only an order line's unbilled part, its billed part being its invoice) and when a credit to the head (a debit note, a crediting journal) is cancelled, under a lock on the
 sanction. A capital head's spending up to the end of each fiscal year can't pass what was sanctioned for it up to that
 year, nor its total. Spending is the submitted invoice lines and journal rows tagged to the head, plus the unbilled
 part of its open Purchase Orders, all net of taxes (non-recoverable tax capitalised on an asset is not counted). The
@@ -19,7 +19,7 @@ import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.query_builder.functions import Sum
-from frappe.utils import flt, getdate
+from frappe.utils import flt, get_datetime, getdate
 
 from campus.research.accounts import NON_SPENDING_EXPENSE_TYPES
 from campus.research.api import head_accounts
@@ -174,9 +174,25 @@ def check_capital_limits(doc, method=None):
 
 
 def validate_updated_order(doc, method=None):
-	"""Update Items on a submitted Purchase Order: the line rules and the capital limit, as at submit."""
+	"""Update Items on a submitted Purchase Order: no new rows on a sanction's order (the dialog can't set their head,
+	project or account), then the line rules and the capital limit, as at submit."""
+	refuse_added_rows(doc)
 	validate_lines(doc)
 	check_capital_limits(doc)
+
+
+def refuse_added_rows(doc):
+	"""Update Items saves its new rows before the order, so they are the rows created after the order last changed."""
+	if not any(row.get(BUDGET_HEAD_FIELD) for row in doc.items):
+		return
+	last_saved = frappe.db.get_value(doc.doctype, doc.name, "modified")
+	for row in doc.items:
+		if row.creation and get_datetime(row.creation) > get_datetime(last_saved):
+			frappe.throw(
+				_("Row {0}: items can't be added to an order of a sanctioned project; raise a new Purchase Order for {1}.").format(
+					row.idx, row.item_code
+				)
+			)
 
 
 def check_capital_credit_cancel(doc, method=None):
@@ -203,8 +219,8 @@ def capital_lines(doc):
 def line_amount(doc, row):
 	if doc.doctype == "Journal Entry":
 		return flt(row.debit) - flt(row.credit)
-	if doc.doctype == "Purchase Order":
-		return flt(row.amount) * flt(doc.conversion_rate or 1)
+	if doc.doctype == "Purchase Order":  # the billed part is counted from its invoice
+		return max(flt(row.amount) - flt(row.billed_amt), 0) * flt(doc.conversion_rate or 1)
 	return flt(row.base_net_amount)
 
 

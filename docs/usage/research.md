@@ -73,6 +73,9 @@ Limits follow the scheme's **Budget Action** (Stop or Warn):
   taxes: non-recoverable GST that ERPNext capitalises into the asset is not counted against the head.
 - The capital check also runs when a submitted order's items are updated (Update Items), and when you cancel a
   credit to a capital head (a debit note, or a journal crediting it), because that cancel gives the spending back.
+  On an updated order, only each line's unbilled part counts; the billed part is counted from its invoice.
+- Update Items can't add rows to an order of a sanctioned project, because the dialog can't set their head,
+  project or account. Raise a new Purchase Order instead.
 
 **Extend** on a sanction also carries the Budgets into the revised end date's fiscal year. Nothing new is
 sanctioned for that year, so only the unspent balance can be spent there.
@@ -117,3 +120,9 @@ sanction's liability balance = receipts + interest (Grant Liability treatment) â
 Each sanction is recognised once per period end. A sanction already recognised up to that date, or with nothing
 new, is dropped from the run. If none is left, the run is refused, so running a period twice posts nothing.
 Cancelling reverses the Journal Entry and frees the period. Only a sanction's latest recognition can be cancelled.
+
+## Deferred
+
+- Re-opening a Closed Purchase Order with capital head lines does not re-run the capital check. Closing frees the
+  unbilled part, so re-opening gives it back without a check. Until this is covered, re-open such an order only if
+  the head still has room, or raise a new order. (P3-T15)

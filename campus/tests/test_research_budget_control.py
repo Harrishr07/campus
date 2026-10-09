@@ -290,6 +290,34 @@ class TestBudgetControl(SanctionFixtures):
 			self.update_order_items(order, 600000)
 		frappe.db.rollback(save_point="update_items")
 
+	def test_updating_a_billed_order_counts_the_billed_part_once(self):
+		sanction = self.submitted_sanction()
+		order = self.order(sanction, [(self.equipment_account, 400000, self.equipment)])
+		order.submit()
+		invoice = make_purchase_invoice(order.name)
+		invoice.posting_date, invoice.set_posting_time, invoice.credit_to = today(), 1, self.creditors
+		invoice.insert()
+		invoice.submit()
+		self.update_order_items(order.reload(), 450000)  # 400000 invoiced + 50000 unbilled, within 500000
+		self.assertEqual(frappe.db.get_value("Purchase Order Item", order.items[0].name, "amount"), 450000)
+		frappe.db.savepoint("billed_update")
+		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
+			self.update_order_items(order.reload(), 550000)
+		frappe.db.rollback(save_point="billed_update")
+
+	def test_rows_added_by_update_items_to_a_sanction_order_are_refused(self):
+		sanction = self.submitted_sanction()
+		order = self.order(sanction, [(self.consumables_account, 1000, self.consumables)])
+		order.submit()
+		row = order.items[0]
+		items = [
+			{"docname": row.name, "item_code": row.item_code, "qty": 1, "rate": 1000, "uom": row.uom,
+			 "conversion_factor": row.conversion_factor, "schedule_date": str(row.schedule_date)},
+			{"item_code": ITEM, "qty": 1, "rate": 500, "uom": row.uom, "conversion_factor": 1, "schedule_date": str(row.schedule_date)},
+		]  # fmt: skip
+		with self.assertRaisesRegex(frappe.ValidationError, "new Purchase Order"):
+			update_child_qty_rate("Purchase Order", json.dumps(items), order.name)
+
 	def test_head_rules_hold_on_updated_order_items(self):
 		sanction = self.submitted_sanction()
 		order = self.order(sanction, [(self.consumables_account, 1000, self.consumables)])
