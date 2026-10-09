@@ -5,16 +5,18 @@ Sources (one claim line per source, quantity from the record):
 - Valuation: each Completed Valuation Allocation of the examiner (by Employee / External Member or user), counted
   in submitted Valuation Entries (scripts valued), activity "Valuation Round <n>", work date the last entry's.
 - QP Setting / QP Scrutiny: each QP Setter Nomination naming the employee as setter or scrutiniser, once the
-  course's approved paper has been released (so a claim never reveals a setter before the exam); work date the release.
-- Invigilation: each duty of the employee in the session's Invigilation Roster on or before the claim date.
+  course's approved paper has been released (so a claim never reveals a setter before the exam); work date the
+  nomination's deadline (the release is only the gate).
+- Invigilation: each duty of the employee in the session's Invigilation Roster dated before the claim date and before
+  today (a duty of today may not have been held yet).
 Each line carries a source key (what was done, not a row name, so a regenerated roster or a recreated nomination
-cannot be paid twice). Claim Item.source_key is unique in the database; the controller also re-reads claimed keys
+cannot be paid twice; a valuation key also names its allocation, so a bundle reallocated to another examiner is theirs). Claim Item.source_key is unique in the database; the controller also re-reads claimed keys
 with a locking read after locking the examiner's master row.
 """
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, now_datetime
+from frappe.utils import getdate, now_datetime, today
 
 from campus.examinations import remuneration_rules as rules
 
@@ -61,7 +63,7 @@ def valuation_work(claim):
 	return [
 		line(
 			f"Valuation Round {a.valuation_round}", "Valuation Allocation", a.name, _("Bundle {0}").format(a.bundle),
-			valued[a.name].last_valued, valued[a.name].scripts, ("Valuation", a.bundle, a.valuation_round),
+			valued[a.name].last_valued, valued[a.name].scripts, ("Valuation", a.bundle, a.valuation_round, a.name),
 		)
 		for a in allocations
 		if a.name in valued
@@ -74,7 +76,7 @@ def qp_work(claim):
 		return []
 	nominations = frappe.get_all(
 		"QP Setter Nomination", {"exam_session": claim.exam_session, "course": ["in", list(released)]},
-		["name", "course", "scrutiniser"], order_by="name",
+		["name", "course", "scrutiniser", "deadline"], order_by="name",
 	)  # fmt: skip
 	setting = set(
 		frappe.get_all(
@@ -88,12 +90,13 @@ def qp_work(claim):
 		for activity, applies in ((QP_SETTING, n.name in setting), (QP_SCRUTINY, n.scrutiniser == claim.employee)):
 			if applies:
 				key = ("QP", claim.exam_session, n.course, activity, claim.employee)
-				lines.append(line(activity, "QP Setter Nomination", n.name, n.course, released[n.course], 1, key))
+				lines.append(line(activity, "QP Setter Nomination", n.name, n.course, n.deadline, 1, key))
 	return lines
 
 
 def released_papers(exam_session):
-	"""{course: release date} of the session's approved papers already released."""
+	"""{course: release date} of the session's approved papers already released (the gate; work is priced on the
+	nomination's deadline, when the paper was set)."""
 	papers = frappe.get_all(
 		"Question Paper",
 		{"exam_session": exam_session, "docstatus": 1, "moderation_status": "Approved", "release_at": ["<=", now_datetime()]},
@@ -108,7 +111,7 @@ def invigilation_work(claim):
 		return []
 	duties = frappe.get_all(
 		"Invigilation Duty",
-		{"parenttype": "Invigilation Roster", "parent": roster, "employee": claim.employee, "exam_date": ["<=", claim.posting_date]},
+		{"parenttype": "Invigilation Roster", "parent": roster, "employee": claim.employee, "exam_date": ["<", held_before(claim)]},
 		["exam_date", "slot", "room"], order_by="exam_date, slot",
 	)  # fmt: skip
 	return [
@@ -118,6 +121,11 @@ def invigilation_work(claim):
 		)
 		for d in duties
 	]
+
+
+def held_before(claim):
+	"""Duties before the claim date, and never one not yet held (a slot of today may still be running)."""
+	return min(getdate(claim.posting_date), getdate(today()))
 
 
 def line(activity, source_doctype, source_name, details, work_date, quantity, key_parts):

@@ -7,7 +7,9 @@ examiner. On submit the lines are recomputed and must not have changed since app
 Needs an approved approval request (Accounts Manager of the company by default; the requester, the owner and the
 examiner never approve). The final approval submits the claim, which pays it (campus.examinations.remuneration_payment):
 an internal examiner by an Additional Salary on the next payroll, an external examiner (an External Member with a
-Supplier) by a draft Purchase Invoice with TDS per the Supplier's Tax Withholding Category.
+Supplier) by a draft Purchase Invoice with TDS per the Supplier's Tax Withholding Category. Cancelling the claim
+cancels its Additional Salary (refused by HRMS once a submitted slip paid it) or its invoice (draft: deleted; submitted:
+cancelled with the user's rights; the invoice alone cannot be cancelled while the claim stands).
 """
 
 import frappe
@@ -45,15 +47,11 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 			invoice = remuneration_payment.draft_purchase_invoice(self)
 			self.db_set({"purchase_invoice": invoice.name, **remuneration_payment.payable_figures(invoice)})
 
-	def before_cancel(self):
-		if self.examiner_type != INTERNAL:
-			remuneration_payment.refuse_cancel_after_invoice(self)
-
 	def on_cancel(self):
 		if self.examiner_type == INTERNAL:
 			remuneration_payment.cancel_additional_salary(self)
 		else:
-			remuneration_payment.delete_draft_invoice(self)
+			remuneration_payment.cancel_or_delete_invoice(self)
 		frappe.db.set_value(remuneration.CLAIM_ITEM, {"parenttype": self.doctype, "parent": self.name}, "source_key", None)
 
 	def approval_excluded_users(self):

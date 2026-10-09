@@ -1,11 +1,13 @@
 """M06-04 Examiner remuneration payment: an HRMS Additional Salary on the Campus-owned component "Campus Exam
 Remuneration" for internal examiners (on the next payroll), or a draft Purchase Invoice for an external examiner's
-Supplier, with TDS withheld by ERPNext / india_compliance per the Supplier's Tax Withholding Category. The claim's TDS
-and net figures follow the invoice when Accounts submits or cancels it (Purchase Invoice doc events). Also the seeded
+Supplier, with TDS withheld by ERPNext / india_compliance per the Supplier's Tax Withholding Category. Accounts submits
+the invoice only as approved (Supplier, college, amount per Item), and the claim then takes its TDS and net figures;
+the invoice of a submitted claim is cancelled by cancelling the claim (Purchase Invoice doc events). Also the seeded
 component and approval policy. HRMS's own salary components are never changed."""
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from campus.examinations import remuneration_rules as rules
 
@@ -20,7 +22,7 @@ POLICY = "Examiner Remuneration Claim Approval"
 def post_additional_salary(claim):
 	"""A submitted Additional Salary for the claim total on the employee's next payroll. Runs as the approver: every
 	input comes from the server-computed claim."""
-	payroll_date = rules.next_payroll_date(claim.posting_date, last_processed_slip_end(claim.employee))
+	payroll_date = rules.next_payroll_date(claim.posting_date, last_processed_slip_end(claim.employee, claim.company))
 	additional = frappe.get_doc(
 		{
 			"doctype": "Additional Salary", "employee": claim.employee, "company": claim.company, "currency": claim.currency,
@@ -34,8 +36,8 @@ def post_additional_salary(claim):
 	return additional
 
 
-def last_processed_slip_end(employee):
-	return frappe.db.get_value("Salary Slip", {"employee": employee, "docstatus": 1}, "end_date", order_by="end_date desc")
+def last_processed_slip_end(employee, company):
+	return frappe.db.get_value("Salary Slip", {"employee": employee, "company": company, "docstatus": 1}, "end_date", order_by="end_date desc")
 
 
 def cancel_additional_salary(claim):
@@ -68,7 +70,8 @@ def draft_purchase_invoice(claim):
 	invoice = frappe.new_doc("Purchase Invoice")
 	invoice.update(
 		{
-			"company": claim.company, "supplier": claim.supplier, "posting_date": claim.posting_date, "bill_no": claim.name, "apply_tds": 1,
+			"company": claim.company, "supplier": claim.supplier, "posting_date": claim.posting_date, "set_posting_time": 1,
+			"bill_no": claim.name, "apply_tds": 1,
 			"remarks": _("Examiner Remuneration Claim {0}: {1}, {2}").format(claim.name, claim.examiner_name, claim.exam_session),
 		}
 	)  # fmt: skip
@@ -87,32 +90,59 @@ def payable_figures(invoice):
 	return {"tds_amount": withheld, "net_payable": invoice.rounded_total or invoice.grand_total}
 
 
-def refuse_cancel_after_invoice(claim):
-	if claim.purchase_invoice and frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True) == 1:
-		frappe.throw(_("Purchase Invoice {0} is submitted; cancel it in Accounts first.").format(claim.purchase_invoice))
-
-
-def delete_draft_invoice(claim):
-	"""A draft invoice goes with the claim; a cancelled one stays (Accounts' record) and stays linked."""
-	if claim.purchase_invoice and frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus") == 0:
+def cancel_or_delete_invoice(claim):
+	"""Cancelling the claim cancels its submitted invoice (as the user, so Accounts' rights and ERPNext's payment
+	checks apply) or deletes a draft one."""
+	status = claim.purchase_invoice and frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True)
+	if status == 1:
+		frappe.get_doc("Purchase Invoice", claim.purchase_invoice).cancel()
+	elif status == 0:
 		invoice = claim.purchase_invoice
 		claim.db_set("purchase_invoice", None)
 		frappe.delete_doc("Purchase Invoice", invoice, ignore_permissions=True)
 
 
-def refresh_claim(invoice, method=None):
-	"""Purchase Invoice on_submit / on_cancel: the claim it pays follows its figures. A submitted amendment of the
-	claim's cancelled invoice becomes the claim's invoice; a cancelled invoice leaves nothing payable."""
+def paid_claim(invoice):
+	"""The submitted claim an invoice (or the cancelled invoice it amends) pays (locking read)."""
 	links = [invoice.name, invoice.amended_from] if invoice.amended_from else [invoice.name]
-	claim = frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", links], "docstatus": 1}, "name", for_update=True)
-	if not claim:
-		return
-	if invoice.docstatus == 2:
-		invoice.ignore_linked_doctypes = (*(invoice.get("ignore_linked_doctypes") or ()), CLAIM)
-		values = {"tds_amount": 0, "net_payable": 0}
-	else:
-		values = {"purchase_invoice": invoice.name, **payable_figures(invoice)}
-	frappe.db.set_value(CLAIM, claim, values)
+	return frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", links], "docstatus": 1}, "name", for_update=True)
+
+
+def check_invoice(invoice, method=None):
+	"""Purchase Invoice before_submit: an invoice of a claim pays exactly the approved claim (its Supplier, college and
+	amount per Item, before tax)."""
+	name = paid_claim(invoice)
+	if name:
+		check_invoice_matches(invoice, frappe.get_doc(CLAIM, name))
+
+
+def refresh_claim(invoice, method=None):
+	"""Purchase Invoice on_submit: the claim takes the invoice's TDS and net figures. A submitted amendment of the
+	claim's cancelled invoice becomes the claim's invoice."""
+	name = paid_claim(invoice)
+	if name:
+		frappe.db.set_value(CLAIM, name, {"purchase_invoice": invoice.name, **payable_figures(invoice)})
+
+
+def check_invoice_matches(invoice, claim):
+	billed = {}
+	for row in invoice.items:
+		billed[row.item_code] = flt(billed.get(row.item_code, 0) + flt(row.base_net_amount), 2)
+	expected = {item: flt(amount, 2) for item, amount in invoice_lines(claim).items()}
+	if (invoice.supplier, invoice.company) != (claim.supplier, claim.company) or billed != expected:
+		frappe.throw(
+			_("Purchase Invoice {0} must pay Examiner Remuneration Claim {1} as approved: {2} for {3}. Cancel and amend the claim to change it.").format(
+				invoice.name, claim.name, frappe.format(claim.total_amount, "Currency"), claim.supplier
+			)
+		)
+
+
+def refuse_invoice_cancel(invoice, method=None):
+	"""Purchase Invoice before_cancel: the invoice of a submitted claim is cancelled only by cancelling the claim, so
+	the claim never stays submitted (holding its work) over a cancelled invoice."""
+	name = paid_claim(invoice)
+	if name:
+		frappe.throw(_("Purchase Invoice {0} pays Examiner Remuneration Claim {1}: cancel the claim first.").format(invoice.name, name))
 
 
 # ---- setup --------------------------------------------------------------------------------------------------------

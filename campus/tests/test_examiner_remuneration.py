@@ -121,9 +121,10 @@ class RemunerationFixture(ValuationFixture):
 			}
 		).insert()  # fmt: skip
 		# stands in for a moderated, sealed and released paper (its sealing needs encrypted set files)
+		self.paper = f"QP-EXR-{frappe.generate_hash(length=6)}"
 		frappe.get_doc(
 			{
-				"doctype": "Question Paper", "name": f"QP-EXR-{frappe.generate_hash(length=6)}", "exam_session": self.session.name,
+				"doctype": "Question Paper", "name": self.paper, "exam_session": self.session.name,
 				"course": COURSE, "company": COLLEGE, "docstatus": 1, "moderation_status": "Approved", "release_at": "2022-12-01 10:00:00",
 			}
 		).db_insert()  # fmt: skip
@@ -211,6 +212,8 @@ class TestClaimComputation(RemunerationFixture):
 		claim = self.claim()
 		sources = {r.activity: (r.source_doctype, r.source_name) for r in claim.items}
 		self.assertEqual(sources["Valuation Round 1"], ("Valuation Allocation", self.allocations[0]))
+		key = next(r.source_key for r in claim.items if r.activity == "Valuation Round 1")
+		self.assertIn(self.allocations[0], key.split("|"))  # a reallocated bundle's next examiner has a key of their own
 		self.assertEqual(sources["QP Setting"][0], "QP Setter Nomination")
 		self.assertEqual(sources["Invigilation"][0], "Invigilation Roster")
 
@@ -235,6 +238,33 @@ class TestClaimComputation(RemunerationFixture):
 		claim.items[0].rate = 9999
 		claim.save()
 		self.assertEqual(claim.total_amount, 2150)
+
+	def test_qp_setting_is_priced_on_the_nomination_deadline_not_the_release(self):
+		# a new version between the deadline (2022-11-01) and the release (2022-12-01) does not apply
+		frappe.get_doc({"doctype": "Remuneration Rate", "company": COLLEGE, "activity": "QP Setting", "from_date": "2022-11-15", "rate": 2000}).insert()
+		self.assertIn(("QP Setting", 1, 1500, 1500), self.lines(self.claim()))
+		frappe.get_doc({"doctype": "Remuneration Rate", "company": COLLEGE, "activity": "QP Scrutiny", "from_date": "2022-10-15", "rate": 700}).insert()
+		self.assertIn(("QP Scrutiny", 1, 700, 700), self.lines(self.claim(self.scrutiniser)))
+
+	def test_no_qp_line_before_the_paper_is_released(self):
+		frappe.db.set_value("Question Paper", self.paper, "release_at", add_days(today(), 2) + " 10:00:00")
+		self.assertNotIn("QP Setting", [r.activity for r in self.claim().items])
+
+	def test_no_qp_line_for_a_paper_not_approved(self):
+		frappe.db.set_value("Question Paper", self.paper, "moderation_status", "Under Moderation")
+		self.assertNotIn("QP Setting", [r.activity for r in self.claim().items])
+
+	def test_a_future_claim_date_does_not_bring_in_duties_not_yet_held(self):
+		claim = self.claim(posting_date=add_days(today(), 60))
+		self.assertEqual([line for line in self.lines(claim) if line[0] == "Invigilation"], [("Invigilation", 2, 300, 600)])
+
+	def test_a_rate_cannot_be_moved_onto_another_version(self):
+		rate = frappe.get_doc("Remuneration Rate", {"company": COLLEGE, "activity": "Invigilation", "from_date": "2023-01-01"})
+		for field, value in (("from_date", "2020-01-01"), ("activity", "QP Setting"), ("company", OTHER)):
+			rate.reload()
+			rate.set(field, value)
+			with self.assertRaises(frappe.ValidationError):
+				rate.save()
 
 	def test_a_missing_rate_is_refused_naming_the_activity(self):
 		frappe.db.delete("Remuneration Rate", {"activity": "QP Scrutiny"})
@@ -323,12 +353,51 @@ class TestExternalPayment(RemunerationFixture):
 		self.assertEqual((claim.tds_amount, claim.net_payable), (6, 54))
 		self.assertFalse(claim.additional_salary)
 
-	def test_the_claim_follows_its_invoice(self):
+	def test_the_claim_follows_its_invoice_on_submit(self):
 		claim = self.approved(self.claim(member=self.member))
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
 		invoice.submit()
-		invoice.cancel()
-		self.assertEqual(frappe.db.get_value(CLAIM, claim.name, ["tds_amount", "net_payable"]), (0, 0))
+		self.assertEqual(frappe.db.get_value(CLAIM, claim.name, ["tds_amount", "net_payable"]), (6, 54))
+
+	def test_an_invoice_edited_away_from_the_claim_is_not_submitted(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.items[0].rate = 600
+		invoice.save()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			invoice.submit()
+		self.assertIn(claim.name, str(caught.exception))
+		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 0)
+
+	def test_an_invoice_for_another_supplier_is_not_submitted(self):
+		claim = self.approved(self.claim(member=self.member))
+		other = frappe.db.get_value("External Member", self.external_member("exr-other-sup@example.com"), "supplier")
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.supplier = other
+		invoice.save()
+		with self.assertRaises(frappe.ValidationError):
+			invoice.submit()
+
+	def test_the_invoice_of_a_submitted_claim_cannot_be_cancelled(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.submit()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			invoice.cancel()
+		self.assertIn(claim.name, str(caught.exception))
+		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 1)
+
+	def test_cancelling_the_claim_cancels_its_submitted_invoice_and_frees_the_work(self):
+		claim = self.approved(self.claim(member=self.member))
+		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
+		invoice.submit()
+		frappe.get_doc(CLAIM, claim.name).cancel()
+		self.assertEqual(frappe.db.get_value("Purchase Invoice", invoice.name, "docstatus"), 2)
+		self.assertEqual(self.claim(member=self.member).total_amount, 60)
+
+	def test_the_invoice_carries_the_claim_date(self):
+		claim = self.approved(self.claim(member=self.member, posting_date=add_days(today(), -3)))
+		self.assertEqual(str(frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "posting_date")), add_days(today(), -3))
 
 	def test_cancelling_the_claim_deletes_its_draft_invoice(self):
 		claim = self.approved(self.claim(member=self.member))

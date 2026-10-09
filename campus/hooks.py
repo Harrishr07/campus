@@ -244,8 +244,10 @@ doc_events["Appraisal"] = {
 	"before_submit": "campus.faculty.self_appraisal.before_submit",
 }
 doc_events["Purchase Invoice"] = {
-	e: ["campus.academic_governance.honorarium.refresh_claim", "campus.examinations.remuneration_payment.refresh_claim"]  # P2-T23
-	for e in ("on_submit", "on_cancel")
+	"on_submit": ["campus.academic_governance.honorarium.refresh_claim", "campus.examinations.remuneration_payment.refresh_claim"],
+	"on_cancel": "campus.academic_governance.honorarium.refresh_claim",
+	"before_submit": "campus.examinations.remuneration_payment.check_invoice",  # P2-T23
+	"before_cancel": "campus.examinations.remuneration_payment.refuse_invoice_cancel",  # P2-T23
 }
 
 # Scheduled Tasks
