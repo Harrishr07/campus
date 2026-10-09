@@ -25,3 +25,4 @@ campus.patches.fill_honours_credits
 campus.patches.link_research_workspace
 campus.patches.require_graduate_certificate_approval
 campus.patches.backfill_metric_values
+campus.patches.backfill_metric_values_v2
