@@ -13,7 +13,7 @@ import frappe
 from frappe.utils import add_days, get_datetime, now_datetime, today
 
 from campus.campus_platform.approvals import approve, request_approval
-from campus.examinations import publication, results, seed
+from campus.examinations import api, publication, results, seed
 from campus.examinations.report.grace_mark_audit.grace_mark_audit import execute as grace_report
 from campus.student_services import portal
 from campus.tests.approval_fixtures import level
@@ -33,7 +33,7 @@ from campus.tests.test_results import (
 
 APPROVER = "exam-principal@example.com"
 ACADEMICS_USER, DEAN_USER = "exam-academics@example.com", "exam-dean@example.com"
-MODERATION = "Mark Moderation"
+MODERATION, RATIFICATION = "Mark Moderation", "Result Ratification"
 PRE = PRE_COURSE[0]
 
 
@@ -46,11 +46,12 @@ class ResultFixture(ExamFixture):
 
 	def setUp(self):
 		super().setUp()
-		frappe.db.delete("Approval Policy", {"document_type": MODERATION})
-		frappe.get_doc(
-			{"doctype": "Approval Policy", "policy_name": "Result Test Moderation", "document_type": MODERATION,
-			"levels": [level("User", APPROVER, title="Principal")]}
-		).insert()  # fmt: skip
+		for doctype, policy in ((MODERATION, "Result Test Moderation"), (RATIFICATION, "Result Test Ratification")):
+			frappe.db.delete("Approval Policy", {"document_type": doctype})
+			frappe.get_doc(
+				{"doctype": "Approval Policy", "policy_name": policy, "document_type": doctype,
+				"levels": [level("User", APPROVER, title="Principal")]}
+			).insert()  # fmt: skip
 
 	def latest(self, student, session=None):
 		name = frappe.db.get_value(
@@ -184,6 +185,15 @@ class TestArrears(ResultFixture):
 		pre = self.row(self.s22, PRE)
 		self.assertEqual((pre.cia, pre.total, pre.grade), (39, 79, "A"))  # 39 + 40 = 79 -> A
 
+	def test_an_arrear_without_a_mark_sheet_stays_pending_and_the_rest_is_graded(self):
+		frappe.db.delete("Mark Sheet Entry Row", {"student": self.s22.name, "parent": frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course": PRE})})
+		self.run_session()
+		pre = self.row(self.s22, PRE)
+		self.assertEqual((pre.kind, pre.result, pre.grade_point), ("Arrear", "Pending", 0))
+		doc = self.latest(self.s22)
+		self.assertEqual(self.row(self.s22, "EXM TH").grade, "B+")  # current courses graded as usual
+		self.assertEqual((doc.sgpa, doc.arrear_count, doc.result), (8.11, 2, "Reappear"))  # EXM PRE still owed, EXM FA failed
+
 	def test_an_arrear_row_needs_a_registration_on_the_sheet(self):
 		sheet = frappe.get_doc("Mark Sheet Entry", {"course_offering": self.offerings22["EXM TH"]})
 		sheet.append("marks", {"student": self.s26.name, "cia": 20, "ese": 30})  # s26 is neither a member nor registered
@@ -200,30 +210,78 @@ class TestVersions(ResultFixture):
 		self.assertEqual(frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.session.name}), 1)
 		self.assertEqual((self.latest(self.s22).version, self.row(self.s22, "EXM FA").grade), (1, "A"))
 
-	def test_after_publication_a_rerun_makes_a_new_version_with_a_change_log(self):
+	def ratify(self, user=COE_USER, approver=APPROVER):
+		frappe.set_user(user)
+		doc = frappe.get_doc({"doctype": RATIFICATION, "exam_session": self.session.name, "reason": "Revaluation outcomes"}).insert()
+		request = request_approval(RATIFICATION, doc.name)
+		frappe.set_user(approver)
+		try:
+			approve(request)
+		finally:
+			frappe.set_user("Administrator")
+		return doc.reload()
+
+	def test_after_publication_a_rerun_makes_a_pending_version_until_ratified(self):
 		first = self.run_session()[self.s22.name]
 		self.publish(add_days(now_datetime(), -1))
 		self.set_ese(self.s22, "EXM FA", 40)  # e.g. a revaluation: 33.6 + 40 = 73.6 -> A
 		second = results.compute_student_result(self.s22.name, self.session.name)
 		self.assertNotEqual(second, first)
 		new, old = frappe.get_doc("Student Result", second), frappe.get_doc("Student Result", first)
-		self.assertEqual((new.version, new.is_latest, new.previous_version), (2, 1, first))
-		self.assertEqual((old.version, old.is_latest), (1, 0))
-		self.assertEqual([c.grade for c in old.courses if c.course == "EXM FA"], ["U"])  # the old version is kept as it was
+		self.assertEqual((new.version, new.is_latest, new.pending_ratification, new.previous_version), (2, 0, 1, first))
+		self.assertEqual((old.version, old.is_latest), (1, 1))  # the published version stays the one everyone sees
+		self.assertEqual([c.grade for c in old.courses if c.course == "EXM FA"], ["U"])
 		self.assertIn("EXM FA: U (Fail) -> A (Pass), total 60 -> 73.6", new.change_log)
 		self.assertIn("SGPA: 8.11 -> 8.08", new.change_log)  # (21 + 16 + 36 + 3*8) / 12 = 8.08
-		# an unchanged re-run adds no version
+		self.assertIn("Arrears: 1 -> 0", new.change_log)
+		# a re-run with the same marks keeps the one pending version
 		self.assertEqual(results.compute_student_result(self.s22.name, self.session.name), second)
 		self.assertEqual(frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.session.name}), 2)
-		# COE reads both; the student and guardian only the latest
-		frappe.set_user(COE_USER)
-		self.assertEqual(sorted(frappe.get_list("Student Result", {"student": self.s22.name, "exam_session": self.session.name}, pluck="name")), sorted([first, second]))
-		for user in (STUDENT_22_USER, GUARDIAN_USER):
+		for user in (STUDENT_22_USER, GUARDIAN_USER, ACADEMICS_USER):
 			frappe.set_user(user)
-			self.assertEqual(frappe.get_list("Student Result", {"exam_session": self.session.name}, pluck="name"), [second], user)
-			self.assertFalse(frappe.has_permission("Student Result", "read", old, user=user))
+			self.assertEqual(frappe.get_list("Student Result", {"student": self.s22.name, "exam_session": self.session.name}, pluck="name"), [first], user)
+			self.assertFalse(frappe.has_permission("Student Result", "read", new, user=user))
+		frappe.set_user("Administrator")
+		self.assertTrue(frappe.has_permission("Student Result", "read", new, user=COE_USER))
+		# ratified: the new version is the latest, the old one stays readable to the COE, the student is told
+		with patch("campus.examinations.doctype.result_ratification.result_ratification.send") as send:
+			ratification = self.ratify()
+		self.assertEqual([i.student_result for i in ratification.items], [second])
+		new.reload(), old.reload()
+		self.assertEqual((new.is_latest, new.pending_ratification, old.is_latest), (1, 0, 0))
+		self.assertEqual(send.call_args.args[2][0], f"Student:{self.s22.name}")
+		frappe.set_user(STUDENT_22_USER)
+		self.assertEqual(frappe.get_list("Student Result", {"exam_session": self.session.name}, pluck="name"), [second])
 		frappe.set_user("Administrator")
 		self.assertTrue(frappe.has_permission("Student Result", "read", old, user=COE_USER))
+
+	def test_a_rerun_back_to_the_published_marks_drops_the_pending_version(self):
+		first = self.run_session()[self.s22.name]
+		self.publish(add_days(now_datetime(), -1))
+		self.set_ese(self.s22, "EXM FA", 40)
+		results.compute_student_result(self.s22.name, self.session.name)
+		self.set_ese(self.s22, "EXM FA", 26.4)
+		self.assertEqual(results.compute_student_result(self.s22.name, self.session.name), first)
+		self.assertEqual(frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.session.name}), 1)
+
+	def test_a_withdrawal_refresh_after_publication_is_pending_too(self):
+		first = self.run_session()[self.s22.name]
+		self.publish(add_days(now_datetime(), -1))
+		with patch.object(results, "withdrawal_code", lambda student, session, course: "WD" if course == "EXM FA" else None):
+			api.refresh_student_result(self.s22.name, self.session.name)
+		self.assertEqual(self.latest(self.s22).name, first)
+		pending = frappe.get_all("Student Result", {"student": self.s22.name, "pending_ratification": 1}, pluck="name")
+		self.assertEqual(len(pending), 1)
+
+	def test_ratification_needs_a_pending_version_and_another_approver(self):
+		self.run_session()
+		self.publish(add_days(now_datetime(), -1))
+		with self.assertRaises(frappe.ValidationError):
+			self.ratify()  # nothing pending
+		self.set_ese(self.s22, "EXM FA", 40)
+		results.compute_student_result(self.s22.name, self.session.name)
+		with self.assertRaises(frappe.PermissionError):
+			self.ratify(approver=COE_USER)  # the requester never approves
 
 	def test_the_run_button_path_is_open_after_publication(self):
 		self.run_session()
@@ -277,31 +335,46 @@ class PassingBoardFixture(ResultFixture):
 		seed_body_types()
 		self.member = frappe.db.get_value("Instructor", self.instructor, "employee")
 
-	def meeting(self, body_type="Passing Board", decision="Approved"):
+	def complete_run(self, session=None, program=PROGRAM, status="Completed", finished_days=-2):
+		"""A finished Result Run of the programme (the tests compute results directly, as its handler does)."""
+		return frappe.get_doc(
+			{"doctype": "Bulk Run", "run_type": results.RUN_TYPE, "status": status, "handler": results.HANDLER, "items": "[]",
+			"total": 0, "parameters": frappe.as_json({"exam_session": (session or self.session).name, "program": program}),
+			"finished_at": add_days(now_datetime(), finished_days) if status == "Completed" else None}
+		).insert(ignore_permissions=True).name  # fmt: skip
+
+	def meeting(self, body_type="Passing Board", decision="Approved", session=None, held=True, days=-1):
 		body = frappe.get_doc(
 			{"doctype": "Body", "body_name": f"{body_type} {frappe.generate_hash(length=5)}", "company": COLLEGE, "body_type": body_type,
 			"members": [{"category": "Internal", "employee": self.member, "from_date": add_days(today(), -400)}]}
 		).insert()  # fmt: skip
-		meeting = frappe.get_doc({"doctype": "Body Meeting", "body": body.name, "meeting_date": add_days(today(), -1), "venue": "COE Office"}).insert()
+		meeting = frappe.get_doc({"doctype": "Body Meeting", "body": body.name, "meeting_date": add_days(today(), days), "venue": "COE Office"}).insert()
 		for row in meeting.attendance:
 			row.present = 1
 		meeting.save()
-		meeting.append("resolutions", {"resolution_text": f"Results of {self.session.name} approved", "decision": decision})
+		bound = self.session.name if session is None else session
+		meeting.append("resolutions", {"resolution_text": f"Results of {bound} approved", "decision": decision, "exam_session": bound or None})
+		meeting.status = "Held" if held else meeting.status
 		meeting.save()
 		return meeting.name, meeting.resolutions[0].resolution_no
 
-	def publish_with_board(self, release_at, body_type="Passing Board", decision="Approved", user=COE_USER):
-		meeting, resolution = self.meeting(body_type, decision)
+	def publish_with_board(self, release_at, user=COE_USER, **meeting):
+		meeting, resolution = self.meeting(**meeting)
 		frappe.set_user(user)
 		try:
 			return publication.publish_results(self.session.name, release_at, meeting, resolution)
 		finally:
 			frappe.set_user("Administrator")
 
+	def ready(self):
+		names = self.run_session()
+		self.complete_run()
+		return names
+
 
 class TestPublication(PassingBoardFixture):
 	def test_a_passing_board_resolution_publishes_at_the_release_time(self):
-		self.run_session()
+		self.ready()
 		release = add_days(now_datetime(), 1).replace(hour=10, minute=0, second=0, microsecond=0)
 		self.publish_with_board(release)
 		session = frappe.get_doc("Exam Session", self.session.name)
@@ -309,17 +382,53 @@ class TestPublication(PassingBoardFixture):
 		self.assertTrue(session.passing_board_meeting and session.passing_board_resolution)
 
 	def test_other_bodies_and_other_decisions_are_refused(self):
-		self.run_session()
+		self.ready()
 		with self.assertRaisesRegex(frappe.ValidationError, "Passing Board"):
 			self.publish_with_board(now_datetime(), body_type="Examination Committee")
 		with self.assertRaisesRegex(frappe.ValidationError, "approve"):
 			self.publish_with_board(now_datetime(), decision="Deferred")
 		self.assertEqual(frappe.db.get_value("Exam Session", self.session.name, "status"), "Marks Entry")
 
+	def test_the_resolution_must_name_this_session(self):
+		self.ready()
+		with self.assertRaisesRegex(frappe.ValidationError, "session"):
+			self.publish_with_board(now_datetime(), session="")  # a resolution bound to no session
+		with self.assertRaisesRegex(frappe.ValidationError, "session"):
+			self.publish_with_board(now_datetime(), session=self.pre_session.name)
+
+	def test_the_meeting_must_be_held_after_the_runs_completed(self):
+		self.ready()
+		with self.assertRaisesRegex(frappe.ValidationError, "Held"):
+			self.publish_with_board(now_datetime(), held=False)
+		with self.assertRaisesRegex(frappe.ValidationError, "Result Run"):
+			self.publish_with_board(now_datetime(), days=-5)  # before the run finished (2 days ago)
+
+	def test_every_programme_run_must_be_complete_and_none_in_flight(self):
+		self.run_session()
+		with self.assertRaisesRegex(frappe.ValidationError, "Result Run"):
+			self.publish_with_board(now_datetime())  # results computed, but no finished run of the programme
+		self.complete_run()
+		self.complete_run(status="Running")
+		with self.assertRaisesRegex(frappe.ValidationError, "still running"):
+			self.publish_with_board(now_datetime())
+
+	def test_the_meeting_owner_cannot_publish_and_release_at_is_required(self):
+		self.ready()
+		meeting, resolution = self.meeting()
+		frappe.db.set_value("Body Meeting", meeting, "owner", COE_USER)
+		frappe.set_user(COE_USER)
+		with self.assertRaisesRegex(frappe.ValidationError, "recorded"):
+			publication.publish_results(self.session.name, now_datetime(), meeting, resolution)
+		frappe.set_user("Administrator")
+		meeting, resolution = self.meeting()
+		frappe.set_user(COE_USER)
+		with self.assertRaisesRegex(frappe.ValidationError, "Release"):
+			publication.publish_results(self.session.name, "", meeting, resolution)
+
 	def test_only_the_coe_publishes_and_never_without_results(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.publish_with_board(now_datetime())  # no Student Result yet
-		self.run_session()
+		self.ready()
 		with self.assertRaises(frappe.PermissionError):
 			self.publish_with_board(now_datetime(), user=FACULTY)
 
@@ -330,17 +439,22 @@ class TestPublication(PassingBoardFixture):
 			session.save()
 
 	def test_one_resolution_publishes_one_session(self):
-		self.run_session()
+		self.ready()
 		meeting, resolution = self.meeting()
 		frappe.set_user(COE_USER)
 		publication.publish_results(self.session.name, now_datetime(), meeting, resolution)
+		frappe.db.set_value("Meeting Resolution", {"resolution_no": resolution}, "exam_session", self.pre_session.name)
+		results.compute_student_result(self.s22.name, self.pre_session.name)
+		frappe.set_user("Administrator")
+		self.complete_run(self.pre_session)
+		frappe.set_user(COE_USER)
 		with self.assertRaisesRegex(frappe.ValidationError, "already"):
 			publication.publish_results(self.pre_session.name, now_datetime(), meeting, resolution)
 
 
 class TestReleaseNotice(PassingBoardFixture):
 	def test_the_notice_goes_out_once_at_release(self):
-		names = self.run_session()
+		names = self.ready()
 		self.publish_with_board(add_days(now_datetime(), 1))
 		with patch.object(publication, "run_bulk") as run_bulk:
 			publication.notify_released_results()

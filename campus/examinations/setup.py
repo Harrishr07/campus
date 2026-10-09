@@ -10,6 +10,7 @@ CIA_UNLOCK_POLICY = "CIA Unlock Approval"
 MALPRACTICE_POLICY = "Malpractice Approval"
 MALPRACTICE_DECISION_FIELDS = "committee_decision\ndecision_remarks"  # the COE records the decision while approving
 MODERATION_POLICY = "Mark Moderation Approval"
+RATIFICATION_POLICY = "Result Ratification Approval"
 
 
 def ensure_coe_role():
@@ -26,6 +27,7 @@ def setup_examinations():
 	seed_cia_unlock_policy()
 	seed_coe_policy(MALPRACTICE_POLICY, "Malpractice Report", MALPRACTICE_DECISION_FIELDS)
 	seed_coe_policy(MODERATION_POLICY, "Mark Moderation", position="PRINCIPAL", title="Principal")  # the COE proposes it
+	seed_coe_policy(RATIFICATION_POLICY, "Result Ratification", position="PRINCIPAL", title="Principal")  # likewise
 	seed_release_template()
 	seed_certificate_types()
 

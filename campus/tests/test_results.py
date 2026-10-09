@@ -265,7 +265,7 @@ class TestResultRun(ExamFixture):
 		run = frappe.get_doc("Bulk Run", name)
 		self.assertEqual(sorted(frappe.parse_json(run.items)), sorted([self.s22.name, self.s26.name, self.s_ab.name, self.s_sa.name]))
 		self.assertEqual(run.handler, results.HANDLER)
-		self.assertEqual(run.get_parameters(), {"exam_session": self.session.name})
+		self.assertEqual(run.get_parameters(), {"exam_session": self.session.name, "program": PROGRAM})
 
 	def test_missing_marks_stop_the_student_instead_of_guessing(self):
 		frappe.db.delete("Mark Sheet Entry Row", {"parent": frappe.db.get_value("Mark Sheet Entry", {"course_offering": self.offerings26["EXM TH"]}), "student": self.s26.name})

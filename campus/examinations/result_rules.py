@@ -27,13 +27,14 @@ def arrear_cia(earlier_cias, current_cia, carry_forward):
 	return attempt_cia(attempts, carry_forward) if attempts else 0
 
 
-def grace_needed(cia, ese, cia_max, ese_max, ese_min_pct, total_min_pct):
+def grace_needed(cia, ese, cia_max, ese_max, ese_min_pct, total_min_pct, ese_alone_min_pct=None):
 	"""Fewest whole ESE marks that make the course pass: 0 when it passes already, None when even the full ESE
-	cannot."""
-	need_ese = ese_min_pct * ese_max / 100 - ese
-	need_total = total_min_pct * (cia_max + ese_max) / 100 - cia - ese
-	marks = max(0, math.ceil(max(need_ese, need_total) - EPSILON))
-	return None if ese + marks > ese_max + EPSILON else marks
+	cannot. `ese_alone_min_pct` is given from the attempt on which the ESE alone may pass (rules.ese_alone_applies):
+	the smaller need of the two bases counts."""
+	on_total = max(ese_min_pct * ese_max / 100 - ese, total_min_pct * (cia_max + ese_max) / 100 - cia - ese)
+	shortfalls = [on_total] if ese_alone_min_pct is None else [on_total, ese_alone_min_pct * ese_max / 100 - ese]
+	feasible = [m for m in (max(0, math.ceil(n - EPSILON)) for n in shortfalls) if ese + m <= ese_max + EPSILON]
+	return min(feasible) if feasible else None
 
 
 def allocate_grace(needs, rule):
@@ -64,8 +65,8 @@ def overall_result(results):
 
 
 def change_log(old, new):
-	"""Lines describing what changed between two result versions ({sgpa, cgpa, courses: [{course, grade,
-	result, total}]}); "" when nothing did."""
+	"""Lines describing what changed between two result versions ({sgpa, cgpa, arrear_count, classification,
+	courses: [{course, grade, result, total}]}); "" when nothing did."""
 	before = {c["course"]: c for c in old["courses"]}
 	after = {c["course"]: c for c in new["courses"]}
 	lines = []
@@ -80,6 +81,10 @@ def change_log(old, new):
 	for label, field in (("SGPA", "sgpa"), ("CGPA", "cgpa")):
 		if old[field] != new[field]:
 			lines.append(f"{label}: {number(old[field])} -> {number(new[field])}")
+	if (old.get("arrear_count") or 0) != (new.get("arrear_count") or 0):
+		lines.append(f"Arrears: {old.get('arrear_count') or 0} -> {new.get('arrear_count') or 0}")
+	if (old.get("classification") or "") != (new.get("classification") or ""):
+		lines.append(f"Classification: {old.get('classification') or '-'} -> {new.get('classification') or '-'}")
 	return "\n".join(lines)
 
 

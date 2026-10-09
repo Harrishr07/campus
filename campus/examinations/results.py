@@ -20,10 +20,14 @@ later than this one), both leaving out the Grading Scheme's excluded course cate
 course passed, arrears count the courses not yet passed. A final-year session with no arrears gets its class
 (rules.classify with the student's entry type, years of study and break of study).
 
-Versioned: before publication a re-run replaces the latest version in place; after publication it makes a new
-version with a change log when anything changed (the old one stays readable to the COE).
+An Arrear with no row on a mark sheet of the session stays Pending (owed, outside the SGPA, counted as an arrear).
+
+Versioned: before publication a re-run replaces the latest version in place. After publication a change makes one
+pending version with a change log, graded on the relative bands frozen at publication; the published version stays
+the latest (and the only one students and staff see) until a Result Ratification publishes the pending one.
 """
 
+import json
 import math
 
 import frappe
@@ -44,6 +48,7 @@ HANDLER = "campus.examinations.results.run_student"
 RESULT = "Student Result"
 SA, AB, FAIL, WD = "SA", "AB", "U", "WD"
 CURRENT, ARREAR = "Current", "Arrear"
+PENDING = "Pending"  # an arrear registered in the session with no mark sheet row: still owed
 SAT = ("Fail", "AB")  # earlier outcomes an arrear attempt follows (their CIA can be carried forward)
 PUBLISHED = "Published"
 ROW_FIELDS = (
@@ -62,7 +67,9 @@ def start_run(exam_session, program):
 	session.check_permission("write")
 	if frappe.db.get_value("Program", program, "oc_company") != session.company:
 		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
-	return run_bulk(RUN_TYPE, program_students(session, program), HANDLER, parameters={"exam_session": exam_session})
+	return run_bulk(
+		RUN_TYPE, program_students(session, program), HANDLER, parameters={"exam_session": exam_session, "program": program}
+	)
 
 
 def program_students(session, program):
@@ -92,9 +99,12 @@ def run_cohorts(run, exam_session):
 	return cached[1]
 
 
-def new_cohorts(exam_session):
-	term = frappe.db.get_value("Exam Session", exam_session, "academic_term")
-	return Cohorts(exam_session, lambda student: eligibility_status(student, term) == "Shortage")
+def new_cohorts(exam_session, frozen=None):
+	"""Cohorts of the session: the bands frozen at publication once Published (unless `frozen` is False), else live
+	(also for a session published before bands were frozen)."""
+	term, status, stored = frappe.db.get_value("Exam Session", exam_session, ["academic_term", "status", "frozen_bands"])
+	bands = json.loads(stored) if frozen is not False and status == PUBLISHED and stored else None
+	return Cohorts(exam_session, lambda student: eligibility_status(student, term) == "Shortage", bands)
 
 
 def compute_student_result(student, exam_session, cohorts=None):
@@ -117,7 +127,7 @@ class StudentRun:
 		self.excluded = {row.course_category for row in self.scheme.get("gpa_excluded_categories", [])}
 		self.moderation = approved_adjustments(session.name)
 		self.history = earlier_rows(student, session.name, session.academic_term)
-		self.short_of_attendance = eligibility_status(student, session.academic_term) == "Shortage"
+		self.short_of_attendance = cohorts.short(student)
 
 	def values(self):
 		rows = [row for row in self.current_rows() + self.arrear_rows() if row]
@@ -170,7 +180,10 @@ class StudentRun:
 		if withdrawn:
 			return {**row, "grade": withdrawn, "result": WD}
 		absent_in_hall = seating.absent(self.student, self.session.name, course["course"])
-		marks = marks_of(self.student, self.session.name, course, kind, required=not absent_in_hall)
+		marks = marks_of(self.student, self.session.name, course, kind, required=kind == CURRENT and not absent_in_hall)
+		if marks is None and kind == ARREAR and not absent_in_hall:  # no sheet row yet: still owed, nothing graded
+			return {**row, "grade": PENDING, "result": PENDING}
+		marks = marks or frappe._dict(cia=None, ese=0, absent=0)
 		if kind == ARREAR:
 			carried = [r["cia"] for r in earlier if r["result"] in SAT]
 			marks.cia = result_rules.arrear_cia(carried, marks.cia, cint(self.rule_set.cia_carry_forward))
@@ -205,7 +218,10 @@ class StudentRun:
 		needs = {}
 		for course, row in failed.items():
 			limits = row["_limits"]
-			need = result_rules.grace_needed(row["cia"], row["ese"], limits["cia_max"], limits["ese_max"], limits["ese_min_pct"], limits["total_min_pct"])
+			alone = limits["ese_only_min_pct"] if rules.ese_alone_applies(row["attempt"], limits["ese_only_from_attempt"]) else None
+			need = result_rules.grace_needed(
+				row["cia"], row["ese"], limits["cia_max"], limits["ese_max"], limits["ese_min_pct"], limits["total_min_pct"], alone
+			)
 			if need:
 				needs[course] = need
 		for course, marks in result_rules.allocate_grace(needs, self.rule_set.as_dict()).items():
@@ -215,15 +231,15 @@ class StudentRun:
 
 	def grade(self, row):
 		method_row = next((m for m in self.scheme.get("methods", []) if m.course_type == row["course_type"]), None)
-		method = method_row and method_row.method
-		if method == rules.RELATIVE:
-			totals = self.cohorts.totals(row["course"], self.scheme.name)
-			method = rules.grading_method(row["course_type"], method, len(totals), method_row.min_cohort, totals)
-		else:
-			method = rules.grading_method(row["course_type"], method, 0, 0)
-		if method == rules.RELATIVE:
+		configured = method_row and method_row.method
+		method = rules.ABSOLUTE if not configured or row["course_type"] in rules.ALWAYS_ABSOLUTE else configured
+		bands = None
+		if method == rules.RELATIVE:  # the cohort (or the bands frozen at publication) decides
 			grades = [g.as_dict() for g in self.scheme.grades]
-			letter, point = rules.relative_grade(row["_mark"], self.cohorts.bands(row["course"], self.scheme.name, grades))
+			bands = self.cohorts.relative_bands(row["course"], self.scheme.name, row["course_type"], method_row, grades)
+			method = rules.RELATIVE if bands else rules.ABSOLUTE
+		if bands:
+			letter, point = rules.relative_grade(row["_mark"], bands)
 		else:
 			table = self.scheme.online_grades if method == rules.ONLINE else self.scheme.grades
 			letter, point = rules.grade(row["_mark"], [g.as_dict() for g in table])
@@ -269,7 +285,7 @@ def arrear_courses(student, exam_session):
 
 def marks_of(student, exam_session, course, kind, required=True):
 	"""{cia, ese, absent} of the student's row on the session's sheet of the offering (current) or course (arrear);
-	without a row, an error when `required`, else no marks."""
+	without a row, an error when `required`, else None."""
 	filters = {"exam_session": exam_session}
 	filters.update({"course_offering": course["offering"]} if kind == CURRENT else {"course": course["course"]})
 	sheets = frappe.get_all("Mark Sheet Entry", filters, pluck="name")
@@ -280,7 +296,7 @@ def marks_of(student, exam_session, course, kind, required=True):
 		as_dict=True,
 	)
 	if not marks and not required:
-		return frappe._dict(cia=None, ese=0, absent=0)
+		return None
 	if not marks:
 		frappe.throw(
 			_("No marks entered for {0} in {1}.").format(frappe.bold(student), frappe.bold(course["offering"] or course["course"]))
@@ -330,23 +346,32 @@ def break_years(student):
 
 
 def save_version(student, session, values):
-	"""Write `values` to the latest version (unpublished session), or as a new version (published, when changed)."""
+	"""Write `values` to the latest version (unpublished session). After publication, a change makes (or updates)
+	the one pending version, which a Result Ratification publishes; going back to the published content drops it."""
 	latest = frappe.db.get_value(RESULT, {"student": student, "exam_session": session.name, "is_latest": 1}, ["name", "version"], as_dict=True, for_update=True)
 	if latest and session.status != PUBLISHED:
 		doc = frappe.get_doc(RESULT, latest.name)
 		doc.update(values)
 		doc.save(ignore_permissions=True)
 		return doc.name
-	doc = new_result(student, session)
-	doc.update(values)
-	if latest:
-		old = frappe.get_doc(RESULT, latest.name)
-		log = result_rules.change_log(summary(old.as_dict()), summary(values))
-		if not log:
-			return old.name
-		doc.update({"version": cint(latest.version) + 1, "previous_version": old.name, "change_log": log})
-		frappe.db.set_value(RESULT, old.name, "is_latest", 0, update_modified=False)
-	doc.insert(ignore_permissions=True)
+	if not latest:
+		doc = new_result(student, session)
+		doc.update(values)
+		doc.insert(ignore_permissions=True)
+		return doc.name
+	pending = frappe.db.get_value(RESULT, {"student": student, "exam_session": session.name, "pending_ratification": 1}, "name", for_update=True)
+	log = result_rules.change_log(summary(frappe.get_doc(RESULT, latest.name).as_dict()), summary(values))
+	if not log:
+		if pending:
+			frappe.delete_doc(RESULT, pending, ignore_permissions=True, force=True)
+		return latest.name
+	doc = frappe.get_doc(RESULT, pending) if pending else new_result(student, session)
+	doc.update({**values, "previous_version": latest.name, "change_log": log, "is_latest": 0, "pending_ratification": 1})
+	if pending:
+		doc.save(ignore_permissions=True)
+	else:
+		doc.version = max(frappe.get_all(RESULT, {"student": student, "exam_session": session.name}, pluck="version")) + 1
+		doc.insert(ignore_permissions=True)
 	return doc.name
 
 
@@ -354,6 +379,8 @@ def summary(values):
 	return {
 		"sgpa": flt(values["sgpa"]),
 		"cgpa": flt(values["cgpa"]),
+		"arrear_count": cint(values.get("arrear_count")),
+		"classification": values.get("classification") or "",
 		"courses": [{"course": c["course"], "grade": c["grade"], "result": c["result"], "total": flt(c["total"])} for c in values["courses"]],
 	}
 
@@ -368,8 +395,4 @@ def new_result(student, session):
 		}
 	)  # fmt: skip
 
-
-def latest_result(student, exam_session):
-	"""Name of the latest Student Result version of the student in the session, or None."""
-	return frappe.db.get_value(RESULT, {"student": student, "exam_session": exam_session, "is_latest": 1})
 

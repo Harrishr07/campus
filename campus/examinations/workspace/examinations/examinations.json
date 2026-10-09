@@ -113,7 +113,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 22,
+   "link_count": 23,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -157,6 +157,17 @@
    "label": "Mark Moderation",
    "link_count": 0,
    "link_to": "Mark Moderation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Result Ratification",
+   "link_count": 0,
+   "link_to": "Result Ratification",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -442,7 +453,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-09 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

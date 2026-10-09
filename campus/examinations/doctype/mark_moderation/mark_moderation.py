@@ -47,6 +47,7 @@ class MarkModeration(ApprovableDocument, Document):
 			frappe.throw(_("The results of {0} are published; its marks can no longer be moderated.").format(frappe.bold(self.exam_session)))
 
 	def check_duplicate(self):
+		frappe.db.get_value("Exam Session", self.exam_session, "name", for_update=True)  # serialise the check per session
 		other = frappe.db.get_value(
 			"Mark Moderation",
 			{"exam_session": self.exam_session, "course": self.course, "docstatus": ["<", 2], "name": ["!=", self.name]},

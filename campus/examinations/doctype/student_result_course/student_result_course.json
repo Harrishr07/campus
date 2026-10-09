@@ -90,7 +90,7 @@
    "fieldname": "result",
    "fieldtype": "Select",
    "label": "Result",
-   "options": "Pass\nFail\nSA\nAB\nWD",
+   "options": "Pass\nFail\nSA\nAB\nWD\nPending",
    "read_only": 1,
    "in_list_view": 1
   },
@@ -144,7 +144,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Student Result Course",

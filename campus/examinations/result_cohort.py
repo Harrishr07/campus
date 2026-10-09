@@ -18,8 +18,9 @@ from campus.examinations.result_rules import combined_ese
 
 
 class Cohorts:
-	def __init__(self, exam_session, is_shortage):
+	def __init__(self, exam_session, is_shortage, frozen=None):
 		self.exam_session = exam_session
+		self.frozen = frozen  # {band_key: bands} of a published session, else None
 		self.is_shortage = is_shortage  # student -> True when short of attendance in the session's term
 		self.moderation = approved_adjustments(exam_session)
 		self.totals_by_course = {}
@@ -33,6 +34,14 @@ class Cohorts:
 		if key not in self.totals_by_course:
 			self.totals_by_course[key] = self.read_totals(course, scheme)
 		return self.totals_by_course[key]
+
+	def relative_bands(self, course, scheme, course_type, method_row, grades):
+		"""The relative bands `course` is graded on under `scheme`, or None when it is graded absolutely."""
+		if self.frozen is not None:
+			return self.frozen.get(band_key(course, scheme))
+		totals = self.totals(course, scheme)
+		method = rules.grading_method(course_type, method_row.method, len(totals), method_row.min_cohort, totals)
+		return self.bands(course, scheme, grades) if method == rules.RELATIVE else None
 
 	def bands(self, course, scheme, grades):
 		key = (course, scheme)
@@ -78,3 +87,8 @@ class Cohorts:
 			self.rule_sets[regulation] = frappe.get_doc("Exam Rule Set", {"regulation": regulation})
 		return self.rule_sets[regulation]
 
+
+
+def band_key(course, scheme):
+	"""Key of a course's relative bands under a Grading Scheme in Exam Session frozen_bands."""
+	return f"{course}::{scheme}"

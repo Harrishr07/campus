@@ -270,7 +270,7 @@ def result_permission_query(user=None):
 		return "1=0"
 	released = "`tabStudent Result`.exam_session in ({})".format(", ".join(frappe.db.escape(s) for s in sessions))
 	if has_any_role(user, STAFF_ROLES):
-		return released
+		return f"{released} and ifnull(`tabStudent Result`.pending_ratification, 0) = 0"
 	students = students_of(user)
 	if not students:
 		return "1=0"
@@ -286,7 +286,7 @@ def result_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if has_any_role(user, RESULT_PRE_RELEASE_ROLES):
 		return True
-	released = doc.exam_session in published_sessions()
+	released = doc.exam_session in published_sessions() and not doc.get("pending_ratification")
 	if has_any_role(user, STAFF_ROLES):
 		return released
 	if ptype and ptype not in READ_TYPES:

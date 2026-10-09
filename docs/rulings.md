@@ -86,6 +86,18 @@
 | 13 | R2026 theory CIA split (P2-T13) | R2022's two assessments (40 assignment + 60 test each) scaled to 35, plus up to 5 attendance marks |
 | 14 | Theory with Lab / Project / R2021 and R2026 lab CIA templates (P2-T13) | not seeded |
 
+### P2-T19 fix round 1 (coordinator rulings)
+- Ruling: grace marks take the smaller need of the total basis and, from the attempt where it applies, the ESE-alone basis.
+- Ruling: an arrear registered in a session without a mark sheet row stays Pending (owed, outside the SGPA, counted as an arrear); the student's other courses are graded.
+- Ruling: a Passing Board resolution names its Exam Session; the meeting is Held, sits after the session's last Result Run finished, and is not recorded by the publisher.
+- Ruling: a re-run after publication makes a pending version; the published version stays the latest until a Result Ratification (approval engine, no self-approval) publishes it and notifies the student; relative bands are frozen at publication and reused by every later re-run.
+
+### Pending confirmation (P2-T19)
+| # | Item | Applied |
+|---|------|---------|
+| 1 | Grace marks per regulation | grace off in every seeded Exam Rule Set (limits are records once a value is given) |
+| 2 | Arrear CIA under a regulation without CIA carry-forward (AU-R2021, R2026) | the CIA on the new session's sheet when entered, else the last earlier attempt's CIA (ruling pending with the user) |
+
 ### Pending confirmation (unsourced Body Type values removed from the P2-T01 seed; fix round 1)
 UGC 2023 cl. 12 as summarised in docs/research/anna-university-autonomous-rules.md is silent on these. They were seeded first, then removed so no unsourced value blocks a save. Colleges set them on the Body Type.
 | # | Body Type | Removed value |

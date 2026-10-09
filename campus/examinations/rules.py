@@ -17,6 +17,7 @@ FAIL_LETTER = "U"
 EPSILON = 1e-9
 PASS, FAIL, ABSENT = "Pass", "Fail", "AB"
 WITHDRAWAL_CODES = ("W", "WD", "WC")
+NOT_SAT = (*WITHDRAWAL_CODES, "Pending")  # outcomes that are not an appearance (Pending: no mark sheet row yet)
 ALWAYS_ABSOLUTE = ("Lab", "Project")
 ABSOLUTE, RELATIVE, ONLINE = "Absolute", "Relative Box-Cox", "Online Table"
 REGULAR, LATERAL = "Regular", "Lateral"
@@ -252,7 +253,7 @@ def passed_at_first_appearance(results_by_course):
 	`results_by_course` maps a course to its results (Pass, Fail, SA, AB, WD …), oldest first.
 	"""
 	for results in results_by_course.values():
-		sat = [r for r in results if r not in WITHDRAWAL_CODES]
+		sat = [r for r in results if r not in NOT_SAT]
 		if sat[:1] != [PASS]:
 			return False
 	return True

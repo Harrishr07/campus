@@ -177,6 +177,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Result Ratification",
+   "link_to": "Result Ratification",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Progression Run",
    "link_to": "Progression Run",
    "link_type": "DocType",
@@ -472,7 +483,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-09 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

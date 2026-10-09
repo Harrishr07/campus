@@ -14,7 +14,7 @@ from frappe.utils import now_datetime
 
 PASS = "Pass"
 # Outcomes a reappearance course has (U fail, absent, withdrawn); see the module docstring.
-REAPPEAR = ("Fail", "AB", "WD")
+REAPPEAR = ("Fail", "AB", "WD", "Pending")  # Pending: an arrear registered without a mark sheet row (P2-T19)
 
 
 def outstanding_arrears(outcomes):

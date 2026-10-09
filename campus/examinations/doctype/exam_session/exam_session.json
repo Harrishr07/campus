@@ -12,6 +12,7 @@
   "passing_board_meeting",
   "passing_board_resolution",
   "results_notified_on",
+  "frozen_bands",
   "section_registration",
   "registration_opens",
   "registration_closes",
@@ -88,6 +89,14 @@
    "description": "When the release notice to students and guardians was queued (at Publish At)."
   },
   {
+   "fieldname": "frozen_bands",
+   "fieldtype": "Long Text",
+   "label": "Relative Bands at Publication",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "JSON, set by Publish Results: per course and Grading Scheme the relative bands every later re-run reuses."
+  },
+  {
    "fieldname": "section_registration",
    "fieldtype": "Section Break",
    "label": "Registration and Exam Dates"
@@ -137,7 +146,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Session",

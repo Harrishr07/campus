@@ -22,6 +22,8 @@
   "version",
   "is_latest",
   "previous_version",
+  "pending_ratification",
+  "ratification",
   "column_break_version",
   "change_log"
  ],
@@ -165,6 +167,22 @@
    "read_only": 1
   },
   {
+   "fieldname": "pending_ratification",
+   "fieldtype": "Check",
+   "label": "Pending Ratification",
+   "default": "0",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "A version made after publication: the published version stays the latest until a Result Ratification is approved."
+  },
+  {
+   "fieldname": "ratification",
+   "fieldtype": "Link",
+   "label": "Ratified By",
+   "options": "Result Ratification",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_version",
    "fieldtype": "Column Break"
   },
@@ -177,7 +195,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Student Result",

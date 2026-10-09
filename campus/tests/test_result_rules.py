@@ -62,6 +62,15 @@ class TestGraceNeeded(UnitTestCase):
 		self.assertEqual(grace_needed(23, 27, **THEORY), 0)  # ESE 45 %, total 50 %
 		self.assertEqual(grace_needed(22.5, 27, **THEORY), 1)  # total 49.5: half a mark short, one whole mark
 
+	def test_the_ese_alone_basis_needs_less_from_its_attempt(self):
+		# R2022, 3rd attempt: CIA 5 + ESE 28 needs 17 on the total basis, 2 to reach the ESE-alone 50 % (30 of 60)
+		self.assertEqual(grace_needed(5, 28, **THEORY), 17)
+		self.assertEqual(grace_needed(5, 28, **THEORY, ese_alone_min_pct=50), 2)
+
+	def test_the_ese_alone_basis_can_rescue_an_otherwise_impossible_pass(self):
+		self.assertIsNone(grace_needed(0, 40, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70))
+		self.assertEqual(grace_needed(0, 40, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70, ese_alone_min_pct=70), 2)
+
 	def test_none_when_even_the_full_ese_cannot_pass(self):
 		self.assertIsNone(grace_needed(0, 10, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70))
 
@@ -100,8 +109,9 @@ class TestOverallResult(UnitTestCase):
 
 
 class TestChangeLog(UnitTestCase):
-	def summary(self, sgpa, cgpa, rows):
-		return {"sgpa": sgpa, "cgpa": cgpa, "courses": [dict(course=c, grade=g, result=r, total=t) for c, g, r, t in rows]}
+	def summary(self, sgpa, cgpa, rows, arrears=0, classification=None):
+		return {"sgpa": sgpa, "cgpa": cgpa, "arrear_count": arrears, "classification": classification,
+			"courses": [dict(course=c, grade=g, result=r, total=t) for c, g, r, t in rows]}  # fmt: skip
 
 	def test_lists_changed_courses_and_gpas_only(self):
 		old = self.summary(8.11, 8.38, [("TH", "B+", "Pass", 63), ("FA", "U", "Fail", 60)])
@@ -115,6 +125,11 @@ class TestChangeLog(UnitTestCase):
 		old = self.summary(8, 8, [("TH", "A", "Pass", 75)])
 		new = self.summary(8, 8, [("LB", "A", "Pass", 75)])
 		self.assertEqual(change_log(old, new).splitlines(), ["LB: added, A (Pass)", "TH: removed, was A (Pass)"])
+
+	def test_arrears_and_classification_changes_are_listed(self):
+		old = self.summary(8, 8, [("TH", "A", "Pass", 75)], arrears=1)
+		new = self.summary(8, 8, [("TH", "A", "Pass", 75)], arrears=0, classification="First Class")
+		self.assertEqual(change_log(old, new).splitlines(), ["Arrears: 1 -> 0", "Classification: - -> First Class"])
 
 	def test_no_change_is_empty(self):
 		same = self.summary(8, 8, [("TH", "A", "Pass", 75)])
