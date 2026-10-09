@@ -8,6 +8,9 @@ deadline unless a CIA Unlock Request is approved. Who may edit: campus.examinati
 M06-04: a row whose ESE came from the script's valuations (campus.examinations.valuation) keeps it; only the
 valuation write-back may change it.
 
+Once a student has a Student Result in the session, a teacher can no longer change the student's marks (the COE
+can, and must re-run the results before publication), and the sheet cannot be deleted.
+
 M06-05: besides the offering's members, a row may be a student whose Exam Registration of the session lists the
 sheet's course as an Arrear; the Result Run grades that row with the CIA the regulation carries forward.
 """
@@ -51,6 +54,35 @@ class MarkSheetEntry(Document):
 		self.keep_valued_ese()
 		self.apply_cia()
 		self.validate_marks(course)
+		self.check_result_lock()
+
+	def on_trash(self):
+		if frappe.db.exists("Student Result", {"exam_session": self.exam_session, "student": ["in", [r.student for r in self.marks] or [""]]}):
+			frappe.throw(_("Students of this Mark Sheet Entry have a Student Result in the session; it cannot be deleted."))
+
+	def check_result_lock(self):
+		"""Once a student has a Student Result in the session, only the COE (or System Manager) changes the student's
+		CIA, ESE or absent mark; the change then needs a fresh Result Run before publication
+		(campus.examinations.publication)."""
+		from campus.examinations.access import MARKS_ROLES, has_any_role
+
+		if has_any_role(frappe.session.user, MARKS_ROLES):
+			return
+		resulted = set(
+			frappe.get_all("Student Result", {"exam_session": self.exam_session, "student": ["in", [r.student for r in self.marks] or [""]]}, pluck="student")
+		)
+		if not resulted:
+			return
+		before = {} if self.is_new() else {r.student: r for r in self.get_doc_before_save().marks}
+		marks = lambda row: (flt(row.cia), flt(row.ese), row.absent or 0) if row else None
+		now = {r.student: r for r in self.marks}
+		for student in resulted & (set(before) | set(now)):
+			if marks(now.get(student)) != marks(before.get(student)):
+				frappe.throw(
+					_("{0} has a Student Result in this session: only the COE changes the marks, and the results are then run again.").format(
+						frappe.bold(student)
+					)
+				)
 
 	def validate_offering(self, session):
 		group = frappe.db.get_value(

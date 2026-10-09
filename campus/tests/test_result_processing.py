@@ -10,13 +10,14 @@ attendance). R2022 / R2026 theory: CIA 40 + ESE 60, ESE >= 45 %, total >= 50 %.
 from unittest.mock import patch
 
 import frappe
-from frappe.utils import add_days, get_datetime, now_datetime, today
+from frappe.utils import add_days, add_to_date, get_datetime, now_datetime, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations import api, publication, results, seed
 from campus.examinations.report.grace_mark_audit.grace_mark_audit import execute as grace_report
 from campus.student_services import portal
 from campus.tests.approval_fixtures import level
+from campus.tests.test_regulation import make_program
 from campus.tests.test_results import (
 	COE_USER,
 	COLLEGE,
@@ -35,6 +36,7 @@ from campus.tests.test_results import (
 APPROVER = "exam-principal@example.com"
 ACADEMICS_USER, DEAN_USER = "exam-academics@example.com", "exam-dean@example.com"
 MODERATION, RATIFICATION = "Mark Moderation", "Result Ratification"
+OTHER_PROGRAM = "Exam Test BE Second"
 PRE = PRE_COURSE[0]
 
 
@@ -291,6 +293,29 @@ class TestVersions(ResultFixture):
 		self.assertEqual(frappe.db.get_value("Student Result", later, "pending_ratification"), 1)  # not on the list
 		self.assertEqual(frappe.db.get_value("Student Result", listed, "pending_ratification"), 1)  # changed since listed
 
+	def test_marks_of_a_student_with_a_result_are_locked_to_teachers(self):
+		self.run_session()
+		frappe.set_user(FACULTY)  # teaches EXM TH
+		sheet = frappe.get_doc("Mark Sheet Entry", {"course_offering": self.offerings22["EXM TH"]})
+		next(r for r in sheet.marks if r.student == self.s22.name).cia = 30
+		with self.assertRaisesRegex(frappe.ValidationError, "Student Result"):
+			sheet.save()
+		frappe.set_user("Administrator")
+
+	def test_a_mark_sheet_with_results_cannot_be_deleted(self):
+		self.run_session()
+		sheet = frappe.db.get_value("Mark Sheet Entry", {"course_offering": self.offerings22["EXM TH"]})
+		with self.assertRaisesRegex(frappe.ValidationError, "Student Result"):
+			frappe.delete_doc("Mark Sheet Entry", sheet)
+
+	def test_the_ratification_fingerprint_covers_the_classification(self):
+		from campus.examinations.doctype.result_ratification.result_ratification import fingerprint
+
+		name = self.run_session()[self.s22.name]
+		before = fingerprint(name)
+		frappe.db.set_value("Student Result", name, "classification", "First Class")
+		self.assertNotEqual(fingerprint(name), before)
+
 	def test_frozen_bands_cannot_change_after_publication(self):
 		self.run_session()
 		self.publish(add_days(now_datetime(), -1))
@@ -379,13 +404,24 @@ class PassingBoardFixture(ResultFixture):
 		seed_body_types()
 		self.member = frappe.db.get_value("Instructor", self.instructor, "employee")
 
-	def complete_run(self, session=None, program=PROGRAM, status="Completed", finished_days=-2):
-		"""A finished Result Run of the programme (the tests compute results directly, as its handler does)."""
+	def complete_run(self, session=None, program=PROGRAM, status="Completed", finished_days=-2, started=None, finished=None):
+		"""A finished Result Run of the programme (the tests compute results directly, as its handler does); it
+		started an hour before it finished unless `started` says otherwise."""
+		ended = status not in ("Queued", "Running")
+		finished = finished or add_days(now_datetime(), finished_days)
 		return frappe.get_doc(
 			{"doctype": "Bulk Run", "run_type": results.RUN_TYPE, "status": status, "handler": results.HANDLER, "items": "[]",
 			"total": 0, "parameters": frappe.as_json({"exam_session": (session or self.session).name, "program": program}),
-			"finished_at": add_days(now_datetime(), finished_days) if status not in ("Queued", "Running") else None}
+			"started_at": started or add_to_date(finished, hours=-1), "finished_at": finished if ended else None}
 		).insert(ignore_permissions=True).name  # fmt: skip
+
+	def stamp(self, doctype, when, **filters):
+		"""Set `modified` of the session's `doctype` rows (matching `filters`) to `when`."""
+		table = frappe.qb.DocType(doctype)
+		query = frappe.qb.update(table).set(table.modified, when).where(table.exam_session == self.session.name)
+		for field, value in filters.items():
+			query = query.where(table[field] == value)
+		query.run()
 
 	def backdate_inputs(self, days=-3, session=None):
 		"""The grading inputs as last changed `days` ago (before the fake run and meeting)."""
@@ -549,6 +585,43 @@ class TestPublicationGuard(PassingBoardFixture):
 		self.complete_run(finished_days=0)  # finished now, today
 		with self.assertRaisesRegex(frappe.ValidationError, "Result Run"):
 			self.publish(self.meeting(days=0, start_time="00:00:00"))  # same day, but at midnight: before the run
+
+	def two_programme_runs(self, mark_hours):
+		"""PROGRAM run 96-95 h ago, OTHER_PROGRAM (s26's result) run 48-47 h ago, marks last edited `mark_hours` ago."""
+		self.run_session()
+		make_program(OTHER_PROGRAM, COLLEGE)
+		frappe.db.set_value("Student Result", {"exam_session": self.session.name, "student": self.s26.name}, "program", OTHER_PROGRAM)
+		at = lambda hours: add_to_date(now_datetime(), hours=hours)
+		self.backdate_inputs()
+		self.complete_run(program=PROGRAM, started=at(-96), finished=at(-95))
+		self.stamp("Student Result", at(-95.5), program=PROGRAM)
+		self.complete_run(program=OTHER_PROGRAM, started=at(-48), finished=at(-47))
+		self.stamp("Student Result", at(-47.5), program=OTHER_PROGRAM)
+		self.stamp("Mark Sheet Entry", at(mark_hours))
+
+	def test_a_mark_edited_between_two_programmes_runs_blocks_publication(self):
+		self.two_programme_runs(mark_hours=-72)  # after PROGRAM's run began: its cohort saw other marks
+		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
+			self.publish(self.meeting())
+		self.stamp("Mark Sheet Entry", add_to_date(now_datetime(), hours=-100))  # before both runs
+		self.publish(self.meeting())
+		self.assertEqual(frappe.db.get_value("Exam Session", self.session.name, "status"), "Published")
+
+	def test_each_programmes_results_are_checked_against_its_own_run(self):
+		self.two_programme_runs(mark_hours=-100)
+		self.stamp("Student Result", add_to_date(now_datetime(), hours=-60), program=PROGRAM)  # after PROGRAM's run ended
+		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
+			self.publish(self.meeting())
+
+	def test_a_mark_edited_during_a_run_blocks_publication(self):
+		self.run_session()
+		self.backdate_inputs()
+		at = lambda hours: add_to_date(now_datetime(), hours=hours)
+		self.complete_run(started=at(-50), finished=at(-48))
+		self.stamp("Student Result", at(-49))
+		self.stamp("Mark Sheet Entry", at(-49.5))  # while the run was going
+		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
+			self.publish(self.meeting())
 
 	def test_a_numbered_resolution_keeps_its_session_and_its_recorder(self):
 		name, number = self.meeting()

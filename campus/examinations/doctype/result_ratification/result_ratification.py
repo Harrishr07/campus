@@ -64,10 +64,12 @@ GRADING_FIELDS = ("course", "kind", "cia", "ese", "moderation", "grace", "total"
 
 
 def fingerprint(name):
-	"""A digest of what grades the version: every course row's marks, grace, grade and result, and its GPAs."""
+	"""A digest of what grades the version: every course row's marks, grace, grade and result, its GPAs, result,
+	arrears and classification."""
 	doc = frappe.get_doc(RESULT, name)
 	rows = [[str(row.get(f)) for f in GRADING_FIELDS] for row in doc.courses]
-	return hashlib.sha256(json.dumps([rows, str(doc.sgpa), str(doc.cgpa), doc.result, doc.arrear_count]).encode()).hexdigest()
+	summary = [str(doc.sgpa), str(doc.cgpa), doc.result, doc.arrear_count, doc.classification or ""]
+	return hashlib.sha256(json.dumps([rows, summary]).encode()).hexdigest()
 
 
 def publish_version(name, listed_fingerprint, ratification):

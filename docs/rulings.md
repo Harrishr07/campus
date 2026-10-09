@@ -97,6 +97,11 @@
 - Ruling: a Meeting Resolution's recorder is stamped by the server when numbered and never changes, nor does its Exam Session; neither the recorder nor the meeting's owner publishes on it.
 - Ruling: the first result version made after publication is pending ratification too; the bands frozen at publication are those the last run graded on.
 
+### P2-T19 fix round 3
+- Ruling: publication compares Mark Sheet Entries and Mark Moderations with the earliest start of the latest clean runs (cohorts are shared across programmes), and each programme's Student Results with its own run's finish.
+- Ruling: a teacher cannot change the marks of a student who has a Student Result in the session, nor delete such a sheet; the COE can change them and must re-run.
+- Deferred (dev data only): sessions published before fix round 2 have no recorded bands, so their post-publication re-runs grade on live bands and only produce pending versions; Result Ratification items listed before fix round 2 have an empty fingerprint and are not published (list them again).
+
 ### Pending confirmation (P2-T19)
 | # | Item | Applied |
 |---|------|---------|

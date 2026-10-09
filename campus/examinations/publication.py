@@ -31,7 +31,7 @@ RUN_TYPE = "Result Release Notice"
 HANDLER = "campus.examinations.publication.notify_result"
 RESULT_RUN = "Result Run"
 ENDED = ("Completed", "Completed with errors", "Failed")
-INPUTS = ("Student Result", "Mark Sheet Entry", "Mark Moderation")  # all carry exam_session
+MARK_INPUTS = ("Mark Sheet Entry", "Mark Moderation")  # read by every run of the session (both carry exam_session)
 REVISED_EVENT = "exam.result_revised"
 REVISED_TEMPLATE = (
 	"Results revised: {{ doc.exam_session }}",
@@ -58,9 +58,9 @@ def publish_results(exam_session, release_at, passing_board_meeting, resolution_
 		frappe.throw(_("Set the Release At time of the results."))
 	if not frappe.db.exists(RESULT, {"exam_session": exam_session}):
 		frappe.throw(_("Run the results of {0} before publishing them.").format(frappe.bold(exam_session)))
-	finished = check_runs(session)
-	meeting_at = check_resolution(session, passing_board_meeting, resolution_no, finished)
-	check_inputs(session, finished, meeting_at)
+	runs = check_runs(session)
+	meeting_at = check_resolution(session, passing_board_meeting, resolution_no, max(finished for _started, finished in runs.values()))
+	check_inputs(session, runs, meeting_at)
 	freeze_bands(exam_session)
 	session.update(
 		{"status": "Published", "publish_at": get_datetime(release_at), "passing_board_meeting": passing_board_meeting,
@@ -72,38 +72,45 @@ def publish_results(exam_session, release_at, passing_board_meeting, resolution_
 
 
 def check_runs(session):
-	"""When the last Result Run of the session finished. Refused while a run is queued or running, unless every
-	programme with results has runs and its latest finished run completed cleanly."""
+	"""{programme: (started_at, finished_at)} of the latest Result Run of each programme of the session. Refused
+	while a run is queued or running, unless every programme with results has runs and its latest finished run
+	completed cleanly."""
 	if live_run(RESULT_RUN, exam_session=session.name):
 		frappe.throw(_("A Result Run of {0} is still running.").format(frappe.bold(session.name)))
 	latest = {}
-	for status, stored, at in frappe.get_all(
-		"Bulk Run", {"run_type": RESULT_RUN, "status": ["in", ENDED]}, ["status", "parameters", "finished_at"], order_by="creation", as_list=True
-	):
+	for status, stored, started, at in frappe.get_all(
+		"Bulk Run", {"run_type": RESULT_RUN, "status": ["in", ENDED]}, ["status", "parameters", "started_at", "finished_at"],
+		order_by="creation", as_list=True,
+	):  # fmt: skip
 		params = json.loads(stored or "{}")
 		if params.get("exam_session") == session.name:
-			latest[params.get("program")] = (status, at)
+			latest[params.get("program")] = (status, started, at)
 	programs = set(frappe.get_all(RESULT, {"exam_session": session.name}, pluck="program", distinct=True)) - {None, ""}
 	missing = sorted(p for p in programs if p not in latest)
 	if missing or not latest:
 		frappe.throw(_("Finish a Result Run of {0} for every programme first: {1}.").format(frappe.bold(session.name), ", ".join(missing) or "-"))
-	unclean = sorted(p or "-" for p, (status, at) in latest.items() if status != "Completed" or not at)
+	unclean = sorted(p or "-" for p, (status, _started, at) in latest.items() if status != "Completed" or not at)
 	if unclean:
 		frappe.throw(_("The latest Result Run of {0} did not finish clean (completed without errors); run it again.").format(", ".join(unclean)))
-	return max(get_datetime(at) for _status, at in latest.values())
+	return {p: (get_datetime(started or at), get_datetime(at)) for p, (_status, started, at) in latest.items()}
 
 
-def check_inputs(session, runs_finished, meeting_at):
-	"""Refuse when a grading input of the session (its Student Results, Mark Sheet Entries or Mark Moderations)
-	changed after the last Result Run finished or after the Passing Board sat: the board approved other results."""
-	stamps = [frappe.db.get_value(doctype, {"exam_session": session.name}, "modified", order_by="modified desc") for doctype in INPUTS]
-	changed = max((get_datetime(at) for at in stamps if at), default=None)
-	if changed and (changed > runs_finished or changed > meeting_at):
-		frappe.throw(
-			_("Grading inputs of {0} changed on {1}, after the last Result Run or the Passing Board meeting. Run the results again and take a new resolution.").format(
-				frappe.bold(session.name), changed
+def check_inputs(session, runs, meeting_at):
+	"""Refuse when a grading input changed after the Passing Board sat, or after the results were run on it: a Mark
+	Sheet Entry or Mark Moderation of the session after the EARLIEST start of the latest runs (the cohorts are
+	shared across programmes, and a run reads marks from its start), a Student Result after its own programme's run
+	finished. The board approved the results those runs produced."""
+	earliest_start = min(started for started, _finished in runs.values())
+	checks = [(doctype, {}, earliest_start) for doctype in MARK_INPUTS]
+	checks += [(RESULT, {"program": program}, finished) for program, (_started, finished) in runs.items()]
+	for doctype, filters, limit in checks:
+		at = frappe.db.get_value(doctype, {"exam_session": session.name, **filters}, "modified", order_by="modified desc")
+		if at and (get_datetime(at) > limit or get_datetime(at) > meeting_at):
+			frappe.throw(
+				_("Grading inputs of {0} ({1}) changed on {2}, after the Result Run used them or after the Passing Board meeting. Run the results again and take a new resolution.").format(
+					frappe.bold(session.name), _(doctype), at
+				)
 			)
-		)
 
 
 def check_resolution(session, meeting_name, resolution_no, runs_finished):
