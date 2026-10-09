@@ -160,9 +160,13 @@ class TestPublicServing(EvidenceFixture):
 		pub = self.make("Redirected", is_public=1).insert()
 		hidden = self.make("Not public").insert()
 		frappe.form_dict.slug = pub.name
-		with self.assertRaises(frappe.Redirect):
+		with self.assertRaises(frappe.Redirect) as raised:
 			disclosure.get_context(frappe._dict())
+		self.assertEqual(raised.exception.http_status_code, 302)
 		self.assertEqual(frappe.local.flags.redirect_location, pub.file)
+		from frappe.website.page_renderers.redirect_page import RedirectPage
+
+		self.assertEqual(RedirectPage("disclosure", raised.exception.http_status_code).render().status_code, 302)
 		for slug in (hidden.name, "no-such-slug"):
 			frappe.form_dict.slug = slug
 			with self.assertRaises(frappe.PageDoesNotExistError):
@@ -178,15 +182,15 @@ class TestPublicServing(EvidenceFixture):
 		frappe.form_dict.pop("slug", None)
 		context = frappe._dict()
 		disclosure.get_context(context)
-		years = {year: dict(types) for year, types in context.groups}
+		years = {year: dict(types) for _company, year, types in context.groups}
 		titles = [row.title for types in years.values() for rows in types.values() for row in rows]
 		self.assertIn("Calendar", titles)
 		self.assertNotIn("Secret minutes", titles)
 		self.assertEqual(set(years[year_name("2022")]), {"IQAC Minutes", "Academic Calendar"})
 		# Frappe strips tags from Data on save; the template must escape whatever it is given all the same
 		hostile = frappe._dict(title="<script>alert(1)</script>", slug='x"><b>', description="<img src=x onerror=1>")
-		html = frappe.render_template(disclosure.GROUPS_TEMPLATE, {"groups": [("<i>2022</i>", [("Other", [hostile])])]})
-		for raw in ("<script>", "<img", "<b>", "<i>"):
+		html = frappe.render_template(disclosure.GROUPS_TEMPLATE, {"groups": [("<u>Co</u>", "<i>2022</i>", [("Other", [hostile])])]})
+		for raw in ("<script>", "<img", "<b>", "<i>", "<u>"):
 			self.assertNotIn(raw, html)
 		self.assertIn("&lt;script&gt;", html)
 
@@ -219,6 +223,7 @@ class TestSlotStatus(EvidenceFixture):
 
 	def test_a_slot_goes_back_to_missing_when_its_source_file_is_removed(self):
 		frappe.db.set_value("Company", COLLEGE, "company_logo", self.make_file())
+		frappe.get_doc("Campus Settings").update({"evidence_sources": [{"document_type": "Company", "file_field": "company_logo"}]}).save()
 		self.make(
 			file=None, source_doctype="Company", source_name=COLLEGE, source_field="company_logo",
 			nodes=[{"node": NODE, "slot_name": SLOT}],
@@ -234,3 +239,108 @@ class TestSlotStatus(EvidenceFixture):
 		frappe.set_user(FACULTY_USER)
 		with self.assertRaises(frappe.PermissionError):
 			api.evidence_slot_status(self.cycle.name, NODE)
+
+
+class TestFixRound1(EvidenceFixture):
+	def test_a_criterion_owner_cannot_change_a_public_evidence_in_any_way(self):
+		pub = self.make("Published minutes", is_public=1).insert()
+		frappe.set_user(OWNER)
+		doc = frappe.get_doc("Evidence", pub.name)
+		doc.file = self.make_file(content="swapped")
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+		doc = frappe.get_doc("Evidence", pub.name)
+		doc.is_public = 0  # unpublishing is a change of the public state too
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+
+	def test_a_criterion_owner_still_edits_a_private_evidence_and_iqac_edits_a_public_one(self):
+		private = self.make("Private notes").insert()
+		frappe.set_user(OWNER)
+		doc = frappe.get_doc("Evidence", private.name)
+		doc.description = "edited"
+		doc.save()
+		frappe.set_user(COORDINATOR)
+		pub = self.make("Coordinator public", is_public=1).insert()
+		pub.description = "edited too"
+		pub.save()
+
+	def test_a_url_slug_never_redirects_off_the_site_it_shows_an_escaped_link_page(self):
+		from campus.www import disclosure
+
+		pub = self.make("Offsite", kind="URL", url="https://example.com/a.pdf?x=1&y=2", is_public=1).insert()
+		frappe.form_dict.slug = pub.name
+		context = frappe._dict()
+		disclosure.get_context(context)  # no Redirect
+		self.assertEqual(context.external_url, "https://example.com/a.pdf?x=1&y=2")
+		self.assertFalse(frappe.local.flags.get("redirect_location"))
+		html = frappe.render_template(disclosure.EXTERNAL_TEMPLATE, {"title": "<b>t</b>", "external_url": 'https://e.com/"><script>'})
+		self.assertNotIn("<script>", html)
+		self.assertNotIn("<b>", html)
+		self.assertIn("noopener noreferrer nofollow", html)
+		frappe.form_dict.pop("slug", None)
+
+	def test_the_index_links_a_url_evidence_directly_with_a_safe_rel(self):
+		from campus.www import disclosure
+
+		row = frappe._dict(title="Ext", slug="ext", description="", kind="URL", url="https://example.com/x")
+		html = frappe.render_template(disclosure.GROUPS_TEMPLATE, {"groups": [("Co", "2022", [("Other", [row])])]})
+		self.assertIn('href="https://example.com/x"', html)
+		self.assertIn("noopener noreferrer nofollow", html)
+
+	def test_an_address_with_a_trailing_newline_is_not_a_web_address(self):
+		self.assertFalse(evidence.is_web_url("https://example.com/a\n"))
+		self.assertTrue(evidence.is_web_url("https://example.com/a"))
+
+	def test_the_controller_refuses_an_unlisted_source_whatever_the_write_path(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Campus Settings"):
+			self.make(
+				source_doctype="Department", source_name=frappe.db.get_value("Department", {}), source_field="department_name", file=None
+			).insert()
+
+	def test_the_controller_refuses_a_source_the_user_cannot_read(self):
+		frappe.get_doc("Campus Settings").update({"evidence_sources": [{"document_type": "Company", "file_field": "company_logo"}]}).save()
+		frappe.set_user(OWNER)  # may create evidence, but holds no permission for the other college
+		with self.assertRaises(frappe.PermissionError):
+			self.make(
+				source_doctype="Company", source_name="Iqac Other College", source_field="company_logo", file=None, company="Iqac Other College"
+			).insert()
+
+	def test_the_controller_takes_the_company_from_the_source(self):
+		frappe.get_doc("Campus Settings").update({"evidence_sources": [{"document_type": "Company", "file_field": "company_logo"}]}).save()
+		doc = self.make(
+			source_doctype="Company", source_name=COLLEGE, source_field="company_logo", file=None, company="Iqac Other College"
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "company"):
+			doc.insert()
+
+	def test_the_source_list_is_for_iqac_roles_only(self):
+		frappe.set_user(FACULTY_USER)
+		with self.assertRaises(frappe.PermissionError):
+			api.evidence_source_doctypes()
+		frappe.set_user(COORDINATOR)
+		self.assertIsInstance(api.evidence_source_doctypes(), dict)
+
+	def test_a_file_field_that_is_not_an_attach_field_is_refused_in_campus_settings(self):
+		settings = frappe.get_doc("Campus Settings")
+		settings.evidence_sources = []
+		settings.append("evidence_sources", {"document_type": "Company", "file_field": "company_name"})
+		with self.assertRaisesRegex(frappe.ValidationError, "Attach"):
+			settings.save()
+
+	def test_seeding_adds_a_missing_source_without_touching_the_college_list(self):
+		from campus.iqac import setup
+
+		settings = frappe.get_doc("Campus Settings")
+		settings.evidence_sources = []
+		settings.append("evidence_sources", {"document_type": "Circular"})
+		settings.save()
+		setup.seed_evidence_sources()
+		listed = frappe.get_all("Evidence Source Doctype", {"parent": "Campus Settings"}, pluck="document_type")
+		self.assertEqual(listed.count("Circular"), 1)
+		self.assertIn("Body Meeting", listed)
+
+	def test_the_public_listing_is_grouped_by_company(self):
+		self.make("Group me", is_public=1).insert()
+		self.assertTrue(all(len(group) == 3 for group in evidence.public_listing()))
+		self.assertEqual(evidence.public_listing()[0][0], COLLEGE)

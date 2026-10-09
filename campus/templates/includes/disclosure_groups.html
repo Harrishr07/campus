@@ -1,11 +1,15 @@
-{% for year, types in groups %}
-<h3 class="mt-5">{{ year|e }}</h3>
+{% for company, year, types in groups %}
+<h3 class="mt-5">{% if company %}{{ company|e }} - {% endif %}{{ year|e }}</h3>
 {% for type, rows in types %}
 <h5 class="mt-3">{{ _(type)|e }}</h5>
 <ul>
 	{% for row in rows %}
 	<li>
+		{% if row.kind == "URL" %}
+		<a href="{{ row.url|e }}" rel="noopener noreferrer nofollow">{{ row.title|e }}</a>
+		{% else %}
 		<a href="/disclosure/{{ row.slug|e }}">{{ row.title|e }}</a>
+		{% endif %}
 		{% if row.description %}<span class="text-muted"> - {{ row.description|e }}</span>{% endif %}
 	</li>
 	{% endfor %}

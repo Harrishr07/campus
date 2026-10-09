@@ -21,6 +21,7 @@ class Evidence(Document):
 		self.public_url = f"/disclosure/{self.slug}"
 		self.evidence_owner = self.evidence_owner or frappe.session.user
 		self.validate_content()
+		self.validate_source()
 		self.validate_nodes()
 		self.validate_public()
 
@@ -30,15 +31,26 @@ class Evidence(Document):
 				frappe.throw(_("A URL evidence needs a web address starting with http:// or https://."))
 			self.file = self.source_field = None
 		elif self.source_field:
-			self.validate_source()
+			pass  # the file is read from the source (see validate_source)
 		elif not self.file:
 			frappe.throw(_("A file evidence needs its file."))
 
 	def validate_source(self):
-		field = frappe.get_meta(self.source_doctype).get_field(self.source_field) if self.source_doctype else None
-		if not (field and field.fieldtype in registry.ATTACH_TYPES and self.source_name):
-			frappe.throw(_("{0} is not an Attach field of {1}.").format(frappe.bold(self.source_field), frappe.bold(self.source_doctype)))
-		self.file = None
+		"""Whatever the write path (desk, REST, import): the source type is listed in Campus Settings, the user may read the
+		record, and the evidence belongs to the source's company."""
+		if not self.source_doctype:
+			return
+		listed = registry.source_file_field(self.source_doctype)
+		if self.is_new() or any(self.has_value_changed(f) for f in ("source_doctype", "source_name", "source_field", "company")):
+			frappe.has_permission(self.source_doctype, "read", self.source_name, throw=True)
+			company = registry.source_company(self.source_doctype, self.source_name)
+			if self.company != company:
+				frappe.throw(_("The company of the evidence must be the company of its source, {0}.").format(frappe.bold(company)))
+		if self.source_field:
+			field = frappe.get_meta(self.source_doctype).get_field(self.source_field)
+			if self.source_field != listed or not (field and field.fieldtype in registry.ATTACH_TYPES and self.source_name):
+				frappe.throw(_("{0} is not the listed Attach field of {1}.").format(frappe.bold(self.source_field), frappe.bold(self.source_doctype)))
+			self.file = None
 
 	def validate_nodes(self):
 		for row in self.nodes:
@@ -51,9 +63,9 @@ class Evidence(Document):
 				frappe.throw(_("Row {0}: slot {1} takes a {2}, this evidence is a {3}.").format(row.idx, frappe.bold(row.slot_name), slot, self.kind))
 
 	def validate_public(self):
-		if not self.is_public:
-			return
-		if self.is_new() or self.has_value_changed("is_public"):
+		"""Any save of an evidence that is public before or after the save needs IQAC publish rights (it could retarget the file)."""
+		before = self.get_doc_before_save()
+		if self.is_public or (before and before.is_public):
 			registry.check_may_publish()
-		if self.kind == "File" and (file := registry.current_file(self)) and not registry.is_public_file(file):
+		if self.is_public and self.kind == "File" and (file := registry.current_file(self)) and not registry.is_public_file(file):
 			frappe.throw(_("The file is private; a public evidence needs a public file."))

@@ -4,7 +4,7 @@ import frappe
 
 from campus.campus_platform.api import request_approval
 from campus.iqac import compute, evidence, metric_values, validation
-from campus.iqac.access import ROLES
+from campus.iqac.access import OWNER_ROLE, ROLES
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
 
@@ -88,7 +88,8 @@ def attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes
 
 @frappe.whitelist()
 def evidence_source_doctypes():
-	"""{document type: file field} that get the Attach as Evidence action."""
+	"""{document type: file field} that get the Attach as Evidence action (IQAC roles)."""
+	frappe.only_for((*ROLES, OWNER_ROLE))
 	rows = frappe.get_all("Evidence Source Doctype", {"parent": "Campus Settings"}, ["document_type", "file_field"])
 	return {row.document_type: row.file_field or "" for row in rows}
 

@@ -2,7 +2,9 @@
 
 {% block page_content %}
 <div class="container my-5" style="max-width: 760px">
+	{% if external_html %}{{ external_html }}{% else %}
 	<h2>{{ title|e }}</h2>
 	{% if groups %}{{ groups_html }}{% else %}<p class="text-muted">{{ _("Nothing has been published yet.") }}</p>{% endif %}
+	{% endif %}
 </div>
 {% endblock %}

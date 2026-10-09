@@ -118,13 +118,12 @@ EVIDENCE_FILE_FIELDS = {"Faculty Achievement": "evidence"}
 
 
 def seed_evidence_sources():
-	"""First time only: list the document types that offer Attach as Evidence (those that exist yet); the college edits the list."""
+	"""List the document types that offer Attach as Evidence (those that exist yet) which are not listed; the college edits the list."""
 	settings = frappe.get_doc("Campus Settings")
-	if settings.evidence_sources:
-		return
-	for document_type in EVIDENCE_SOURCES:
-		if frappe.db.exists("DocType", document_type):
-			settings.append("evidence_sources", {"document_type": document_type, "file_field": EVIDENCE_FILE_FIELDS.get(document_type)})
-	if settings.evidence_sources:
+	listed = {row.document_type for row in settings.evidence_sources}
+	missing = [d for d in EVIDENCE_SOURCES if d not in listed and frappe.db.exists("DocType", d)]
+	for document_type in missing:
+		settings.append("evidence_sources", {"document_type": document_type, "file_field": EVIDENCE_FILE_FIELDS.get(document_type)})
+	if missing:
 		settings.flags.ignore_permissions = True
 		settings.save()

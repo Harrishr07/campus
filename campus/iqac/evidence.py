@@ -14,7 +14,7 @@ from frappe import _
 from campus.iqac.access import ROLES, has_role
 
 EVIDENCE_FIELDS = ["name", "title", "slug", "evidence_type", "academic_year", "description", "kind", "file", "url",
-	"source_doctype", "source_name", "source_field", "is_public"]  # fmt: skip
+	"source_doctype", "source_name", "source_field", "is_public", "company"]  # fmt: skip
 ATTACH_TYPES = ("Attach", "Attach Image")
 WEB_URL = re.compile(r"^https?://[^\s<>\"']+$", re.IGNORECASE)
 
@@ -29,7 +29,7 @@ def unique_slug(title):
 
 
 def is_web_url(url):
-	return bool(url and WEB_URL.match(url))
+	return bool(url and WEB_URL.fullmatch(url))
 
 
 def is_public_file(file_url):
@@ -67,15 +67,17 @@ def public_target(name):
 
 
 def public_listing():
-	"""[(academic year, [(type, [Evidence rows])])] of what the public may get, newest year first."""
+	"""[(college, academic year, [(type, [Evidence rows])])] of what the public may get: by college, then newest year first."""
 	rows = frappe.get_all("Evidence", {"is_public": 1}, EVIDENCE_FIELDS, order_by="title")
 	rows = [row for row in rows if public_target(row.name)]
 	years = {y.name: y.year_start_date for y in frappe.get_all("Academic Year", ["name", "year_start_date"])}
 	types = frappe.get_meta("Evidence").get_field("evidence_type").options.split("\n")
 	groups = []
-	for year in sorted({row.academic_year for row in rows}, key=lambda y: str(years.get(y) or ""), reverse=True):
-		by_type = [(kind, [r for r in rows if r.academic_year == year and r.evidence_type == kind]) for kind in types]
-		groups.append((year, [(kind, found) for kind, found in by_type if found]))
+	for company in sorted({row.company or "" for row in rows}):
+		mine = [row for row in rows if (row.company or "") == company]
+		for year in sorted({row.academic_year for row in mine}, key=lambda y: str(years.get(y) or ""), reverse=True):
+			by_type = [(kind, [r for r in mine if r.academic_year == year and r.evidence_type == kind]) for kind in types]
+			groups.append((company, year, [(kind, found) for kind, found in by_type if found]))
 	return groups
 
 
@@ -118,11 +120,17 @@ def filled_by(scope, nodes):
 	return found
 
 
+def source_file_field(doctype):
+	"""The file field Campus Settings > Evidence Sources lists for `doctype` ("" for none); throws when it is not listed."""
+	field = frappe.db.get_value("Evidence Source Doctype", {"parent": "Campus Settings", "document_type": doctype}, "file_field")
+	if field is None:
+		frappe.throw(_("{0} is not listed under Evidence Sources in Campus Settings.").format(frappe.bold(doctype)))
+	return field
+
+
 def attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None):
 	"""Make an Evidence from any record whose document type is listed in Campus Settings > Evidence Sources; returns its name."""
-	source = frappe.db.get_value("Evidence Source Doctype", {"parent": "Campus Settings", "document_type": doctype}, "file_field")
-	if source is None:
-		frappe.throw(_("{0} is not listed under Evidence Sources in Campus Settings.").format(frappe.bold(doctype)))
+	source = source_file_field(doctype)
 	frappe.has_permission(doctype, "read", name, throw=True)
 	values = {
 		"doctype": "Evidence", "title": title, "evidence_type": evidence_type, "academic_year": academic_year,
