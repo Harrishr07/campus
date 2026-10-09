@@ -18,6 +18,7 @@ from campus.tests.test_results import COLLEGE
 N263, N211, N212, N111, N141 = (f"{FRAMEWORK}-{code}" for code in ("2.6.3", "2.1.1", "2.1.2", "1.1.1", "1.4.1"))
 EP21 = f"{FRAMEWORK}-EP-2.1"
 CHOICE = "A. All 4 of the above"
+EXPORTER = "iqac-exporter@example.com"
 INJECTION = "=HYPERLINK(\"http://evil.example\",\"x\")"
 
 
@@ -120,6 +121,30 @@ class TestExcelValues(ExportFixture):
 		self.assertTrue(expected <= listed, expected - listed)
 		self.assertEqual({k for k, _ in expected}, {"final_year_passed", "final_year_appeared"})
 
+	def test_records_the_exporter_cannot_read_are_counted_not_listed(self):
+		self.lock()
+		snapshot = json.loads(frappe.db.get_value("Metric Value", f"{self.cycle.name}-2.6.3", "snapshot"))
+		results = {r["name"] for point in snapshot["inputs"].values() for r in point["records"] if r["doctype"] == "Student Result"}
+		self.assertTrue(results)
+		if not frappe.db.exists("User", EXPORTER):  # IQAC Coordinator alone: no exam role, so no Student Result read
+			frappe.get_doc({"doctype": "User", "email": EXPORTER, "first_name": "exporter", "send_welcome_email": 0, "roles": [{"role": "IQAC Coordinator"}]}).insert()
+			frappe.get_doc({"doctype": "User Permission", "user": EXPORTER, "allow": "Company", "for_value": COLLEGE}).insert()
+		frappe.set_user(EXPORTER)
+		self.assertFalse(frappe.has_permission("Student Result", "read"))
+		book = self.workbook()
+		cells = [c.value for row in book[export.data_sheet_name("2.6.3")].iter_rows() for c in row if c.value is not None]
+		self.assertFalse(results & set(cells), "unreadable Student Results are listed")
+		self.assertIn(f"{len(results)} records you cannot open are not listed.", cells)
+
+	def test_a_snapshot_point_without_records_is_listed_once_without_a_record(self):
+		self.lock()
+		name = f"{self.cycle.name}-2.6.3"
+		snapshot = json.loads(frappe.db.get_value("Metric Value", name, "snapshot"))
+		snapshot["inputs"]["bare_point"] = {"value": 3}  # no "records" key
+		frappe.db.set_value("Metric Value", name, "snapshot", json.dumps(snapshot))
+		rows = [[c.value for c in row] for row in self.workbook()[export.data_sheet_name("2.6.3")].iter_rows()]
+		self.assertEqual([row[4] for row in rows if row[1] == "bare_point"], [None])
+
 	def test_the_cover_sheet_says_what_was_exported(self):
 		self.lock()
 		cover = self.workbook()[export.COVER]
@@ -194,7 +219,7 @@ class TestFormulaInjection(ExportFixture):
 		frappe.db.set_value("Metric Value", f"{self.cycle.name}-1.1.1", "narrative", f"<p>{INJECTION}</p>")
 		name = f"{self.cycle.name}-2.6.3"
 		snapshot = json.loads(frappe.db.get_value("Metric Value", name, "snapshot"))
-		snapshot["inputs"]["final_year_passed"]["records"].append({"doctype": "Student Result", "name": INJECTION})
+		snapshot["inputs"][INJECTION] = {"value": 1, "records": []}  # a snapshot key, written to the Data Template sheet
 		frappe.db.set_value("Metric Value", name, "snapshot", json.dumps(snapshot))
 		book = self.workbook()
 		texts = []
@@ -205,7 +230,7 @@ class TestFormulaInjection(ExportFixture):
 					if isinstance(cell.value, str):
 						texts.append(cell.value)
 						self.assertNotIn(cell.value.lstrip(" ")[:1], ("=", "+", "@", "\t", "\r"), cell.value)
-		self.assertIn("'" + INJECTION, texts)  # the narrative and the record name both appear, defused
+		self.assertIn("'" + INJECTION, texts)  # the narrative and the data point key both appear, defused
 		self.assertGreaterEqual(texts.count("'" + INJECTION), 2)
 
 	def test_a_formula_like_sheet_name_or_label_cannot_break_out(self):

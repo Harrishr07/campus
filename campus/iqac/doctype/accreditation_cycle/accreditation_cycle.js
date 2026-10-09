@@ -1,4 +1,7 @@
 frappe.ui.form.on("Accreditation Cycle", {
+	setup(frm) {
+		frm.set_query("framework", () => ({ filters: { status: "Published" } }));
+	},
 	refresh(frm) {
 		if (frm.is_new()) return;
 		const status = frm.doc.status;

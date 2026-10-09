@@ -3,7 +3,8 @@
 The regulators' official templates are not available, so every layout here is a labelled placeholder: the AQAR ones put
 each answer node on a sheet per criterion (or a PDF section) in code order, and the NBA / NIRF ones are empty mappings on
 Draft frameworks with no nodes yet. A college edits the mapping rows (they are data); seeding never overwrites a template
-that exists.
+that exists. Seeding runs on every migrate: a deleted placeholder template is made again, and so is its NBA-SAR / NIRF
+Draft framework when that is gone too (delete neither while the seed lists it; leave an unused one empty instead).
 """
 
 import frappe

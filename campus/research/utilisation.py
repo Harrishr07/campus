@@ -238,27 +238,38 @@ def forget_queued():
 
 
 def recheck_queued():
-	"""before_commit: recheck each queued UC once against the transaction's whole ledger."""
+	"""before_commit: recheck each queued UC once against the transaction's whole ledger. A failing UC is logged and
+	skipped, so the commit (and the posting) goes ahead; only a deadlock is raised, for the request to be retried."""
 	for name in sorted(frappe.flags.pop(RECHECK_FLAG, None) or ()):
-		uc = frappe.db.get_value(UC_DOCTYPE, name, ["docstatus", "source_changed"], as_dict=True)
-		if uc and uc.docstatus == 1 and not uc.source_changed:
-			recheck(frappe.get_doc(UC_DOCTYPE, name))
+		try:
+			uc = frappe.db.get_value(UC_DOCTYPE, name, ["docstatus", "source_changed"], as_dict=True)
+			if uc and uc.docstatus == 1 and not uc.source_changed:
+				recheck(frappe.get_doc(UC_DOCTYPE, name))
+		except Exception as error:
+			if frappe.db.is_deadlocked(error):
+				raise
+			frappe.clear_last_message()
+			log_recheck_failure(name, error, _("it could not be rechecked"))
 
 
 def recheck(uc):
 	try:
 		changed = source_moved(uc)
 	except Exception as error:  # a head mapping changed since, a corrupt snapshot...: never block the posting
+		if frappe.db.is_deadlocked(error):
+			raise
 		frappe.clear_last_message()
-		frappe.log_error(
-			title=_("Utilisation Certificate recheck failed"),
-			message=_("{0} could not be recomputed after a ledger change ({1}); it is marked Source Changed.").format(
-				uc.name, type(error).__name__
-			),
-			reference_doctype=UC_DOCTYPE, reference_name=uc.name,
-		)  # fmt: skip
+		log_recheck_failure(uc.name, error, _("it is marked Source Changed"))
 		changed = True
 	mark_source(uc, changed)
+
+
+def log_recheck_failure(name, error, outcome):
+	frappe.log_error(
+		title=_("Utilisation Certificate recheck failed"),
+		message=_("{0} could not be recomputed after a ledger change ({1}); {2}.").format(name, type(error).__name__, outcome),
+		reference_doctype=UC_DOCTYPE, reference_name=name,
+	)  # fmt: skip
 
 
 def mark_source(uc, changed=None):

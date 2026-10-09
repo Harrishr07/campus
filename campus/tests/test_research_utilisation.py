@@ -14,7 +14,7 @@ from frappe.utils import add_days, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.research.budget_control import BUDGET_HEAD_FIELD
-from campus.research.utilisation import UC_POLICY, recheck_queued, utilisation_figures
+from campus.research.utilisation import RECHECK_FLAG, UC_POLICY, forget_queued, recheck_queued, utilisation_figures
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import make_account
 from campus.tests.research_fixtures import ABBR, COLLEGE, SanctionFixtures
@@ -38,6 +38,7 @@ class TestUtilisationCertificate(SanctionFixtures):
 	def setUp(self):
 		super().setUp()
 		self.addCleanup(frappe.set_user, "Administrator")
+		self.addCleanup(forget_queued)  # no queued recheck leaks into the next test
 		self.link_user(self.pi, PI_USER)  # an employee's user gets the Employee role
 		self.link_user(self.make_employee("Outsider", COLLEGE), OUTSIDER)
 		self.equipment_account = f"Capital Equipment - {ABBR}"
@@ -155,9 +156,14 @@ class TestUtilisationCertificate(SanctionFixtures):
 		return {row.budget_head: row for row in uc.heads}
 
 	def flagged(self, uc):
-		"""The UC's Source Changed flag once the transaction commits (the recheck runs before the commit)."""
+		"""The UC's Source Changed flag once the transaction commits (the recheck runs before the commit). A UC that
+		ends up flagged must have been queued by the posting."""
+		queued = set(frappe.flags.get(RECHECK_FLAG) or ())
 		recheck_queued()
-		return frappe.db.get_value(DOCTYPE, uc.name, "source_changed")
+		flag = frappe.db.get_value(DOCTYPE, uc.name, "source_changed")
+		if flag:
+			self.assertIn(uc.name, queued)
+		return flag
 
 	# acceptance 1: UC figures equal GL figures for the period
 	def test_figures_equal_the_ledger_for_the_period(self):
@@ -435,6 +441,26 @@ class TestUtilisationCertificate(SanctionFixtures):
 		uc = self.approved(sanction)
 		self.recognise(sanction, uc.to_date)
 		self.assertEqual(self.flagged(uc), 0)
+
+	def test_a_posting_queues_the_uc_and_registers_the_recheck_before_commit(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		forget_queued()
+		self.spend(sanction, self.travel_account, 250, self.travel, posting_date=add_days(self.period_start, 15))
+		self.assertIn(uc.name, frappe.flags.get(RECHECK_FLAG))
+		self.assertIn(recheck_queued, frappe.db.before_commit._functions)
+
+	def test_a_failing_recheck_is_logged_and_never_breaks_the_commit(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		self.spend(sanction, self.travel_account, 250, self.travel, posting_date=add_days(self.period_start, 15))
+		logged = frappe.db.count("Error Log", {"reference_name": uc.name})
+		with patch("campus.research.utilisation.mark_source", side_effect=RuntimeError("db_set failed")):
+			recheck_queued()  # returns normally
+		self.assertIsNone(frappe.flags.get(RECHECK_FLAG))
+		self.assertEqual(frappe.db.count("Error Log", {"reference_name": uc.name}), logged + 1)
 
 	def test_a_real_change_in_the_period_still_flags_once_committed(self):
 		sanction = self.submitted_sanction()

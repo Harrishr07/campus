@@ -3,7 +3,7 @@
 The layout is the template's mapping rows (data); this module only writes what they say. Values are the cycle's Metric
 Values as the user may read them. Every cell written from user data goes through `safe_text`, so nothing in a sheet can run
 as a spreadsheet formula. Excel: a Cover sheet, the mapped sheets, then a Data Template sheet per flagged computed node
-listing the records behind its value (from the Metric Value snapshot). PDF: a Part A style cover block, then the mapped
+listing the records behind its value (from the Metric Value snapshot) that the user may read, with a count of the others. PDF: a Part A style cover block, then the mapped
 sections in the order they first appear.
 """
 
@@ -11,6 +11,7 @@ import html
 import io
 import json
 import re
+from collections import defaultdict
 
 import frappe
 from frappe import _
@@ -105,6 +106,7 @@ class Exported:
 		)  # fmt: skip
 		self.college = {v.node: v for v in self.values if not v.department}
 		self.mappings = list(template.mappings)
+		self.read_rights = {}
 
 	def answer(self, node):
 		"""The college-level answer of `node`: a number, a choice, plain narrative text, or None."""
@@ -155,8 +157,8 @@ class Exported:
 
 	def data_sheet(self, book, node):
 		"""A listing of the records behind the node's value(s); nothing for a node without a snapshot (answered by hand)."""
-		rows = self.listing(node)
-		if not rows:
+		rows, hidden = self.listing(node)
+		if not rows and not hidden:
 			return
 		meta = self.nodes[node]
 		sheet = book.create_sheet(unique_sheet_name(book, data_sheet_name(meta.code)))
@@ -167,15 +169,35 @@ class Exported:
 		for number, row in enumerate(rows, 5):
 			for column, value in enumerate(row, 1):
 				put(sheet, f"{get_column_letter(column)}{number}", value)
+		if hidden:
+			put(sheet, f"A{len(rows) + 6}", _("{0} records you cannot open are not listed.").format(hidden))
 
 	def listing(self, node):
+		"""Rows of the records behind the node's values that the user may read, and how many were left out."""
 		rows = []
 		for value in sorted((v for v in self.values if v.node == node), key=lambda v: (bool(v.department), v.department or "")):
 			inputs = json.loads(value.snapshot or "{}").get("inputs", {})
 			for key, point in inputs.items():
-				for record in point["records"] or [{}]:
-					rows.append([value.department or _("College"), key, flt(point["value"]), record.get("doctype"), record.get("name")])
-		return rows
+				for record in point.get("records") or [{}]:
+					rows.append([value.department or _("College"), key, flt(point.get("value")), record.get("doctype"), record.get("name")])
+		names = defaultdict(set)
+		for row in rows:
+			if row[3]:
+				names[row[3]].add(row[4])
+		readable = {doctype: self.readable(doctype, wanted) for doctype, wanted in names.items()}
+		shown = [row for row in rows if not row[3] or row[4] in readable[row[3]]]
+		return shown, sum(len(wanted - readable[doctype]) for doctype, wanted in names.items())
+
+	def readable(self, doctype, names):
+		"""The `names` of `doctype` the user may read (one get_list per doctype per export, so the permission query applies)."""
+		cached = self.read_rights.setdefault(doctype, {})
+		unknown = [name for name in names if name not in cached]
+		if unknown:
+			allowed = set()
+			if frappe.db.exists("DocType", doctype) and frappe.has_permission(doctype, "read"):
+				allowed = set(frappe.get_list(doctype, {"name": ["in", unknown]}, pluck="name", limit_page_length=0))
+			cached.update({name: name in allowed for name in unknown})
+		return {name for name in names if cached[name]}
 
 	# PDF
 
