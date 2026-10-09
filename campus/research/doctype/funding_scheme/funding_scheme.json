@@ -9,6 +9,7 @@
   "column_break_1",
   "overhead_percent",
   "uc_format",
+  "budget_action",
   "heads_section",
   "heads",
   "instalments_section",
@@ -49,6 +50,15 @@
    "description": "Overrides the agency's UC / SOE format for this scheme (placeholder until the official template is supplied)."
   },
   {
+   "fieldname": "budget_action",
+   "fieldtype": "Select",
+   "label": "Budget Action",
+   "options": "Stop\nWarn",
+   "default": "Stop",
+   "reqd": 1,
+   "description": "What ERPNext Budget does when spending crosses a head's sanctioned amount."
+  },
+  {
    "fieldname": "heads_section",
    "fieldtype": "Section Break",
    "label": "Budget Heads"
@@ -74,7 +84,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Funding Scheme",

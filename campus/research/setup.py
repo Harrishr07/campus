@@ -1,15 +1,18 @@
 """M08-02 Research setup, run on install and migrate (idempotent): the PI deadline reminder template and the default
-internal review policy for Research Proposals. Existing (possibly edited) records are left alone."""
+internal review policy for Research Proposals (P3-T13), and the "Institution" Funding Agency that seed money is
+sanctioned under (P3-T14). Existing (possibly edited) records are left alone."""
 
 import frappe
 
 REMINDER_EVENT = "research_proposal.deadline"
 REVIEW_POLICY = "Research Proposal Internal Review"
+INSTITUTION_AGENCY = "Institution"
 
 
 def setup_research():
 	seed_reminder_template()
 	seed_review_policy()
+	seed_institution_agency()
 
 
 def seed_reminder_template():
@@ -44,3 +47,12 @@ def seed_review_policy():
 			"levels": [{"approver_type": "Role", "approver": "Principal", "limit_to_company": 1, "title": "Internal Review", "sla_hours": 72}],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
+
+
+def seed_institution_agency():
+	"""The college's own seed money is a grant like any other, from this agency."""
+	if frappe.db.exists("Funding Agency", INSTITUTION_AGENCY):
+		return
+	frappe.get_doc(
+		{"doctype": "Funding Agency", "agency_name": INSTITUTION_AGENCY, "agency_type": "Institution"}
+	).insert(ignore_permissions=True)

@@ -1,11 +1,13 @@
 """M08-02 Research proposal deadline reminders: every day, the PI of each proposal not yet submitted to the agency
 (draft, under review or internally approved) is messaged from the call's `reminder_days` before its deadline up to the
-deadline day. One message per proposal per day (the day is the messaging dedupe token)."""
+deadline day. One message per proposal per day (the day is the messaging dedupe token). A draft whose latest internal
+review was Rejected gets no more reminders."""
 
 import frappe
 from frappe.utils import date_diff, getdate, today
 
 from campus.campus_messaging.api import send
+from campus.campus_platform.api import latest_request
 from campus.research.setup import REMINDER_EVENT
 
 OPEN_STATUSES = ("Draft", "Approved")
@@ -19,7 +21,11 @@ def reminder_due(deadline, on_date, reminder_days):
 def send_deadline_reminders(on_date=None):
 	"""Scheduler entry point (daily). Returns the number of proposals reminded."""
 	on_date = getdate(on_date or today())
-	due = [row for row in open_proposals(on_date) if reminder_due(row.deadline, on_date, row.reminder_days)]
+	due = [
+		row
+		for row in open_proposals(on_date)
+		if reminder_due(row.deadline, on_date, row.reminder_days) and not rejected_internally(row.name)
+	]
 	for row in due:
 		try:
 			proposal = frappe.get_doc("Research Proposal", row.name)
@@ -32,6 +38,11 @@ def send_deadline_reminders(on_date=None):
 		except Exception:
 			frappe.log_error(title=f"Research proposal deadline reminder failed for {row.name}")  # keep the rest going
 	return len(due)
+
+
+def rejected_internally(proposal):
+	request = latest_request(frappe._dict(doctype="Research Proposal", name=proposal))
+	return bool(request and request.status == "Rejected")
 
 
 def open_proposals(on_date):

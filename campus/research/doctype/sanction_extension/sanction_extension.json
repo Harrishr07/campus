@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "order_no",
+  "order_date",
+  "previous_end_date",
+  "revised_end_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "order_no",
+   "fieldtype": "Data",
+   "label": "Extension Order No",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "previous_end_date",
+   "fieldtype": "Date",
+   "label": "Previous End Date",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "revised_end_date",
+   "fieldtype": "Date",
+   "label": "Revised End Date",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Sanction Extension",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1,
+ "permissions": []
+}

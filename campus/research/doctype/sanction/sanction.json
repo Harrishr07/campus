@@ -1,0 +1,334 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "title",
+  "company",
+  "research_proposal",
+  "research_centre",
+  "column_break_1",
+  "funding_agency",
+  "funding_scheme",
+  "sanction_order_no",
+  "sanction_order_date",
+  "investigators_section",
+  "principal_investigator",
+  "pi_name",
+  "co_investigators",
+  "duration_section",
+  "start_date",
+  "column_break_2",
+  "end_date",
+  "extensions",
+  "heads_section",
+  "currency",
+  "heads",
+  "total_sanctioned",
+  "instalments_section",
+  "instalments",
+  "total_received",
+  "conditions_section",
+  "conditions",
+  "setup_section",
+  "project",
+  "cost_center",
+  "column_break_3",
+  "liability_account",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "SANC-.YYYY.-",
+   "default": "SANC-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Project Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "research_proposal",
+   "fieldtype": "Link",
+   "label": "Research Proposal",
+   "options": "Research Proposal"
+  },
+  {
+   "fieldname": "research_centre",
+   "fieldtype": "Link",
+   "label": "Research Centre",
+   "options": "Research Centre"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "funding_agency",
+   "fieldtype": "Link",
+   "label": "Funding Agency",
+   "options": "Funding Agency",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_scheme",
+   "fieldtype": "Link",
+   "label": "Funding Scheme",
+   "options": "Funding Scheme",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sanction_order_no",
+   "fieldtype": "Data",
+   "label": "Sanction Order No",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sanction_order_date",
+   "fieldtype": "Date",
+   "label": "Sanction Order Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "investigators_section",
+   "fieldtype": "Section Break",
+   "label": "Investigators"
+  },
+  {
+   "fieldname": "principal_investigator",
+   "fieldtype": "Link",
+   "label": "Principal Investigator",
+   "options": "Employee",
+   "reqd": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "pi_name",
+   "fieldtype": "Data",
+   "label": "PI Name",
+   "fetch_from": "principal_investigator.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "co_investigators",
+   "fieldtype": "Table",
+   "label": "Co-Investigators",
+   "options": "Research Proposal Investigator"
+  },
+  {
+   "fieldname": "duration_section",
+   "fieldtype": "Section Break",
+   "label": "Duration"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date",
+   "reqd": 1,
+   "description": "Revised only through Extend, with the agency's order."
+  },
+  {
+   "fieldname": "extensions",
+   "fieldtype": "Table",
+   "label": "Extensions",
+   "options": "Sanction Extension",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "heads_section",
+   "fieldtype": "Section Break",
+   "label": "Sanctioned Budget"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "heads",
+   "fieldtype": "Table",
+   "label": "Heads (per year)",
+   "options": "Sanction Head",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_sanctioned",
+   "fieldtype": "Currency",
+   "label": "Total Sanctioned",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "instalments_section",
+   "fieldtype": "Section Break",
+   "label": "Instalments"
+  },
+  {
+   "fieldname": "instalments",
+   "fieldtype": "Table",
+   "label": "Instalments",
+   "options": "Sanction Instalment",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_received",
+   "fieldtype": "Currency",
+   "label": "Total Received",
+   "options": "currency",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "conditions_section",
+   "fieldtype": "Section Break",
+   "label": "Conditions"
+  },
+  {
+   "fieldname": "conditions",
+   "fieldtype": "Small Text",
+   "label": "Conditions"
+  },
+  {
+   "fieldname": "setup_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Set-up",
+   "description": "Created when the sanction is submitted (blueprint D9)."
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "liability_account",
+   "fieldtype": "Link",
+   "label": "Grant Liability Account",
+   "options": "Account",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Sanction",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "link_doctype": "Grant Receipt",
+   "link_fieldname": "sanction"
+  }
+ ],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Sanction",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}

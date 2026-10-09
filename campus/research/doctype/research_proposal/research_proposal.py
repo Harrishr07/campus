@@ -16,6 +16,8 @@ from campus.campus_platform.api import ApprovableDocument, is_approved
 from campus.research.api import validate_scheme_usable
 
 OUTCOMES = ("Sanctioned", "Not Sanctioned")
+# Set only by submit_to_agency / record_outcome (db_set); never by saving the submitted form
+AGENCY_FIELDS = ("status", "submission_date", "agency_reference", "outcome", "outcome_date")
 
 
 class ResearchProposal(ApprovableDocument, Document):
@@ -40,6 +42,12 @@ class ResearchProposal(ApprovableDocument, Document):
 			)
 		self.status = "Approved"
 
+	def before_update_after_submit(self):
+		before = self.get_doc_before_save()
+		changed = [field for field in AGENCY_FIELDS if before and str(before.get(field) or "") != str(self.get(field) or "")]
+		if changed:
+			frappe.throw(_("Use Submit to Agency or Record Outcome to change {0}.").format(", ".join(changed)))
+
 	def on_cancel(self):
 		self.db_set("status", "Cancelled")
 
@@ -63,6 +71,12 @@ class ResearchProposal(ApprovableDocument, Document):
 		self.db_set(
 			{"status": "Submitted to Agency", "submission_date": submission_date, "agency_reference": agency_reference}
 		)
+		self.add_comment(
+			"Info",
+			_("Submitted to the agency on {0}, reference {1}.").format(
+				frappe.format(submission_date, "Date"), agency_reference or _("none")
+			),
+		)
 
 	@frappe.whitelist()
 	def record_outcome(self, outcome, outcome_date=None):
@@ -72,7 +86,9 @@ class ResearchProposal(ApprovableDocument, Document):
 			frappe.throw(_("The outcome must be one of: {0}.").format(", ".join(_(o) for o in OUTCOMES)))
 		if self.locked_status() != "Submitted to Agency":
 			frappe.throw(_("Record the outcome once {0} is submitted to the agency.").format(self.name))
-		self.db_set({"status": outcome, "outcome": outcome, "outcome_date": getdate(outcome_date or today())})
+		outcome_date = getdate(outcome_date or today())
+		self.db_set({"status": outcome, "outcome": outcome, "outcome_date": outcome_date})
+		self.add_comment("Info", _("Agency outcome: {0} on {1}.").format(_(outcome), frappe.format(outcome_date, "Date")))
 
 	def locked_status(self):
 		"""The stored status, read under a row lock so two clicks can't both pass the status check."""

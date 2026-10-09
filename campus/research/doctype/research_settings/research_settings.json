@@ -9,6 +9,7 @@
   "grant_liability_parent",
   "grant_income_account",
   "deferred_capital_grant_account",
+  "research_cost_center",
   "column_break_1",
   "interest_treatment",
   "interest_income_account",
@@ -55,6 +56,13 @@
    "description": "Liability holding grants spent on capitalised assets, released in line with depreciation."
   },
   {
+   "fieldname": "research_cost_center",
+   "fieldtype": "Link",
+   "label": "Research Cost Centre",
+   "options": "Cost Center",
+   "description": "Group cost centre under which each sanction gets its own cost centre."
+  },
+  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -88,7 +96,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research Settings",

@@ -7,7 +7,7 @@ import frappe
 from frappe.tests import UnitTestCase
 from frappe.utils import add_days, getdate, today
 
-from campus.campus_platform.approvals import approve, request_approval
+from campus.campus_platform.approvals import approve, reject, request_approval
 from campus.research import proposals
 from campus.research.report.research_proposal_pipeline import research_proposal_pipeline as pipeline
 from campus.research.setup import REMINDER_EVENT, setup_research
@@ -19,6 +19,7 @@ COLLEGE, ABBR = "Research Proposal Test College", "RPTC"
 OTHER, OTHER_ABBR = "Research Proposal Other College", "RPTO"
 REVIEWER = "rp-reviewer@example.com"
 PI_USER = "rp-pi@example.com"
+CO_PI_USER = "rp-copi@example.com"
 
 
 class TestReminderDue(UnitTestCase):
@@ -58,7 +59,8 @@ class TestResearchProposal(CampusTestCase):
 			frappe.get_doc({"doctype": "Gender", "gender": "Male"}).insert()
 		make_user(REVIEWER, [COLLEGE])
 		make_user(PI_USER, [COLLEGE])
-		for user in (REVIEWER, PI_USER):
+		make_user(CO_PI_USER, [COLLEGE])
+		for user in (REVIEWER, PI_USER, CO_PI_USER):
 			frappe.get_doc("User", user).add_roles("Principal")
 
 	def setUp(self):
@@ -76,7 +78,7 @@ class TestResearchProposal(CampusTestCase):
 		self.scheme = self.make_scheme("RPT Core Grant", [self.consumables, self.travel])
 		self.call = self.make_call(add_days(today(), 3))
 		self.pi = self.make_employee("Pi", COLLEGE, user=PI_USER)
-		self.co_pi = self.make_employee("CoPi", COLLEGE)
+		self.co_pi = self.make_employee("CoPi", COLLEGE, user=CO_PI_USER)
 
 	# fixtures
 	def make_settings(self, company, abbr):
@@ -282,3 +284,66 @@ class TestResearchProposal(CampusTestCase):
 		self.assertEqual(stages[submitted.name], "Submitted to Agency")
 		self.assertEqual(pipeline.execute({"company": OTHER})[1], [])
 		self.assertEqual(pipeline.execute({})[1], [])
+
+	# T13 review carry-overs (P3-T14)
+	def test_principal_reads_only_own_college_and_pi_reads_a_colleague_named_proposal(self):
+		other_consumables = make_account(OTHER, OTHER_ABBR, "RP Consumables", "Indirect Expenses")
+		shared = self.make_head("RPT Shared Head", [(COLLEGE, frappe.db.get_value("Grant Budget Head Account", {"parent": self.consumables}, "account")), (OTHER, other_consumables)])
+		self.make_settings(OTHER, OTHER_ABBR)
+		other_call = self.make_call(add_days(today(), 3), scheme=self.make_scheme("RPT Shared Grant", [shared]))
+		elsewhere = self.proposal(
+			company=OTHER, call=other_call, principal_investigator=self.make_employee("Far", OTHER), co_investigators=[],
+			budget=[(shared, 1000)],
+		)  # fmt: skip
+		colleague = self.make_employee("Colleague", COLLEGE)
+		named = self.proposal(co_investigators=[{"employee": colleague}])  # PI_USER's employee is the PI
+		colleagues_own = self.proposal(principal_investigator=colleague, co_investigators=[])
+		if not frappe.db.exists("User Permission", {"user": PI_USER, "allow": "Employee"}):
+			frappe.get_doc({"doctype": "User Permission", "user": PI_USER, "allow": "Employee", "for_value": self.pi}).insert()
+
+		for user in (REVIEWER, PI_USER):
+			frappe.set_user(user)
+			visible = set(frappe.get_list("Research Proposal", pluck="name"))
+			self.assertNotIn(elsewhere.name, visible, user)
+			self.assertFalse(frappe.has_permission("Research Proposal", "read", elsewhere.name), user)
+			self.assertTrue({named.name, colleagues_own.name} <= visible, user)
+			self.assertTrue(frappe.has_permission("Research Proposal", "read", named.name), user)
+			frappe.set_user("Administrator")
+
+	def test_co_investigator_cannot_review_the_proposal(self):
+		proposal = self.proposal()
+		request = request_approval("Research Proposal", proposal.name)
+		self.assertNotIn(CO_PI_USER, frappe.get_all("Approval Request Approver", {"parent": request}, pluck="user"))
+		frappe.set_user(CO_PI_USER)  # a Principal, but a co-PI of the proposal
+		with self.assertRaisesRegex(frappe.PermissionError, "own approval request"):
+			approve(request, None)
+
+	def test_no_reminder_once_internal_review_rejected_it(self):
+		proposal = self.proposal()
+		request = request_approval("Research Proposal", proposal.name)
+		frappe.set_user(REVIEWER)
+		reject(request, "Out of scope")
+		frappe.set_user("Administrator")
+		proposals.send_deadline_reminders()
+		self.assertEqual(self.reminder_logs(proposal), [])
+
+	def test_agency_submission_and_outcome_leave_an_audit_comment(self):
+		proposal = self.approved(self.proposal())
+		proposal.submit_to_agency(agency_reference="DST/RPT/9")
+		proposal.reload().record_outcome("Not Sanctioned")
+		comments = frappe.get_all(
+			"Comment", {"reference_doctype": "Research Proposal", "reference_name": proposal.name, "comment_type": "Info"},
+			pluck="content",
+		)  # fmt: skip
+		self.assertTrue(any("DST/RPT/9" in c for c in comments), comments)
+		self.assertTrue(any("Not Sanctioned" in c for c in comments), comments)
+
+	def test_agency_fields_cannot_be_edited_after_submit(self):
+		proposal = self.approved(self.proposal())
+		proposal.status = "Sanctioned"
+		with self.assertRaisesRegex(frappe.ValidationError, "Submit to Agency"):
+			proposal.save()
+		proposal.reload()
+		proposal.outcome = "Sanctioned"
+		with self.assertRaisesRegex(frappe.ValidationError, "Submit to Agency"):
+			proposal.save()
