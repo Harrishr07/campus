@@ -142,7 +142,12 @@ def registered_final_action(method):
 def requesters(request, doc=None):
 	"""Users who may not approve their own request: the requester, the document owner and any users the document
 	names in an `approval_excluded_users()` method (e.g. a question paper's setters and editors)."""
-	doc = doc or frappe.get_doc(request.reference_doctype, request.reference_name)
+	if not doc:
+		try:
+			doc = frappe.get_doc(request.reference_doctype, request.reference_name)
+		except frappe.DoesNotExistError:
+			frappe.clear_last_message()
+			return {u for u in (request.requested_by,) if u}
 	excluded = {request.requested_by, doc.owner}
 	if hasattr(doc, "approval_excluded_users"):
 		excluded |= set(doc.approval_excluded_users())

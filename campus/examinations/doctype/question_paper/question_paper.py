@@ -14,6 +14,7 @@ Release At is always the slot start of the course in the session's schedule.
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 from campus.campus_platform import approval_rules
 from campus.campus_platform.approval_engine import find_policy, latest_request
@@ -80,15 +81,17 @@ class QuestionPaper(ApprovableDocument, Document):
 		nominations = frappe.get_all("QP Setter Nomination", {"exam_session": self.exam_session, "course": self.course}, pluck="name")
 		employees = frappe.get_all("QP Nomination Setter", {"parent": ["in", nominations or [""]]}, pluck="employee")
 		setters = frappe.get_all("Employee", {"name": ["in", employees or [""]], "user_id": ["is", "set"]}, pluck="user_id")
-		return {*setters, *(self.editors or "").split()}
+		items = [q.question_item for q in self.questions] or [""]
+		item_editors = frappe.get_all("Question Bank Item", {"name": ["in", items]}, pluck="editors")
+		return {*setters, *(self.editors or "").split(), *" ".join(e or "" for e in item_editors).split()}
 
 	def record_editor(self):
+		"""Server-owned: the saved editors, plus the session user when the content changed; a client value is ignored."""
 		before = self.get_doc_before_save()
-		if before and content_signature(before) == content_signature(self):
-			return
-		editors = (self.editors or "").split()
-		if frappe.session.user not in editors:
-			self.editors = "\n".join([*editors, frappe.session.user])
+		editors = (before.editors or "").split() if before else []
+		if (not before or content_signature(before) != content_signature(self)) and frappe.session.user not in editors:
+			editors.append(frappe.session.user)
+		self.editors = "\n".join(editors) or None
 
 	def refuse_change_once_withdrawn(self):
 		before = self.get_doc_before_save()
@@ -98,7 +101,11 @@ class QuestionPaper(ApprovableDocument, Document):
 	def validate_questions(self):
 		seen = set()
 		for row in self.questions:
-			course, company, disabled = frappe.db.get_value("Question Bank Item", row.question_item, ["course", "company", "disabled"])
+			course, company, disabled, retired = frappe.db.get_value(
+				"Question Bank Item", row.question_item, ["course", "company", "disabled", "retired_by_withdrawal"]
+			)
+			if retired:
+				frappe.throw(_("Row {0}: {1} was on withdrawn paper {2} and is retired.").format(row.idx, row.question_item, retired))
 			if course != self.course or company != self.company:
 				frappe.throw(_("Row {0}: {1} is not a question of {2} in {3}.").format(row.idx, row.question_item, self.course, self.company))
 			if disabled:
@@ -116,6 +123,8 @@ class QuestionPaper(ApprovableDocument, Document):
 	def validate_sealable(self):
 		if not self.release_at:
 			frappe.throw(_("Set Release At before approving the paper."))
+		if now_datetime() >= window_for(self.release_at)[0]:
+			frappe.throw(_("The download window of this paper has already opened; it is too late to seal it."))
 		if not self.set_a_file:
 			frappe.throw(_("Attach the Set A paper before approving."))
 		for field in PAPER_FILE_FIELDS.values():

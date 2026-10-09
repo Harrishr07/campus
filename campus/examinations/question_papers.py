@@ -351,8 +351,25 @@ WITHDRAW_ROLES = ("COE", "System Manager")
 def withdraw(question_paper, reason):
 	"""Withdraw a paper for good (COE or System Manager of the paper's college, any time, with a reason): a sealed
 	paper is cancelled and stays closed, a draft is closed."""
+	withdraw_doc(frappe.get_doc(QUESTION_PAPER, question_paper), reason)
+
+
+@frappe.whitelist(methods=["POST"])
+def withdraw_course_paper(exam_session, course, reason):
+	"""Withdraw the live papers of `course` in `exam_session` without opening them (COE or System Manager of the
+	session's college, with a reason); returns their names."""
+	company = frappe.db.get_value("Exam Session", exam_session, "company")
+	if not may_withdraw(frappe.session.user, company):
+		raise frappe.PermissionError(_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(company))
+	names = frappe.get_all(QUESTION_PAPER, {"exam_session": exam_session, "course": course, "docstatus": ["<", 2],
+		"moderation_status": ["!=", WITHDRAWN]}, pluck="name", order_by="name")  # fmt: skip
+	for name in names:
+		withdraw_doc(frappe.get_doc(QUESTION_PAPER, name), reason)
+	return names
+
+
+def withdraw_doc(doc, reason):
 	reason = (reason or "").strip()
-	doc = frappe.get_doc(QUESTION_PAPER, question_paper)
 	if not may_withdraw(frappe.session.user, doc.company):
 		raise frappe.PermissionError(_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(doc.company))
 	if not reason:
@@ -361,12 +378,19 @@ def withdraw(question_paper, reason):
 		return
 	doc.flags.ignore_permissions = doc.flags.ignore_approval_lock = True
 	if doc.docstatus == 1:
+		retire_questions(doc)
 		doc.cancel()
 		doc.db_set("withdrawal_reason", reason)
 	else:
 		doc.moderation_status, doc.withdrawal_reason = WITHDRAWN, reason
 		doc.save()
 	log_access(doc, "Withdraw", True, reason)
+
+
+def retire_questions(doc):
+	"""The questions of a withdrawn sealed paper may have leaked: they never go on another paper."""
+	for item in {q.question_item for q in doc.questions}:
+		frappe.db.set_value(BANK_ITEM, item, {"disabled": 1, "retired_by_withdrawal": doc.name})
 
 
 def may_withdraw(user, company):

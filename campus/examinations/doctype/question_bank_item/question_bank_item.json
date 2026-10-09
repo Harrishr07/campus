@@ -13,7 +13,10 @@
   "difficulty",
   "disabled",
   "section_question",
-  "question"
+  "question",
+  "section_audit",
+  "editors",
+  "retired_by_withdrawal"
  ],
  "fields": [
   {
@@ -82,11 +85,32 @@
    "fieldtype": "Text Editor",
    "label": "Question",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_audit",
+   "fieldtype": "Section Break",
+   "label": "Audit",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "editors",
+   "fieldtype": "Small Text",
+   "label": "Editors",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Users who wrote this question; they never approve a paper that uses it."
+  },
+  {
+   "fieldname": "retired_by_withdrawal",
+   "fieldtype": "Data",
+   "label": "Retired by Withdrawal of",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:00:00.000000",
+ "modified": "2026-10-09 03:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Question Bank Item",

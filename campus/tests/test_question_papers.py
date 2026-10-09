@@ -144,9 +144,16 @@ class QuestionPaperFixture(CampusTestCase):
 		return doc
 
 	def paper(self, release_in_minutes=120, approve=True, items=None, sets=("A", "B"), session=None):
-		doc = self.draft(release_in_minutes, items, sets, session)
+		"""An approved paper whose slot starts `release_in_minutes` from now. Approval is refused once the window is
+		opening, so a paper meant to be inside (or past) its window is approved ahead and then moved in time."""
+		ahead = release_in_minutes < 60 and approve
+		doc = self.draft(240 if ahead else release_in_minutes, items, sets, session)
 		if approve:
 			self.approve(doc)
+		if ahead:
+			release = add_to_date(now_datetime(), minutes=release_in_minutes)
+			frappe.db.set_value(QP, doc.name, {"release_at": release, "download_opens_at": add_to_date(release, minutes=-30),
+				"download_closes_at": add_to_date(release, minutes=180)}, update_modified=False)  # fmt: skip
 		return frappe.get_doc(QP, doc.name)
 
 	def approve(self, doc, approver=EC_USER):
@@ -811,3 +818,71 @@ class TestRound2(QuestionPaperFixture):
 			os.environ.pop("CAMPUS_QP_KEY", None)
 			self.assertFalse(question_paper_setup.ensure_key())
 		update.assert_not_called()
+
+
+class TestRound3(QuestionPaperFixture):
+	def test_editors_are_kept_by_the_server(self):
+		"""I-D bypass 1: a client cannot clear or rewrite the editors."""
+		doc = self.draft()
+		frappe.set_user(EC_USER)
+		doc = frappe.get_doc(QP, doc.name)
+		doc.blueprint[0].max_percent = 65
+		doc.editors = ""
+		doc.save()
+		frappe.set_user("Administrator")
+		self.assertIn(EC_USER, doc.editors.split())
+		doc = frappe.get_doc(QP, doc.name)
+		doc.editors = "someone@example.com"
+		doc.save()
+		self.assertEqual(set(frappe.db.get_value(QP, doc.name, "editors").split()), {"Administrator", EC_USER})
+
+	def test_an_editor_of_a_bank_question_on_the_paper_cannot_approve(self):
+		"""I-D bypass 2: editing the question text of the paper's items is editing the paper."""
+		doc = self.draft()
+		frappe.set_user(EC_USER)
+		item = frappe.get_doc("Question Bank Item", self.items[0])
+		item.question = "Rewritten by the moderator"
+		item.save()
+		frappe.set_user("Administrator")
+		self.assertIn(EC_USER, frappe.db.get_value("Question Bank Item", item.name, "editors").split())
+		request = approvals.request_approval(QP, doc.name)
+		frappe.set_user(EC_USER)
+		with self.assertRaises(frappe.PermissionError):
+			approvals.approve(request)
+		frappe.set_user(SM_EC_USER)
+		approvals.approve(request)
+		frappe.set_user("Administrator")
+
+	def test_withdrawing_a_sealed_paper_retires_its_bank_items(self):
+		paper = self.paper(release_in_minutes=120).name
+		self.withdraw(paper)
+		for item in self.items:
+			self.assertEqual(frappe.db.get_value("Question Bank Item", item, ["disabled", "retired_by_withdrawal"]), (1, paper))
+		with self.assertRaises(frappe.ValidationError):
+			self.draft(session=self.session_2)  # a replacement paper cannot reuse the leaked questions
+		item = frappe.get_doc("Question Bank Item", self.items[0])
+		item.disabled = 0
+		with self.assertRaises(frappe.ValidationError):
+			item.save()
+
+	def test_the_coe_withdraws_a_course_paper_without_opening_it(self):
+		paper = self.paper(release_in_minutes=120).name
+		frappe.set_user(EC_USER)
+		with self.assertRaises(frappe.PermissionError):
+			question_papers.withdraw_course_paper(self.session.name, COURSE, "Leaked")
+		frappe.set_user(COE_USER)
+		self.assertEqual(question_papers.withdraw_course_paper(self.session.name, COURSE, "Leaked"), [paper])
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value(QP, paper, ["docstatus", "withdrawal_reason"]), (2, "Leaked"))
+		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[question_papers.withdraw_course_paper], ["POST"])
+
+	def test_a_paper_whose_window_is_opening_cannot_be_approved(self):
+		doc = self.draft(release_in_minutes=20)  # the 30-minute lead has already begun
+		with self.assertRaises(frappe.ValidationError):
+			approvals.request_approval(QP, doc.name)
+
+	def test_requesters_survive_a_deleted_document(self):
+		from campus.campus_platform.approval_engine import requesters
+
+		request = frappe._dict(reference_doctype=QP, reference_name="QP-MISSING", requested_by=EC_USER)
+		self.assertEqual(requesters(request), {EC_USER})

@@ -135,7 +135,7 @@ Only users with the **Exam Confidential** role see Question Bank Items, QP Sette
    - the pattern: at least one CO row and one Bloom row, each with min-max % of the marks;
    - the questions for sets A and B, and the PDF of each set. A PDF is encrypted when the paper is saved.
    - Release At is always the slot start from the session's schedule.
-4. **Request Approval.** The paper is refused if it is off its blueprint. A moderator approves it. A moderator is never the requester, the owner, a nominated setter, or anyone who changed the questions, pattern or files.
+4. **Request Approval** before the download window opens. The paper is refused if it is off its blueprint or its window has begun. A moderator approves it. A moderator is never the requester, the owner, a nominated setter, anyone who changed the questions, pattern or files, or anyone who wrote one of its bank questions.
 5. **Approval seals the paper.**
    - It fixes the download window: from the lead before the slot start until the slot ends.
    - It fixes each sealed file's name and SHA-256.
@@ -150,6 +150,9 @@ Only users with the **Exam Confidential** role see Question Bank Items, QP Sette
 ## Withdraw
 - The COE or a System Manager of the paper's college can withdraw a paper at any time, and must give a reason.
 - A withdrawn sealed paper stays closed for good. It is never downloadable, and it can never be amended, copied or deleted.
+- Withdraw from the **Exam Session** form (**Question Paper > Withdraw Question Paper**): pick the course and give the reason. You never open the paper.
+- Withdrawing a sealed paper retires its bank questions: they are disabled for good and no other paper can use them.
+- If an exam is postponed, withdraw its sealed paper and seal a new one. The download window fixed at approval does not follow schedule changes.
 
 ## Audit
 Every open, list, download, print and withdrawal is logged in the **QP Access Log**, allowed or denied, with the user, time and IP. The log rows cannot be changed or deleted.

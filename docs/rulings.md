@@ -112,6 +112,8 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 4 | Download lead | At most 120 minutes; release_at is always the slot start |
 | 5 | Withdrawal | COE or System Manager of the paper's company, with a reason; a withdrawn sealed paper stays closed for good |
 | 6 | Deferred | Encrypting Question Bank question text at rest; unsealing a paper for edits; portal access for setters |
+| 7 | Withdrawal retires the bank items (fix round 3) | Withdrawing a sealed paper disables its bank items for good (retired_by_withdrawal); a replacement paper cannot use them |
+| 8 | Deferred (fix round 3) | A denial inside a request that rolls back only to a savepoint (not the whole transaction) is not replayed; the download window snapshot does not follow a later schedule change: on postponement, withdraw the paper and seal a new one |
 
 ### P2-T21 fix round 1: withdrawal, break of study, rejoin (coordinator rulings)
 | # | Item | Ruling |
