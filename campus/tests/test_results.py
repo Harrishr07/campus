@@ -242,7 +242,7 @@ class TestResultRun(ExamFixture):
 		self.assertEqual(self.grades(ab)["EXM LB"], ("A", 8, "Pass"))
 		self.assertEqual(ab.sgpa, 8.67)  # (2*8 + 4*9) / 6: AB and the failed course are outside the credits
 
-	def test_rerun_replaces_the_result_and_a_published_session_is_refused(self):
+	def test_rerun_replaces_the_result_before_publication(self):  # after publication: test_result_processing.TestVersions
 		names = self.run_session()
 		entry = frappe.get_doc("Mark Sheet Entry", {"course_offering": self.offerings22["EXM FA"]})
 		row = next(r for r in entry.marks if r.student == self.s22.name)
@@ -253,12 +253,6 @@ class TestResultRun(ExamFixture):
 		doc = self.result(self.s22)
 		self.assertEqual(len(doc.courses), 4)
 		self.assertEqual(self.grades(doc)["EXM FA"], ("A", 8, "Pass"))
-		self.publish(add_days(now_datetime(), -1))
-		with self.assertRaises(frappe.ValidationError):
-			results.compute_student_result(self.s22.name, self.session.name)
-		frappe.set_user(COE_USER)
-		with self.assertRaises(frappe.ValidationError):
-			api.run_results(self.session.name, PROGRAM)
 
 	def test_run_results_queues_one_item_per_enrolled_student_and_needs_the_coe_role(self):
 		frappe.set_user(FACULTY)

@@ -7,6 +7,9 @@ deadline unless a CIA Unlock Request is approved. Who may edit: campus.examinati
 
 M06-04: a row whose ESE came from the script's valuations (campus.examinations.valuation) keeps it; only the
 valuation write-back may change it.
+
+M06-05: besides the offering's members, a row may be a student whose Exam Registration of the session lists the
+sheet's course as an Arrear; the Result Run grades that row with the CIA the regulation carries forward.
 """
 
 import frappe
@@ -15,6 +18,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from campus.examinations import cia
+from campus.examinations.arrears import arrear_writers
 from campus.examinations.courses import offering_course, student_limits
 
 MARKS_ENTRY, PUBLISHED = "Marks Entry", "Published"
@@ -98,7 +102,7 @@ class MarkSheetEntry(Document):
 			)
 
 	def validate_marks(self, course):
-		members = set(student_group_students(self.course_offering))
+		members = set(student_group_students(self.course_offering)) | arrear_writers(self.exam_session, course["course"])
 		seen = set()
 		for row in self.marks:
 			if row.student not in members or row.student in seen:

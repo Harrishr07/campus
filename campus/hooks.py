@@ -385,6 +385,7 @@ scheduler_events = {
 			"campus.campus_messaging.delivery.dispatch_due",
 			"campus.campus_messaging.doctype.broadcast.broadcast.release_due",
 			"campus.campus_messaging.doctype.circular.circular.publish_due",
+			"campus.examinations.publication.notify_released_results",
 		]
 	},
 }

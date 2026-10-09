@@ -1,6 +1,7 @@
 frappe.ui.form.on("Exam Session", {
 	refresh(frm) {
-		if (frm.is_new() || frm.doc.status === "Published") return;
+		if (frm.is_new()) return;
+		// after publication a re-run makes new result versions (with a change log) instead of replacing them
 		frm.add_custom_button(__("Run Results"), () => {
 			frappe.prompt(
 				{ fieldname: "program", fieldtype: "Link", options: "Program", label: __("Program"), reqd: 1 },
@@ -9,6 +10,21 @@ frappe.ui.form.on("Exam Session", {
 						() => frappe.show_alert({ message: __("Result Run queued"), indicator: "green" })
 					),
 				__("Run Results")
+			);
+		});
+		if (frm.doc.status === "Published") return;
+		frm.add_custom_button(__("Publish Results"), () => {
+			frappe.prompt(
+				[
+					{ fieldname: "passing_board_meeting", fieldtype: "Link", options: "Body Meeting", label: __("Passing Board Meeting"), reqd: 1 },
+					{ fieldname: "resolution_no", fieldtype: "Data", label: __("Resolution No"), reqd: 1 },
+					{ fieldname: "release_at", fieldtype: "Datetime", label: __("Release At"), reqd: 1 },
+				],
+				(values) =>
+					frappe
+						.xcall("campus.examinations.publication.publish_results", { exam_session: frm.doc.name, ...values })
+						.then(() => frm.reload_doc()),
+				__("Publish Results")
 			);
 		});
 		frm.add_custom_button(__("Create Exam Registrations"), () => {

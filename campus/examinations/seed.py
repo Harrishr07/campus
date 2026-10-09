@@ -172,3 +172,22 @@ def seed_regulation(regulation, code):
 	for template in cia_templates(regulation, code):
 		if not frappe.db.exists("CIA Component Template", {"regulation": regulation, "course_type": template["course_type"]}):
 			frappe.get_doc(template).insert(ignore_permissions=True)
+
+
+DISTINCTION = "First Class with Distinction"
+LATERAL_DISTINCTION_YEARS = {"R2022": 4}  # regulation code -> lateral-entry years of its distinction rows
+
+
+def fill_lateral_distinction_years():
+	"""Classification Rules seeded before max_years_lateral existed keep 0 there (the seed never edits a record, and
+	Effective ones are locked): give the distinction rows of each LATERAL_DISTINCTION_YEARS regulation (by code, the
+	company suffix ignored) their lateral-entry limit. Rows already set are left alone. DML only; run by a patch."""
+	for code, years in LATERAL_DISTINCTION_YEARS.items():
+		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name")
+		rules = frappe.get_all("Classification Rule", {"regulation": ["in", regulations or [""]]}, pluck="name")
+		for name in frappe.get_all(
+			"Classification Rule Class",
+			{"parenttype": "Classification Rule", "parent": ["in", rules or [""]], "class_name": DISTINCTION, "max_years_lateral": 0},
+			pluck="name",
+		):
+			frappe.db.set_value("Classification Rule Class", name, "max_years_lateral", years, update_modified=False)

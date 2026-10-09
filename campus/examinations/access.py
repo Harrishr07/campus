@@ -5,8 +5,9 @@ instructors of the offering (Student Group instructor -> Instructor.employee -> 
 staff roles read all, an HOD reads the offerings of the department's programmes. Mark Sheet Entry (M06-04
 hardening) is narrower: only COE, System Manager and Dean Academics read every sheet; Academics Users,
 instructors and HODs read the sheets of the offerings they teach or their department's. The session status and
-CIA lock rules are the controllers'. Results: staff roles, else the student and guardians linked to the student,
-and only once the session is Published and now >= publish_at.
+CIA lock rules are the controllers'. Results: COE, System Manager and Dean Academics at any time; the other staff
+roles, and the student and guardians linked to the student (latest version only), once the session is Published
+and now >= publish_at (the release).
 """
 
 import frappe
@@ -18,6 +19,9 @@ STAFF_ROLES = (COE_ROLE, "System Manager", "Dean Academics", "Academics User")
 READ_TYPES = ("read", "print", "email", "export", "report", "select")
 OFFERING_SCOPED = ("Mark Sheet Entry", "CIA Schedule", "CIA Unlock Request")
 SHEET_READ_ALL_ROLES = (COE_ROLE, "System Manager", "Dean Academics")
+# Before release a Student Result (its ESE included) is read by these alone: other staff wait for publication, so
+# no examiner or teacher can tie marks to students early (P2-T18 anonymity). Dean Academics sits on the Passing Board.
+RESULT_PRE_RELEASE_ROLES = SHEET_READ_ALL_ROLES
 
 
 def read_all_roles(doctype):
@@ -256,27 +260,38 @@ def published_sessions():
 
 
 def result_permission_query(user=None):
+	"""Before release only RESULT_PRE_RELEASE_ROLES read results (every version); other staff read released sessions;
+	students and guardians the latest version of their own released results."""
 	user = user or frappe.session.user
-	if has_any_role(user, STAFF_ROLES):
+	if has_any_role(user, RESULT_PRE_RELEASE_ROLES):
 		return ""
-	students, sessions = students_of(user), published_sessions()
-	if not (students and sessions):
+	sessions = published_sessions()
+	if not sessions:
 		return "1=0"
-	return "`tabStudent Result`.student in ({}) and `tabStudent Result`.exam_session in ({})".format(
-		", ".join(frappe.db.escape(s) for s in students), ", ".join(frappe.db.escape(s) for s in sessions)
-	)
+	released = "`tabStudent Result`.exam_session in ({})".format(", ".join(frappe.db.escape(s) for s in sessions))
+	if has_any_role(user, STAFF_ROLES):
+		return released
+	students = students_of(user)
+	if not students:
+		return "1=0"
+	own = ", ".join(frappe.db.escape(s) for s in students)
+	return f"`tabStudent Result`.student in ({own}) and {released} and `tabStudent Result`.is_latest = 1"
 
 
 def result_has_permission(doc, ptype=None, user=None):
-	"""Staff keep their role permissions; everyone else reads own/guarded published results only.
+	"""Deny-only: RESULT_PRE_RELEASE_ROLES keep their role permissions; other staff read released sessions; everyone
+	else reads the latest version of their own / guarded released results only.
 
 	A controller hook can only deny (a falsy result denies), so allowed users get True."""
 	user = user or frappe.session.user
-	if has_any_role(user, STAFF_ROLES):
+	if has_any_role(user, RESULT_PRE_RELEASE_ROLES):
 		return True
+	released = doc.exam_session in published_sessions()
+	if has_any_role(user, STAFF_ROLES):
+		return released
 	if ptype and ptype not in READ_TYPES:
 		return False
-	return doc.student in students_of(user) and doc.exam_session in published_sessions()
+	return released and bool(doc.get("is_latest")) and doc.student in students_of(user)
 
 
 # ---- Hall Ticket --------------------------------------------------------------------------

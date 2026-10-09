@@ -142,6 +142,17 @@
   {
    "child": 1,
    "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Mark Moderation",
+   "link_to": "Mark Moderation",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "filters": "[[\"Bulk Run\",\"run_type\",\"=\",\"Result Run\"]]",
    "indent": 0,
    "keep_closed": 0,
@@ -362,6 +373,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Grace Mark Audit",
+   "link_to": "Grace Mark Audit",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "settings",
@@ -384,7 +406,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 23:30:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

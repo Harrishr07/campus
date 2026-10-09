@@ -74,7 +74,9 @@ def appeared_results(company, academic_year, department=None):
 	)
 	if not sessions:
 		return {}
-	results = frappe.get_all("Student Result", program_filter({"exam_session": ["in", sessions]}, department), pluck="name")
+	results = frappe.get_all(
+		"Student Result", program_filter({"exam_session": ["in", sessions], "is_latest": 1}, department), pluck="name"
+	)  # the latest version of each result (P2-T19)
 	rows = frappe.get_all(
 		"Student Result Course",
 		{"parenttype": "Student Result", "parent": ["in", results or [""]]},

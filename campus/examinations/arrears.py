@@ -5,6 +5,8 @@ Only published Student Results count, and a later Pass of a course clears it. Tw
   Fail (U), SA shortage of attendance, AB absent or WD withdrawn;
 - a reappearance course (reappearance_courses, for exam registration, M06-01) is the subset written again as an
   arrear in a later session: Fail, AB and WD. An SA course is not one; the student redoes the course first.
+Only the latest version of a Student Result counts (P2-T19 versions). arrear_writers: the students registered
+to write a course as an arrear in a session (they may have a row on the course's Mark Sheet Entry).
 """
 
 import frappe
@@ -42,11 +44,24 @@ def published_outcomes(student):
 		.join(session)
 		.on(session.name == result.exam_session)
 		.select(course_row.course, course_row.result)
-		.where(result.student == student)
+		.where((result.student == student) & (result.is_latest == 1))
 		.where(session.status == "Published")
 		.where(session.publish_at <= now_datetime())
 		.orderby(session.publish_at)
 		.orderby(result.creation)
 		.orderby(course_row.idx)
 		.run()
+	)
+
+
+def arrear_writers(exam_session, course):
+	"""Students whose Exam Registration of the session lists `course` as an Arrear."""
+	registration, row = frappe.qb.DocType("Exam Registration"), frappe.qb.DocType("Exam Registration Course")
+	return set(
+		frappe.qb.from_(registration)
+		.join(row)
+		.on((row.parent == registration.name) & (row.parenttype == "Exam Registration"))
+		.select(registration.student)
+		.where((registration.exam_session == exam_session) & (row.course == course) & (row.kind == "Arrear"))
+		.run(pluck=True)
 	)

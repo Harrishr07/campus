@@ -1,7 +1,8 @@
 """M12-02, M06-05 Exam Rule Set: per course type the CIA/ESE maxima, pass thresholds, the attempt rule
 (from attempt N the ESE alone decides) and revaluation eligibility; for the regulation the CIA
 carry-forward, absence handling, maximum attempts, the Internal Only pass % and (M06-04) the third-valuation
-difference and final ESE mark rule. Locked once the regulation is Effective."""
+difference and final ESE mark rule; (M06-05) whether grace marks are allowed and their limits. Locked once the
+regulation is Effective."""
 
 import frappe
 from frappe import _
@@ -35,6 +36,8 @@ class ExamRuleSet(Document):
 				self.set(field, self.meta.get_field(field).default)
 		if not 0 < flt(self.third_valuation_diff_pct) <= 100:
 			frappe.throw(_("The third valuation difference % lies above 0 and up to 100."))
+		if self.grace_allowed and flt(self.grace_max_per_course) <= 0:
+			frappe.throw(_("Set the maximum grace marks per course, or turn grace marks off."))
 
 	def on_trash(self):
 		validate_rule_delete(self)

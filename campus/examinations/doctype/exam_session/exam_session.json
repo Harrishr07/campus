@@ -9,6 +9,9 @@
   "is_final_year",
   "status",
   "publish_at",
+  "passing_board_meeting",
+  "passing_board_resolution",
+  "results_notified_on",
   "section_registration",
   "registration_opens",
   "registration_closes",
@@ -64,6 +67,27 @@
    "description": "Students and guardians see results only from this time."
   },
   {
+   "fieldname": "passing_board_meeting",
+   "fieldtype": "Link",
+   "label": "Passing Board Meeting",
+   "options": "Body Meeting",
+   "read_only": 1,
+   "description": "Set by Publish Results: the quorate Passing Board meeting whose resolution approved the results."
+  },
+  {
+   "fieldname": "passing_board_resolution",
+   "fieldtype": "Data",
+   "label": "Passing Board Resolution",
+   "read_only": 1
+  },
+  {
+   "fieldname": "results_notified_on",
+   "fieldtype": "Datetime",
+   "label": "Results Notice Sent On",
+   "read_only": 1,
+   "description": "When the release notice to students and guardians was queued (at Publish At)."
+  },
+  {
    "fieldname": "section_registration",
    "fieldtype": "Section Break",
    "label": "Registration and Exam Dates"
@@ -113,7 +137,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 12:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Session",

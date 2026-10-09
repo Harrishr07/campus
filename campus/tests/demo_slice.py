@@ -416,6 +416,7 @@ def publish_results(session, students):
 		results.compute_student_result(student, session)
 	doc.status = "Published"
 	doc.publish_at = add_days(now_datetime(), -1)
+	doc.flags.passing_board_approval = True  # the thin-slice demo has no Passing Board meeting (P2-T19 publish_results)
 	doc.save(ignore_permissions=True)
 
 

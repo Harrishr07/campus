@@ -2,6 +2,9 @@
 
 M06-01 adds the registration window (opens, closes = last day without a late fee), the exam dates and the
 Exam Schedule (one row per course: date and slot, inside the exam dates).
+
+M06-06: it becomes Published only through campus.examinations.publication.publish_results, on the approving
+resolution of a quorate Passing Board meeting; publish_at is the release time.
 """
 
 import frappe
@@ -17,6 +20,8 @@ class ExamSession(Document):
 			frappe.throw(_("A published Exam Session cannot be reopened."))
 		if before and before.status == "Published" and get_datetime(before.publish_at) != get_datetime(self.publish_at):
 			frappe.throw(_("The publication time of a published Exam Session cannot change."))
+		if self.status == "Published" and not (before and before.status == "Published") and not self.flags.passing_board_approval:
+			frappe.throw(_("Results are published with Publish Results, on the approving resolution of a Passing Board meeting."))
 		if frappe.db.exists(
 			"Exam Session", {"company": self.company, "academic_term": self.academic_term, "name": ["!=", self.name]}
 		):

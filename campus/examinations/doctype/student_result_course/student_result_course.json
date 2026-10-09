@@ -13,7 +13,14 @@
   "total",
   "grade",
   "grade_point",
-  "result"
+  "result",
+  "kind",
+  "attempt",
+  "moderation",
+  "grace",
+  "grace_rule",
+  "grading_method",
+  "in_gpa"
  ],
  "fields": [
   {
@@ -86,11 +93,58 @@
    "options": "Pass\nFail\nSA\nAB\nWD",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Data",
+   "label": "Kind",
+   "read_only": 1,
+   "description": "Current or Arrear."
+  },
+  {
+   "fieldname": "attempt",
+   "fieldtype": "Int",
+   "label": "Attempt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "moderation",
+   "fieldtype": "Float",
+   "label": "Moderation",
+   "read_only": 1,
+   "description": "ESE marks from the approved Mark Moderation of the course."
+  },
+  {
+   "fieldname": "grace",
+   "fieldtype": "Float",
+   "label": "Grace",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grace_rule",
+   "fieldtype": "Link",
+   "label": "Grace Rule",
+   "options": "Exam Rule Set",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grading_method",
+   "fieldtype": "Data",
+   "label": "Grading Method",
+   "read_only": 1
+  },
+  {
+   "fieldname": "in_gpa",
+   "fieldtype": "Check",
+   "label": "Counts in GPA",
+   "default": "1",
+   "read_only": 1,
+   "description": "Off for a course category the Grading Scheme excludes from SGPA and CGPA (e.g. mandatory courses)."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Student Result Course",

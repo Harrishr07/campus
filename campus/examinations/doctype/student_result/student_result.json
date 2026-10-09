@@ -14,7 +14,16 @@
   "courses",
   "sgpa",
   "cgpa",
-  "credits_earned"
+  "credits_earned",
+  "result",
+  "arrear_count",
+  "classification",
+  "version_section",
+  "version",
+  "is_latest",
+  "previous_version",
+  "column_break_version",
+  "change_log"
  ],
  "fields": [
   {
@@ -102,11 +111,73 @@
    "fieldtype": "Float",
    "label": "Credits Earned",
    "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "\nPass\nReappear",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Pass when every course passed."
+  },
+  {
+   "fieldname": "arrear_count",
+   "fieldtype": "Int",
+   "label": "Arrears",
+   "read_only": 1,
+   "description": "Courses not yet passed after this result, earlier sessions included."
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Data",
+   "label": "Classification",
+   "read_only": 1,
+   "description": "Final-year session with no arrears: the class by the regulation's Classification Rule."
+  },
+  {
+   "fieldname": "version_section",
+   "fieldtype": "Section Break",
+   "label": "Version"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_latest",
+   "fieldtype": "Check",
+   "label": "Latest Version",
+   "default": "1",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "Students and guardians see only the latest version; COE reads every version."
+  },
+  {
+   "fieldname": "previous_version",
+   "fieldtype": "Link",
+   "label": "Previous Version",
+   "options": "Student Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_version",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "change_log",
+   "fieldtype": "Small Text",
+   "label": "Changes from the Previous Version",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Student Result",
@@ -156,7 +227,7 @@
    "print": 1
   }
  ],
- "autoname": "format:SR-{exam_session}-{student}",
- "naming_rule": "Expression",
+ "autoname": "",
+ "naming_rule": "By script",
  "title_field": "student_name"
 }

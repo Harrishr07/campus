@@ -16,7 +16,13 @@
   "third_valuation_diff_pct",
   "column_break_valuation",
   "final_valuation_method",
-  "allow_course_teacher_as_examiner"
+  "allow_course_teacher_as_examiner",
+  "grace_section",
+  "grace_allowed",
+  "grace_max_per_course",
+  "column_break_grace",
+  "grace_max_courses",
+  "grace_max_total"
  ],
  "fields": [
   {
@@ -103,11 +109,50 @@
    "label": "Allow Course Teacher as Examiner",
    "default": "0",
    "description": "When off, a teacher of the course in the session's term cannot value its scripts."
+  },
+  {
+   "fieldname": "grace_section",
+   "fieldtype": "Section Break",
+   "label": "Grace Marks"
+  },
+  {
+   "fieldname": "grace_allowed",
+   "fieldtype": "Check",
+   "label": "Grace Marks Allowed",
+   "default": "0",
+   "description": "The Result Run adds the fewest whole ESE marks that make a failed course pass, within the limits below. Every grace is listed in the Grace Mark Audit report."
+  },
+  {
+   "fieldname": "grace_max_per_course",
+   "fieldtype": "Float",
+   "label": "Maximum Grace per Course",
+   "non_negative": 1,
+   "depends_on": "grace_allowed"
+  },
+  {
+   "fieldname": "column_break_grace",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "grace_max_courses",
+   "fieldtype": "Int",
+   "label": "Maximum Courses with Grace",
+   "non_negative": 1,
+   "depends_on": "grace_allowed",
+   "description": "Per student per session. 0: no limit."
+  },
+  {
+   "fieldname": "grace_max_total",
+   "fieldtype": "Float",
+   "label": "Maximum Total Grace",
+   "non_negative": 1,
+   "depends_on": "grace_allowed",
+   "description": "Per student per session. 0: no limit."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 10:00:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",

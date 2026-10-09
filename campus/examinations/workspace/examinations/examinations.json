@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 18,
+   "link_count": 19,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -124,6 +124,17 @@
    "label": "Student Result",
    "link_count": 0,
    "link_to": "Student Result",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Mark Moderation",
+   "link_count": 0,
+   "link_to": "Mark Moderation",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -297,7 +308,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -335,6 +346,17 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Grace Mark Audit",
+   "link_count": 0,
+   "link_to": "Grace Mark Audit",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
@@ -354,7 +376,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 23:30:00.000000",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

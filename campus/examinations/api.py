@@ -17,7 +17,8 @@ from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public AP
 def run_results(exam_session, program):
 	"""Queue the Result Run for `program` in `exam_session` (COE only); returns the Bulk Run name.
 
-	Idempotent: a re-run replaces the Student Results of the session. Refused once Published.
+	Idempotent: before publication a re-run replaces the Student Results of the session; after it, a re-run makes a
+	new version of each changed result (P2-T19).
 	"""
 	return results.start_run(exam_session, program)
 
@@ -117,7 +118,7 @@ def student_registrations(student):
 
 def refresh_student_result(student, exam_session):
 	"""Recompute the student's Student Result of the session when the Result Run has made one (an approved or
-	cancelled exam withdrawal changes a course's code). Refused once the session is Published."""
+	cancelled exam withdrawal changes a course's code). After publication this makes a new result version."""
 	if frappe.db.exists(results.RESULT, {"student": student, "exam_session": exam_session}):
 		results.compute_student_result(student, exam_session)
 

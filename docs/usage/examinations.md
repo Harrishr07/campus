@@ -165,3 +165,26 @@ A System Manager can still reach confidential data through configuration paths:
 Treat System Manager as equivalent to Administrator. Give that role only to people who may see exam papers.
 
 Notifications, Webhooks and Version history on these DocTypes are refused. Bank question text is not encrypted at rest (deferred).
+
+# Examinations: result processing, Passing Board and publication (P2-T19)
+
+## Moderation (COE, approved by the Principal)
+1. **Mark Moderation**: the Exam Session, the course, the ESE adjustment in marks (negative lowers it) and the justification. **Request Approval**; the seeded policy sends it to the Principal of the college (the requester never approves). Only the final approval submits it.
+2. One live moderation per session and course. None is proposed, submitted or cancelled once the session is Published.
+3. The next Result Run adds the adjustment to the ESE of every student who sat the course (kept within 0 and the ESE maximum) and shows it in the course row's **Moderation** column.
+
+## Result Run (COE)
+1. On the Exam Session, **Run Results** for each programme. The bulk job (Result Runs) grades every enrolled student, less those on a break of study:
+   - current courses of the term, and the **Arrear** courses of the student's Exam Registration of the session. An arrear writer gets a row on the course's Mark Sheet Entry in the session; the Result Run keeps the CIA of the first attempt when the Exam Rule Set has **Carry Forward CIA** (R2022), otherwise the CIA on the new sheet (or the last one);
+   - SA, WD/WC and AB codes as before; the attempt number (earlier fails, and absences when the rule counts them) decides the R2022 ESE-alone pass from the 3rd attempt;
+   - **grace marks** when the student's Exam Rule Set has **Grace Marks Allowed**: the fewest whole ESE marks that pass a failed course, up to the maximum per course, the number of courses and the total per student. The seeded rule sets have grace off (the research note gives no values). Every grace is listed in **Grace Mark Audit** (report) with the Exam Rule Set that allowed it and its limits;
+   - grades by the Grading Scheme method of the course type: R2022 theory is **Relative Box-Cox** when more than 30 students of the session passed the course (same bands for every programme), otherwise, and for labs and projects, the absolute table. The row shows the **Grading Method**;
+   - SGPA over this session's current courses, CGPA over every pass, both leaving out the scheme's excluded categories (MC); **Result** Pass / Reappear and the **Arrears** count; a final-year session gives a student without arrears a **Classification** (lateral entry and break of study included).
+2. Before publication a re-run replaces the results. After publication a re-run creates a **new version** (SR-...-V2) with **Changes from the Previous Version**; the old one keeps its content, loses **Latest Version**, and stays readable to the COE.
+3. Speed: about 25 ms per student on the test bench (480 students in well under a minute, plus the bulk runner's commits).
+
+## Passing Board and publication (COE)
+1. Hold a **Body Meeting** of the college's **Passing Board** (quorum met) and record a resolution approving the results.
+2. On the Exam Session, **Publish Results**: the meeting, the resolution number and **Release At** (e.g. 10:00 the next day). The resolution must be Approved, of a quorate, uncancelled Passing Board meeting of the same college, and unused by another session. The session becomes Published with Publish At = Release At; setting the status to Published by hand is refused.
+3. Until Release At, Student Results are read only by the COE, System Manager and Dean Academics: Academics Users, teachers, students and guardians see nothing, on the desk, the API and `/campus-portal/results`. After it, staff read the session's results; students and guardians the latest version of their own.
+4. Within 15 minutes of Release At the scheduler queues the release notice (template `exam.result_published`: SMS, WhatsApp, email by consent) to every student and guardian, once per session.
