@@ -191,7 +191,8 @@ amend it. The amendment is the next **version** and needs approval again.
 
 ## PFMS EAT export (P3-T18, M08-07)
 
-**PFMS Export Batch** (Research > Transactions): pick the sanction, the export type and the period. Saving the draft
+**PFMS Export Batch** (Research > Transactions): pick the sanction, the export type and the period. You need read
+access to the sanction and its college, because the rows carry suppliers' bank details. Saving the draft
 lists the sanction's payments of that type in the period:
 
 - **Expenditure**: Payment Entries to a supplier against the sanction's Purchase Invoices (the allocated amount, so a
@@ -212,14 +213,25 @@ an export key, unique in the database. A payment in a submitted batch is not exp
 failed, so re-exporting a period gives only the new and the failed payments. **Already Exported** shows how many were
 left out for that reason. A batch with a row PFMS accepted can't be cancelled; cancelling any other frees its rows.
 
+Exports are also counted per payment, so ERPNext rewriting a payment doesn't send the same money twice: an advance
+later reconciled to an invoice, a reference pointing back to an advance, or a voucher cancelled and amended (the
+amendment counts as its first version) exports nothing more. A payment whose lines now add up to more than was
+exported is excluded for review. An unallocated payment naming one sanction's project and another's cost centre is
+excluded until it is corrected.
+
+**Cancelling an exported payment**: a Payment Entry or Purchase Invoice in a submitted batch can't be cancelled
+until it is withdrawn from PFMS: PFMS reports its row failed (Import Status), or its batch is cancelled. The batch
+keeps the row as history.
+
 **The file**: the batch attaches the EAT bulk-upload CSV, laid out by its **PFMS Export Layout** (Research > Settings).
 A layout is a list of columns, each a header and a source (a payment or batch field, or a fixed value), plus the date
 format and the header row. The seeded "PFMS EAT ... (placeholder)" layouts are placeholders until the official EAT
 file spec is supplied: change the columns to the official ones, with no code change. Every layout needs a **Row
 Reference** column. Text cells that would start a spreadsheet formula (=, +, -, @) get a leading apostrophe.
 
-**Import Status**: upload the status file PFMS returns. The layout names its columns (row reference, status, PFMS
-reference, message) and which status values mean success or failure. Accepted rows are final. Failed rows go into
+**Import Status**: upload the status file PFMS returns. The layout names its columns (row reference, by default the
+export's "Unique Reference" header; status; PFMS reference; message) and which status values mean success or failure
+(a value can't be both). Accepted rows are final. Failed rows go into
 the next batch of the period. A row already accepted or failed, an unknown reference or an unknown status is skipped
 and listed. The batch is **Processed** when no row is waiting for a status.
 
@@ -296,8 +308,7 @@ posting can't pass each other. Cancelling the closure cancels the refund entry, 
 - The project-side unreconciled read at final approval is not a locking read, so untagged spending posted on the
   project under another cost centre at the same moment as the approval can slip past the gate. The posting then
   flags the UC Source Changed, or Recheck Source catches it. (P3-T17 fix 1)
-- PFMS export: payments made by Journal Entry and Expense Claim reimbursements are not exported, and a payment
-  cancelled after it was exported is not withdrawn from PFMS. Cancel it in PFMS by hand. The official EAT layout,
+- PFMS export: payments made by Journal Entry and Expense Claim reimbursements are not exported. The official EAT layout,
   UC upload and the PFMS API adapter wait for the spec and agency access. (P3-T18)
 - Project closure: the asset handover to the department (Asset Movement) is not part of the closure yet. Move the
   project's assets with an Asset Movement before closing. Closing doesn't end the project staff's Salary Structure

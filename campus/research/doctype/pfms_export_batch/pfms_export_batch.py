@@ -22,13 +22,14 @@ ROW_DOCTYPE = "PFMS Export Batch Row"
 EXPORT_METHODS = {"Expenditure": "export_expenditure", "Advance": "export_advance", "Transfer": "export_transfer"}
 ROW_FIELDS = (
 	"voucher_type", "voucher_no", "reference_doctype", "reference_name", "posting_date", "supplier", "supplier_name",
-	"pfms_vendor_code", "bank_account", "bank_account_no", "ifsc", "budget_head", "amount",
+	"pfms_vendor_code", "bank_account", "bank_account_no", "ifsc", "budget_head", "amount", "payment_key",
 )  # fmt: skip
 
 
 class PFMSExportBatch(Document):
 	def validate(self):
 		sanction = self.set_from_sanction()
+		self.check_sanction_access()
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("The From Date can't be after the To Date."))
 		self.adapter = self.adapter or DEFAULT_ADAPTER
@@ -98,7 +99,9 @@ class PFMSExportBatch(Document):
 		return self.apply_status(adapter_for(self.adapter).import_status(self, content))
 
 	def apply_status(self, updates):
-		frappe.db.get_value(self.doctype, self.name, "name", for_update=True)  # one import at a time
+		# one import at a time, and never into a batch cancelled since this one was loaded
+		if frappe.db.get_value(self.doctype, self.name, "docstatus", for_update=True) != 1:
+			frappe.throw(_("{0} is no longer submitted: its status can't be imported.").format(self.name))
 		rows = {row.row_reference: row for row in self.locked_rows()}
 		updated, skipped = 0, []
 		for update in updates:
@@ -159,6 +162,15 @@ class PFMSExportBatch(Document):
 			frappe.throw(_("Set the PFMS Unique Agency Code in {0}'s Research Settings.").format(self.company))
 		self.funding_agency_code = frappe.db.get_value("Funding Agency", self.funding_agency, "pfms_agency_code")
 		return sanction
+
+	def check_sanction_access(self):
+		"""Rows carry suppliers' bank details: build them only for a user who may read the sanction and create a
+		batch of its college (the create check at insert ran before the college was set)."""
+		if self.flags.ignore_permissions:
+			return
+		frappe.has_permission("Sanction", "read", self.sanction, throw=True)
+		if self.is_new():
+			self.check_permission("create")
 
 	def check_layout(self):
 		self.layout = self.layout or default_layout(self.export_type)

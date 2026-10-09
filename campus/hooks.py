@@ -265,6 +265,11 @@ doc_events["Journal Entry"]["before_cancel"] = f"{_budget_control}.check_capital
 for _dt in ("Payment Entry", "Journal Entry"):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
 	_before = doc_events.setdefault(_dt, {}).get("before_submit")
 	doc_events[_dt]["before_submit"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.examinations.remuneration_payment.check_paid_invoice"]
+for _dt in ("Payment Entry", "Purchase Invoice"):  # P3-T18: a payment exported to PFMS is withdrawn there before a cancel
+	_before = doc_events[_dt].get("before_cancel")
+	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.research.pfms.refuse_exported_cancel"]
+	_on = doc_events[_dt].get("on_cancel")
+	doc_events[_dt]["on_cancel"] = [*([_on] if isinstance(_on, str) else _on or []), "campus.research.pfms.allow_withdrawn_cancel"]
 
 # Scheduled Tasks
 # ---------------

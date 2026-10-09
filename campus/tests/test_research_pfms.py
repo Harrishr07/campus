@@ -20,9 +20,11 @@ from campus.research import pfms_adapter
 from campus.research.budget_control import BUDGET_HEAD_FIELD
 from campus.research.pfms import DEFAULT_LAYOUTS, PFMS_AGENCY_FIELD, VENDOR_CODE_FIELD, export_key
 from campus.research.pfms_adapter import FileAdapter, adapter_for, neutralise
-from campus.tests.research_fixtures import ABBR, COLLEGE, SanctionFixtures
+from campus.tests.factories import make_user
+from campus.tests.research_fixtures import ABBR, COLLEGE, OTHER, SanctionFixtures
 
 ITEM, BANK = "PFMS Test Item", "PFMS Test Bank"
+OTHER_COLLEGE_USER = "pfms-other-accounts@example.com"
 BATCH = "PFMS Export Batch"
 
 
@@ -39,6 +41,8 @@ class TestPfmsExport(SanctionFixtures):
 			frappe.get_doc({"doctype": "Bank", "bank_name": BANK}).insert()
 		if not frappe.db.exists("Party Type", "Supplier"):  # the bare test site has only Student
 			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
+		make_user(OTHER_COLLEGE_USER, [OTHER])
+		frappe.get_doc("User", OTHER_COLLEGE_USER).add_roles("Accounts Manager")
 
 	def setUp(self):
 		super().setUp()
@@ -101,17 +105,38 @@ class TestPfmsExport(SanctionFixtures):
 		payment.submit()
 		return payment
 
-	def advance(self, supplier, amount, posting_date=None):
+	def advance(self, supplier, amount, posting_date=None, **values):
 		payment = frappe.get_doc(
 			{
 				"doctype": "Payment Entry", "payment_type": "Pay", "company": COLLEGE, "posting_date": posting_date or today(),
 				"party_type": "Supplier", "party": supplier, "paid_from": self.bank, "paid_to": self.creditors,
 				"paid_amount": amount, "received_amount": amount, "reference_no": "UTR-ADV", "reference_date": today(),
-				"project": self.sanction_doc.project, "cost_center": self.sanction_doc.cost_center,
+				"project": self.sanction_doc.project, "cost_center": self.sanction_doc.cost_center, **values,
 			}  # fmt: skip
 		).insert()
 		payment.submit()
 		return payment
+
+	def order(self, supplier, amount):
+		sanction = self.sanction_doc
+		order = frappe.get_doc(
+			{
+				"doctype": "Purchase Order", "company": COLLEGE, "supplier": supplier, "transaction_date": today(), "schedule_date": today(),
+				"items": [
+					{"item_code": ITEM, "qty": 1, "rate": amount, "expense_account": self.consumables_account, "schedule_date": today(),
+					 "cost_center": sanction.cost_center, "project": sanction.project, BUDGET_HEAD_FIELD: self.consumables}
+				],
+			}  # fmt: skip
+		).insert()
+		order.submit()
+		return order
+
+	def amend(self, payment):
+		amended = frappe.copy_doc(payment)
+		amended.amended_from, amended.docstatus = payment.name, 0
+		amended.insert()
+		amended.submit()
+		return amended
 
 	def paid_invoice(self, supplier, amount):
 		return self.invoice(supplier, amount, is_paid=1, cash_bank_account=self.bank, paid_amount=amount, mode_of_payment=None)
@@ -131,7 +156,7 @@ class TestPfmsExport(SanctionFixtures):
 		content = frappe.get_doc("File", {"file_url": batch.export_file}).get_content()
 		return list(csv.reader(io.StringIO(content.decode() if isinstance(content, bytes) else content)))
 
-	def status_file(self, batch, lines, header=("Row Reference", "Status", "PFMS Reference", "Remarks")):
+	def status_file(self, batch, lines, header=("Unique Reference", "Status", "PFMS Reference", "Remarks")):
 		buffer = io.StringIO()
 		writer = csv.writer(buffer)
 		writer.writerow(header)
@@ -172,6 +197,26 @@ class TestPfmsExport(SanctionFixtures):
 		self.assertIn(("Payment Entry", transfer.name), self.vouchers(self.batch("Transfer")))
 		self.assertFalse(self.batch("Advance").rows)
 		self.assertFalse(self.batch("Expenditure").rows)
+
+	def test_an_advance_against_a_purchase_order_is_an_advance_row(self):
+		order = self.order(self.vendor, 2000)
+		payment = get_payment_entry("Purchase Order", order.name, party_amount=500, bank_account=self.bank)
+		payment.update({"reference_no": "UTR-PO", "reference_date": today()})
+		payment.paid_amount = payment.received_amount = 500
+		payment.references[0].allocated_amount = 500
+		payment.insert()
+		payment.submit()
+		batch = self.batch("Advance")
+		self.assertEqual([(r.voucher_no, r.reference_doctype, r.reference_name, r.amount) for r in batch.rows], [(payment.name, "Purchase Order", order.name, 500)])
+		self.assertFalse(self.batch().rows)
+
+	def test_an_unallocated_payment_naming_two_sanctions_is_excluded(self):
+		other = self.submitted_sanction()
+		payment = self.advance(self.vendor, 300, project=other.project)  # the other sanction's project, this one's cost centre
+		batch = self.batch("Advance")
+		self.assertFalse(batch.rows)
+		self.assertIn(other.name, next(row.reason for row in batch.exclusions if row.voucher_no == payment.name))
+		self.assertFalse(frappe.get_doc({"doctype": BATCH, "sanction": other.name, "export_type": "Advance", "from_date": self.period[0], "to_date": self.period[1]}).insert().rows)
 
 	# acceptance 1: vendor check
 	def test_vendors_without_a_pfms_code_or_bank_details_are_excluded_and_reported(self):
@@ -214,6 +259,42 @@ class TestPfmsExport(SanctionFixtures):
 		ref = {row.voucher_no: row.row_reference for row in batch.rows}
 		batch.import_status(self.status_file(batch, [(ref[first.name], "Success", "PF1", ""), (ref[second.name], "Rejected", "", "Bad IFSC")]))
 		self.assertEqual(self.vouchers(self.batch()), sorted([("Payment Entry", second.name), ("Payment Entry", third.name)]))
+
+	def test_an_advance_reconciled_to_an_invoice_is_not_exported_again(self):
+		payment = self.advance(self.vendor, 300)
+		self.assertEqual(self.exported("Advance").row_count, 1)
+		self.invoice(
+			self.vendor, 300,
+			advances=[{"reference_type": "Payment Entry", "reference_name": payment.name, "advance_amount": 300, "allocated_amount": 300}],
+		)  # fmt: skip
+		self.assertTrue(frappe.get_all("Payment Entry Reference", {"parent": payment.name, "reference_doctype": "Purchase Invoice"}))
+		batch = self.batch()
+		self.assertFalse(batch.rows)  # the same money, now allocated to the invoice
+		self.assertEqual(batch.already_exported_count, 1)
+
+	def test_an_amended_payment_is_not_exported_again(self):
+		payment = self.pay(self.invoice(self.vendor, 1000))
+		self.exported()
+		with patch("campus.research.pfms.refuse_exported_cancel"):
+			payment.cancel()
+		amended = self.amend(payment)
+		batch = self.batch()
+		self.assertFalse(batch.rows)
+		self.assertEqual(batch.already_exported_count, 1)
+		self.assertTrue(amended.name.startswith(payment.name))
+
+	def test_an_exported_payment_cannot_be_cancelled_until_pfms_failed_it(self):
+		payment = self.pay(self.invoice(self.vendor, 1000))
+		cash = self.paid_invoice(self.vendor, 400)
+		batch = self.exported()
+		for voucher in (payment, cash):
+			with self.assertRaisesRegex(frappe.ValidationError, batch.name):
+				frappe.get_doc(voucher.doctype, voucher.name).cancel()
+		ref = {row.voucher_no: row.row_reference for row in batch.rows}
+		batch.import_status(self.status_file(batch, [(ref[payment.name], "Failed", "", "Bad account")]))
+		frappe.get_doc("Payment Entry", payment.name).cancel()
+		amended = self.amend(payment)
+		self.assertEqual(self.vouchers(self.batch()), [("Payment Entry", amended.name)])  # re-exported once fixed
 
 	def test_two_drafts_of_a_period_export_a_payment_once(self):
 		self.pay(self.invoice(self.vendor, 1000))
@@ -278,6 +359,15 @@ class TestPfmsExport(SanctionFixtures):
 		self.assertEqual(again["updated"], 0)
 		self.assertEqual(frappe.db.get_value("PFMS Export Batch Row", rows[first.name].name, "status"), "Success")
 
+	def test_status_import_on_a_batch_cancelled_meanwhile_is_refused(self):
+		self.pay(self.invoice(self.vendor, 1000))
+		batch = self.exported()
+		stale = frappe.get_doc(BATCH, batch.name)
+		batch.cancel()
+		with self.assertRaisesRegex(frappe.ValidationError, "submitted"):
+			stale.import_status(self.status_file(stale, [(stale.rows[0].row_reference, "Success", "P1", "")]))
+		self.assertEqual(frappe.db.get_value("PFMS Export Batch Row", stale.rows[0].name, "status"), "Exported")
+
 	def test_status_import_keeps_the_batch_exported_while_rows_are_pending(self):
 		self.pay(self.invoice(self.vendor, 1000))
 		self.pay(self.invoice(self.vendor, 500))
@@ -325,6 +415,20 @@ class TestPfmsExport(SanctionFixtures):
 			layout.save()
 		with self.assertRaises(frappe.ValidationError):
 			self.batch("Advance", layout=DEFAULT_LAYOUTS["Expenditure"])
+
+	def test_a_user_of_another_college_cannot_build_a_batch_of_this_sanction(self):
+		self.pay(self.invoice(self.vendor, 1000))
+		frappe.set_user(OTHER_COLLEGE_USER)
+		self.addCleanup(frappe.set_user, "Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			self.batch()
+
+	def test_success_and_failure_values_must_not_overlap(self):
+		layout = frappe.get_doc("PFMS Export Layout", DEFAULT_LAYOUTS["Expenditure"])
+		self.assertEqual(layout.status_reference_column, "Unique Reference")  # the export's reference header
+		layout.failure_values = "Failed\naccepted"
+		with self.assertRaisesRegex(frappe.ValidationError, "accepted"):
+			layout.save()
 
 	def test_the_college_agency_code_is_required(self):
 		frappe.db.set_value("Research Settings", COLLEGE, "pfms_unique_agency_code", None)

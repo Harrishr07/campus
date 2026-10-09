@@ -11,19 +11,28 @@ excluded and reported (its share can't be told from the payment).
 The vendor check excludes and reports a payment to a Supplier without a PFMS vendor code (`oc_pfms_vendor_code`) or
 without a bank account carrying an account number and IFSC (the payment's party bank account, else the Supplier's
 default). A payment already in a submitted batch, and not reported failed by PFMS, holds its export key (unique in the
-database) and is left out; so re-exporting a period gives only what PFMS has not taken."""
+database) and is left out; so re-exporting a period gives only what PFMS has not taken.
+
+ERPNext can rewrite a payment after it was exported: an advance reconciled to an invoice gets a new reference row, a
+reference may point back to an advance (advance_voucher_no), and a cancelled voucher is amended under a new name. So
+exports are also counted per payment (`payment_key`: the voucher, or the advance it allocates, followed back through
+amended_from to the first version): a payment with live exported rows exports nothing more, and one whose lines now
+add up to more than was exported is excluded for review. A voucher with live exported rows can't be cancelled
+(`refuse_exported_cancel`) until PFMS reports them failed or their batch is cancelled."""
 
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
 VENDOR_CODE_FIELD = "oc_pfms_vendor_code"
 PFMS_AGENCY_FIELD = "oc_pfms_agency"
 EXPORT_TYPES = ("Expenditure", "Advance", "Transfer")
 DEFAULT_LAYOUTS = {export_type: f"PFMS EAT {export_type} (placeholder)" for export_type in EXPORT_TYPES}
+STATUS_REFERENCE_HEADER = "Unique Reference"  # the placeholder export's Row Reference header
 PLACEHOLDER_COLUMNS = (
-	("Unique Reference", "Row Reference"), ("Agency Unique Code", "Agency Unique Code"),
+	(STATUS_REFERENCE_HEADER, "Row Reference"), ("Agency Unique Code", "Agency Unique Code"),
 	("Sanction Order No", "Sanction Order No"), ("Payment Date", "Payment Date"), ("Vendor Code", "PFMS Vendor Code"),
 	("Vendor Name", "Vendor Name"), ("Account Number", "Bank Account No"), ("IFSC", "IFSC"), ("Amount", "Amount"),
 	("Component", "Budget Head"), ("Voucher No", "Voucher No"), ("Bill No", "Invoice or Order No"),
@@ -45,25 +54,32 @@ class PaymentSelection:
 		self.exclusions = []
 
 	def run(self):
-		payments = [p for p in self.payments() if p.export_type == self.export_type]
-		exported = self.exported_keys([p.export_key for p in payments])
-		rows = []
-		for payment in payments:
-			if payment.export_key in exported:
+		payments = self.payments()
+		exported = self.exported_amounts({p.payment_key for p in payments})
+		totals = {}
+		for payment in payments:  # every export type: a reconciled advance comes back as expenditure
+			totals[payment.payment_key] = totals.get(payment.payment_key, 0) + flt(payment.amount)
+		rows, already_exported = [], 0
+		for payment in (p for p in payments if p.export_type == self.export_type):
+			done = exported.get(payment.payment_key)
+			if done and flt(totals[payment.payment_key] - done, 2) <= 0:
+				already_exported += 1
 				continue
-			reason = payment.get("reason") or self.vendor_problem(payment)
+			reason = payment.get("reason") or (done and self.partly_exported(payment, done)) or self.vendor_problem(payment)
 			if reason:
 				self.exclude(payment, reason)
 			else:
 				rows.append(payment)
-		return frappe._dict(rows=rows, exclusions=self.exclusions, already_exported=len(exported))
+		return frappe._dict(rows=rows, exclusions=self.exclusions, already_exported=already_exported)
 
 	# payments
 	def payments(self):
 		payments = self.allocated() + self.unallocated() + self.paid_invoices()
 		self.suppliers = supplier_details({p.supplier for p in payments})
+		roots = first_versions(payments)
 		for payment in payments:
 			payment.export_key = export_key(payment.voucher_type, payment.voucher_no, payment.reference_doctype, payment.reference_name)
+			payment.payment_key = payment_key(*roots[payment_voucher(payment)])
 			if self.suppliers.get(payment.supplier, {}).get("agency"):
 				payment.export_type = "Transfer"
 		return sorted(payments, key=lambda p: (str(p.posting_date), p.voucher_no, p.reference_name or ""))
@@ -72,7 +88,10 @@ class PaymentSelection:
 		pe, ref = frappe.qb.DocType("Payment Entry"), frappe.qb.DocType("Payment Entry Reference")
 		lines = (
 			self.payment_query(pe).join(ref).on(ref.parent == pe.name)
-			.select(ref.reference_doctype, ref.reference_name, ref.allocated_amount.as_("amount"))
+			.select(
+				ref.reference_doctype, ref.reference_name, ref.allocated_amount.as_("amount"),
+				ref.advance_voucher_type, ref.advance_voucher_no,
+			)
 			.where(
 				(ref.parenttype == "Payment Entry") & ref.reference_doctype.isin(["Purchase Invoice", "Purchase Order"])
 				& (ref.allocated_amount > 0)
@@ -97,13 +116,27 @@ class PaymentSelection:
 		pe = frappe.qb.DocType("Payment Entry")
 		payments = (
 			self.payment_query(pe)
-			.select(pe.unallocated_amount.as_("amount"))
+			.select(pe.unallocated_amount.as_("amount"), pe.project, pe.cost_center)
 			.where((pe.unallocated_amount > 0) & ((pe.project == self.sanction.project) | (pe.cost_center == self.sanction.cost_center)))
 			.run(as_dict=True)
 		)  # fmt: skip
 		for payment in payments:
-			payment.update(voucher_type="Payment Entry", export_type="Advance")
+			payment.update(voucher_type="Payment Entry", export_type="Advance", reason=self.other_sanction(payment))
 		return payments
+
+	def other_sanction(self, payment):
+		"""Why an unallocated payment with this sanction's project or cost centre can't be told apart: the other one
+		belongs to another sanction."""
+		other = None
+		if payment.project and payment.project != self.sanction.project:
+			other = frappe.db.get_value("Sanction", {"project": payment.project, "docstatus": 1})
+		if not other and payment.cost_center and payment.cost_center != self.sanction.cost_center:
+			other = frappe.db.get_value("Sanction", {"cost_center": payment.cost_center, "docstatus": 1})
+		if other:
+			return _("Payment Entry {0} names the project or cost centre of Sanction {1} as well as of Sanction {2}; correct it.").format(
+				payment.voucher_no, other, self.sanction.name
+			)
+		return None
 
 	def paid_invoices(self):
 		pi = frappe.qb.DocType("Purchase Invoice")
@@ -176,12 +209,22 @@ class PaymentSelection:
 		payment.update(supplier_name=supplier.get("supplier_name"), pfms_vendor_code=supplier.get("vendor_code"))
 		return " ".join(problems)
 
-	def exported_keys(self, keys):
+	def partly_exported(self, payment, done):
+		return _("{0} {1}: {2} of it is already exported to PFMS and its lines now add up to more. Review it before exporting.").format(
+			_(payment.voucher_type), payment.voucher_no, frappe.format(done, "Currency")
+		)
+
+	def exported_amounts(self, keys):
+		"""{payment_key: amount in live (exported, not failed) rows}."""
 		if not keys:
-			return set()
+			return {}
 		row = frappe.qb.DocType("PFMS Export Batch Row")
-		query = frappe.qb.from_(row).select(row.export_key).where(row.export_key.isin(keys))
-		return set((query.for_update() if self.lock else query).run(pluck=True))
+		query = (
+			frappe.qb.from_(row).select(row.payment_key, Sum(row.amount))
+			.where(row.payment_key.isin(list(keys)) & row.export_key.isnotnull())
+			.groupby(row.payment_key)
+		)  # fmt: skip
+		return {key: flt(amount, 2) for key, amount in (query.for_update() if self.lock else query).run()}
 
 	def exclude(self, payment, reason):
 		self.exclusions.append(
@@ -191,6 +234,60 @@ class PaymentSelection:
 				"supplier": payment.supplier, "amount": flt(payment.amount, 2), "reason": reason,
 			}  # fmt: skip
 		)
+
+
+def payment_key(voucher_type, voucher_no):
+	return f"{voucher_type}|{voucher_no}"
+
+
+def payment_voucher(payment):
+	"""The voucher whose money a line is: the advance it allocates, else its own voucher."""
+	if payment.get("advance_voucher_no"):
+		return (payment.advance_voucher_type or "Payment Entry", payment.advance_voucher_no)
+	return (payment.voucher_type, payment.voucher_no)
+
+
+def first_versions(payments):
+	"""{(doctype, name): (doctype, first version)} following amended_from back."""
+	vouchers = {payment_voucher(p) for p in payments}
+	roots = {voucher: voucher for voucher in vouchers}
+	for doctype in {doctype for doctype, _name in vouchers}:
+		names = [name for kind, name in vouchers if kind == doctype]
+		amended = dict(frappe.get_all(doctype, {"name": ["in", names], "amended_from": ["is", "set"]}, ["name", "amended_from"], as_list=True))
+		for name, earlier in amended.items():
+			first, seen = earlier, {name}
+			while first not in seen:  # rare: walk the rest of the chain one version at a time
+				seen.add(first)
+				first = frappe.db.get_value(doctype, first, "amended_from") or first
+			roots[(doctype, name)] = (doctype, first)
+	return roots
+
+
+def refuse_exported_cancel(doc, method=None):
+	"""Doc event (Payment Entry / Purchase Invoice before_cancel): a voucher PFMS has, or may have, paid is withdrawn
+	from PFMS first (its rows reported failed, or its batch cancelled)."""
+	row = frappe.qb.DocType("PFMS Export Batch Row")
+	batches = (
+		frappe.qb.from_(row).select(row.parent)
+		.where(
+			row.export_key.isnotnull()
+			& (((row.voucher_type == doc.doctype) & (row.voucher_no == doc.name)) | ((row.reference_doctype == doc.doctype) & (row.reference_name == doc.name)))
+		)
+		.for_update().run(pluck=True)
+	)  # fmt: skip
+	if batches:
+		frappe.throw(
+			_("{0} {1} is exported to PFMS in {2}. Withdraw it from PFMS first: import its failed status or cancel the batch.").format(
+				_(doc.doctype), doc.name, ", ".join(sorted(set(batches)))
+			)
+		)
+
+
+def allow_withdrawn_cancel(doc, method=None):
+	"""Doc event (Payment Entry / Purchase Invoice on_cancel, after ERPNext's own, which sets the ignore list): the
+	batches still list a voucher whose rows PFMS failed or whose batch was cancelled (refuse_exported_cancel refused
+	any other); they keep it as history and don't block the cancel."""
+	doc.ignore_linked_doctypes = (*(doc.get("ignore_linked_doctypes") or ()), "PFMS Export Batch")
 
 
 def supplier_details(suppliers):
@@ -242,13 +339,23 @@ def seed_layouts():
 	"""One placeholder layout per export type, until the official EAT file spec is supplied. Edited ones are kept."""
 	for export_type, name in DEFAULT_LAYOUTS.items():
 		if frappe.db.exists("PFMS Export Layout", name):
+			fix_status_reference_column(name)
 			continue
 		frappe.get_doc(
 			{
 				"doctype": "PFMS Export Layout", "layout_name": name, "export_type": export_type, "is_placeholder": 1,
+				"status_reference_column": STATUS_REFERENCE_HEADER,
 				"columns": [{"column_header": header, "source": source} for header, source in PLACEHOLDER_COLUMNS],
 			}  # fmt: skip
 		).insert(ignore_permissions=True)
+
+
+def fix_status_reference_column(name):
+	"""Placeholder layouts seeded before P3-T18 fix 1 read the status file's references from a "Row Reference" column
+	the export never wrote; point them at the export's own reference header unless they were edited."""
+	layout = frappe.db.get_value("PFMS Export Layout", name, ["is_placeholder", "status_reference_column"], as_dict=True)
+	if layout.is_placeholder and layout.status_reference_column == "Row Reference":
+		frappe.db.set_value("PFMS Export Layout", name, "status_reference_column", STATUS_REFERENCE_HEADER)
 
 
 def default_layout(export_type):
