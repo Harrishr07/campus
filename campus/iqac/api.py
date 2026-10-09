@@ -3,7 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import request_approval
-from campus.iqac import compute, evidence, metric_values, validation
+from campus.iqac import compute, evidence, feedback, feedback_invites, metric_values, validation
 from campus.iqac import export as exporter
 from campus.iqac.access import OWNER_ROLE, ROLES
 from campus.iqac import cycle as lifecycle
@@ -107,3 +107,17 @@ def export_cycle(cycle, template):
 	"""Download the cycle as the Excel / PDF of an Export Template (IQAC staff and the Principal, within their company)."""
 	filename, content = exporter.export(cycle, template)
 	frappe.response.update({"filename": filename, "filecontent": content, "type": "download"})
+
+
+@frappe.whitelist(methods=["POST"])
+def send_feedback_invitations(campaign):
+	"""M01-05 Invite the campaign's audience through messaging (bulk run); IQAC Coordinator / System Manager."""
+	frappe.only_for(ROLES)
+	frappe.get_doc("Feedback Campaign", campaign).check_permission("write")
+	return feedback_invites.send_invitations(campaign)
+
+
+def indirect_co_scores(offering):
+	"""M03-03 Indirect CO attainment of a course offering from its exit-survey ratings: {CO: {responses, average (1-5),
+	percent (of 5), suppressed}}; a CO with fewer responses than the Campus Settings minimum group size is suppressed."""
+	return feedback.indirect_co_scores(offering)

@@ -114,7 +114,7 @@ def fill_blanks(doc, values):
 
 
 EVIDENCE_SOURCES = ("Body Meeting", "Circular", "Faculty Achievement", "Sanction", "Feedback Campaign", "Placement Drive")
-EVIDENCE_FILE_FIELDS = {"Faculty Achievement": "evidence"}
+EVIDENCE_FILE_FIELDS = {"Faculty Achievement": "evidence", "Feedback Campaign": "action_taken_report"}
 
 
 def seed_evidence_sources():

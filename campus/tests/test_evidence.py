@@ -129,6 +129,27 @@ class TestSourceLink(EvidenceFixture):
 		with self.assertRaises(frappe.PermissionError):
 			self.attach()
 
+	def test_an_evidence_keeps_saving_after_its_source_type_is_delisted(self):
+		doc = frappe.get_doc("Evidence", self.attach())
+		frappe.get_doc("Campus Settings").update({"evidence_sources": []}).save()
+		doc.title = "College logo (renamed)"
+		doc.save()  # the source fields did not change, so the list is not checked again
+		doc.source_name = "Iqac Other College"
+		with self.assertRaisesRegex(frappe.ValidationError, "Campus Settings"):
+			doc.save()
+
+
+class TestFixRound2(EvidenceFixture):
+	def test_a_source_field_without_a_source_doctype_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.make(source_field="company_logo", file=None).insert()
+
+	def test_an_evidence_without_a_source_counts_only_for_a_college_the_user_may_see(self):
+		frappe.set_user(OWNER)  # holds the Company permission for COLLEGE only
+		with self.assertRaises(frappe.PermissionError):
+			self.make("Other college minutes", company="Iqac Other College").insert()
+		self.assertTrue(self.make("Own college minutes").insert().name)
+
 
 class TestPublicServing(EvidenceFixture):
 	def test_only_a_public_evidence_with_a_public_file_has_a_target(self):

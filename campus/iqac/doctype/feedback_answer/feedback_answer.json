@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 23:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "question_row",
+  "question",
+  "question_type",
+  "course_outcome",
+  "rating",
+  "answer"
+ ],
+ "fields": [
+  {
+   "fieldname": "question_row",
+   "fieldtype": "Data",
+   "label": "Question Row",
+   "read_only": 1
+  },
+  {
+   "fieldname": "question",
+   "fieldtype": "Small Text",
+   "label": "Question",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "question_type",
+   "fieldtype": "Data",
+   "label": "Type",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_outcome",
+   "fieldtype": "Data",
+   "label": "CO",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "rating",
+   "fieldtype": "Int",
+   "label": "Rating",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "answer",
+   "fieldtype": "Small Text",
+   "label": "Answer",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-09 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Feedback Answer",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -8,7 +8,7 @@
 			("attendance", _("Attendance"), "/campus-portal/attendance"), ("results", _("Results"), "/campus-portal/results"),
 			("circulars", _("Circulars"), "/campus-portal/circulars"),
 			("certificates", _("Certificates"), "/campus-portal/certificates"), ("grievances", _("Grievances"), "/campus-portal/grievances"),
-			("leave", _("Leave"), "/campus-portal/leave")] %}
+			("leave", _("Leave"), "/campus-portal/leave"), ("feedback", _("Feedback"), "/campus-portal/feedback")] %}
 		<a href="{{ href }}{% if student and students|length > 1 %}?student={{ student }}{% endif %}"
 			{% if key == active %}aria-current="page"{% endif %}>{{ label }}</a>
 		{% endfor %}

@@ -1,7 +1,7 @@
 {
  "app": "campus",
  "charts": [],
- "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>IQAC</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Cycle\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Value\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Framework\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Drill-down\", \"col\": 3}}, {\"id\": \"sp0006\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0007\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>IQAC</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Cycle\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Value\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Framework\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Drill-down\", \"col\": 3}}, {\"id\": \"sp0006\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0007\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Feedback\", \"col\": 4}}]",
  "creation": "2026-10-06 00:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -165,6 +165,47 @@
    "label": "Cycle Readiness",
    "link_count": 0,
    "link_to": "Cycle Readiness",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Campaign",
+   "link_count": 0,
+   "link_to": "Feedback Campaign",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Form",
+   "link_count": 0,
+   "link_to": "Feedback Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Feedback Analysis",
+   "link_count": 0,
+   "link_to": "Feedback Analysis",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"

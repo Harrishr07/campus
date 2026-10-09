@@ -33,6 +33,19 @@ class TestRuleLogic(UnitTestCase):
 		self.assertFalse(validation.outside_range(5, None, None))
 		self.assertTrue(validation.outside_range(5, 6, 9))
 
+	def test_a_bound_must_be_a_finite_number(self):
+		from campus.iqac.doctype.validation_rule.validation_rule import is_number
+
+		for text in ("nan", "NaN", "inf", "-inf", "Infinity", "abc", ""):
+			self.assertFalse(is_number(text), text)
+		for text in ("0", "-1.5", "100", "1e3"):
+			self.assertTrue(is_number(text), text)
+
+	def test_the_range_text_shows_an_unset_bound_as_open_ended(self):
+		self.assertEqual(validation.range_text("0", None), "0 or more")
+		self.assertEqual(validation.range_text(None, "100"), "at most 100")
+		self.assertEqual(validation.range_text("0", "100"), "0 to 100")
+
 	def test_the_rule_type_options_are_the_ones_the_engine_checks(self):
 		options = frappe.get_meta("Validation Rule").get_field("rule_type").options.split("\n")
 		self.assertEqual(set(options), set(validation.CHECKS))
@@ -129,6 +142,18 @@ class TestEachRuleType(ValidationFixture):
 		self.answer(N212, manual_value=120)
 		[failure] = self.failures(rule_type="Range")
 		self.assertIn("120", failure.detail)
+
+	def test_range_with_only_a_minimum_flags_values_below_it_and_names_no_missing_bound(self):
+		self.rule("Range", N212, minimum=0)
+		self.answer(N212, manual_value=-1)
+		[failure] = self.failures(rule_type="Range")
+		self.assertIn("0 or more", failure.detail)
+		self.assertNotIn("None", failure.detail)
+
+	def test_a_non_finite_bound_is_refused(self):
+		for bound in ("nan", "inf"):
+			with self.assertRaises(frappe.ValidationError):
+				self.rule("Range", N212, minimum=bound)
 
 	def test_range_passes_inside_the_bounds(self):
 		self.rule("Range", N212, minimum=0, maximum=100)

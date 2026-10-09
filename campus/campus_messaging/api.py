@@ -97,3 +97,17 @@ def plan_channels(template, settings, entry):
 	if not eligible and not skipped:
 		skipped = unaddressed
 	return eligible, skipped
+
+
+def audience_members(rule):
+	"""Recipients ("Doctype:name") of an Audience Rule, a saved name or an unsaved document."""
+	from campus.campus_messaging.audience import resolve
+
+	return resolve(rule)
+
+
+def recipient_keys_for_user(user):
+	"""Every recipient key ("Doctype:name") a user answers to: the user and their Student / Guardian / Employee records."""
+	from campus.campus_messaging.audience import keys_for_user
+
+	return keys_for_user(user)

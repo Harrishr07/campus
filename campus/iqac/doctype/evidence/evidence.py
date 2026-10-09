@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from campus.campus_platform.company_scope import permitted_companies
 from campus.iqac import evidence as registry
 
 
@@ -36,21 +37,37 @@ class Evidence(Document):
 			frappe.throw(_("A file evidence needs its file."))
 
 	def validate_source(self):
-		"""Whatever the write path (desk, REST, import): the source type is listed in Campus Settings, the user may read the
-		record, and the evidence belongs to the source's company."""
+		"""Whatever the write path (desk, REST, import), when the source or company changes: the source type is listed in
+		Campus Settings, the user may read the record, and the evidence belongs to the source's company. An evidence without
+		a source belongs to a company the user is permitted for (so it never fills another college's slots). A source type
+		delisted later does not block saving an evidence whose source is unchanged."""
 		if not self.source_doctype:
+			if self.source_name or self.source_field:
+				frappe.throw(_("A source record or field needs its source document type."))
+			if self.source_changed():
+				self.check_company_permitted()
+			return
+		if self.source_field:
+			self.file = None
+		if not self.source_changed():
 			return
 		listed = registry.source_file_field(self.source_doctype)
-		if self.is_new() or any(self.has_value_changed(f) for f in ("source_doctype", "source_name", "source_field", "company")):
-			frappe.has_permission(self.source_doctype, "read", self.source_name, throw=True)
-			company = registry.source_company(self.source_doctype, self.source_name)
-			if self.company != company:
-				frappe.throw(_("The company of the evidence must be the company of its source, {0}.").format(frappe.bold(company)))
+		frappe.has_permission(self.source_doctype, "read", self.source_name, throw=True)
+		company = registry.source_company(self.source_doctype, self.source_name)
+		if self.company != company:
+			frappe.throw(_("The company of the evidence must be the company of its source, {0}.").format(frappe.bold(company)))
 		if self.source_field:
 			field = frappe.get_meta(self.source_doctype).get_field(self.source_field)
 			if self.source_field != listed or not (field and field.fieldtype in registry.ATTACH_TYPES and self.source_name):
 				frappe.throw(_("{0} is not the listed Attach field of {1}.").format(frappe.bold(self.source_field), frappe.bold(self.source_doctype)))
-			self.file = None
+
+	def source_changed(self):
+		return self.is_new() or any(self.has_value_changed(f) for f in ("source_doctype", "source_name", "source_field", "company"))
+
+	def check_company_permitted(self):
+		permitted = permitted_companies(frappe.session.user)
+		if permitted is not None and self.company not in permitted:
+			frappe.throw(_("You are not permitted to add evidence for {0}.").format(frappe.bold(self.company)), frappe.PermissionError)
 
 	def validate_nodes(self):
 		for row in self.nodes:

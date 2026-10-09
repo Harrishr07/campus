@@ -393,6 +393,7 @@ scheduler_events = {
 		"campus.admissions.enquiry_followup.create_due_todos",
 		"campus.examinations.question_paper_files.sweep_plaintext",
 		"campus.research.proposals.send_deadline_reminders",
+		"campus.iqac.feedback_invites.send_reminders",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
@@ -505,10 +506,11 @@ jinja = {
 website_route_rules = [
 	{"from_route": "/verify/<code>", "to_route": "verify"},
 	{"from_route": "/disclosure/<slug>", "to_route": "disclosure"},  # P3-T04 public evidence
+	{"from_route": "/feedback/<campaign>", "to_route": "feedback"},  # P3-T07 answer a feedback campaign
 	{"from_route": "/campus-portal", "to_route": "campus_portal"},
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
-		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation")
+		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback")
 	),
 	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
 	*(

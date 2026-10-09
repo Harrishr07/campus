@@ -1,9 +1,11 @@
 """M01-03 Validation Rule: a check on the answers of a framework, kept as a record (never as code).
 
 Rule types: Required Evidence (a slot of the node has evidence), Word Limit (narrative within the limit), Comparison
-(the node's value against another node's), Range (value within minimum / maximum), Non-empty (the node is answered).
+(the node's value against another node's; each side sums the node's answered values, college and department rows), Range (value within minimum / maximum), Non-empty (the node is answered).
 Blocking failures stop a cycle moving to IQAC Review; warnings need a comment. Evaluated by campus.iqac.validation.
 """
+
+import math
 
 import frappe
 from frappe import _
@@ -47,11 +49,11 @@ class ValidationRule(Document):
 
 
 def is_number(text):
+	"""True for a finite number written as text (nan and inf are not bounds)."""
 	try:
-		float(text)
+		return math.isfinite(float(text))
 	except ValueError:
 		return False
-	return True
 
 
 CHECKS = {

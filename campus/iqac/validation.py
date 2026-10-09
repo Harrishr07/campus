@@ -31,6 +31,15 @@ def outside_range(value, minimum, maximum):
 	return (minimum is not None and value < minimum) or (maximum is not None and value > maximum)
 
 
+def range_text(minimum, maximum):
+	"""The bounds of a Range rule in words; an unset bound is open-ended."""
+	if minimum in (None, ""):
+		return _("at most {0}").format(maximum)
+	if maximum in (None, ""):
+		return _("{0} or more").format(minimum)
+	return _("{0} to {1}").format(minimum, maximum)
+
+
 def bound(text):
 	"""A Range rule's bound (kept as text) as a number; None when blank."""
 	return None if text in (None, "") else flt(text)
@@ -90,6 +99,7 @@ def check_word_limit(rule, ctx):
 
 
 def check_comparison(rule, ctx):
+	"""Each side is the sum of the node's answered Metric Values (the college row and any department rows)."""
 	if not (ctx.answered(rule.node) and ctx.answered(rule.compare_node)):
 		return []  # an unanswered side is a Non-empty matter, not a comparison failure
 	left, right = ctx.total(rule.node), ctx.total(rule.compare_node)
@@ -100,7 +110,7 @@ def check_comparison(rule, ctx):
 
 def check_range(rule, ctx):
 	return [
-		failure(rule, _("{0} is outside {1} to {2}.").format(row.value, rule.minimum, rule.maximum), row.department)
+		failure(rule, _("{0} is outside {1}.").format(row.value, range_text(rule.minimum, rule.maximum)), row.department)
 		for row in ctx.answered(rule.node) if outside_range(flt(row.value), bound(rule.minimum), bound(rule.maximum))
 	]  # fmt: skip
 

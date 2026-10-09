@@ -1,0 +1,39 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<link rel="stylesheet" href="/assets/campus/css/campus_portal.css">
+<div class="cp">
+	<h2>{{ title|e }}</h2>
+	{% if state == "denied" %}
+	<p class="cp-empty">{{ _("This feedback is not available to you. Please use the link you were sent, or log in with the account it was sent to.") }}</p>
+	{% elif state == "answered" %}
+	<p class="cp-empty">{{ _("Thank you: your feedback has been recorded.") }}</p>
+	{% elif state == "closed" %}
+	<p class="cp-empty">{{ _("This feedback is not open.") }}</p>
+	{% else %}
+	{% if is_anonymous %}<p class="cp-who">{{ _("Your answers are anonymous: they are kept without your name, account or the time you answered.") }}</p>{% endif %}
+	<form class="cp-card cp-form" id="cp-feedback" data-campaign="{{ campaign|e }}" data-member="{{ member|e }}" data-signature="{{ signature|e }}">
+		{% for q in questions %}
+		<fieldset class="cp-question" data-question="{{ q.name|e }}" data-type="{{ q.question_type|e }}">
+			<legend>{{ loop.index }}. {{ q.question|e }}{% if q.is_required %} *{% endif %}</legend>
+			{% if q.question_type == "Likert" %}
+			{% for n, label in [(1, _("Strongly disagree")), (2, _("Disagree")), (3, _("Neutral")), (4, _("Agree")), (5, _("Strongly agree"))] %}
+			<label><input type="radio" name="{{ q.name|e }}" value="{{ n }}" {% if q.is_required %}required{% endif %}> {{ n }} {{ label }}</label>
+			{% endfor %}
+			{% elif q.question_type == "Choice" %}
+			{% for option in q.options %}
+			<label><input type="radio" name="{{ q.name|e }}" value="{{ option|e }}" {% if q.is_required %}required{% endif %}> {{ option|e }}</label>
+			{% endfor %}
+			{% else %}
+			<textarea name="{{ q.name|e }}" rows="3" maxlength="2000" {% if q.is_required %}required{% endif %}></textarea>
+			{% endif %}
+		</fieldset>
+		{% endfor %}
+		<button class="cp-btn" type="submit">{{ _("Submit") }}</button>
+		<p class="cp-message" role="alert"></p>
+	</form>
+	{% endif %}
+</div>
+<script>document.body.dataset.cpError = {{ _("Network error. Please try again.")|tojson }};</script>
+<script src="/assets/campus/js/campus_portal.js"></script>
+<script src="/assets/campus/js/campus_feedback.js"></script>
+{% endblock %}

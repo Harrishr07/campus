@@ -13,7 +13,9 @@
   "no_dues_section",
   "no_dues_office_roles",
   "evidence_section",
-  "evidence_sources"
+  "evidence_sources",
+  "feedback_section",
+  "feedback_minimum_group_size"
  ],
  "fields": [
   {
@@ -77,13 +79,26 @@
    "label": "Evidence Sources",
    "options": "Evidence Source Doctype",
    "description": "Document types that get an Attach as Evidence action, and the Attach field holding their file."
+  },
+  {
+   "fieldname": "feedback_section",
+   "fieldtype": "Section Break",
+   "label": "Feedback"
+  },
+  {
+   "default": "5",
+   "description": "Feedback reports and CO scores never show a group (question, course, faculty, CO) answered by fewer respondents than this.",
+   "fieldname": "feedback_minimum_group_size",
+   "fieldtype": "Int",
+   "label": "Feedback Minimum Group Size",
+   "non_negative": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-06 13:00:00.000000",
+ "modified": "2026-10-09 23:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Campus Settings",
