@@ -175,8 +175,9 @@ Scheme, else of the Funding Agency, names the print format the certificate is is
 of Utilisation Certificate, so an agency's own layout is a new print format, not a code change.
 
 **Source changed**: any ledger entry on the sanction's liability, cost centre or project dated on or before an
-approved UC's period end (a back-dated voucher, or a cancellation) recomputes the UC. If the figures move, the UC is
-marked **Source Changed** and the approved figures stay as they were. **Recheck Source** recomputes it and clears
+approved UC's period end (a back-dated voucher, or a cancellation) recomputes the UC once, when the transaction
+commits and the whole voucher is posted, so a voucher that nets to zero or a Grant Income Recognition doesn't flag
+it. If the figures move, the UC is marked **Source Changed** and the approved figures stay as they were. **Recheck Source** recomputes it and clears
 the mark when the figures match again. To revise a certificate, cancel it (its Verifiable Document is revoked) and
 amend it. The amendment is the next **version** and needs approval again.
 

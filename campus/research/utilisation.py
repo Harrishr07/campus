@@ -15,7 +15,8 @@ outside every head of the sanction, or on the project under another cost centre)
 approved while any exists up to its period end.
 
 An approved UC keeps a snapshot of its figures. Any GL entry on its liability, cost centre or project dated up to its
-period end recomputes it, and a difference marks it "source changed"; the approved figures stay as they were."""
+period end queues it for a recompute just before the transaction commits (once per UC, with every row of the voucher
+posted), and a difference marks it "source changed"; the approved figures stay as they were."""
 
 import json
 
@@ -31,6 +32,7 @@ from campus.research.grant_recognition import posted
 UC_DOCTYPE = "Utilisation Certificate"
 UC_POLICY = "Utilisation Certificate Approval"
 ENGINE_VERSION = 1
+RECHECK_FLAG = "campus_uc_recheck"
 SANCTION_FIELDS = ["name", "company", "liability_account", "cost_center", "project", "start_date", "end_date"]
 FIGURE_FIELDS = (
 	"opening_unspent", "grants_received", "interest_earned", "other_adjustments", "total_available",
@@ -203,8 +205,10 @@ def source_moved(uc):
 
 
 def note_ledger_change(doc, method=None):
-	"""on_submit of GL Entry (postings and the reversing entries of a cancel): recheck the approved UCs the entry can
-	move, those of its liability, cost centre or project with a period end on or after its date."""
+	"""on_submit of GL Entry (postings and the reversing entries of a cancel): queue the approved UCs the entry can
+	move, those of its liability, cost centre or project with a period end on or after its date. They are rechecked
+	once, just before the transaction commits: the voucher's other rows aren't posted yet when its first row is, so a
+	voucher that nets to zero (or a Grant Income Recognition, linked to its entry only afterwards) would flag wrongly."""
 	uc = frappe.qb.DocType(UC_DOCTYPE)
 	touches = uc.liability_account == doc.account
 	if doc.cost_center:
@@ -216,21 +220,45 @@ def note_ledger_change(doc, method=None):
 		.where((uc.docstatus == 1) & (uc.source_changed == 0) & (uc.to_date >= doc.posting_date) & touches)
 		.run(pluck=True)
 	)  # fmt: skip
-	for name in names:
-		uc = frappe.get_doc(UC_DOCTYPE, name)
-		try:
-			changed = source_moved(uc)
-		except Exception as error:  # a head mapping changed since, a corrupt snapshot...: never block the posting
-			frappe.clear_last_message()
-			frappe.log_error(
-				title=_("Utilisation Certificate recheck failed"),
-				message=_("{0} could not be recomputed after GL Entry {1} ({2}); it is marked Source Changed.").format(
-					name, doc.name, type(error).__name__
-				),
-				reference_doctype=UC_DOCTYPE, reference_name=name,
-			)  # fmt: skip
-			changed = True
-		mark_source(uc, changed)
+	if names:
+		queue_recheck(names)
+
+
+def queue_recheck(names):
+	queued = frappe.flags.get(RECHECK_FLAG)
+	if queued is None:  # first in this transaction
+		queued = frappe.flags[RECHECK_FLAG] = set()
+		frappe.db.before_commit.add(recheck_queued)
+		frappe.db.after_rollback.add(forget_queued)
+	queued.update(names)
+
+
+def forget_queued():
+	frappe.flags.pop(RECHECK_FLAG, None)
+
+
+def recheck_queued():
+	"""before_commit: recheck each queued UC once against the transaction's whole ledger."""
+	for name in sorted(frappe.flags.pop(RECHECK_FLAG, None) or ()):
+		uc = frappe.db.get_value(UC_DOCTYPE, name, ["docstatus", "source_changed"], as_dict=True)
+		if uc and uc.docstatus == 1 and not uc.source_changed:
+			recheck(frappe.get_doc(UC_DOCTYPE, name))
+
+
+def recheck(uc):
+	try:
+		changed = source_moved(uc)
+	except Exception as error:  # a head mapping changed since, a corrupt snapshot...: never block the posting
+		frappe.clear_last_message()
+		frappe.log_error(
+			title=_("Utilisation Certificate recheck failed"),
+			message=_("{0} could not be recomputed after a ledger change ({1}); it is marked Source Changed.").format(
+				uc.name, type(error).__name__
+			),
+			reference_doctype=UC_DOCTYPE, reference_name=uc.name,
+		)  # fmt: skip
+		changed = True
+	mark_source(uc, changed)
 
 
 def mark_source(uc, changed=None):

@@ -14,7 +14,7 @@ from frappe.utils import add_days, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.research.budget_control import BUDGET_HEAD_FIELD
-from campus.research.utilisation import UC_POLICY, utilisation_figures
+from campus.research.utilisation import UC_POLICY, recheck_queued, utilisation_figures
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import make_account
 from campus.tests.research_fixtures import ABBR, COLLEGE, SanctionFixtures
@@ -153,6 +153,11 @@ class TestUtilisationCertificate(SanctionFixtures):
 
 	def heads_of(self, uc):
 		return {row.budget_head: row for row in uc.heads}
+
+	def flagged(self, uc):
+		"""The UC's Source Changed flag once the transaction commits (the recheck runs before the commit)."""
+		recheck_queued()
+		return frappe.db.get_value(DOCTYPE, uc.name, "source_changed")
 
 	# acceptance 1: UC figures equal GL figures for the period
 	def test_figures_equal_the_ledger_for_the_period(self):
@@ -373,8 +378,9 @@ class TestUtilisationCertificate(SanctionFixtures):
 		self.funded(sanction)
 		uc = self.approved(sanction)
 		self.spend(sanction, self.consumables_account, 800, self.consumables, posting_date=add_days(today(), 1))  # later period
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 0)
+		self.assertEqual(self.flagged(uc), 0)
 		entry = self.spend(sanction, self.consumables_account, 800, self.consumables, posting_date=add_days(self.period_start, 15))
+		self.assertEqual(self.flagged(uc), 1)
 		uc.reload()
 		self.assertEqual(uc.source_changed, 1)
 		self.assertTrue(uc.source_changed_on)
@@ -391,14 +397,14 @@ class TestUtilisationCertificate(SanctionFixtures):
 		uc = self.approved(sanction)
 		self.assertEqual(uc.source_changed, 0)
 		entry.cancel()
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+		self.assertEqual(self.flagged(uc), 1)
 
 	def test_entry_before_the_period_moves_the_opening_and_flags_too(self):
 		sanction = self.submitted_sanction()
 		self.funded(sanction)
 		uc = self.approved(sanction)
 		self.interest(sanction, 1, posting_date=add_days(self.period_start, -30))
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+		self.assertEqual(self.flagged(uc), 1)
 
 	def test_unrelated_and_reconciling_entries_do_not_flag(self):
 		sanction = self.submitted_sanction()
@@ -407,30 +413,59 @@ class TestUtilisationCertificate(SanctionFixtures):
 		other = self.submitted_sanction()
 		self.spend(other, self.consumables_account, 500, self.consumables, posting_date=add_days(self.period_start, 15))
 		self.depreciate(sanction, 100, posting_date=add_days(self.period_start, 15))  # on the cost centre, not spending
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 0)
+		self.assertEqual(self.flagged(uc), 0)
+
+	def test_a_voucher_that_nets_to_zero_on_the_cost_centre_does_not_flag(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		row = {"account": self.consumables_account, "cost_center": sanction.cost_center, "project": sanction.project,
+			BUDGET_HEAD_FIELD: self.consumables}  # fmt: skip
+		frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": add_days(self.period_start, 15),
+				"accounts": [row | {"debit_in_account_currency": 300}, row | {"credit_in_account_currency": 300}],
+			}  # fmt: skip
+		).insert().submit()
+		self.assertEqual(self.flagged(uc), 0)
+
+	def test_a_recognition_run_up_to_the_period_end_does_not_flag(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		self.recognise(sanction, uc.to_date)
+		self.assertEqual(self.flagged(uc), 0)
+
+	def test_a_real_change_in_the_period_still_flags_once_committed(self):
+		sanction = self.submitted_sanction()
+		self.funded(sanction)
+		uc = self.approved(sanction)
+		self.spend(sanction, self.travel_account, 250, self.travel, posting_date=add_days(self.period_start, 15))
+		self.assertEqual(self.flagged(uc), 1)
+		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "closing_unspent"), 516000)  # approved figures kept
 
 	def test_backdated_untagged_spending_flags_too(self):
 		sanction = self.submitted_sanction()
 		self.funded(sanction)
 		uc = self.approved(sanction)
 		self.untagged_spend(sanction, 50, posting_date=add_days(self.period_start, 15))
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+		self.assertEqual(self.flagged(uc), 1)
 
 	def test_a_ledger_entry_is_never_blocked_by_a_certificate_that_cannot_be_recomputed(self):
 		sanction = self.submitted_sanction()
 		self.funded(sanction)
 		uc = self.approved(sanction)
+		self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
 		with patch("campus.research.utilisation.utilisation_figures", side_effect=frappe.ValidationError("broken mapping")):
-			self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+			self.assertEqual(self.flagged(uc), 1)
 
 	def test_a_ledger_entry_is_never_blocked_by_an_unexpected_recompute_error(self):
 		sanction = self.submitted_sanction()
 		self.funded(sanction)
 		uc = self.approved(sanction)
+		self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
 		with patch("campus.research.utilisation.utilisation_figures", side_effect=KeyError("corrupt snapshot")):
-			self.spend(sanction, self.consumables_account, 10, self.consumables, posting_date=add_days(self.period_start, 15))
-		self.assertEqual(frappe.db.get_value(DOCTYPE, uc.name, "source_changed"), 1)
+			self.assertEqual(self.flagged(uc), 1)
 
 	# versions
 	def test_a_revised_certificate_is_a_new_version_and_periods_do_not_overlap(self):

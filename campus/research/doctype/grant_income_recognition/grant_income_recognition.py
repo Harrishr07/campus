@@ -124,5 +124,7 @@ class GrantIncomeRecognition(Document):
 		)
 		entry.flags.ignore_permissions = True
 		entry.insert()
+		if not self.is_new():  # linked before its GL posts, so the UC recheck leaves it out of the liability inflows
+			self.db_set("journal_entry", entry.name, update_modified=False)
 		entry.submit()
 		return entry.name
