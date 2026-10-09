@@ -374,6 +374,7 @@ scheduler_events = {
 		"campus.admissions.documents.send_daily_reminders",
 		"campus.admissions.enquiry_followup.create_due_todos",
 		"campus.examinations.question_paper_files.sweep_plaintext",
+		"campus.research.proposals.send_deadline_reminders",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",

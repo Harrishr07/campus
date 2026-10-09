@@ -8,12 +8,14 @@ import frappe
 from frappe.boot import get_bootinfo
 
 from campus.campus_platform.api import clear_pack_cache
-from campus.tests.factories import make_company
+from campus.campus_platform.pack_visibility import hidden_workspaces
+from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
 
 APP_ICON = "OneBook Campus"
 COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
 TEST_ONLY_DOCTYPES = {"Approval Test Document"}
+RESEARCH_USER = "campus-nav-research@example.com"
 SECTIONS = ["Masters", "Transactions", "Reports", "Settings"]
 USERS = {
 	"accounts": ("campus-nav-accounts@example.com", ["Accounts User"]),
@@ -104,8 +106,19 @@ class TestNavigation(CampusTestCase):
 			)
 
 	def test_module_packs_hide_their_area(self):
-		for code, area in (("COE", "Examinations"), ("GOVERNANCE", "Academic Governance"), ("IQAC", "IQAC")):
+		for code, area in (
+			("COE", "Examinations"), ("GOVERNANCE", "Academic Governance"), ("IQAC", "IQAC"), ("RESEARCH", "Research")
+		):  # fmt: skip
 			self.assertIn(area, frappe.get_all("Module Pack Workspace", {"parent": code}, pluck="workspace"), code)
+
+	def test_research_area_hidden_when_its_pack_is_off(self):
+		make_user(RESEARCH_USER, [COLLEGE])  # sees only this college, so the college's switch decides
+		self.assertNotIn("Research", hidden_workspaces(RESEARCH_USER))
+		profile = frappe.get_doc("Institution Profile", COLLEGE)
+		profile.append("packs", {"pack": "RESEARCH", "enabled": 0})
+		profile.save()
+		clear_pack_cache()
+		self.assertIn("Research", hidden_workspaces(RESEARCH_USER))
 
 	# role mapping
 	def desk_areas(self, key):

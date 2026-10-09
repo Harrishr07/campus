@@ -22,3 +22,4 @@ campus.patches.open_malpractice_decision_to_approver
 campus.patches.fill_lateral_distinction_years
 campus.patches.use_campus_statutory_components
 campus.patches.fill_honours_credits
+campus.patches.link_research_workspace
