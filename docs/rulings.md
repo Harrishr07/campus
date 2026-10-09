@@ -148,3 +148,5 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 2 | Additional courses in the CGPA | Additional, Honours and Minor registrations count only once the Honours or Minor credits are passed and the Grading Scheme counts them |
 | 3 | Progression Rule values | not seeded (the note gives none): each college sets the arrear limit and probation CGPA per regulation |
 | 4 | Convocation export format | placeholder columns (register no, name, date of birth, programme, regulation, CGPA, %, class, completion term) until the university's format is known |
+| 5 | Degree credit total | the regulation's Curriculum Rule Minimum Total Credits, checked against passed core credits (additional / Honours / Minor excluded); not checked when unset |
+| 6 | Withdrawn / SA / Pending courses at graduation | arrears until passed, as in arrears.py (T21: a withdrawal is no attempt or appearance but the course is owed) |

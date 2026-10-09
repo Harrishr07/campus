@@ -119,3 +119,27 @@ class TestExportCells(UnitTestCase):
 	def test_formula_like_text_is_neutralised(self):
 		self.assertEqual([g.csv_cell(v) for v in ("=HYPERLINK(1)", "+1", "-2", "@x", "Asha", 8.5, None)],
 			["'=HYPERLINK(1)", "'+1", "'-2", "'@x", "Asha", 8.5, ""])  # fmt: skip
+
+
+class TestFixRound1(UnitTestCase):
+	def test_m1_the_listed_row_is_the_latest_pass_the_cgpa_counts(self):
+		improved = [attempt("C1", 6), attempt("C2", 9), attempt("C3", 8), attempt("C4", 9), attempt("C1", 9)]
+		record = g.consolidate(improved, {}, 18, 1)
+		self.assertEqual([c["grade_point"] for c in record["core_courses"]], [9, 9, 8, 9])
+		self.assertEqual(record["cgpa"], 8.75)  # (9 + 9 + 8 + 9) / 4: the same pass as listed
+
+	def test_m6_withdrawn_shortage_and_pending_courses_stay_arrears(self):
+		# T21: a withdrawal is not an attempt or appearance but the course is still owed; SA redoes the course;
+		# Pending (T19 fix 1) is a registered arrear without marks
+		rows = [*STRONG[:1], attempt("C2", 0, "WD"), attempt("C3", 0, "SA"), attempt("C4", 0, "Pending")]
+		record = g.consolidate(rows, {}, 18, 1)
+		self.assertEqual(record["arrears"], ["C2", "C3", "C4"])
+		cleared = g.consolidate([attempt("C2", 0, "WD"), *STRONG], {}, 18, 1)
+		self.assertEqual((cleared["arrears"], cleared["first_appearance"]), ([], True))
+
+	def test_m2_core_credits_earned(self):
+		record = g.consolidate([*STRONG[:3], attempt("C4", 0, "Fail"), attempt("H1", 10, credits=9)], HONOURS, 18, 1)
+		self.assertEqual(record["core_credits"], 9)
+		self.assertTrue(g.credits_complete(record, 9))
+		self.assertFalse(g.credits_complete(record, 12))
+		self.assertTrue(g.credits_complete(record, 0))  # no credit total on record: not checked

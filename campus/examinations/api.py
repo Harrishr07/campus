@@ -62,6 +62,13 @@ def rerun_progression(progression_run):
 	return progression.rerun(progression_run)
 
 
+def desk_only_certificate_types():
+	"""Certificate Types requested on the desk only, never in the portal (the Degree Data Sheet, P2-T22)."""
+	from campus.examinations.exam_certificates import desk_only_types
+
+	return desk_only_types()
+
+
 @frappe.whitelist(methods=["POST"])
 def start_registration(exam_session, program=None):
 	"""Queue the bulk Exam Registration of the session (COE only); returns the Bulk Run name.

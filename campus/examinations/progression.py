@@ -5,7 +5,8 @@ the outstanding arrears and CGPA of their published results (campus.examinations
 Bulk: one item per student through campus_platform.bulk.run_bulk. The handler is DB-only and idempotent: a student's
 outcome row is written once per run and updated on a re-run, and the semester moves from the row's from_semester,
 so re-running never promotes twice. Promote and Probation set the next semester (status Active); Detain sets the
-academic status Detained and keeps the semester.
+academic status Detained and keeps the semester. A re-run also takes the students this run detained, so a later
+revaluation that clears their arrears promotes them.
 """
 
 import frappe
@@ -44,9 +45,13 @@ def rerun(progression_run):
 
 
 def active_students(run_doc):
+	"""The run's students: Active ones, plus those this run detained (a re-run after a revaluation can promote them)."""
 	students = program_students(frappe._dict(academic_term=run_doc.academic_term, company=run_doc.company), run_doc.program)
 	statuses = dict(frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_academic_status"], as_list=True))
-	return [s for s in students if (statuses.get(s) or ACTIVE) == ACTIVE]
+	detained_here = set(
+		frappe.get_all(ROW, {"parent": run_doc.name, "parenttype": RUN_TYPE, "outcome": graduation_rules.DETAIN}, pluck="student")
+	)
+	return [s for s in students if (statuses.get(s) or ACTIVE) == ACTIVE or (statuses.get(s) == DETAINED and s in detained_here)]
 
 
 def progress_student(student, run):

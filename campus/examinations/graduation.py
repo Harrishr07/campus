@@ -2,14 +2,16 @@
 consolidated grade sheet, provisional and degree certificates, degree data sheet, transcript, Convocation List and
 Progression Run.
 
-Published means the latest version (is_latest) of a Student Result whose Exam Session is Published with publish_at
-passed. Values come from campus.examinations.graduation_rules: CGPA and % (CGPA x 10) with the additional / Honours /
+Published means the latest, ratified version of a Student Result (is_latest, not pending_ratification: P2-T19 fix 1)
+whose Exam Session is Published with publish_at passed. Values come from campus.examinations.graduation_rules: CGPA and % (CGPA x 10) with the additional / Honours /
 Minor courses of the student's Course Registrations per the Grading Scheme and Classification Rule, the outstanding
 arrears, and the class (rules.classify with the student's entry type, years of study and break of study). A student
-has completed the programme with a published final-year session result and no outstanding core arrear.
+has completed the programme with a published final-year session result, no outstanding core arrear and, when the
+regulation's Curriculum Rule sets min_total_credits, at least that many core credits passed.
 """
 
 import frappe
+from frappe.query_builder.functions import Coalesce
 from frappe.utils import now_datetime
 
 from campus.campus_platform.api import get_regulation
@@ -38,7 +40,10 @@ def graduate_record(student):
 	record = frappe._dict(info, **consolidated, regulation=regulation, semesters=semesters)
 	record.program = semesters[-1].program if semesters else frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1}, "program")
 	record.completion_term = semesters[-1].academic_term if semesters else None
-	record.completed = bool(semesters) and any(s.is_final_year for s in semesters) and not record.arrears
+	record.completed = (
+		bool(semesters) and any(s.is_final_year for s in semesters) and not record.arrears
+		and graduation_rules.credits_complete(consolidated, required_credits(regulation))
+	)  # fmt: skip
 	record.classification = record.class_variant = None
 	if record.completed and rule:
 		found = graduation_rules.classification(
@@ -47,6 +52,11 @@ def graduate_record(student):
 		)  # fmt: skip
 		record.classification, record.class_variant = found or (None, None)
 	return record
+
+
+def required_credits(regulation):
+	"""The regulation's credit total for the degree (Curriculum Rule min_total_credits), or 0 when none is set."""
+	return regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits") or 0
 
 
 def classification_rule(regulation):
@@ -74,7 +84,7 @@ def published_attempts(student):
 			session.is_final_year, row.course, course.course_name, row.credits, row.grade, row.grade_point, row.result,
 			row.in_gpa,
 		)  # fmt: skip
-		.where((result.student == student) & (result.is_latest == 1))
+		.where((result.student == student) & (result.is_latest == 1) & (Coalesce(result.pending_ratification, 0) == 0))
 		.where((session.status == PUBLISHED) & (session.publish_at <= now_datetime()))
 		.orderby(term.term_start_date)
 		.orderby(result.creation)
@@ -123,6 +133,7 @@ def final_year_students(company, program=None):
 		.select(result.student)
 		.distinct()
 		.where((result.company == company) & (result.is_latest == 1) & (session.is_final_year == 1))
+		.where(Coalesce(result.pending_ratification, 0) == 0)
 		.where((session.status == PUBLISHED) & (session.publish_at <= now_datetime()))
 		.orderby(result.student)
 	)

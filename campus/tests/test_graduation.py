@@ -14,14 +14,17 @@ import frappe
 from frappe.utils import add_days, now_datetime
 
 from campus.campus_platform import bulk
+from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.verification import verify
 from campus.examinations import api, convocation, exam_certificates, graduation, progression
 from campus.examinations.seed import seed_regulation
-from campus.tests.factories import make_company
+from campus.tests.approval_fixtures import level
+from campus.tests.factories import make_company, make_user
 from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
 from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR, PROGRAM, UNIVERSITY = "Grad Test College", "GRDC", "Grad Test BE", "Grad Test University"
+APPROVER, POLICY = "grd-coe-approver@example.com", "GRD Certificate Policy"
 DISTINCTION, FIRST, SECOND = "First Class with Distinction", "First Class", "Second Class"
 CORE = ("GRD C1", "GRD C2", "GRD C3", "GRD C4")
 TRANSCRIPT, CONSOLIDATED, PROVISIONAL, DEGREE, DATA_SHEET = (
@@ -74,6 +77,7 @@ class GraduationFixture(CampusTestCase):
 			"affiliating_university": UNIVERSITY, "degree_awarding_body": "University", "provisional_certificate_issuer": "College"}
 		).insert()  # fmt: skip
 		exam_certificates.seed_certificate_types()
+		make_user(APPROVER, [COLLEGE])
 		for course in (*CORE, "GRD H1", "GRD H2", "GRD A1"):
 			if not frappe.db.exists("Course", course):
 				frappe.get_doc({"doctype": "Course", "course_name": course, "oc_company": COLLEGE}).insert()
@@ -156,6 +160,12 @@ class GraduationFixture(CampusTestCase):
 		frappe.db.savepoint("graduation_test")
 		self.addCleanup(frappe.db.rollback, save_point="graduation_test")
 		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.db.delete("Approval Level", {"parent": POLICY})
+		frappe.db.delete("Approval Policy", {"name": POLICY})
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": POLICY, "document_type": "Certificate Request",
+			"condition": "doc.needs_approval", "levels": [level("User", APPROVER, title="COE")]}
+		).insert()  # fmt: skip
 
 	def awarding(self, body):
 		frappe.db.set_value("Institution Profile", COLLEGE, "degree_awarding_body", body)
@@ -164,8 +174,20 @@ class GraduationFixture(CampusTestCase):
 		doc = frappe.get_doc(
 			{"doctype": "Certificate Request", "student": self.students[key], "certificate_type": certificate_type, "purpose": "Higher studies"}
 		).insert()
+		if submit and doc.needs_approval:
+			return self.approve(doc)
 		if submit:
 			doc.submit()
+		return doc
+
+	def approve(self, doc):
+		"""The graduate documents need approval (fix round 1, I-2): approving submits (issues) the request."""
+		request = request_approval("Certificate Request", doc.name)
+		frappe.set_user(APPROVER)
+		approve(request, None)
+		frappe.set_user("Administrator")
+		doc.reload()
+		self.assertEqual(doc.docstatus, 1)
 		return doc
 
 	def printed(self, doc):
@@ -251,12 +273,14 @@ class TestPrints(GraduationFixture):
 		with self.assertRaises(frappe.ValidationError):
 			self.request("dist", DATA_SHEET, submit=False)
 
-	def test_ac2_a_degree_print_is_refused_after_the_switch(self):
+	def test_ac2_an_issued_degree_certificate_stays_printable_after_the_switch_a_draft_does_not(self):
 		self.awarding("College")
-		doc = self.request("dist", DEGREE)
+		issued = self.request("dist", DEGREE)
+		draft = self.request("cleared", DEGREE, submit=False)
 		self.awarding("University")
+		self.assertIn(DISTINCTION, self.printed(issued))  # rendered from its snapshot
 		with self.assertRaises(frappe.ValidationError):
-			self.printed(doc)
+			self.printed(draft)
 
 	def test_ac3_consolidated_sheet_lists_honours_courses_per_the_regulation(self):
 		html = self.printed(self.request("honours", CONSOLIDATED))
@@ -414,3 +438,92 @@ class TestProgressionRun(GraduationFixture):
 		rule.max_arrears = 5
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot be edited"):
 			rule.save()
+
+
+class TestFixRound1(GraduationFixture):
+	def s2_result(self, key):
+		return frappe.db.get_value("Student Result", {"student": self.students[key], "exam_session": self.s2})
+
+	def test_i1_an_issued_print_keeps_its_issued_values(self):
+		doc = self.request("dist", CONSOLIDATED)
+		snapshot = frappe.parse_json(frappe.db.get_value("Certificate Request", doc.name, "record_snapshot"))
+		self.assertEqual((snapshot["cgpa"], snapshot["classification"]), (8.75, DISTINCTION))
+		# a later result (revaluation) lowers GRD C3, and the rule's distinction line moves
+		frappe.db.set_value("Student Result Course", {"parent": self.s2_result("dist"), "course": "GRD C3"}, "grade_point", 5)
+		frappe.db.set_value("Classification Rule Class", {"parent": self.regs["R2022"], "class_name": DISTINCTION}, "cgpa_min", 9.9)
+		self.assertNotEqual(graduation.graduate_record(self.students["dist"]).cgpa, 8.75)
+		html = self.printed(doc)
+		for text in ("87.50", "8.75", DISTINCTION):
+			self.assertIn(text, html)
+
+	def test_i1_a_submitted_request_without_a_snapshot_does_not_render_live(self):
+		doc = self.request("dist", TRANSCRIPT)
+		frappe.db.set_value("Certificate Request", doc.name, "record_snapshot", None)
+		with self.assertRaisesRegex(frappe.ValidationError, "snapshot"):
+			self.printed(doc)
+
+	def test_i2_graduate_documents_need_approval_the_transcript_does_not(self):
+		for certificate_type in (CONSOLIDATED, PROVISIONAL, DATA_SHEET):
+			self.assertEqual(frappe.db.get_value("Certificate Type", certificate_type, "needs_approval"), 1)
+			doc = self.request("dist", certificate_type, submit=False)
+			with self.assertRaisesRegex(frappe.ValidationError, "needs approval"):
+				doc.submit()
+		self.assertEqual(frappe.db.get_value("Certificate Type", TRANSCRIPT, "needs_approval"), 0)
+
+	def test_i2_one_provisional_and_one_degree_certificate_per_student(self):
+		first = self.request("dist", PROVISIONAL)
+		with self.assertRaisesRegex(frappe.ValidationError, "already"):
+			self.request("dist", PROVISIONAL, submit=False)
+		first.cancel()
+		self.request("dist", PROVISIONAL)  # allowed again once the first is cancelled
+		self.awarding("College")
+		self.request("dist", DEGREE)
+		with self.assertRaisesRegex(frappe.ValidationError, "already"):
+			self.request("dist", DEGREE, submit=False)
+		self.request("dist", CONSOLIDATED)
+		self.request("dist", CONSOLIDATED)  # a grade sheet copy may be issued again
+
+	def test_i2_the_degree_data_sheet_is_not_requestable_in_the_portal(self):
+		from campus.student_services import portal
+
+		user = "grd-student-ds@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "GrdDs", "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+		frappe.db.set_value("Student", self.students["dist"], "user", user)
+		frappe.set_user(user)
+		self.assertNotIn(DATA_SHEET, [t.name for t in portal.certificate_types()])
+		self.assertIn(CONSOLIDATED, [t.name for t in portal.certificate_types()])
+		with self.assertRaises(frappe.PermissionError):
+			portal.request_certificate(DATA_SHEET, "University")
+		frappe.set_user("Administrator")
+		self.request("dist", DATA_SHEET)  # the desk can
+
+	def test_pending_ratification_versions_never_count(self):
+		name = self.s2_result("dist")
+		frappe.db.set_value("Student Result", name, "pending_ratification", 1)
+		record = graduation.graduate_record(self.students["dist"])
+		self.assertEqual([s.exam_session for s in record.semesters], [self.s1])
+
+	def test_m2_the_regulation_credit_total_must_be_earned(self):
+		rule = {"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 12, "max_total_credits": 200}
+		frappe.get_doc(rule).insert()
+		self.assertTrue(graduation.graduate_record(self.students["dist"]).completed)  # 12 core credits
+		frappe.db.set_value("Curriculum Rule", {"regulation": self.regs["R2022"]}, "min_total_credits", 15)
+		record = graduation.graduate_record(self.students["dist"])
+		self.assertEqual((record.completed, record.classification), (False, None))
+
+	def test_m3_a_rerun_reconsiders_the_runs_detained_students(self):
+		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2022"], "max_arrears": 0}).insert()
+		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2026"], "max_arrears": 0}).insert()
+		doc = frappe.get_doc({"doctype": "Progression Run", "company": COLLEGE, "academic_term": self.terms["S2"], "program": PROGRAM}).insert()
+		with patch.object(bulk, "enqueue_run"):
+			doc.submit()
+		doc.reload()
+		run = frappe.get_doc("Bulk Run", doc.bulk_run)
+		progression.progress_student(self.students["arrear"], run)
+		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], "oc_academic_status"), "Detained")
+		# a revaluation clears the arrear; the re-run takes the detained student again and promotes
+		frappe.db.set_value("Student Result Course", {"parent": self.s2_result("arrear"), "course": "GRD C4"}, {"result": "Pass", "grade_point": 7})
+		self.assertIn(self.students["arrear"], progression.active_students(doc))
+		self.assertEqual(progression.progress_student(self.students["arrear"], run), "Promote")
+		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_current_semester"]), ("Active", 3))

@@ -147,10 +147,14 @@ def grade_sheet_url(student_result):
 
 @frappe.whitelist()
 def certificate_types():
-	"""Certificate types a student may ask for, with their fee and whether approval is needed."""
+	"""Certificate types a student may ask for, with their fee and whether approval is needed (never the desk-only
+	examination types such as the Degree Data Sheet)."""
+	from campus.examinations.api import desk_only_certificate_types
+
 	require_login()
 	return frappe.get_all(
-		"Certificate Type", {"enabled": 1}, ["name", "fee_amount", "needs_approval", "is_transfer_certificate"], order_by="name"
+		"Certificate Type", {"enabled": 1, "name": ["not in", desk_only_certificate_types() or [""]]},
+		["name", "fee_amount", "needs_approval", "is_transfer_certificate"], order_by="name",
 	)
 
 

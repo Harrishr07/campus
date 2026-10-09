@@ -5,7 +5,10 @@ classify it by the regulation's Classification Rule, decide a term-end progressi
 Additional, Honours and Minor courses (their Course Registration type) are listed apart from the core courses and
 enter the CGPA only when the Grading Scheme counts them (count_additional_with_honours) and the student completed the
 Honours or Minor: passed courses of that type worth the Classification Rule's honours_credits. They are never
-arrears. A course's latest attempt is listed; a pass is never replaced by a later attempt.
+arrears. A course's latest pass is listed (the one rules.cgpa counts), else its latest attempt. Withdrawn (WD), SA
+and Pending courses stay arrears until passed, as in campus.examinations.arrears (T21: a withdrawal is no attempt
+or appearance, but the course is still owed). The core credits passed are checked against the regulation's credit
+total by credits_complete.
 """
 
 from campus.examinations import rules
@@ -36,7 +39,7 @@ def consolidate(attempts, registration_types, credits_needed=0, count_additional
 	additional_counts = bool(count_additional) and variant != REGULAR
 	final = {}
 	for row in attempts:
-		if final.get(row["course"], {}).get("result") != PASS:
+		if row["result"] == PASS or final.get(row["course"], {}).get("result") != PASS:
 			final[row["course"]] = row
 	counted = {}
 	courses = []
@@ -59,7 +62,13 @@ def consolidate(attempts, registration_types, credits_needed=0, count_additional
 		"additional_courses": [c for c in courses if c["registration_type"] in ADDITIONAL_TYPES],
 		"arrears": sorted(c["course"] for c in core if c["result"] != PASS),
 		"first_appearance": rules.passed_at_first_appearance(history),
+		"core_credits": sum(c["credits"] for c in core if c["result"] == PASS),
 	}
+
+
+def credits_complete(record, required_credits):
+	"""Whether the passed core credits reach the regulation's total (0 or None: no total on record, not checked)."""
+	return not required_credits or record["core_credits"] >= required_credits
 
 
 def classification(record, classes, years_taken, break_years, entry_type):
