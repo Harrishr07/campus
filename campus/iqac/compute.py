@@ -116,6 +116,7 @@ def compute_node(cycle, node, done=None, nodes=None, department=None):
 		metric.update(
 			{"computed_value": value, "computed_at": computed_at, "snapshot": json.dumps(snapshot, indent=1), "source_changed": 0, "recomputed_value": None}
 		)
+		metric.flags.engine_write = True
 		metric.save(ignore_permissions=True)
 	done[(node, department)] = metric.name
 	return metric.name

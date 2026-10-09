@@ -15,6 +15,7 @@ from campus.iqac.cycle import CLOSED_CYCLE
 from campus.iqac.metric_values import FROZEN, count_words, effective_value
 
 OVERRIDE_FIELDS = ("override_reason", "override_approved", "override_request")
+ENGINE_FIELDS = ("computed_value", "computed_at", "snapshot", "recomputed_value", "source_changed", "verified_by", "verified_on")
 ANSWER_FIELDS = ("manual_value", "choice", "narrative")
 NODE_FIELDS = ["framework", "code", "node_type", "answer_type", "choices", "formula", "department_wise"]
 
@@ -29,6 +30,7 @@ class MetricValue(Document):
 		cycle = frappe.db.get_value("Accreditation Cycle", self.cycle, ["framework", "company", "status"], as_dict=True)
 		self.validate_scope(node, cycle)
 		self.validate_not_frozen()
+		self.validate_engine_fields()
 		self.validate_answer(node)
 		self.validate_override_fields(node)
 		self.word_count = count_words(self.narrative)
@@ -59,6 +61,18 @@ class MetricValue(Document):
 			self.changed(field) for field in (*ANSWER_FIELDS, *OVERRIDE_FIELDS)
 		):
 			frappe.throw(_("{0} is Verified; reopen it to change the answer.").format(frappe.bold(self.name)))
+
+	def validate_engine_fields(self):
+		"""read_only is UI-only: the engine's fields change only through compute, Verify / Reopen and an applied override."""
+		if self.flags.engine_write or self.flags.override_applied:
+			return
+		if self.is_new():
+			changed = any(self.get(field) not in (None, "", 0) for field in ENGINE_FIELDS)
+		else:
+			before = self.get_doc_before_save()  # a blank, a None and a zero are the same "unset" in a NOT NULL column
+			changed = any((before.get(field) or None) != (self.get(field) or None) for field in ENGINE_FIELDS)
+		if changed:
+			frappe.throw(_("The computed value, its snapshot and the verification are set by the engine and cannot be edited."))
 
 	def validate_answer(self, node):
 		if node.node_type not in ("Metric", "Sub-Metric", "Extended Profile"):

@@ -40,6 +40,7 @@ def verify(name):
 		frappe.throw(_("{0} has no answer to verify.").format(frappe.bold(name)))
 	set_status(metric, "Verified")
 	metric.update({"verified_by": frappe.session.user, "verified_on": now_datetime()})
+	metric.flags.engine_write = True
 	metric.save()
 
 
@@ -51,6 +52,7 @@ def reopen(name):
 		frappe.throw(_("{0} is {1}; only a Verified value can be reopened.").format(frappe.bold(name), _(metric.status)))
 	set_status(metric, "Draft")
 	metric.update({"verified_by": None, "verified_on": None})
+	metric.flags.engine_write = True
 	metric.save()
 
 

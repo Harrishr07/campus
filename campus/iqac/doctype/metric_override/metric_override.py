@@ -45,6 +45,8 @@ class MetricOverride(ApprovableDocument, Document):
 		metric = self.metric(lock=True)
 		if metric.override_request != self.name:
 			return  # a later override replaced it
+		if metric.status == "Verified":
+			frappe.throw(_("{0} is Verified; reopen it before cancelling the override that set its value.").format(frappe.bold(metric.name)))
 		self.check_applicable(applied=True)
 		metric.flags.override_applied = True
 		metric.update({"manual_value": None, "override_reason": None, "override_approved": 0, "override_request": None})

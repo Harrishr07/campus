@@ -403,3 +403,90 @@ class TestLockAndAccess(MetricFixture):
 		self.assertFalse(self.metric(MANUAL_NODE).has_permission("read"))
 		frappe.set_user(COORDINATOR)
 		self.assertTrue(self.metric(MANUAL_NODE).has_permission("write"))
+
+
+class TestEngineOwnedFields(MetricFixture):
+	"""P3-T03 fix 1 (I-1): read_only is UI-only; the server refuses a saver changing what the engine owns."""
+
+	def setUp(self):
+		super().setUp()
+		self.make_results()
+		compute.compute_cycle(self.cycle.name)
+		self.metric_name = self.metric(NODE_26_3).name
+
+	def tamper(self, **values):
+		metric = frappe.get_doc("Metric Value", self.metric_name)
+		metric.update(values)
+		return metric
+
+	def test_a_saver_cannot_change_the_computed_value_of_a_computed_row(self):
+		before = self.metric(NODE_26_3).value
+		with self.assertRaisesRegex(frappe.ValidationError, "engine"):
+			self.tamper(computed_value=99).save()
+		self.assertEqual(frappe.db.get_value("Metric Value", self.metric_name, "value"), before)
+
+	def test_nor_of_a_verified_row_nor_the_snapshot_or_source_flags(self):
+		api.verify_metric(self.metric_name)
+		for values in ({"computed_value": 1}, {"snapshot": "{}"}, {"source_changed": 1}, {"recomputed_value": 3}, {"verified_by": "x@example.com"}):
+			with self.assertRaises(frappe.ValidationError, msg=str(values)):
+				self.tamper(**values).save()
+
+	def test_a_new_row_cannot_be_inserted_with_an_engine_value(self):
+		frappe.delete_doc("Metric Value", self.metric_name, force=True)
+		with self.assertRaisesRegex(frappe.ValidationError, "engine"):
+			frappe.get_doc({"doctype": "Metric Value", "cycle": self.cycle.name, "node": NODE_26_3, "computed_value": 77}).insert()
+
+	def test_the_engine_itself_and_verify_still_write_them(self):
+		compute.compute_cycle(self.cycle.name)
+		api.verify_metric(self.metric_name)
+		self.assertEqual(frappe.db.get_value("Metric Value", self.metric_name, "verified_by"), frappe.session.user)
+
+	def test_an_ordinary_save_of_an_untouched_row_is_fine(self):
+		metric = frappe.get_doc("Metric Value", self.metric_name)
+		metric.save()
+		metric.reload()
+		self.assertEqual(metric.status, "Computed")
+
+
+class TestOverridePermissions(MetricFixture):
+	def test_criterion_owners_see_only_the_overrides_of_their_criteria(self):
+		from campus.iqac import access
+
+		lifecycle.prepare_values(self.cycle.name)
+		self.make_results()
+		compute.compute_cycle(self.cycle.name)
+		doc = frappe.get_doc("Accreditation Cycle", self.cycle.name)
+		doc.append("owners", {"criterion": f"{FRAMEWORK}-2", "user": OWNER_A})
+		doc.save()
+		name = api.request_override(f"{self.cycle.name}-2.6.3", 50, "Hand count")
+		override = frappe.get_doc("Metric Override", name)
+		self.assertTrue(access.override_has_permission(override, "read", OWNER_A))
+		self.assertFalse(access.override_has_permission(override, "read", OWNER_B))
+		self.assertTrue(access.override_has_permission(override, "read", COORDINATOR))
+		self.assertIn(name, frappe.get_list("Metric Override", pluck="name", user=OWNER_A))
+		self.assertIn("select name from `tabMetric Value`", access.override_permission_query(OWNER_B))
+		self.assertEqual(access.override_permission_query(COORDINATOR), "")
+
+
+class TestBackfillPatch(MetricFixture):
+	def test_a_legacy_row_keeps_its_value_as_the_computed_value(self):
+		from campus.patches import backfill_metric_values
+
+		self.make_results()
+		compute.compute_cycle(self.cycle.name)
+		name = f"{self.cycle.name}-2.6.3"
+		# legacy shape: engine value only in `value`, the new NOT NULL columns at their defaults
+		frappe.db.set_value("Metric Value", name, {"computed_value": 0, "status": "Draft"}, update_modified=False)
+		value = frappe.db.get_value("Metric Value", name, "value")
+		self.assertTrue(value)
+		backfill_metric_values.backfill()
+		self.assertEqual(frappe.db.get_value("Metric Value", name, ["computed_value", "status"]), (value, "Computed"))
+		frappe.get_doc("Metric Value", name).save()
+		self.assertEqual(frappe.db.get_value("Metric Value", name, "value"), value)
+
+	def test_an_answered_by_hand_row_and_a_rerun_are_left_alone(self):
+		from campus.patches import backfill_metric_values
+
+		metric = frappe.get_doc({"doctype": "Metric Value", "cycle": self.cycle.name, "node": MANUAL_NODE, "manual_value": 5}).insert()
+		backfill_metric_values.backfill()
+		self.assertEqual(frappe.db.get_value("Metric Value", metric.name, ["computed_value", "status"]), (0, "Draft"))

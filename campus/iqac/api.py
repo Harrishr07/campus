@@ -4,6 +4,7 @@ import frappe
 
 from campus.campus_platform.api import request_approval
 from campus.iqac import compute, metric_values
+from campus.iqac.access import ROLES
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
 
@@ -11,7 +12,7 @@ from campus.iqac import framework as framework_lifecycle
 @frappe.whitelist(methods=["POST"])
 def compute_cycle(cycle):
 	"""Compute all formula metrics of an Accreditation Cycle (IQAC Coordinator / System Manager); returns Metric Value names."""
-	frappe.only_for(compute.ROLES)
+	frappe.only_for(ROLES)
 	return compute.compute_cycle(cycle)
 
 

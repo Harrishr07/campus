@@ -57,3 +57,20 @@ def permission_query(user=None):
 		if nodes:
 			conditions.append(f"(`tabMetric Value`.cycle = {frappe.db.escape(row.parent)} and `tabMetric Value`.node in ({', '.join(frappe.db.escape(n) for n in nodes)}))")
 	return f"({' or '.join(conditions)})" if conditions else "1=0"
+
+
+def override_has_permission(doc, ptype=None, user=None):
+	"""Metric Override hook: IQAC staff and the Principal see all; a criterion owner only the overrides under their criteria."""
+	user = user or frappe.session.user
+	if has_role(user, READERS):
+		return True
+	values = frappe.db.get_value("Metric Value", doc.metric_value, ["cycle", "node"], as_dict=True) if doc.metric_value else None
+	return bool(values and owns(user, values.cycle, values.node))
+
+
+def override_permission_query(user=None):
+	"""Metric Override list condition: the overrides of the Metric Values the user may see."""
+	user = user or frappe.session.user
+	if has_role(user, READERS):
+		return ""
+	return f"`tabMetric Override`.metric_value in (select name from `tabMetric Value` where {permission_query(user)})"
