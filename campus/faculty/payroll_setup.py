@@ -1,20 +1,24 @@
 """M07-07 Payroll setup for aided and self-financing staff, on HRMS payroll (no parallel payroll DocTypes).
 
-Seeds, and never over a college's edits:
-- the pay components Basic, Dearness Allowance (DA), House Rent Allowance (HRA) and Academic Grade Pay (AGP), when
-  missing (DA and AGP round to the nearest rupee);
-- once per site (flag STATUTORY_FLAG): the Component Type of HRMS's Provident Fund and Professional Tax when blank
-  (for the HRMS PF and PT reports), Provident Fund not by payment days (it is computed on the prorated wage) and
-  rounded, and rounding on DA and AGP;
-- once per college (Company.oc_payroll_templates_seeded): one draft Salary Structure per funding mode (Aided,
-  Self-financing) with PLACEHOLDER rates, for the college to review and submit. A deleted one is not seeded again.
+Campus never changes a Salary Component it did not create. Each run creates, when missing:
+- the pay components Basic, Dearness Allowance (DA), House Rent Allowance (HRA) and Academic Grade Pay (AGP)
+  (DA and AGP round to the nearest rupee);
+- its own statutory components "Campus EPF" (Component Type Provident Fund, so the HRMS Provident Fund Deductions
+  report finds it; not by payment days, rounded) and "Campus PT" (Component Type Professional Tax, a disabled
+  placeholder). HRMS's Provident Fund and Professional Tax are left alone. The Component Type field comes from HRMS
+  India with the first Indian company, so it is filled on Campus's components on a later run if it was missing.
+Once per college (Company.oc_payroll_templates_seeded): one draft Salary Structure per funding mode (Aided,
+Self-financing) with PLACEHOLDER rates, for the college to review and submit. A deleted one is not seeded again.
 
 The rates (DA %, HRA %, PF % and wage ceiling) live in those structure records: payroll reads only the records, the
 defaults below are used only to create them. Earnings are written on `base` (pay, from the Salary Structure
 Assignment) and `variable` (AGP), because HRMS's Basic and HRA depend on payment days and HRMS refuses a payment-days
-formula that reads another payment-days component. Provident Fund does not depend on payment days, so it reads the
-prorated Basic, AGP and DA. Professional Tax is seeded disabled (amount 0, a false Condition with a TODO): state slabs
-must be entered by the college. See docs/usage/payroll.md.
+formula that reads another payment-days component. Campus EPF does not depend on payment days, so it reads the
+prorated Basic, AGP and DA. Campus PT is seeded disabled (amount 0, a false Condition with a TODO): state slabs must be
+entered by the college. See docs/usage/payroll.md.
+
+`revert_statutory_wiring` (patch use_campus_statutory_components) undoes the one-time changes an earlier version made to
+HRMS's components where they are unchanged since and not used by the college's own structures.
 """
 
 import frappe
@@ -23,17 +27,16 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 MODULE = "Faculty"
 FUNDING_MODES = ("Aided", "Self-financing")
 
-# name, abbreviation, type
+EPF, PT = "Campus EPF", "Campus PT"
+# name, abbreviation, type, HRMS India component type, depends on payment days, round to the nearest rupee
 COMPONENTS = [
-	("Basic", "B", "Earning"),
-	("Dearness Allowance", "DA", "Earning"),
-	("House Rent Allowance", "HRA", "Earning"),
-	("Academic Grade Pay", "AGP", "Earning"),
+	("Basic", "B", "Earning", None, 1, 0),
+	("Dearness Allowance", "DA", "Earning", None, 1, 1),
+	("House Rent Allowance", "HRA", "Earning", None, 1, 0),
+	("Academic Grade Pay", "AGP", "Earning", None, 1, 1),
+	(EPF, "CEPF", "Deduction", "Provident Fund", 0, 1),
+	(PT, "CPT", "Deduction", "Professional Tax", 0, 1),
 ]
-STATUTORY_TYPES = {"Provident Fund": "Provident Fund", "Professional Tax": "Professional Tax"}
-
-STATUTORY_FLAG = "campus_payroll_statutory_wired"
-ROUNDED = ("Dearness Allowance", "Academic Grade Pay", "Provident Fund")
 SEED_NOTE = "PLACEHOLDER RATES - review every rate before submitting (seeded by OneBook Campus; see the payroll guide)."
 PT_TODO = '0 and "TODO: enter your state Professional Tax slab as the condition and amount"'
 
@@ -48,8 +51,8 @@ STRUCTURES = {
 			("House Rent Allowance", "(base + variable) * 0.10", 0, None),
 		],
 		[
-			("Provident Fund", "min({B} + {AGP} + {DA}, 15000) * 0.12", 0, None),
-			("Professional Tax", None, 0, PT_TODO),
+			(EPF, "min({B} + {AGP} + {DA}, 15000) * 0.12", 0, None),
+			(PT, None, 0, PT_TODO),
 		],
 	),
 	"Self-financing": (
@@ -59,8 +62,8 @@ STRUCTURES = {
 			("House Rent Allowance", "base * 0.10", 0, None),
 		],
 		[
-			("Provident Fund", "min({B} + {DA}, 15000) * 0.12", 0, None),
-			("Professional Tax", None, 0, PT_TODO),
+			(EPF, "min({B} + {DA}, 15000) * 0.12", 0, None),
+			(PT, None, 0, PT_TODO),
 		],
 	),
 }
@@ -97,32 +100,24 @@ def company_fields():
 
 
 def seed_salary_components():
-	for name, abbr, component_type in COMPONENTS:
+	"""Create the missing Campus components; fill Component Type on Campus EPF / PT once HRMS India has added the field."""
+	typed = has_component_type()
+	for name, abbr, kind, component_type, by_payment_days, rounded in COMPONENTS:
 		if frappe.db.exists("Salary Component", name):
+			if typed and component_type and name in (EPF, PT) and not frappe.db.get_value("Salary Component", name, "component_type"):
+				frappe.db.set_value("Salary Component", name, "component_type", component_type)
 			continue
 		frappe.get_doc(
 			{
-				"doctype": "Salary Component", "salary_component": name, "salary_component_abbr": abbr, "type": component_type,
-				"description": name, "is_tax_applicable": 1, "depends_on_payment_days": 1, "round_to_the_nearest_integer": int(name in ROUNDED),
+				"doctype": "Salary Component", "salary_component": name, "salary_component_abbr": abbr, "type": kind,
+				"description": name, "is_tax_applicable": int(kind == "Earning"), "depends_on_payment_days": by_payment_days,
+				"round_to_the_nearest_integer": rounded, **({"component_type": component_type} if typed and component_type else {}),
 			}
 		).insert(ignore_permissions=True)  # fmt: skip
-	type_statutory_components()
 
 
-def type_statutory_components():
-	"""Once per site: wire HRMS's statutory components and round DA, AGP and PF. Later edits by the college are kept."""
-	if frappe.db.get_global(STATUTORY_FLAG):
-		return
-	if frappe.get_meta("Salary Component").has_field("component_type"):
-		for name, component_type in STATUTORY_TYPES.items():
-			if frappe.db.exists("Salary Component", name) and not frappe.db.get_value("Salary Component", name, "component_type"):
-				frappe.db.set_value("Salary Component", name, "component_type", component_type)
-	if frappe.db.exists("Salary Component", "Provident Fund"):
-		frappe.db.set_value("Salary Component", "Provident Fund", "depends_on_payment_days", 0)
-	for name in ROUNDED:
-		if frappe.db.exists("Salary Component", name):
-			frappe.db.set_value("Salary Component", name, "round_to_the_nearest_integer", 1)
-	frappe.db.set_global(STATUTORY_FLAG, 1)
+def has_component_type():
+	return frappe.get_meta("Salary Component").has_field("component_type")
 
 
 def college_companies():
@@ -149,7 +144,7 @@ def seed_salary_structures(company):
 			{
 				"doctype": "Salary Structure", "name": name, "company": company, "oc_funding_mode": mode, "currency": currency,
 				"payroll_frequency": "Monthly", "is_active": "Yes", "oc_seed_note": SEED_NOTE,
-				"earnings": rows(earnings, abbrs), "deductions": rows(deductions, abbrs, available_only=True),
+				"earnings": rows(earnings, abbrs), "deductions": rows(deductions, abbrs),
 			}
 		).insert(ignore_permissions=True)  # fmt: skip
 	frappe.db.set_value("Company", company, "oc_payroll_templates_seeded", 1)
@@ -160,13 +155,82 @@ def abbreviations():
 	return {key: frappe.db.get_value("Salary Component", name, "salary_component_abbr") or key for key, name in names.items()}
 
 
-def rows(components, abbrs, available_only=False):
-	"""Structure rows; statutory deductions are added only where the HRMS component exists on the site."""
+def rows(components, abbrs):
 	return [
 		{
 			"salary_component": component, "amount_based_on_formula": 1 if formula else 0,
 			"formula": formula.format(**abbrs) if formula else None, "amount": amount, "condition": condition,
 		}
 		for component, formula, amount, condition in components
-		if not available_only or frappe.db.exists("Salary Component", component)
 	]  # fmt: skip
+
+
+# ---- undo the earlier one-time wiring of HRMS's components (patch use_campus_statutory_components) ----------------
+
+OLD_STATUTORY_FLAG = "campus_payroll_statutory_wired"
+# component -> (the values the earlier wiring set, the values to restore)
+OLD_WIRING = {
+	"Provident Fund": (
+		{"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1},
+		{"component_type": "", "depends_on_payment_days": 1, "round_to_the_nearest_integer": 0},
+	),
+	"Professional Tax": ({"component_type": "Professional Tax"}, {"component_type": ""}),
+	"Dearness Allowance": ({"round_to_the_nearest_integer": 1}, {"round_to_the_nearest_integer": 0}),
+	"Academic Grade Pay": ({"round_to_the_nearest_integer": 1}, {"round_to_the_nearest_integer": 0}),
+}
+SWAPS = {"Provident Fund": EPF, "Professional Tax": PT}
+
+
+def revert_statutory_wiring():
+	"""On a site the earlier version wired: move Campus's draft structures to Campus EPF / PT, and restore each wired
+	component where its values are still the wired ones and no other (college) structure uses it; otherwise leave it
+	and say so. DML only."""
+	if not frappe.db.get_global(OLD_STATUTORY_FLAG):
+		return
+	seed_salary_components()
+	ours = campus_structures()
+	swap_draft_rows(ours)
+	for name, (wired, original) in OLD_WIRING.items():
+		if not frappe.db.exists("Salary Component", name) or campus_created(name):
+			continue
+		current = frappe.db.get_value("Salary Component", name, list(wired), as_dict=True)
+		if any((current[field] or "") != (value or "") for field, value in wired.items()):
+			print(f"Salary Component {name}: changed since Campus wired it; left as it is.")
+		elif used_by_others(name, ours):
+			print(f"Salary Component {name}: used by your own salary structures; Campus's earlier settings left in place.")
+		else:
+			frappe.db.set_value("Salary Component", name, dict(original))  # set_value adds modified to the dict
+	frappe.defaults.clear_default(OLD_STATUTORY_FLAG, parent="__global")
+
+
+def campus_structures():
+	"""Names of the structures Campus seeded (by their seeded names)."""
+	names = [structure_name(mode, c) for c in frappe.get_all("Company", pluck="name") for mode in FUNDING_MODES]
+	return frappe.get_all("Salary Structure", {"name": ["in", names]}, pluck="name") if names else []
+
+
+def swap_draft_rows(structures):
+	drafts = frappe.get_all("Salary Structure", {"name": ["in", structures or [""]], "docstatus": 0}, pluck="name")
+	for old, new in SWAPS.items():
+		abbr = frappe.db.get_value("Salary Component", new, "salary_component_abbr")
+		for row in frappe.get_all("Salary Detail", {"parenttype": "Salary Structure", "parent": ["in", drafts or [""]], "salary_component": old}, pluck="name"):
+			frappe.db.set_value("Salary Detail", row, {"salary_component": new, "abbr": abbr})
+	for name in set(structures) - set(drafts):
+		if frappe.db.exists("Salary Detail", {"parent": name, "parenttype": "Salary Structure", "salary_component": ["in", list(SWAPS)]}):
+			print(f"Salary Structure {name} is submitted and uses HRMS's Provident Fund / Professional Tax; review it.")
+
+
+def campus_created(name):
+	"""DA / AGP created by Campus (its description and abbreviation) keep their rounding."""
+	row = next((c for c in COMPONENTS if c[0] == name), None)
+	if not row or name not in ("Dearness Allowance", "Academic Grade Pay"):
+		return False
+	return frappe.db.get_value("Salary Component", name, ["description", "salary_component_abbr"]) == (name, row[1])
+
+
+def used_by_others(component, ours):
+	return bool(
+		frappe.db.exists(
+			"Salary Detail", {"parenttype": "Salary Structure", "salary_component": component, "parent": ["not in", ours or [""]]}
+		)
+	)

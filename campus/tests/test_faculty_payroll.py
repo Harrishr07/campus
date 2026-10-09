@@ -5,7 +5,10 @@ Fixture (Demo College of Engineering, September 2026, a holiday list without hol
 assigned from 2026-04-01 by campus.faculty.api.assign_salary_structure. Professional Tax stays unconfigured (its seeded
 row is disabled), so no PT is deducted.
 
-Hand figures from the seeded structure records (DA, AGP and PF round to the nearest rupee; HRMS's HRA does not):
+Deductions use the Campus-owned components Campus EPF and Campus PT; HRMS's Provident Fund and Professional Tax are
+never changed.
+
+Hand figures from the seeded structure records (DA, AGP and Campus EPF round to the nearest rupee; HRMS's HRA does not):
 - faculty_1, Aided, base (pay) 40,000 and variable (AGP) 9,000: Basic 40,000, AGP 9,000, DA 50% of 49,000 = 24,500,
   HRA 10% of 49,000 = 4,900; gross 78,400. PF 12% of (Basic + AGP + DA) 73,500 capped at the 15,000 wage ceiling
   = 1,800; net 76,600.
@@ -13,16 +16,20 @@ Hand figures from the seeded structure records (DA, AGP and PF round to the near
   min(33,000, 15,000) = 1,800; net 34,200.
 - faculty_2 with 15 days' leave without pay (15 of 30 payment days): Basic 15,000, DA 1,500, HRA 1,500; gross 18,000.
   PF on the prorated wage min(16,500, 15,000) = 1,800 (not halved again); net 16,200.
+- faculty_2 with 20 days' leave without pay (10 of 30): Basic 10,000, DA 1,000, HRA 1,000; gross 12,000. PF 12% of
+  11,000 (under the ceiling) = 1,320; net 10,680.
 - faculty_3, Self-financing, base 12,346: Basic 12,346, DA 1,234.6 -> 1,235, HRA 1,234.6; gross 14,815.6.
   PF 12% of 13,581 = 1,629.72 -> 1,630; net 13,185.6.
 - faculty_1 after a 3% increment (Employee Promotion from 2026-08-01, new assignment base 41,200): Basic 41,200,
   AGP 9,000, DA 25,100, HRA 5,020; gross 80,320, PF 1,800, net 78,520. Its July slip keeps the old figures.
 """
 
+from unittest import mock
+
 import frappe
 
-from campus.faculty import api
-from campus.faculty.payroll_setup import seed_salary_components, seed_salary_structures, structure_name
+from campus.faculty import api, payroll_setup
+from campus.faculty.payroll_setup import EPF, PT, seed_salary_components, seed_salary_structures, structure_name
 from campus.tests import demo
 from campus.tests.utils import CampusTestCase
 
@@ -82,9 +89,9 @@ class PayrollFixture(CampusTestCase):
 
 AIDED_ROWS = {
 	"Basic": 40000, "Academic Grade Pay": 9000, "Dearness Allowance": 24500, "House Rent Allowance": 4900,
-	"Provident Fund": 1800,
+	"Campus EPF": 1800,
 }  # fmt: skip
-SELF_FINANCING_ROWS = {"Basic": 30000, "Dearness Allowance": 3000, "House Rent Allowance": 3000, "Provident Fund": 1800}
+SELF_FINANCING_ROWS = {"Basic": 30000, "Dearness Allowance": 3000, "House Rent Allowance": 3000, "Campus EPF": 1800}
 
 
 class TestPayrollEntry(PayrollFixture):
@@ -124,8 +131,28 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(slip.payment_days, 15)
 		self.assertEqual(
 			self.amounts(slip),
-			({"Basic": 15000, "Dearness Allowance": 1500, "House Rent Allowance": 1500, "Provident Fund": 1800}, (18000, 1800, 16200)),
+			({"Basic": 15000, "Dearness Allowance": 1500, "House Rent Allowance": 1500, "Campus EPF": 1800}, (18000, 1800, 16200)),
 		)
+
+	def test_pf_under_the_ceiling_with_leave_without_pay(self):
+		self.submit_structures()
+		self.assign_demo_staff()
+		self.leave_without_pay(self.self_financing, "2026-09-01", "2026-09-20")
+		slip = self.direct_slip(self.self_financing)
+		self.assertEqual(slip.payment_days, 10)
+		self.assertEqual(
+			self.amounts(slip),
+			({"Basic": 10000, "Dearness Allowance": 1000, "House Rent Allowance": 1000, "Campus EPF": 1320}, (12000, 1320, 10680)),
+		)
+
+	def test_pf_report_finds_campus_epf(self):
+		from hrms.payroll.report.provident_fund_deductions.provident_fund_deductions import execute
+
+		self.submit_structures()
+		self.assign_demo_staff()
+		self.direct_slip(self.self_financing).submit()
+		_columns, data = execute({"company": self.company, "month": 9, "year": 2026})
+		self.assertEqual([(r["employee"], r["pf_amount"]) for r in data], [(self.self_financing, 1800)])
 
 	def test_fractional_amounts_round_on_the_seeded_components(self):
 		self.submit_structures()
@@ -134,7 +161,7 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(
 			self.amounts(self.direct_slip(employee)),
 			(
-				{"Basic": 12346, "Dearness Allowance": 1235, "House Rent Allowance": 1234.6, "Provident Fund": 1630},
+				{"Basic": 12346, "Dearness Allowance": 1235, "House Rent Allowance": 1234.6, "Campus EPF": 1630},
 				(14815.6, 1630, 13185.6),
 			),
 		)
@@ -241,23 +268,71 @@ class TestSeeding(PayrollFixture):
 		seed_salary_components()
 		self.assertEqual(frappe.db.get_value("Salary Component", "Dearness Allowance", "description"), "Edited by the college")
 
-	def test_statutory_components_are_typed_for_the_hrms_reports(self):
-		self.assertEqual(frappe.db.get_value("Salary Component", "Provident Fund", "component_type"), "Provident Fund")
-		self.assertEqual(frappe.db.get_value("Salary Component", "Professional Tax", "component_type"), "Professional Tax")
+	def test_campus_statutory_components(self):
+		epf = frappe.db.get_value("Salary Component", EPF, ["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"])
+		pt = frappe.db.get_value("Salary Component", PT, ["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"])
+		self.assertEqual(epf, ("Deduction", "Provident Fund", 0, 1))
+		self.assertEqual(pt, ("Deduction", "Professional Tax", 0, 1))
 
-	def test_seeded_rounding_and_pf_not_by_payment_days(self):
-		for component in ("Dearness Allowance", "Academic Grade Pay", "Provident Fund"):
-			self.assertEqual(frappe.db.get_value("Salary Component", component, "round_to_the_nearest_integer"), 1, component)
-		self.assertEqual(frappe.db.get_value("Salary Component", "Provident Fund", "depends_on_payment_days"), 0)
-
-	def test_statutory_wiring_runs_once(self):
-		frappe.db.set_value("Salary Component", "Provident Fund", "round_to_the_nearest_integer", 0)  # the college's choice
+	def test_hrms_statutory_components_are_never_changed(self):
+		fields = ["component_type", "depends_on_payment_days", "round_to_the_nearest_integer"]
+		for name in ("Provident Fund", "Professional Tax"):
+			frappe.db.set_value("Salary Component", name, {"component_type": "", "depends_on_payment_days": 1, "round_to_the_nearest_integer": 0})
+		frappe.db.set_value("Company", self.company, "oc_payroll_templates_seeded", 0)
+		for mode in ("Aided", "Self-financing"):
+			frappe.delete_doc("Salary Structure", structure_name(mode, self.company), ignore_permissions=True)
 		seed_salary_components()
-		self.assertEqual(frappe.db.get_value("Salary Component", "Provident Fund", "round_to_the_nearest_integer"), 0)
+		seed_salary_structures(self.company)
+		for name in ("Provident Fund", "Professional Tax"):
+			self.assertEqual(frappe.db.get_value("Salary Component", name, fields), ("", 1, 0), name)
+		used = frappe.get_all("Salary Detail", {"parent": structure_name("Aided", self.company)}, pluck="salary_component")
+		self.assertNotIn("Provident Fund", used)
+		self.assertIn(EPF, used)
+
+	def test_fresh_site_order(self):
+		"""On a fresh site Campus seeds before HRMS India adds Component Type (it does so with the first Indian company)."""
+		frappe.db.delete("Salary Component", {"name": ["in", [EPF, PT]]})
+		with mock.patch.object(payroll_setup, "has_component_type", return_value=False):
+			seed_salary_components()
+		self.assertFalse(frappe.db.get_value("Salary Component", EPF, "component_type"))
+		seed_salary_components()  # the next migrate
+		self.assertEqual(frappe.db.get_value("Salary Component", EPF, "component_type"), "Provident Fund")
+		self.submit_structures()
+		self.assign_demo_staff()
+		self.assertEqual(self.amounts(self.direct_slip(self.self_financing)), (SELF_FINANCING_ROWS, (36000, 1800, 34200)))
+
+	def test_revert_earlier_wiring_where_unchanged_and_unused(self):
+		wired = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
+		frappe.db.set_value("Salary Component", "Provident Fund", dict(wired))  # set_value adds modified to the dict
+		frappe.db.set_value("Salary Component", "Professional Tax", "component_type", "Professional Tax")
+		frappe.db.set_global(payroll_setup.OLD_STATUTORY_FLAG, 1)
+		seeded = frappe.get_doc("Salary Structure", structure_name("Aided", self.company))
+		frappe.db.set_value("Salary Detail", seeded.deductions[0].name, {"salary_component": "Provident Fund", "abbr": "PF"})
+		payroll_setup.revert_statutory_wiring()
+		self.assertEqual(
+			frappe.db.get_value("Salary Component", "Provident Fund", list(wired)), ("", 1, 0)
+		)
+		self.assertFalse(frappe.db.get_value("Salary Component", "Professional Tax", "component_type"))
+		self.assertEqual(frappe.db.get_value("Salary Detail", seeded.deductions[0].name, "salary_component"), EPF)
+		self.assertFalse(frappe.db.get_global(payroll_setup.OLD_STATUTORY_FLAG))
+
+	def test_revert_leaves_hrms_pf_used_by_a_college_structure(self):
+		wired = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
+		frappe.db.set_value("Salary Component", "Provident Fund", dict(wired))  # set_value adds modified to the dict
+		frappe.db.set_global(payroll_setup.OLD_STATUTORY_FLAG, 1)
+		frappe.get_doc(
+			{
+				"doctype": "Salary Structure", "name": "College Own Structure", "company": self.company, "currency": "INR",
+				"payroll_frequency": "Monthly", "is_active": "Yes",
+				"deductions": [{"salary_component": "Provident Fund", "amount": 100}],
+			}
+		).insert(ignore_permissions=True)  # fmt: skip
+		payroll_setup.revert_statutory_wiring()
+		self.assertEqual(frappe.db.get_value("Salary Component", "Provident Fund", list(wired)), ("Provident Fund", 0, 1))
 
 	def test_professional_tax_seeded_disabled_with_a_todo(self):
 		doc = frappe.get_doc("Salary Structure", structure_name(SELF_FINANCING, self.company))
-		pt = next(r for r in doc.deductions if r.salary_component == "Professional Tax")
+		pt = next(r for r in doc.deductions if r.salary_component == PT)
 		self.assertEqual(pt.amount, 0)
 		self.assertIn("TODO", pt.condition)
 		self.assertFalse(frappe.safe_eval(pt.condition))
