@@ -23,7 +23,11 @@ function cpPost(method, body, message, button, onDone) {
 document.querySelectorAll("form[data-method]").forEach(function (form) {
 	form.addEventListener("submit", function (event) {
 		event.preventDefault();
-		cpPost(form.dataset.method, new FormData(form), form.querySelector(".cp-message"),
+		var body = new FormData(form);
+		(form.dataset.list || "").split(",").filter(Boolean).forEach(function (name) {  // checkbox groups post as one JSON list
+			body.set(name, JSON.stringify(body.getAll(name)));
+		});
+		cpPost(form.dataset.method, body, form.querySelector(".cp-message"),
 			form.querySelector("button[type=submit]"), function () { window.location.reload(); });
 	});
 });

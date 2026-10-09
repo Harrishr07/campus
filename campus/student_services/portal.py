@@ -15,7 +15,7 @@ from frappe.utils.html_utils import sanitize_html
 
 from campus.campus_finance.api import can_pay_online, fee_payment_link, has_dues, student_invoices
 from campus.campus_platform.api import find_policy, latest_request, start_request
-from campus.examinations.api import confirm_registration, student_registrations
+from campus.examinations.api import confirm_registration, released_sessions, student_registrations
 from campus.student_services import grievances
 from campus.student_services.api import student_terms, summarise, term_window
 
@@ -112,11 +112,14 @@ def get_attendance(student=None, academic_term=None):
 
 @frappe.whitelist()
 def get_results(student=None):
-	"""Published Student Results of the student; the doctype's permission query gates publication."""
+	"""Released Student Results of the student, the ratified version only. The doctype's permission query gates
+	publication and the version (is_latest); the sessions are read again with examinations.api.released_sessions
+	(Published, publish_at passed), the one release reader of the examination reports."""
 	student = resolve_student(student)
-	names = frappe.get_list("Student Result", {"student": student}, pluck="name", order_by="creation desc")
+	rows = frappe.get_list("Student Result", {"student": student}, ["name", "exam_session", "company"], order_by="creation desc")
+	released = {company: set(released_sessions(company)) for company in {row.company for row in rows}}
 	results = []
-	for name in names:
+	for name in [row.name for row in rows if row.exam_session in released[row.company]]:
 		doc = frappe.get_doc("Student Result", name)
 		doc.check_permission("read")
 		results.append(

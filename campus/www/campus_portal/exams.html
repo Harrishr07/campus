@@ -1,0 +1,35 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Exams") }}</h2>
+{% set registrations = exams.registrations %}
+{% if not registrations %}<p class="cp-empty">{{ _("No exam registration is open.") }}</p>{% endif %}
+{% include "campus/www/campus_portal/_registrations.html" %}
+
+<h2>{{ _("Withdrawal from examination") }}</h2>
+{% if exams.can_act %}
+{% for w in exams.withdrawable %}
+<form class="cp-card cp-form" data-method="campus.student_services.exam_portal.apply_withdrawal" data-list="courses">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<input type="hidden" name="exam_session" value="{{ w.exam_session|e }}">
+	<strong>{{ w.exam_session|e }}</strong>
+	<fieldset><legend>{{ _("Courses") }}</legend>
+		{% for c in w.courses %}
+		<label><input type="checkbox" name="courses" value="{{ c|e }}"> {{ c|e }}</label>
+		{% endfor %}
+	</fieldset>
+	<label for="cp-wd-reason-{{ loop.index }}">{{ _("Reason") }}</label>
+	<textarea id="cp-wd-reason-{{ loop.index }}" name="reason" required maxlength="500"></textarea>
+	<p>{{ _("A withdrawal is allowed once in the programme, within the days after the exam that the regulation sets. The HOD and the Principal approve it.") }}</p>
+	<button class="cp-btn" type="submit">{{ _("Apply for withdrawal") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% endfor %}
+{% endif %}
+{% if not exams.withdrawals %}<p class="cp-empty">{{ _("No withdrawal applications.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for w in exams.withdrawals %}
+	<li><strong>{{ w.name|e }}</strong> <span class="cp-badge">{{ _(w.status)|e }}</span><br>
+		{{ w.exam_session|e }}: {{ w.courses|join(", ")|e }}<br>{{ (w.reason or "")|e }}</li>
+	{% endfor %}
+</ul>
+{% endblock %}

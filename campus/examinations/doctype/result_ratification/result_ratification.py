@@ -136,9 +136,11 @@ def issue_grade_sheet(student_result, ratification):
 
 
 def refresh_later_results(student, exam_session, ratification):
-	"""Recompute the student's results of later sessions on the ratified version (P2-T20): their CGPA and arrears read
-	it. A published later session gets a pending version (its own ratification publishes it and re-issues its sheet);
-	an unpublished one is replaced in place. A session that cannot be recomputed is logged, never blocking this one."""
+	"""Recompute the student's results of the sessions that read the ratified version (P2-T20): those of later terms
+	and the other sessions of the same term (a supplementary; results.earlier_rows reads terms starting no later), as
+	their CGPA and arrears read it. A published session gets a pending version (its own ratification publishes it and
+	re-issues its sheet); an unpublished one is replaced in place. A session that cannot be recomputed, for any
+	reason, is logged with an explicit message and never blocks this one or the others."""
 	from campus.examinations.results import compute_student_result
 
 	start = frappe.db.get_value("Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date")
@@ -147,7 +149,7 @@ def refresh_later_results(student, exam_session, ratification):
 		frappe.qb.from_(result)
 		.join(term).on(term.name == result.academic_term)
 		.select(result.exam_session).distinct()
-		.where((result.student == student) & (result.is_latest == 1) & (result.exam_session != exam_session) & (term.term_start_date > start))
+		.where((result.student == student) & (result.is_latest == 1) & (result.exam_session != exam_session) & (term.term_start_date >= start))
 		.orderby(term.term_start_date)
 		.run(pluck=True)
 	)  # fmt: skip
@@ -155,7 +157,7 @@ def refresh_later_results(student, exam_session, ratification):
 		frappe.db.savepoint("later_result")
 		try:
 			compute_student_result(student, session)
-		except frappe.ValidationError as e:
+		except Exception as e:
 			frappe.db.rollback(save_point="later_result")
 			frappe.clear_messages()
 			frappe.log_error(

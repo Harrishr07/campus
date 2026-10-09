@@ -108,14 +108,24 @@ def check_courses(doc, result, rule_set):
 			frappe.throw(_("{0} is not on the published result of {1}.").format(frappe.bold(row.course), frappe.bold(doc.exam_session)))
 		if course.result not in SAT:
 			frappe.throw(_("{0} was not sat ({1}): there is no script to see or revalue.").format(frappe.bold(row.course), course.grade))
-		limits = rule_limits(rule_set, {"course_type": course.course_type, "cia_max": 0, "ese_max": 0}, doc.student)
-		if not cint(limits["revaluation_allowed"]):
+		if not revaluation_allowed(rule_set, course.course_type, doc.student):
 			frappe.throw(
 				_("{0} ({1}) is not eligible for photocopy, revaluation or review under the regulation.").format(
 					frappe.bold(row.course), _(course.course_type)
 				)
 			)
 		row.course_type, row.grade = course.course_type, course.grade
+
+
+def revaluation_allowed(rule_set, course_type, student):
+	"""Whether the Exam Rule Set's row of `course_type` allows photocopy, revaluation and review."""
+	limits = rule_limits(rule_set, {"course_type": course_type, "cia_max": 0, "ese_max": 0}, student)
+	return bool(cint(limits["revaluation_allowed"]))
+
+
+def eligible_courses(result, rule_set):
+	"""Course rows of a published result that the student may apply for: sat, and of a course type the rule allows."""
+	return [row for row in result.courses if row.result in SAT and revaluation_allowed(rule_set, row.course_type, result.student)]
 
 
 def check_duplicates(doc):
@@ -245,18 +255,21 @@ FULL_READ_ROLES = ("COE", "System Manager", "Dean Academics")
 
 
 def teachable_drafts(user):
-	"""Draft Revaluation applications listing a course `user` teaches in the term of the application's session."""
+	"""Draft Revaluation applications listing a course `user` teaches in the term of the application's session, at
+	the college of the offering's Program (a teacher of the same course and term elsewhere sees none of them)."""
 	from campus.examinations.access import instructed_offerings
 
 	taught = frappe.get_all(
-		"Student Group", {"name": ["in", instructed_offerings(user)], "group_based_on": "Course"}, ["course", "academic_term"]
+		"Student Group", {"name": ["in", instructed_offerings(user)], "group_based_on": "Course"}, ["course", "academic_term", "program"]
 	)
+	companies = {p.name: p.oc_company for p in frappe.get_all("Program", {"name": ["in", [t.program for t in taught] or [""]]}, ["name", "oc_company"])}
+	taught = [t for t in taught if companies.get(t.program)]  # an offering without a college's Program gives nothing
 	if not taught:
 		return []
 	app, row, session = frappe.qb.DocType(APPLICATION), frappe.qb.DocType(APPLICATION_COURSE), frappe.qb.DocType(SESSION)
 	pairs = None
 	for t in taught:
-		clause = (row.course == t.course) & (session.academic_term == t.academic_term)
+		clause = (row.course == t.course) & (session.academic_term == t.academic_term) & (app.company == companies[t.program])
 		pairs = clause if pairs is None else pairs | clause
 	return (
 		frappe.qb.from_(app)
@@ -310,6 +323,8 @@ def reraise_fee(application):
 	"""COE: queue the fee invoice again of a submitted application whose invoice job failed."""
 	frappe.only_for(MARKS_ROLES)
 	values = frappe.db.get_value(APPLICATION, application, ["docstatus", "fee_amount", "fee_invoice", "company"], as_dict=True, for_update=True)
+	if not values:
+		frappe.throw(_("Revaluation Application {0} not found.").format(frappe.bold(application)), frappe.DoesNotExistError)
 	check_company(frappe._dict(values, name=application))
 	if values.docstatus != 1 or flt(values.fee_amount) <= 0:
 		frappe.throw(_("{0} is not a submitted application with a fee.").format(frappe.bold(application)))

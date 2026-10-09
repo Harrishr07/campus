@@ -19,6 +19,7 @@ from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.verification import issue
 from campus.campus_finance.fee_heads import EXAM, set_item_default
 from campus.examinations import revaluation, setup
+from campus.examinations.doctype.result_ratification import result_ratification
 from campus.examinations.report.evaluation_grievances_vs_appeared.evaluation_grievances_vs_appeared import (
 	execute as grievance_report,
 )
@@ -29,7 +30,7 @@ from campus.tests.test_exam_registration import with_customer
 from campus.tests.test_regulation import year_name
 from campus.tests.test_result_processing import APPROVER, RATIFICATION, ResultFixture
 from campus.tests.factories import make_company
-from campus.tests.test_results import COLLEGE, COE_USER, FACULTY, OTHER_FACULTY, make_instructor, make_login
+from campus.tests.test_results import COLLEGE, COE_USER, FACULTY, OTHER_FACULTY, make_instructor, make_login, make_term
 
 APPLICATION, OUTCOME = "Revaluation Application", "Revaluation Outcome"
 REVALUER = "exam-revaluer@example.com"
@@ -424,6 +425,34 @@ class TestLaterSessions(RevaluationFixture):
 		self.assertIn("CGPA: 8.38 -> 8.69", pending.change_log)
 		self.assertEqual(frappe.db.get_value("Student Result", later, "is_latest"), 1)  # until its own ratification
 
+	def test_a_same_term_session_is_refreshed_and_a_failing_session_is_logged_not_blocking(self):
+		# a supplementary session of the ratified session's term reads it (results.earlier_rows: term start <=)
+		supplementary = frappe.get_doc(
+			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": make_term("Exm Supp", "2023-03-01", "2023-05-31"), "status": "Marks Entry"}
+		).insert()  # fmt: skip
+		supplementary.db_set("academic_term", self.pre_session.academic_term)  # one session per term is the form's rule
+		result = frappe.get_doc(
+			{"doctype": "Student Result", "student": self.s22.name, "exam_session": supplementary.name, "company": COLLEGE,
+			"academic_term": self.pre_session.academic_term, "version": 1, "is_latest": 1}
+		)  # fmt: skip
+		result.name = f"SR-{supplementary.name}-{self.s22.name}"
+		result.db_insert()
+		called = []
+
+		def recompute(student, session):
+			called.append(session)
+			if session == supplementary.name:
+				raise RuntimeError("supplementary marks missing")
+
+		before = frappe.db.count("Error Log")
+		with patch("campus.examinations.results.compute_student_result", side_effect=recompute):
+			result_ratification.refresh_later_results(self.s22.name, self.pre_session.name, "RRAT-SUPP")
+		self.assertEqual(called, [supplementary.name, self.session.name])
+		self.assertEqual(frappe.db.count("Error Log"), before + 1)
+		log = frappe.get_all("Error Log", fields=["method", "error"], order_by="creation desc", limit=1)[0]
+		self.assertIn("RRAT-SUPP", log.method + (log.error or ""))
+		self.assertNotIn("Traceback", log.error or "")
+
 
 class TestInstructorAccess(RevaluationFixture):
 	def visible(self, user):
@@ -445,6 +474,25 @@ class TestInstructorAccess(RevaluationFixture):
 		draft.reload().submit()
 		self.assertEqual(self.visible(OTHER_FACULTY), [])  # drafts only
 		self.assertFalse(frappe.has_permission(APPLICATION, "read", draft.reload(), user=OTHER_FACULTY))
+
+	def test_a_teacher_of_the_course_and_term_at_another_college_does_not_see_its_drafts(self):
+		self.photocopy(["EXM FA"])
+		own = self.apply(revaluation.REVALUATION, ["EXM FA"], submit=False)
+		make_company(OTHER_COLLEGE, "RVOC")
+		other_session = frappe.get_doc(
+			{"doctype": "Exam Session", "company": OTHER_COLLEGE, "academic_term": self.session.academic_term, "status": "Marks Entry"}
+		).insert()  # fmt: skip
+		other = frappe.get_doc(
+			{"doctype": APPLICATION, "student": self.s22.name, "exam_session": other_session.name, "company": OTHER_COLLEGE,
+			"application_type": revaluation.REVALUATION, "courses": [{"course": "EXM FA"}]}
+		)  # fmt: skip
+		other.name = "RVA-OTHER-COLLEGE"
+		other.db_insert()  # as the other college's own application would be (its validation reads its own world)
+		for row in other.courses:
+			row.update({"name": frappe.generate_hash(length=10), "parent": other.name, "parenttype": APPLICATION, "parentfield": "courses"})
+			row.db_insert()
+		self.assertEqual(self.visible(OTHER_FACULTY), [own.name])
+		self.assertFalse(frappe.has_permission(APPLICATION, "read", frappe.get_doc(APPLICATION, other.name), user=OTHER_FACULTY))
 
 	def test_a_non_teacher_learns_nothing_from_justify(self):
 		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"])  # submitted, and not a revaluation
@@ -470,6 +518,10 @@ class TestFeeSafety(RevaluationFixture):
 		frappe.set_user(FACULTY)
 		with self.assertRaises(frappe.PermissionError):
 			revaluation.reraise_fee(doc.name)
+
+	def test_raising_the_fee_of_an_unknown_application_is_a_clean_not_found(self):
+		with self.assertRaisesRegex(frappe.DoesNotExistError, "RVA-NO-SUCH.*not found"):
+			revaluation.reraise_fee("RVA-NO-SUCH")
 
 	def test_issue_photocopy_respects_the_coes_company_restriction(self):
 		doc = self.apply(revaluation.PHOTOCOPY, ["EXM FA"])

@@ -196,3 +196,32 @@ def released_sessions(company, academic_year=None, final_year=False):
 	from campus.examinations import coe_reports
 
 	return [s.name for s in coe_reports.released_sessions(company, academic_year, final_year=final_year)]
+
+
+def revaluation_options(student):
+	"""The student's released results whose photocopy / revaluation window is open, with the eligible courses (the
+	caller, the portal, resolves the student). P2-T25."""
+	from campus.examinations import student_revaluation
+
+	return student_revaluation.options(student)
+
+
+def student_revaluations(student):
+	"""The student's photocopy, revaluation and review applications with their portal status (no marks)."""
+	from campus.examinations import student_revaluation
+
+	return student_revaluation.applications(student)
+
+
+def apply_revaluation(student, exam_session, application_type, courses):
+	"""Make the student's application under the revaluation rules, submitted unless a justification is due."""
+	from campus.examinations import student_revaluation
+
+	return student_revaluation.apply(student, exam_session, application_type, courses)
+
+
+def submit_revaluation(student, application):
+	"""Submit the student's own justified draft revaluation; its fee invoice follows."""
+	from campus.examinations import student_revaluation
+
+	return student_revaluation.submit(student, application)
