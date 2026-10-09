@@ -228,6 +228,49 @@ as an API adapter once the agency grants access, with the hook `pfms_adapters = 
 The class implements `export_expenditure`, `export_advance`, `export_transfer` and `import_status`
 (campus.research.pfms_adapter.PFMSAdapter).
 
+## Project execution, staff and closure (P3-T19, M08-08, M08-09)
+
+**Progress reports and the mid-term review** are ERPNext **Project Update** records of the sanction's project; there is
+no separate DocType. On a sanctioned project, an update needs a **Report Type** (Progress Report or Mid-term Review)
+and a **Period From / To** inside the sanction period. Its **Milestones** field is filled on each save from the
+project's milestone Tasks (Task > Is Milestone), with their status and due date. **Deliverables** is free text. The
+update shows its **Sanction**. Updates of other projects work as ERPNext has them.
+
+**Project staff** (JRF, SRF, Project Assistant) are HRMS Employees with the Employment Type **Project Staff**, paid
+through payroll. Set-up seeds the employment type, the three designations and the **Fellowship** salary component.
+Once per college:
+1. Map the Fellowship component (Salary Component > Accounts) to the account of the scheme's Manpower budget head.
+2. Build and submit a fellowship Salary Structure (for example Fellowship = `base`). Every earning on it must post
+   to an account of one revenue head of the sanction.
+
+A **Project Staff Appointment** (sanction, employee, designation, from date, salary structure, base) checks the
+employee, the period and that the salary posts to a head of the sanction. On submit it:
+- sets the Employee's contract end date to the sanction end, and their designation;
+- submits a Salary Structure Assignment from the from date, with the sanction's cost centre as the only (100%)
+  payroll cost centre.
+
+Payroll Entry then accrues the salary on the sanction's cost centre. The accrual's salary rows take the head their
+account maps to (Manpower) and the sanction's project. They count against the head's Budget and the sanction period,
+and they appear in the UC under that head. An employee holds one appointment at a time. Cancelling the appointment
+cancels the assignment.
+
+**Project Closure** names the sanction and its **final Utilisation Certificate**, which must be approved, not marked
+Source Changed, and the sanction's latest UC. Its posting date must be after the UC's period end. On submit, under a
+lock on the sanction:
+- It is refused while any ledger entry on the sanction's liability or cost centre is dated after the final UC's
+  period end. Certify that spending in a final UC first.
+- It is refused while the final UC's figures no longer match the ledger. Revise the UC first.
+- The **unspent balance** (the UC's closing unspent) leaves the grant liability by a Journal Entry:
+  - **Refund to Agency**: credited to the bank or cash ledger in **Paid From**, with the UTR / cheque number and date.
+  - **Retain per Agency Letter**: credited to the **Retained To** ledger (liability, income or equity). The agency
+    letter number, date and attachment are required.
+  - Nothing is posted when nothing is unspent.
+- The Project is set to Completed and the sanction to closed (its **Project Closure** field).
+
+A closed sanction refuses new spending lines (purchase, journal, expense claim, payroll), Grant Receipts and project
+staff appointments. A spending voucher's submit re-reads the closure under the sanction lock, so a closure and a
+posting can't pass each other. Cancelling the closure cancels the refund entry, reopens the Project and the sanction.
+
 ## Deferred
 
 - Re-opening a Closed Purchase Order with capital head lines does not re-run the capital check. Closing frees the
@@ -256,3 +299,9 @@ The class implements `export_expenditure`, `export_advance`, `export_transfer` a
 - PFMS export: payments made by Journal Entry and Expense Claim reimbursements are not exported, and a payment
   cancelled after it was exported is not withdrawn from PFMS. Cancel it in PFMS by hand. The official EAT layout,
   UC upload and the PFMS API adapter wait for the spec and agency access. (P3-T18)
+- Project closure: the asset handover to the department (Asset Movement) is not part of the closure yet. Move the
+  project's assets with an Asset Movement before closing. Closing doesn't end the project staff's Salary Structure
+  Assignments either: after closure their payroll accrual is refused, so relieve them (Employee relieving date) or
+  move them to another sanction first. (P3-T19)
+- Extending a sanction does not move its project staff's contract end dates. Update them on the Employee. No
+  fellowship Salary Structure is seeded, because the rates differ by agency and scheme. (P3-T19)

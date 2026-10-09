@@ -4,7 +4,7 @@ project and cost centre (blueprint D9: a receipt is never income; income is reco
 A Journal Entry is used rather than a Payment Entry because a Funding Agency is not an ERPNext party.
 
 An instalment can't be received beyond its amount; the check runs under a lock on the sanction, and the entry is built
-from the sanction's set-up as re-read under that lock."""
+from the sanction's set-up as re-read under that lock. A closed sanction (Project Closure) receives nothing more."""
 
 import frappe
 from frappe import _
@@ -12,7 +12,11 @@ from frappe.model.document import Document
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
-SANCTION_FIELDS = ["docstatus", "company", "funding_agency", "currency", "liability_account", "cost_center", "project"]
+from campus.research.api import check_sanction_open
+
+SANCTION_FIELDS = [
+	"docstatus", "company", "funding_agency", "currency", "liability_account", "cost_center", "project", "project_closure",
+]  # fmt: skip
 
 
 class GrantReceipt(Document):
@@ -20,6 +24,7 @@ class GrantReceipt(Document):
 		sanction = self.get_sanction()
 		if sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to receive money against it.").format(self.sanction))
+		check_sanction_open(self.sanction, sanction.project_closure)
 		self.company, self.funding_agency, self.currency = sanction.company, sanction.funding_agency, sanction.currency
 		if flt(self.amount) <= 0:
 			frappe.throw(_("Enter the amount received."))
@@ -32,6 +37,7 @@ class GrantReceipt(Document):
 		sanction = self.get_sanction(for_update=True)
 		if sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to receive money against it.").format(self.sanction))
+		check_sanction_open(self.sanction, sanction.project_closure)
 		balance = flt(self.instalment_amount()) - self.received_so_far()
 		if flt(self.amount, 2) > flt(balance, 2):
 			frappe.throw(

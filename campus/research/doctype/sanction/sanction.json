@@ -37,6 +37,7 @@
   "cost_center",
   "column_break_3",
   "liability_account",
+  "project_closure",
   "amended_from"
  ],
  "fields": [
@@ -257,6 +258,15 @@
    "no_copy": 1
   },
   {
+   "fieldname": "project_closure",
+   "fieldtype": "Link",
+   "label": "Project Closure",
+   "options": "Project Closure",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Set when the project is closed: no further spending, receipts or appointments."
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -271,9 +281,17 @@
   {
    "link_doctype": "Grant Receipt",
    "link_fieldname": "sanction"
+  },
+  {
+   "link_doctype": "Project Staff Appointment",
+   "link_fieldname": "sanction"
+  },
+  {
+   "link_doctype": "Project Closure",
+   "link_fieldname": "sanction"
   }
  ],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-10 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Sanction",

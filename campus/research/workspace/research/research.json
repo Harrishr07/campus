@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 9,
+   "link_count": 12,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -187,6 +187,39 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Project Update",
+   "link_count": 0,
+   "link_to": "Project Update",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Staff Appointment",
+   "link_count": 0,
+   "link_to": "Project Staff Appointment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Closure",
+   "link_count": 0,
+   "link_to": "Project Closure",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "PFMS Export Batch",
    "link_count": 0,
    "link_to": "PFMS Export Batch",
@@ -266,7 +299,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-10 09:00:00.000000",
+ "modified": "2026-10-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",

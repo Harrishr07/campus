@@ -197,10 +197,11 @@ def snapshot(figures):
 	return json.dumps({**signature(figures), "computed_at": str(now_datetime()), "engine_version": ENGINE_VERSION}, indent=1)
 
 
-def source_moved(uc):
-	"""True when the ledger behind an approved UC no longer gives its snapshot figures."""
+def source_moved(uc, lock=False):
+	"""True when the ledger behind an approved UC no longer gives its snapshot figures (read with locking reads when
+	`lock`, by a caller holding the sanction lock)."""
 	stored = json.loads(uc.snapshot or "{}")
-	current = signature(utilisation_figures(uc.sanction, uc.from_date, uc.to_date))
+	current = signature(utilisation_figures(uc.sanction, uc.from_date, uc.to_date, lock=lock))
 	return {"figures": stored.get("figures"), "heads": stored.get("heads")} != current
 
 

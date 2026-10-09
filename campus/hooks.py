@@ -485,6 +485,8 @@ doc_events["DocShare"]["validate"] = [doc_events["DocShare"]["validate"], f"{_va
 doc_events["GL Entry"] = {"on_submit": "campus.research.utilisation.note_ledger_change"}
 permission_query_conditions["Utilisation Certificate"] = "campus.research.utilisation.permission_query"
 has_permission["Utilisation Certificate"] = "campus.research.utilisation.has_permission"
+# P3-T19: a sanctioned project's Project Update is its progress report / mid-term review
+doc_events["Project Update"] = {"validate": "campus.research.progress.validate_project_update"}
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.

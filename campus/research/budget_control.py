@@ -13,7 +13,10 @@ items are updated (counting only an order line's unbilled part, its billed part 
 sanction. A capital head's spending up to the end of each fiscal year can't pass what was sanctioned for it up to that
 year, nor its total. Spending is the submitted invoice lines and journal rows tagged to the head, plus the unbilled
 part of its open Purchase Orders, all net of taxes (non-recoverable tax capitalised on an asset is not counted). The
-scheme's Budget Action decides Stop or Warn."""
+scheme's Budget Action decides Stop or Warn.
+
+A payroll accrual's salary rows on a sanction (project staff, P3-T19) take the head their account maps to. A closed
+sanction (Project Closure) takes no further lines."""
 
 import frappe
 from frappe import _
@@ -22,11 +25,11 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import flt, get_datetime, getdate
 
 from campus.research.accounts import NON_SPENDING_EXPENSE_TYPES
-from campus.research.api import head_accounts
+from campus.research.api import check_sanction_open, head_accounts
 
 BUDGET_HEAD_FIELD = "oc_budget_head"
 LINE_TABLES = {"Purchase Order": "items", "Purchase Invoice": "items", "Journal Entry": "accounts", "Expense Claim": "expenses"}
-SANCTION_FIELDS = ["name", "company", "funding_scheme", "project", "cost_center", "start_date", "end_date"]
+SANCTION_FIELDS = ["name", "company", "funding_scheme", "project", "cost_center", "start_date", "end_date", "project_closure"]
 
 
 def budget_head_fields():
@@ -64,8 +67,9 @@ class Line:
 			if head:
 				frappe.throw(_("{0}: a Grant Budget Head goes only on lines of a sanctioned project.").format(self.label))
 			return
+		self.check_open(sanction)
 		row.project = sanction.project
-		head = head or self.item_group_head(sanction)
+		head = head or self.item_group_head(sanction) or self.payroll_head(sanction)
 		if not head:
 			frappe.throw(_("{0}: select the Grant Budget Head; the line is spent on Sanction {1}.").format(self.label, sanction.name))
 		row.set(BUDGET_HEAD_FIELD, head)
@@ -97,6 +101,29 @@ class Line:
 		if key not in self.sanctions:
 			self.sanctions[key] = frappe.db.get_value("Sanction", {field: value, "docstatus": 1}, SANCTION_FIELDS, as_dict=True)
 		return self.sanctions[key]
+
+	def check_open(self, sanction):
+		"""A closed sanction takes no more spending. On submit the closure is re-read with a locking read of the sanction
+		row, which the Project Closure holds while it checks the ledger, so spending and closure never pass each other."""
+		key = ("closure", sanction.name)
+		if key not in self.sanctions:
+			closure = sanction.project_closure
+			if self.doc.docstatus == 1:
+				closure = frappe.db.get_value("Sanction", sanction.name, "project_closure", for_update=True)
+			self.sanctions[key] = closure
+		check_sanction_open(sanction.name, self.sanctions[key])
+
+	def payroll_head(self, sanction):
+		"""A payroll accrual's salary row (P3-T19, project staff): the sanction head its account maps to; a sanction's
+		heads never share an account."""
+		if self.doc.doctype != "Journal Entry" or not any(r.reference_type == "Payroll Entry" for r in self.doc.accounts):
+			return None
+		heads = frappe.get_all("Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, pluck="budget_head")
+		return frappe.db.get_value(
+			"Grant Budget Head Account",
+			{"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head", "company": sanction.company, "account": self.account},
+			"parent",
+		)
 
 	def item_group_head(self, sanction):
 		group = self.row.get("item_group")
