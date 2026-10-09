@@ -84,3 +84,33 @@ the letter. Submitting it:
 
 A head can't give away money already spent or committed against it. A revenue head left with nothing loses its
 Budget, and its lines are then refused. Cancelling the request moves the amount back.
+
+## Grant income, capital grants and interest (P3-T16, M08-05, blueprint D9)
+
+Set-up: **Research Settings** names the **Grant Income Account**, the **Deferred Capital Grant Account** and the
+**Interest Treatment** (Grant Liability by default). A Funding Agency can override the treatment.
+
+**Grant Interest** (Research > Transactions): enter the interest the bank credited on a sanction's grant funds, and
+the bank or cash account it was credited in. Submitting it posts a Journal Entry that debits the bank. With the
+Grant Liability treatment, it credits the sanction's "Grant Received in Advance" liability. With Interest Income,
+it credits the college's Interest Income Account instead.
+
+**Grant Income Recognition** (Research > Transactions) is the period-end entry. Enter the college and the period.
+List the sanctions, or leave the table empty to take every submitted sanction of the college that has started by
+the period end. Submitting it posts one Journal Entry on the period end, with each sanction's project and cost
+centre on its rows. For each sanction, it:
+
+- moves the **revenue spending** (the sanction's revenue head accounts on its cost centre) from the liability to
+  grant income
+- moves **asset purchases** (its capital head accounts) from the liability to the Deferred Capital Grant
+- releases the **Deferred Capital Grant** to grant income in line with the **depreciation** booked on the sanction's
+  cost centre. Give assets bought from a sanction the sanction's cost centre. The release never passes what was
+  capitalised, and each asset is taken as wholly funded by the sanction.
+
+Amounts are cumulative to the period end, less what earlier recognitions already did. So a credit note reverses
+income, and spending back-dated into a recognised period is picked up by the next period. After recognition, a
+sanction's liability balance = receipts + interest (Grant Liability treatment) − revenue recognised − capitalised.
+
+Each sanction is recognised once per period end. A sanction already recognised up to that date, or with nothing
+new, is dropped from the run. If none is left, the run is refused, so running a period twice posts nothing.
+Cancelling reverses the Journal Entry and frees the period. Only a sanction's latest recognition can be cancelled.
