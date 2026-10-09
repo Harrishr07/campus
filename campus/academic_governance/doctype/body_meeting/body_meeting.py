@@ -85,7 +85,7 @@ class BodyMeeting(Document):
 		self.keep_numbered_rows(old)
 		new = [row for row in self.resolutions if row.name not in old or not old[row.name].resolution_no]
 		for row in new:
-			row.resolution_no = row.serial = None  # numbers are the server's
+			row.resolution_no = row.serial = row.recorded_by = None  # numbers (and who recorded them) are the server's
 		if new:
 			self.validate_can_resolve()
 			self.number_resolutions(new)
@@ -101,9 +101,10 @@ class BodyMeeting(Document):
 			row = current.get(name)
 			if not row:
 				frappe.throw(_("Resolution {0} cannot be removed. Cancel the meeting to void it.").format(saved_row.resolution_no))
-			if (row.resolution_text, row.decision, row.proposal or "") != (saved_row.resolution_text, saved_row.decision, saved_row.proposal or ""):
+			fields = lambda r: (r.resolution_text, r.decision, r.proposal or "", r.get("exam_session") or "")
+			if fields(row) != fields(saved_row):
 				frappe.throw(_("Resolution {0} cannot be edited once numbered").format(saved_row.resolution_no))
-			row.resolution_no, row.serial = saved_row.resolution_no, saved_row.serial
+			row.resolution_no, row.serial, row.recorded_by = saved_row.resolution_no, saved_row.serial, saved_row.get("recorded_by")
 
 	def validate_can_resolve(self):
 		if self.status == "Cancelled" or getdate(self.meeting_date) > getdate(today()):
@@ -118,6 +119,7 @@ class BodyMeeting(Document):
 			serial += 1
 			row.serial = serial
 			row.resolution_no = f"{self.body}/{year}/{serial:03d}"
+			row.recorded_by = frappe.session.user
 
 	@frappe.whitelist()
 	def send_notice(self, override_reason=None):

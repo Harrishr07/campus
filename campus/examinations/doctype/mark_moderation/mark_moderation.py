@@ -51,6 +51,7 @@ class MarkModeration(ApprovableDocument, Document):
 		other = frappe.db.get_value(
 			"Mark Moderation",
 			{"exam_session": self.exam_session, "course": self.course, "docstatus": ["<", 2], "name": ["!=", self.name]},
+			for_update=True,  # a locking read: a plain one would see the snapshot from before the lock
 		)
 		if other:
 			frappe.throw(_("{0} already moderates {1} in this session.").format(frappe.bold(other), frappe.bold(self.course)))

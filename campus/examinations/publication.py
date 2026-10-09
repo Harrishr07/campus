@@ -30,6 +30,8 @@ RELEASE_EVENT = "exam.result_published"
 RUN_TYPE = "Result Release Notice"
 HANDLER = "campus.examinations.publication.notify_result"
 RESULT_RUN = "Result Run"
+ENDED = ("Completed", "Completed with errors", "Failed")
+INPUTS = ("Student Result", "Mark Sheet Entry", "Mark Moderation")  # all carry exam_session
 REVISED_EVENT = "exam.result_revised"
 REVISED_TEMPLATE = (
 	"Results revised: {{ doc.exam_session }}",
@@ -57,7 +59,8 @@ def publish_results(exam_session, release_at, passing_board_meeting, resolution_
 	if not frappe.db.exists(RESULT, {"exam_session": exam_session}):
 		frappe.throw(_("Run the results of {0} before publishing them.").format(frappe.bold(exam_session)))
 	finished = check_runs(session)
-	check_resolution(session, passing_board_meeting, resolution_no, finished)
+	meeting_at = check_resolution(session, passing_board_meeting, resolution_no, finished)
+	check_inputs(session, finished, meeting_at)
 	freeze_bands(exam_session)
 	session.update(
 		{"status": "Published", "publish_at": get_datetime(release_at), "passing_board_meeting": passing_board_meeting,
@@ -69,29 +72,46 @@ def publish_results(exam_session, release_at, passing_board_meeting, resolution_
 
 
 def check_runs(session):
-	"""When the last Result Run of the session finished; refused unless every programme with results has a
-	Completed run and no run of the session is still queued or running."""
+	"""When the last Result Run of the session finished. Refused while a run is queued or running, unless every
+	programme with results has runs and its latest finished run completed cleanly."""
 	if live_run(RESULT_RUN, exam_session=session.name):
 		frappe.throw(_("A Result Run of {0} is still running.").format(frappe.bold(session.name)))
-	finished = {}
-	for name, stored, at in frappe.get_all(
-		"Bulk Run", {"run_type": RESULT_RUN, "status": "Completed"}, ["name", "parameters", "finished_at"], as_list=True
+	latest = {}
+	for status, stored, at in frappe.get_all(
+		"Bulk Run", {"run_type": RESULT_RUN, "status": ["in", ENDED]}, ["status", "parameters", "finished_at"], order_by="creation", as_list=True
 	):
 		params = json.loads(stored or "{}")
-		if params.get("exam_session") == session.name and at:
-			finished[params.get("program")] = max(get_datetime(at), finished.get(params.get("program")) or get_datetime(at))
+		if params.get("exam_session") == session.name:
+			latest[params.get("program")] = (status, at)
 	programs = set(frappe.get_all(RESULT, {"exam_session": session.name}, pluck="program", distinct=True)) - {None, ""}
-	missing = sorted(p for p in programs if p not in finished)
-	if missing or not finished:
+	missing = sorted(p for p in programs if p not in latest)
+	if missing or not latest:
 		frappe.throw(_("Finish a Result Run of {0} for every programme first: {1}.").format(frappe.bold(session.name), ", ".join(missing) or "-"))
-	return max(finished.values())
+	unclean = sorted(p or "-" for p, (status, at) in latest.items() if status != "Completed" or not at)
+	if unclean:
+		frappe.throw(_("The latest Result Run of {0} did not finish clean (completed without errors); run it again.").format(", ".join(unclean)))
+	return max(get_datetime(at) for _status, at in latest.values())
+
+
+def check_inputs(session, runs_finished, meeting_at):
+	"""Refuse when a grading input of the session (its Student Results, Mark Sheet Entries or Mark Moderations)
+	changed after the last Result Run finished or after the Passing Board sat: the board approved other results."""
+	stamps = [frappe.db.get_value(doctype, {"exam_session": session.name}, "modified", order_by="modified desc") for doctype in INPUTS]
+	changed = max((get_datetime(at) for at in stamps if at), default=None)
+	if changed and (changed > runs_finished or changed > meeting_at):
+		frappe.throw(
+			_("Grading inputs of {0} changed on {1}, after the last Result Run or the Passing Board meeting. Run the results again and take a new resolution.").format(
+				frappe.bold(session.name), changed
+			)
+		)
 
 
 def check_resolution(session, meeting_name, resolution_no, runs_finished):
 	"""Refuse unless `resolution_no` names this session and approves it, in a Held, quorate meeting of the company's
 	Passing Board after the Result Runs finished, recorded by someone else, and has not published another session."""
 	meeting = frappe.db.get_value(
-		"Body Meeting", meeting_name, ["body", "company", "status", "quorum_status", "docstatus", "meeting_date", "owner"], as_dict=True
+		"Body Meeting", meeting_name,
+		["body", "company", "status", "quorum_status", "docstatus", "meeting_date", "start_time", "owner"], as_dict=True,
 	)
 	if not meeting:
 		frappe.throw(_("Body Meeting {0} does not exist.").format(frappe.bold(meeting_name)))
@@ -101,17 +121,20 @@ def check_resolution(session, meeting_name, resolution_no, runs_finished):
 		frappe.throw(_("{0} is a meeting of another college.").format(frappe.bold(meeting_name)))
 	if meeting.status != "Held" or meeting.docstatus == 2 or meeting.quorum_status != "Met":
 		frappe.throw(_("{0} must be Held with its quorum met.").format(frappe.bold(meeting_name)))
-	if getdate(meeting.meeting_date) < getdate(runs_finished):
+	meeting_at = get_datetime(f"{getdate(meeting.meeting_date)} {meeting.start_time or '00:00:00'}")
+	if meeting_at < runs_finished:
 		frappe.throw(_("{0} sat before the last Result Run of {1} finished.").format(frappe.bold(meeting_name), frappe.bold(session.name)))
 	if meeting.owner == frappe.session.user:
 		frappe.throw(_("{0} was recorded by you; another COE user publishes on it.").format(frappe.bold(meeting_name)))
 	resolution = frappe.db.get_value(
 		"Meeting Resolution", {"parent": meeting_name, "parenttype": "Body Meeting", "resolution_no": resolution_no, "void": 0},
-		["decision", "exam_session"], as_dict=True,
+		["decision", "exam_session", "recorded_by"], as_dict=True,
 	)  # fmt: skip
 	if not resolution:
 		frappe.throw(_("{0} has no resolution {1}.").format(frappe.bold(meeting_name), frappe.bold(resolution_no)))
 	decision = resolution.decision
+	if resolution.recorded_by == frappe.session.user:
+		frappe.throw(_("Resolution {0} was recorded by you; another COE user publishes on it.").format(frappe.bold(resolution_no)))
 	if resolution.exam_session != session.name:
 		frappe.throw(_("Resolution {0} does not name the exam session {1}.").format(frappe.bold(resolution_no), frappe.bold(session.name)))
 	if decision != "Approved":
@@ -121,16 +144,16 @@ def check_resolution(session, meeting_name, resolution_no, runs_finished):
 	)
 	if used:
 		frappe.throw(_("Resolution {0} already published {1}.").format(frappe.bold(resolution_no), frappe.bold(used)))
+	return meeting_at
 
 
 def freeze_bands(exam_session):
-	"""Store, and return, the relative bands of every course and Grading Scheme graded relatively in the session's
-	latest results: {band_key: bands}. Re-runs after publication grade on these, so no student's grade moves because
-	another's marks changed."""
+	"""Freeze, and return, the relative bands the session's last Result Run graded on: {band_key: bands}, recorded by
+	the run (campus.examinations.result_cohort). A relatively graded course with no recorded bands (results run
+	before bands were recorded) gets them from the cohort now; the input guard makes that the run's cohort."""
 	from campus.examinations.results import new_cohorts
 
-	cohorts = new_cohorts(exam_session, frozen=False)
-	frozen = {}
+	frozen = json.loads(frappe.db.get_value(SESSION, exam_session, "frozen_bands") or "{}")
 	result, row = frappe.qb.DocType(RESULT), frappe.qb.DocType("Student Result Course")
 	pairs = (
 		frappe.qb.from_(result)
@@ -141,9 +164,12 @@ def freeze_bands(exam_session):
 		.where((result.exam_session == exam_session) & (result.is_latest == 1) & (row.grading_method == "Relative Box-Cox"))
 		.run()
 	)
+	cohorts = None
 	for course, regulation in pairs:
 		scheme = frappe.get_doc("Grading Scheme", {"regulation": regulation})
-		frozen[band_key(course, scheme.name)] = cohorts.bands(course, scheme.name, [g.as_dict() for g in scheme.grades])
+		if band_key(course, scheme.name) not in frozen:
+			cohorts = cohorts or new_cohorts(exam_session, frozen=False)
+			frozen[band_key(course, scheme.name)] = cohorts.bands(course, scheme.name, [g.as_dict() for g in scheme.grades])
 	frappe.db.set_value(SESSION, exam_session, "frozen_bands", json.dumps(frozen, sort_keys=True), update_modified=False)
 	return frozen
 

@@ -104,7 +104,7 @@ def new_cohorts(exam_session, frozen=None):
 	(also for a session published before bands were frozen)."""
 	term, status, stored = frappe.db.get_value("Exam Session", exam_session, ["academic_term", "status", "frozen_bands"])
 	bands = json.loads(stored) if frozen is not False and status == PUBLISHED and stored else None
-	return Cohorts(exam_session, lambda student: eligibility_status(student, term) == "Shortage", bands)
+	return Cohorts(exam_session, lambda student: eligibility_status(student, term) == "Shortage", bands, record=status != PUBLISHED)
 
 
 def compute_student_result(student, exam_session, cohorts=None):
@@ -346,31 +346,35 @@ def break_years(student):
 
 
 def save_version(student, session, values):
-	"""Write `values` to the latest version (unpublished session). After publication, a change makes (or updates)
-	the one pending version, which a Result Ratification publishes; going back to the published content drops it."""
+	"""Write `values` to the latest version (unpublished session). After publication, a change - or the student's
+	first result - makes (or updates) the one pending version, which a Result Ratification publishes; going back to
+	the published content drops it."""
 	latest = frappe.db.get_value(RESULT, {"student": student, "exam_session": session.name, "is_latest": 1}, ["name", "version"], as_dict=True, for_update=True)
 	if latest and session.status != PUBLISHED:
 		doc = frappe.get_doc(RESULT, latest.name)
 		doc.update(values)
 		doc.save(ignore_permissions=True)
 		return doc.name
-	if not latest:
+	if not latest and session.status != PUBLISHED:
 		doc = new_result(student, session)
 		doc.update(values)
 		doc.insert(ignore_permissions=True)
 		return doc.name
 	pending = frappe.db.get_value(RESULT, {"student": student, "exam_session": session.name, "pending_ratification": 1}, "name", for_update=True)
-	log = result_rules.change_log(summary(frappe.get_doc(RESULT, latest.name).as_dict()), summary(values))
-	if not log:
+	if latest:
+		log = result_rules.change_log(summary(frappe.get_doc(RESULT, latest.name).as_dict()), summary(values))
+	else:  # the student's first result after publication: everything is new, and pending too
+		log = result_rules.change_log({"sgpa": 0, "cgpa": 0, "courses": []}, summary(values)) or _("First result after publication")
+	if latest and not log:
 		if pending:
 			frappe.delete_doc(RESULT, pending, ignore_permissions=True, force=True)
 		return latest.name
 	doc = frappe.get_doc(RESULT, pending) if pending else new_result(student, session)
-	doc.update({**values, "previous_version": latest.name, "change_log": log, "is_latest": 0, "pending_ratification": 1})
+	doc.update({**values, "previous_version": latest and latest.name, "change_log": log, "is_latest": 0, "pending_ratification": 1})
 	if pending:
 		doc.save(ignore_permissions=True)
 	else:
-		doc.version = max(frappe.get_all(RESULT, {"student": student, "exam_session": session.name}, pluck="version")) + 1
+		doc.version = max(frappe.get_all(RESULT, {"student": student, "exam_session": session.name}, pluck="version") or [0]) + 1
 		doc.insert(ignore_permissions=True)
 	return doc.name
 

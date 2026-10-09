@@ -92,6 +92,11 @@
 - Ruling: a Passing Board resolution names its Exam Session; the meeting is Held, sits after the session's last Result Run finished, and is not recorded by the publisher.
 - Ruling: a re-run after publication makes a pending version; the published version stays the latest until a Result Ratification (approval engine, no self-approval) publishes it and notifies the student; relative bands are frozen at publication and reused by every later re-run.
 
+### P2-T19 fix round 2 (coordinator rulings)
+- Ruling: one input-change guard at publication: refused when any Student Result, Mark Sheet Entry or Mark Moderation of the session changed after the last clean Result Run finished or after the Passing Board meeting (datetimes); the latest run of each programme must be clean.
+- Ruling: a Meeting Resolution's recorder is stamped by the server when numbered and never changes, nor does its Exam Session; neither the recorder nor the meeting's owner publishes on it.
+- Ruling: the first result version made after publication is pending ratification too; the bands frozen at publication are those the last run graded on.
+
 ### Pending confirmation (P2-T19)
 | # | Item | Applied |
 |---|------|---------|

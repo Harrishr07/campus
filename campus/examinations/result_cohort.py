@@ -6,7 +6,15 @@ course's approved moderation: absent rows, students short of attendance and arre
 CIA) are left out, and a pass is judged on the total with the student's Exam Rule Set (first-attempt rule,
 no grace). Every student of the course therefore gets the same bands, whichever programme is run first. One
 Cohorts object serves a whole bulk run, so each cohort is read once.
+
+Before publication each run records the decision it graded on in Exam Session frozen_bands (the bands of a
+relative course; no entry for one graded absolutely), under the session row lock the Result Run holds. Publication
+freezes that record (campus.examinations.publication): `relative_bands` then returns the stored bands, or None
+(absolute) for a course that was not graded relatively, so a re-run after publication never moves another
+student's grade.
 """
+
+import json
 
 import frappe
 
@@ -18,9 +26,11 @@ from campus.examinations.result_rules import combined_ese
 
 
 class Cohorts:
-	def __init__(self, exam_session, is_shortage, frozen=None):
+	def __init__(self, exam_session, is_shortage, frozen=None, record=False):
 		self.exam_session = exam_session
 		self.frozen = frozen  # {band_key: bands} of a published session, else None
+		self.record = record  # store the live decisions on the session (unpublished)
+		self.recorded = set()
 		self.is_shortage = is_shortage  # student -> True when short of attendance in the session's term
 		self.moderation = approved_adjustments(exam_session)
 		self.totals_by_course = {}
@@ -41,7 +51,21 @@ class Cohorts:
 			return self.frozen.get(band_key(course, scheme))
 		totals = self.totals(course, scheme)
 		method = rules.grading_method(course_type, method_row.method, len(totals), method_row.min_cohort, totals)
-		return self.bands(course, scheme, grades) if method == rules.RELATIVE else None
+		bands = self.bands(course, scheme, grades) if method == rules.RELATIVE else None
+		self.remember(band_key(course, scheme), bands)
+		return bands
+
+	def remember(self, key, bands):
+		"""Record the run's decision for `key` on the session (once per run and key)."""
+		if not self.record or key in self.recorded:
+			return
+		self.recorded.add(key)
+		stored = json.loads(frappe.db.get_value("Exam Session", self.exam_session, "frozen_bands") or "{}")
+		if bands:
+			stored[key] = bands
+		else:
+			stored.pop(key, None)
+		frappe.db.set_value("Exam Session", self.exam_session, "frozen_bands", json.dumps(stored, sort_keys=True), update_modified=False)
 
 	def bands(self, course, scheme, grades):
 		key = (course, scheme)

@@ -195,6 +195,19 @@ class TestResultRunAtScale(ScaleFixture):
 				row = next(c for c in frappe.get_doc("Student Result", pending).courses if c.course == "EXM TH")
 				self.assertEqual((row.grade, row.grade_point), relative_grade(row.total, stored[key]), f"R2022 student {i}")
 
+	def test_publication_freezes_the_bands_the_run_graded_on(self):
+		self.run_programs()
+		scheme = frappe.db.get_value("Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
+		key = publication.band_key("EXM TH", scheme)
+		recorded = json.loads(frappe.db.get_value("Exam Session", self.session.name, "frozen_bands"))  # stored by the run
+		totals = [sum(theory_marks(i)) for i in range(BATCH) if theory_marks(i)[1] >= 27 and sum(theory_marks(i)) >= 50] + [63]
+		self.assertEqual(recorded[key], relative_grade_bands(totals, self.r2022_grades()))
+		self.assertEqual(set(recorded), {key})  # labs and the R2026 batch are absolute
+		sheets = frappe.get_all("Mark Sheet Entry", {"course": "EXM TH"}, pluck="name")
+		for name in frappe.get_all("Mark Sheet Entry Row", {"student": ["in", self.batch22[:10]], "parent": ["in", sheets]}, pluck="name"):
+			frappe.db.set_value("Mark Sheet Entry Row", name, "ese", 60)  # changed after the run, never re-run
+		self.assertEqual(publication.freeze_bands(self.session.name)[key], recorded[key])
+
 	def r2022_grades(self):
 		scheme = frappe.get_doc("Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
 		return [g.as_dict() for g in scheme.grades]

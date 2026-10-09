@@ -20,6 +20,8 @@ class ExamSession(Document):
 			frappe.throw(_("A published Exam Session cannot be reopened."))
 		if before and before.status == "Published" and get_datetime(before.publish_at) != get_datetime(self.publish_at):
 			frappe.throw(_("The publication time of a published Exam Session cannot change."))
+		if before and before.status == "Published" and (before.frozen_bands or "") != (self.frozen_bands or ""):
+			frappe.throw(_("The relative bands frozen at publication cannot change."))
 		if self.status == "Published" and not (before and before.status == "Published") and not self.flags.passing_board_approval:
 			frappe.throw(_("Results are published with Publish Results, on the approving resolution of a Passing Board meeting."))
 		if frappe.db.exists(

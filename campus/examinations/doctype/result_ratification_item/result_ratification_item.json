@@ -7,7 +7,8 @@
   "student_result",
   "student",
   "version",
-  "change_log"
+  "change_log",
+  "fingerprint"
  ],
  "fields": [
   {
@@ -39,12 +40,20 @@
    "label": "Changes",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "fingerprint",
+   "fieldtype": "Data",
+   "label": "Grading Fingerprint",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "SHA-256 of the version's marks, grace, grades, results and GPAs when listed; approval publishes it only if unchanged."
   }
  ],
  "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-09 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Result Ratification Item",
