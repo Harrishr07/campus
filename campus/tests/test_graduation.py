@@ -527,3 +527,44 @@ class TestFixRound1(GraduationFixture):
 		self.assertIn(self.students["arrear"], progression.active_students(doc))
 		self.assertEqual(progression.progress_student(self.students["arrear"], run), "Promote")
 		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_current_semester"]), ("Active", 3))
+
+
+class TestFixRound2(GraduationFixture):
+	def student_login(self, key, user):
+		if not frappe.db.exists("User", user):
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "GrdN1", "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+		frappe.db.set_value("Student", self.students[key], "user", user)
+
+	def test_n1_a_student_cannot_print_their_pending_graduate_draft(self):
+		from frappe.utils.print_format import download_pdf
+
+		self.student_login("dist", "grd-n1@example.com")
+		draft = self.request("dist", PROVISIONAL, submit=False)
+		frappe.set_user("grd-n1@example.com")
+		self.assertTrue(frappe.has_permission("Certificate Request", "read", draft.name))  # the student does see it
+		with self.assertRaisesRegex(Exception, "(?i)draft"):
+			frappe.get_print("Certificate Request", draft.name, PROVISIONAL)
+		with self.assertRaisesRegex(Exception, "(?i)draft"):
+			download_pdf("Certificate Request", draft.name, PROVISIONAL)
+
+	def test_n1_a_staff_draft_preview_is_watermarked_an_issued_print_is_not(self):
+		draft = self.request("dist", PROVISIONAL, submit=False)
+		self.assertIn("DRAFT - NOT VALID", self.printed(draft))
+		issued = self.approve(draft)
+		self.assertNotIn("DRAFT - NOT VALID", self.printed(issued))
+
+	def test_any_examination_draft_is_staff_only_the_transcript_too(self):
+		self.student_login("dist", "grd-n1t@example.com")
+		frappe.db.set_value("Certificate Type", TRANSCRIPT, "needs_approval", 1)  # a college may require it
+		draft = self.request("dist", TRANSCRIPT, submit=False)
+		frappe.set_user("grd-n1t@example.com")
+		with self.assertRaisesRegex(Exception, "(?i)draft"):
+			frappe.get_print("Certificate Request", draft.name, TRANSCRIPT)
+
+	def test_a_draft_made_before_approval_was_required_still_needs_it_at_submit(self):
+		frappe.db.set_value("Certificate Type", PROVISIONAL, "needs_approval", 0)
+		draft = self.request("dist", PROVISIONAL, submit=False)
+		self.assertEqual(draft.needs_approval, 0)
+		frappe.db.set_value("Certificate Type", PROVISIONAL, "needs_approval", 1)  # the fix round 1 patch
+		with self.assertRaisesRegex(frappe.ValidationError, "approval"):
+			draft.submit()

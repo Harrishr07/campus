@@ -17,8 +17,11 @@ Control (fix round 1):
   no published result, or, for the graduate prints, before the programme is completed.
 - Snapshot: on submit the graduate record is frozen as JSON on the request (record_snapshot), and an issued print
   renders from that snapshot only, so the QR always attests what was issued: a later result version, rule change or
-  setting switch never alters it. A draft renders live (preview, no QR) and refuses a print unavailable to the
-  college.
+  setting switch never alters it.
+- Drafts (fix round 2): only staff who can edit Certificate Requests preview a draft. It renders live with no QR,
+  under a "DRAFT - NOT VALID" watermark, and refuses a print unavailable to the college. A Student or Guardian
+  cannot print or download a draft, so an unapproved certificate never leaves the college. At submit the type's
+  needs_approval is read again, so a draft made before approval was required still needs it.
 """
 
 import json
@@ -26,7 +29,7 @@ import json
 import frappe
 from frappe import _
 
-from campus.campus_platform.api import get_institution
+from campus.campus_platform.api import get_institution, is_approved
 from campus.examinations.graduation import graduate_record
 
 TRANSCRIPT, CONSOLIDATED, PROVISIONAL, DEGREE, DATA_SHEET = (
@@ -128,6 +131,8 @@ def before_submit_request(doc, method=None):
 	print_format = print_format_of(doc)
 	if print_format not in PRINTS:
 		return
+	if frappe.db.get_value("Certificate Type", doc.certificate_type, "needs_approval") and not is_approved(doc):
+		frappe.throw(_("{0} needs approval before it can be issued. Use Request Approval.").format(doc.name))
 	frappe.db.get_value("Student", doc.student, "name", for_update=True)  # one issue per student at a time
 	check_once_only(doc, print_format, lock=True)
 	doc.record_snapshot = frappe.as_json(live_record(doc, print_format), indent=None)
@@ -165,10 +170,14 @@ def live_record(doc, print_format):
 
 
 def oc_graduate_record(doc, print_format):
-	"""Jinja method for the examination prints: an issued request's frozen snapshot, or a draft's live record (a
-	preview, refused when `print_format` is not available to the college)."""
+	"""Jinja method for the examination prints: an issued request's frozen snapshot, or for staff a draft's live,
+	watermarked record (refused when `print_format` is not available to the college)."""
 	if doc.get("record_snapshot"):
 		return json.loads(doc.record_snapshot, object_hook=frappe._dict)
 	if doc.docstatus == 0:
-		return live_record(doc, print_format)
+		if not frappe.has_permission(REQUEST, "write"):
+			frappe.throw(_("This {0} is a draft and not valid; it can be printed once the college issues it.").format(_(print_format)), frappe.PermissionError)
+		record = live_record(doc, print_format)
+		record.draft_preview = True
+		return record
 	frappe.throw(_("{0} was issued without a record snapshot and cannot be reprinted; issue it again.").format(doc.name))
