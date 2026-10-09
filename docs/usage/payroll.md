@@ -100,12 +100,12 @@ india_compliance has no payroll features; HRMS provides the components and two r
   component as usual.
 
 ## Sites set up by the earlier version
-An earlier version changed HRMS's components once (Component Type on Provident Fund / Professional Tax, Provident
-Fund not by payment days and rounded, rounding on DA / AGP). The patch `use_campus_statutory_components` moves
-Campus's draft structures to Campus EPF / Campus PT and restores each changed component, but only where its values
-are still the ones Campus set and none of your own salary structures uses it; otherwise it leaves the component and
-prints a note in the migrate output. Submitted Campus structures that still use HRMS's Provident Fund or Professional
-Tax are listed in that output for you to review.
+An earlier development version changed HRMS's components once: Component Type on Provident Fund and Professional
+Tax, Provident Fund not by payment days and rounded, and rounding on DA and AGP. The patch
+`use_campus_statutory_components` moves Campus's **draft** structures to Campus EPF / Campus PT and changes no HRMS or
+college component back. It prints what the earlier version changed so you can review those components by hand if
+your own structures use them, and lists submitted Campus structures that still use HRMS's Provident Fund or
+Professional Tax (they keep working as they are; amend them to Campus EPF / PT when you next revise them).
 
 ## Demo and tests
 `campus/tests/test_faculty_payroll.py` builds September 2026 payroll for Demo College of Engineering (no PT

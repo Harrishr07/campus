@@ -81,6 +81,16 @@ class PayrollFixture(CampusTestCase):
 		rows = {r.salary_component: r.amount for r in (*slip.earnings, *slip.deductions)}
 		return rows, (slip.gross_pay, slip.total_deduction, slip.net_pay)
 
+	def leave_without_pay(self, employee, from_date, to_date):
+		leave_type = demo.get_or_insert("Leave Type", {"leave_type_name": "Payroll Test LWP"}, {"is_lwp": 1})
+		frappe.db.set_single_value("HR Settings", "leave_approver_mandatory_in_leave_application", 0)
+		frappe.get_doc(
+			{
+				"doctype": "Leave Application", "employee": employee, "leave_type": leave_type, "from_date": from_date,
+				"to_date": to_date, "status": "Approved", "company": self.company, "posting_date": from_date,
+			}
+		).insert(ignore_permissions=True).submit()  # fmt: skip
+
 	def direct_slip(self, employee, start=START, end=END):
 		return frappe.get_doc(
 			{"doctype": "Salary Slip", "employee": employee, "start_date": start, "end_date": end, "posting_date": end, "payroll_frequency": "Monthly"}
@@ -166,15 +176,6 @@ class TestPayrollEntry(PayrollFixture):
 			),
 		)
 
-	def leave_without_pay(self, employee, from_date, to_date):
-		leave_type = demo.get_or_insert("Leave Type", {"leave_type_name": "Payroll Test LWP"}, {"is_lwp": 1})
-		frappe.db.set_single_value("HR Settings", "leave_approver_mandatory_in_leave_application", 0)
-		frappe.get_doc(
-			{
-				"doctype": "Leave Application", "employee": employee, "leave_type": leave_type, "from_date": from_date,
-				"to_date": to_date, "status": "Approved", "company": self.company, "posting_date": from_date,
-			}
-		).insert(ignore_permissions=True).submit()  # fmt: skip
 
 	def payroll_entry(self):
 		company = frappe.get_cached_doc("Company", self.company)
@@ -301,34 +302,44 @@ class TestSeeding(PayrollFixture):
 		self.assign_demo_staff()
 		self.assertEqual(self.amounts(self.direct_slip(self.self_financing)), (SELF_FINANCING_ROWS, (36000, 1800, 34200)))
 
-	def test_revert_earlier_wiring_where_unchanged_and_unused(self):
-		wired = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
-		frappe.db.set_value("Salary Component", "Provident Fund", dict(wired))  # set_value adds modified to the dict
+	WIRED = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
+
+	def wire_like_the_old_version(self):
+		frappe.db.set_value("Salary Component", "Provident Fund", dict(self.WIRED))  # set_value adds modified to the dict
 		frappe.db.set_value("Salary Component", "Professional Tax", "component_type", "Professional Tax")
 		frappe.db.set_global(payroll_setup.OLD_STATUTORY_FLAG, 1)
-		seeded = frappe.get_doc("Salary Structure", structure_name("Aided", self.company))
+
+	def hrms_pf(self):
+		return frappe.db.get_value("Salary Component", "Provident Fund", list(self.WIRED))
+
+	def test_retiring_the_old_wiring_swaps_drafts_and_changes_no_hrms_component(self):
+		self.wire_like_the_old_version()
+		seeded = frappe.get_doc("Salary Structure", structure_name(AIDED, self.company))
 		frappe.db.set_value("Salary Detail", seeded.deductions[0].name, {"salary_component": "Provident Fund", "abbr": "PF"})
-		payroll_setup.revert_statutory_wiring()
-		self.assertEqual(
-			frappe.db.get_value("Salary Component", "Provident Fund", list(wired)), ("", 1, 0)
-		)
-		self.assertFalse(frappe.db.get_value("Salary Component", "Professional Tax", "component_type"))
-		self.assertEqual(frappe.db.get_value("Salary Detail", seeded.deductions[0].name, "salary_component"), EPF)
+		payroll_setup.retire_statutory_wiring()
+		self.assertEqual(self.hrms_pf(), ("Provident Fund", 0, 1))
+		self.assertEqual(frappe.db.get_value("Salary Component", "Professional Tax", "component_type"), "Professional Tax")
+		self.assertEqual(frappe.db.get_value("Salary Detail", seeded.deductions[0].name, ["salary_component", "abbr"]), (EPF, "CEPF"))
 		self.assertFalse(frappe.db.get_global(payroll_setup.OLD_STATUTORY_FLAG))
 
-	def test_revert_leaves_hrms_pf_used_by_a_college_structure(self):
-		wired = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
-		frappe.db.set_value("Salary Component", "Provident Fund", dict(wired))  # set_value adds modified to the dict
-		frappe.db.set_global(payroll_setup.OLD_STATUTORY_FLAG, 1)
-		frappe.get_doc(
-			{
-				"doctype": "Salary Structure", "name": "College Own Structure", "company": self.company, "currency": "INR",
-				"payroll_frequency": "Monthly", "is_active": "Yes",
-				"deductions": [{"salary_component": "Provident Fund", "amount": 100}],
-			}
-		).insert(ignore_permissions=True)  # fmt: skip
-		payroll_setup.revert_statutory_wiring()
-		self.assertEqual(frappe.db.get_value("Salary Component", "Provident Fund", list(wired)), ("Provident Fund", 0, 1))
+	def test_submitted_structure_on_hrms_pf_keeps_its_pf(self):
+		self.wire_like_the_old_version()
+		name = structure_name(SELF_FINANCING, self.company)
+		row = frappe.get_doc("Salary Structure", name).deductions[0].name
+		frappe.db.set_value("Salary Detail", row, {"salary_component": "Provident Fund", "abbr": "PF"})
+		self.submit_structures()
+		self.assign_demo_staff()
+		self.leave_without_pay(self.self_financing, "2026-09-01", "2026-09-20")
+		before = self.amounts(self.direct_slip(self.self_financing))
+		frappe.db.delete("Salary Slip", {"employee": self.self_financing})
+
+		payroll_setup.retire_statutory_wiring()
+
+		self.assertEqual(self.hrms_pf(), ("Provident Fund", 0, 1))
+		self.assertEqual(frappe.db.get_value("Salary Detail", row, "salary_component"), "Provident Fund")
+		after = self.amounts(self.direct_slip(self.self_financing))
+		self.assertEqual(after, before)
+		self.assertEqual(after[0]["Provident Fund"], 1320)
 
 	def test_professional_tax_seeded_disabled_with_a_todo(self):
 		doc = frappe.get_doc("Salary Structure", structure_name(SELF_FINANCING, self.company))

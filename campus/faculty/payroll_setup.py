@@ -17,8 +17,8 @@ formula that reads another payment-days component. Campus EPF does not depend on
 prorated Basic, AGP and DA. Campus PT is seeded disabled (amount 0, a false Condition with a TODO): state slabs must be
 entered by the college. See docs/usage/payroll.md.
 
-`revert_statutory_wiring` (patch use_campus_statutory_components) undoes the one-time changes an earlier version made to
-HRMS's components where they are unchanged since and not used by the college's own structures.
+`retire_statutory_wiring` (patch use_campus_statutory_components), on a site an earlier version wired, moves Campus's
+draft structures to Campus EPF / PT, changes no HRMS or college component, and prints what may need a manual review.
 """
 
 import frappe
@@ -165,41 +165,29 @@ def rows(components, abbrs):
 	]  # fmt: skip
 
 
-# ---- undo the earlier one-time wiring of HRMS's components (patch use_campus_statutory_components) ----------------
+# ---- retire the earlier one-time wiring of HRMS's components (patch use_campus_statutory_components) --------------
 
 OLD_STATUTORY_FLAG = "campus_payroll_statutory_wired"
-# component -> (the values the earlier wiring set, the values to restore)
-OLD_WIRING = {
-	"Provident Fund": (
-		{"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1},
-		{"component_type": "", "depends_on_payment_days": 1, "round_to_the_nearest_integer": 0},
-	),
-	"Professional Tax": ({"component_type": "Professional Tax"}, {"component_type": ""}),
-	"Dearness Allowance": ({"round_to_the_nearest_integer": 1}, {"round_to_the_nearest_integer": 0}),
-	"Academic Grade Pay": ({"round_to_the_nearest_integer": 1}, {"round_to_the_nearest_integer": 0}),
-}
+# what the earlier version changed, for the college to review by hand; Campus does not change these back
+OLD_WIRING_NOTE = (
+	"Provident Fund (Component Type, Depends on Payment Days off, Round to the Nearest Integer), "
+	"Professional Tax (Component Type), Dearness Allowance and Academic Grade Pay (Round to the Nearest Integer)"
+)
 SWAPS = {"Provident Fund": EPF, "Professional Tax": PT}
 
 
-def revert_statutory_wiring():
-	"""On a site the earlier version wired: move Campus's draft structures to Campus EPF / PT, and restore each wired
-	component where its values are still the wired ones and no other (college) structure uses it; otherwise leave it
-	and say so. DML only."""
+def retire_statutory_wiring():
+	"""On a site the earlier version wired: move Campus's draft structures to Campus EPF / PT, print what a college may
+	review by hand, and clear the old flag. No HRMS or college Salary Component is changed. DML only."""
 	if not frappe.db.get_global(OLD_STATUTORY_FLAG):
 		return
 	seed_salary_components()
 	ours = campus_structures()
 	swap_draft_rows(ours)
-	for name, (wired, original) in OLD_WIRING.items():
-		if not frappe.db.exists("Salary Component", name) or campus_created(name):
-			continue
-		current = frappe.db.get_value("Salary Component", name, list(wired), as_dict=True)
-		if any((current[field] or "") != (value or "") for field, value in wired.items()):
-			print(f"Salary Component {name}: changed since Campus wired it; left as it is.")
-		elif used_by_others(name, ours):
-			print(f"Salary Component {name}: used by your own salary structures; Campus's earlier settings left in place.")
-		else:
-			frappe.db.set_value("Salary Component", name, dict(original))  # set_value adds modified to the dict
+	print(
+		"OneBook Campus no longer changes HRMS's salary components. An earlier version changed: "
+		f"{OLD_WIRING_NOTE}. They are left as they are; review them if your own salary structures use them."
+	)
 	frappe.defaults.clear_default(OLD_STATUTORY_FLAG, parent="__global")
 
 
@@ -210,27 +198,15 @@ def campus_structures():
 
 
 def swap_draft_rows(structures):
+	"""Draft Campus structures move from HRMS's PF / PT rows to Campus EPF / PT; submitted ones are listed, not changed."""
 	drafts = frappe.get_all("Salary Structure", {"name": ["in", structures or [""]], "docstatus": 0}, pluck="name")
 	for old, new in SWAPS.items():
 		abbr = frappe.db.get_value("Salary Component", new, "salary_component_abbr")
-		for row in frappe.get_all("Salary Detail", {"parenttype": "Salary Structure", "parent": ["in", drafts or [""]], "salary_component": old}, pluck="name"):
+		rows = frappe.get_all(
+			"Salary Detail", {"parenttype": "Salary Structure", "parent": ["in", drafts or [""]], "salary_component": old}, pluck="name"
+		)
+		for row in rows:
 			frappe.db.set_value("Salary Detail", row, {"salary_component": new, "abbr": abbr})
-	for name in set(structures) - set(drafts):
+	for name in sorted(set(structures) - set(drafts)):
 		if frappe.db.exists("Salary Detail", {"parent": name, "parenttype": "Salary Structure", "salary_component": ["in", list(SWAPS)]}):
 			print(f"Salary Structure {name} is submitted and uses HRMS's Provident Fund / Professional Tax; review it.")
-
-
-def campus_created(name):
-	"""DA / AGP created by Campus (its description and abbreviation) keep their rounding."""
-	row = next((c for c in COMPONENTS if c[0] == name), None)
-	if not row or name not in ("Dearness Allowance", "Academic Grade Pay"):
-		return False
-	return frappe.db.get_value("Salary Component", name, ["description", "salary_component_abbr"]) == (name, row[1])
-
-
-def used_by_others(component, ours):
-	return bool(
-		frappe.db.exists(
-			"Salary Detail", {"parenttype": "Salary Structure", "salary_component": component, "parent": ["not in", ours or [""]]}
-		)
-	)
