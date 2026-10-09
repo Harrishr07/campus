@@ -236,3 +236,26 @@ Every print below reads **published** results only (the latest ratified version,
 ## Convocation List (COE)
 1. Create a **Convocation List** (company, optionally programme) and **Get Graduates**: students with the programme completed from published results, not already on another list.
 2. **Download** exports CSV in the list's **Export Format** columns. The default columns are a placeholder: the university's format is not known yet, so set the headings and order to match it. Cells that look like spreadsheet formulas are neutralised.
+
+# Examinations: COE reports and data points (P2-T24)
+
+All are script reports in the Examinations module (COE, Dean Academics, System Manager; the valuation reports for COE
+and Exam Confidential). Each needs a Company and shows nothing for a company the user is not permitted for.
+
+- **Exam Registration Summary**: per session and program, registrations, confirmed, attendance shortage, detained,
+  debarred, and current / arrear / not-eligible courses.
+- **Exam Eligibility Withheld**: withheld Hall Tickets with the reasons and the not-eligible courses.
+- **Exam Absentee List**: students marked absent on the Seating Plans.
+- **Valuation Progress**: per allocation, scripts, valued, pending and overdue (dummy numbers only).
+- **Valuation Difference**: first and second valuation of each script, the difference and any third valuation.
+- **Result Analysis**: appeared, passed and pass % by course, program or department. With Final Year Only, the total
+  row is the `pass_percentage` data point (AQAR 2.6.3).
+- **Rank List**: students of a session whose result is a Pass, ranked by SGPA or CGPA per program (ties share a rank).
+- **Arrear List**: students with outstanding arrears and the courses.
+- **Days Exam End to Result**: per session, last exam to publication in days. The average row is the
+  `days_exam_to_result` data point (AQAR 2.5.1). Set the session's Exam End; without one the last scheduled exam is used.
+- **Malpractice Register**: Malpractice Reports with the category and committee decision.
+
+The result reports and the data points `students_appeared`, `pass_percentage`, `days_exam_to_result` (with
+`final_year_passed` and `evaluation_grievances`) read only the latest, ratified results of published sessions; a
+revised version waiting for its Result Ratification is not counted.

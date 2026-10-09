@@ -14,14 +14,13 @@ from campus.tests.utils import CampusTestCase
 
 REFUSALS = (SyntaxError, NameError, TypeError, ValueError, RecursionError, MemoryError)
 SCRATCH = "DP Scratch Framework"
-# Not yet registered, carried to the P2-T24 brief (register them and add to this set): days_exam_to_result,
-# students_appeared, pass_percentage (evaluation_grievances: P2-T20).
 PHASE_1_2_KEYS = {
 	"students_admitted", "final_year_appeared", "final_year_passed", "scholarship_govt_students",
 	"scholarship_inst_students", "reserved_seats_filled", "seats_earmarked_reserved", "total_students",
 	"outgoing_students", "programmes_offered", "courses_offered", "mentor_ratio", "full_time_teachers",
 	"sanctioned_posts", "phd_teachers", "teacher_experience_years", "student_teacher_ratio", "fdp_teachers",
 	"teachers_financially_supported", "syllabus_revised_programmes", "new_courses_introduced", "evaluation_grievances",
+	"days_exam_to_result", "students_appeared", "pass_percentage",
 }  # fmt: skip
 ESCAPES = [
 	"__import__('os').getcwd()",

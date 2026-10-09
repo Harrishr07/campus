@@ -167,3 +167,24 @@ def evaluation_grievances(company, academic_year, programs=None):
 	from campus.examinations import revaluation
 
 	return revaluation.evaluation_grievances(company, academic_year, programs)
+
+
+def students_appeared(company, academic_year, programs=None):
+	"""{value, records}: distinct students who sat a course in the company's published sessions of the year (M17-06)."""
+	from campus.examinations import coe_reports
+
+	return coe_reports.students_appeared(company, academic_year, programs)
+
+
+def pass_percentage(company, academic_year, programs=None):
+	"""{value, records}: % of the final-year results that appeared and passed every course (AQAR 2.6.3)."""
+	from campus.examinations import coe_reports
+
+	return coe_reports.pass_percentage(company, academic_year, programs)
+
+
+def days_exam_to_result(company, academic_year, programs=None):
+	"""{value, records}: average days from the last exam to the publication of the year's sessions (AQAR 2.5.1)."""
+	from campus.examinations import coe_reports
+
+	return coe_reports.days_exam_to_result(company, academic_year, programs)

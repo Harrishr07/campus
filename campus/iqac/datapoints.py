@@ -33,6 +33,9 @@ campus.academic_governance.api.proposal_programmes / proposal_courses.
 Phase 2 (P2-T20): evaluation_grievances (AQAR 2.5.2): distinct students with a submitted Revaluation or Review
 application in the company's published Exam Sessions of the academic year (a photocopy request alone is not a
 grievance); `department` narrows by the application's program; see campus.examinations.api.evaluation_grievances.
+
+Phase 2 (P2-T24): students_appeared, pass_percentage (AQAR 2.6.3) and days_exam_to_result (AQAR 2.5.1) read the latest,
+ratified results of the year's published sessions, as the COE reports do; see campus/examinations/coe_reports.py.
 """
 
 import frappe
@@ -264,3 +267,19 @@ def new_courses_introduced(company, academic_year, department=None):
 @campus_metric("evaluation_grievances", "Examinations", "Students with a revaluation or review application in the year's published exam sessions (AQAR 2.5.2)")
 def evaluation_grievances(company, academic_year, department=None):
 	return exams.evaluation_grievances(company, academic_year, department_programs(department))
+
+
+# P2-T24 COE data points (AQAR 2.5.1, 2.6.3 and the 2.5.2 denominator), see campus.examinations.coe_reports.
+@campus_metric("students_appeared", "Examinations", "Distinct students who sat at least one course in the year's published exam sessions")
+def students_appeared(company, academic_year, department=None):
+	return exams.students_appeared(company, academic_year, department_programs(department))
+
+
+@campus_metric("pass_percentage", "Examinations", "Final-year results that passed every course, as % of those that appeared (AQAR 2.6.3)")
+def pass_percentage(company, academic_year, department=None):
+	return exams.pass_percentage(company, academic_year, department_programs(department))
+
+
+@campus_metric("days_exam_to_result", "Examinations", "Average days from the last exam to the publication of results (AQAR 2.5.1)")
+def days_exam_to_result(company, academic_year, department=None):
+	return exams.days_exam_to_result(company, academic_year, department_programs(department))
