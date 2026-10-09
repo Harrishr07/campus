@@ -111,3 +111,20 @@ def fill_blanks(doc, values):
 	blank = {field: value for field, value in values.items() if value and not doc.get(field)}
 	doc.update(blank)
 	return bool(blank)
+
+
+EVIDENCE_SOURCES = ("Body Meeting", "Circular", "Faculty Achievement", "Sanction", "Feedback Campaign", "Placement Drive")
+EVIDENCE_FILE_FIELDS = {"Faculty Achievement": "evidence"}
+
+
+def seed_evidence_sources():
+	"""First time only: list the document types that offer Attach as Evidence (those that exist yet); the college edits the list."""
+	settings = frappe.get_doc("Campus Settings")
+	if settings.evidence_sources:
+		return
+	for document_type in EVIDENCE_SOURCES:
+		if frappe.db.exists("DocType", document_type):
+			settings.append("evidence_sources", {"document_type": document_type, "file_field": EVIDENCE_FILE_FIELDS.get(document_type)})
+	if settings.evidence_sources:
+		settings.flags.ignore_permissions = True
+		settings.save()

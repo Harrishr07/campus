@@ -11,7 +11,9 @@
   "languages_enabled",
   "default_company",
   "no_dues_section",
-  "no_dues_office_roles"
+  "no_dues_office_roles",
+  "evidence_section",
+  "evidence_sources"
  ],
  "fields": [
   {
@@ -63,6 +65,18 @@
    "label": "No Dues Office Roles",
    "options": "No Dues Office Role",
    "description": "Roles allowed to clear each office on a No Dues Clearance. Offices without a row can be cleared by anyone who can edit the clearance."
+  },
+  {
+   "fieldname": "evidence_section",
+   "fieldtype": "Section Break",
+   "label": "Evidence"
+  },
+  {
+   "fieldname": "evidence_sources",
+   "fieldtype": "Table",
+   "label": "Evidence Sources",
+   "options": "Evidence Source Doctype",
+   "description": "Document types that get an Attach as Evidence action, and the Attach field holding their file."
   }
  ],
  "index_web_pages_for_search": 0,

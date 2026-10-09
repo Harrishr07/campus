@@ -24,6 +24,7 @@ frappe.ui.form.on("Metric Value", {
 			);
 		}
 		show_word_count(frm);
+		show_evidence_slots(frm);
 	},
 	narrative(frm) {
 		show_word_count(frm);
@@ -59,5 +60,20 @@ function show_word_count(frm) {
 			limit ? __("{0} of {1} words", [words, limit]) : __("{0} words", [words])
 		);
 		field.$wrapper.find(".help-box").css("color", over ? "var(--red-500)" : "");
+	});
+}
+
+function show_evidence_slots(frm) {
+	frappe.xcall("campus.iqac.api.evidence_slot_status", { cycle: frm.doc.cycle, node: frm.doc.node }).then((slots) => {
+		if (!slots.length) return;
+		const rows = slots
+			.map((slot) => {
+				const state = slot.filled
+					? `<span class="indicator-pill green">${__("Filled")}</span> ${slot.evidence.map((e) => frappe.utils.escape_html(e)).join(", ")}`
+					: `<span class="indicator-pill ${slot.required ? "red" : "orange"}">${__("Missing")}</span>`;
+				return `<tr><td>${frappe.utils.escape_html(slot.slot_name)}</td><td>${__(slot.kind)}</td><td>${state}</td></tr>`;
+			})
+			.join("");
+		frm.dashboard.add_section(`<table class="table table-sm"><tbody>${rows}</tbody></table>`, __("Evidence"));
 	});
 }

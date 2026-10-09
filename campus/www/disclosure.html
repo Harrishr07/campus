@@ -1,0 +1,8 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-5" style="max-width: 760px">
+	<h2>{{ title|e }}</h2>
+	{% if groups %}{{ groups_html }}{% else %}<p class="text-muted">{{ _("Nothing has been published yet.") }}</p>{% endif %}
+</div>
+{% endblock %}

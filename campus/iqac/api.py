@@ -3,7 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import request_approval
-from campus.iqac import compute, metric_values
+from campus.iqac import compute, evidence, metric_values
 from campus.iqac.access import ROLES
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
@@ -65,3 +65,23 @@ def clone_framework(framework, new_name, version):
 	"""Clone to new version (M01-01): a Draft copy of `framework` with identical nodes; needs the create right on frameworks."""
 	frappe.has_permission("Accreditation Framework", "create", throw=True)
 	return framework_lifecycle.clone(framework, new_name, version)
+
+
+@frappe.whitelist(methods=["POST"])
+def attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None):
+	"""Make an Evidence from a record of a document type listed in Campus Settings > Evidence Sources; returns its name."""
+	return evidence.attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes, is_public, file, url)
+
+
+@frappe.whitelist()
+def evidence_source_doctypes():
+	"""{document type: file field} that get the Attach as Evidence action."""
+	rows = frappe.get_all("Evidence Source Doctype", {"parent": "Campus Settings"}, ["document_type", "file_field"])
+	return {row.document_type: row.file_field or "" for row in rows}
+
+
+@frappe.whitelist()
+def evidence_slot_status(cycle, node=None):
+	"""Filled / missing evidence slots of a node (or the whole framework) for a cycle."""
+	frappe.has_permission("Accreditation Cycle", "read", cycle, throw=True)
+	return evidence.slot_status(cycle, node)

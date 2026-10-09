@@ -417,7 +417,7 @@ scheduler_events = {
 doc_events["Approval Request"] = {"on_update": "campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status"}
 doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
-app_include_js = "/assets/campus/js/approvals.js"
+app_include_js = ["/assets/campus/js/approvals.js", "/assets/campus/js/attach_evidence.js"]  # P3-T04 Attach as Evidence
 
 doctype_js = {
 	"Student Applicant": "public/js/student_applicant.js",
@@ -502,6 +502,7 @@ website_route_rules = [
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
 		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation")
+	{"from_route": "/disclosure/<slug>", "to_route": "disclosure"},  # P3-T04 public evidence
 	),
 	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
 	*(

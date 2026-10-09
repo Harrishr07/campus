@@ -1,0 +1,230 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Evidence",
+ "naming_rule": "By script",
+ "title_field": "title",
+ "track_changes": 1,
+ "field_order": [
+  "title",
+  "evidence_type",
+  "slug",
+  "public_url",
+  "column_break_scope",
+  "company",
+  "academic_year",
+  "department",
+  "evidence_owner",
+  "section_break_content",
+  "kind",
+  "file",
+  "url",
+  "description",
+  "section_break_source",
+  "source_doctype",
+  "source_name",
+  "source_field",
+  "section_break_nodes",
+  "nodes",
+  "section_break_public",
+  "is_public"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "evidence_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "IQAC Minutes\nAcademic Calendar\nAQAR\nFeedback Report\nBest Practice\nOther",
+   "default": "Other",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "label": "Slug",
+   "read_only": 1,
+   "unique": 1,
+   "set_only_once": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "public_url",
+   "fieldtype": "Data",
+   "label": "Public URL",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Stable: it keeps pointing at the current file when the source file is replaced."
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "evidence_owner",
+   "fieldtype": "Link",
+   "label": "Owner",
+   "options": "User"
+  },
+  {
+   "fieldname": "section_break_content",
+   "fieldtype": "Section Break",
+   "label": "Content"
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "File\nURL",
+   "default": "File",
+   "reqd": 1
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "File",
+   "depends_on": "eval:doc.kind=='File'"
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "URL",
+   "options": "URL",
+   "depends_on": "eval:doc.kind=='URL'"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "section_break_source",
+   "fieldtype": "Section Break",
+   "label": "Source Record",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "label": "Source Document Type",
+   "options": "DocType",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Source",
+   "options": "source_doctype",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "source_field",
+   "fieldtype": "Data",
+   "label": "Source File Field",
+   "set_only_once": 1,
+   "description": "When set, the file served is always the current file of that field of the source record."
+  },
+  {
+   "fieldname": "section_break_nodes",
+   "fieldtype": "Section Break",
+   "label": "Evidence For"
+  },
+  {
+   "fieldname": "nodes",
+   "fieldtype": "Table",
+   "label": "Nodes and Slots",
+   "options": "Evidence Node"
+  },
+  {
+   "fieldname": "section_break_public",
+   "fieldtype": "Section Break",
+   "label": "Public Disclosure"
+  },
+  {
+   "fieldname": "is_public",
+   "fieldtype": "Check",
+   "label": "Public",
+   "default": "0",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Served at the public URL (only if its file is public). Only IQAC Coordinators and System Managers can publish."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "IQAC Criterion Owner",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

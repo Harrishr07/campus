@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1,
+ "istable": 1,
+ "name": "Evidence Source Doctype",
+ "permissions": [],
+ "field_order": [
+  "document_type",
+  "file_field"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "options": "DocType",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "file_field",
+   "fieldtype": "Data",
+   "label": "File Field",
+   "in_list_view": 1,
+   "description": "Attach field of that document type whose current file is the evidence, so replacing the file keeps the same public URL. Empty: the file is attached to the evidence itself."
+  }
+ ]
+}

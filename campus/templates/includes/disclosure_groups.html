@@ -1,0 +1,14 @@
+{% for year, types in groups %}
+<h3 class="mt-5">{{ year|e }}</h3>
+{% for type, rows in types %}
+<h5 class="mt-3">{{ _(type)|e }}</h5>
+<ul>
+	{% for row in rows %}
+	<li>
+		<a href="/disclosure/{{ row.slug|e }}">{{ row.title|e }}</a>
+		{% if row.description %}<span class="text-muted"> - {{ row.description|e }}</span>{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endfor %}
+{% endfor %}
