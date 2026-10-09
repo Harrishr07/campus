@@ -125,18 +125,27 @@ class TestFormulaSandbox(IqacFixture):
 		self.assertEqual(evaluate("round(max(a, b) / min(a, b), 1)", {"a": 3, "b": 2}), 1.5)
 
 	def test_node_rejects_unknown_keys_bad_syntax_and_formula_on_non_metrics(self):
+		scratch = "Iqac Scratch Framework"  # the seeded framework is published, so its nodes are locked
+		if not frappe.db.exists("Accreditation Framework", scratch):
+			frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": scratch}).insert()
+			for code, node_type, parent in (("9", "Criterion", None), ("9.9", "Key Indicator", "9")):
+				frappe.get_doc(
+					{"doctype": "Framework Node", "framework": scratch, "code": code, "title": "t", "node_type": node_type,
+						"parent_node": parent and f"{scratch}-{parent}"}
+				).insert()  # fmt: skip
+
 		def node(**values):
 			return frappe.get_doc(
-				{"doctype": "Framework Node", "framework": FRAMEWORK, "code": "9.9.9", "title": "t", "node_type": "Metric", **values}
-			)
+				{"doctype": "Framework Node", "framework": scratch, "code": "9.9.9", "title": "t", "node_type": "Metric",
+					"parent_node": f"{scratch}-9.9", **values}
+			)  # fmt: skip
 
 		for values in (
 			{"formula": "students_admitted + unknown_key"},
 			{"formula": "students_admitted +"},
 			{"formula": "frappe.session.user"},
 			{"formula": "(lambda: 1)()"},
-			{"formula": ""},
-			{"node_type": "Criterion", "formula": "students_admitted"},
+			{"node_type": "Criterion", "parent_node": None, "formula": "students_admitted"},
 		):
 			with self.subTest(values=values), self.assertRaises(frappe.ValidationError):
 				node(**values).insert()

@@ -1,17 +1,14 @@
-"""M15-01 IQAC setup: the IQAC Coordinator role and the seeded NAAC AQAR framework."""
+"""M01-01 / M15-01 IQAC setup: the IQAC Coordinator role and the seeded, published NAAC AQAR framework."""
 
 import frappe
 
+from campus.iqac.aqar_seed import PLACEHOLDER, seed_nodes
+
 FRAMEWORK = "NAAC-AQAR-RAF2017"
-PASS_PCT = "round(final_year_passed / final_year_appeared * 100, 2)"
-# code, title, node type, parent code, formula; titles are placeholders
-NODES = [
-	("2", "Teaching-Learning and Evaluation", "Criterion", None, None),
-	("2.1", "Student Enrolment and Profile", "Key Indicator", "2", None),
-	("2.6", "Student Performance and Learning Outcomes", "Key Indicator", "2", None),
-	("2.1.1", "Students admitted", "Metric", "2.1", "students_admitted"),
-	("2.6.3", "Pass percentage of final year students", "Metric", "2.6", PASS_PCT),
-]
+FRAMEWORK_VALUES = {
+	"framework_code": "NAAC-AQAR", "version": "RAF 2017", "segments": "UG\nPG",
+	"description": f"NAAC AQAR, Revised Accreditation Framework 2017: structure only, {PLACEHOLDER}.",
+}
 
 
 def ensure_iqac_role():
@@ -22,18 +19,38 @@ def ensure_iqac_role():
 
 
 def seed_framework():
-	"""Create the NAAC AQAR framework and its nodes when missing; never overwrites edited nodes."""
-	if not frappe.db.exists("Accreditation Framework", FRAMEWORK):
-		frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": FRAMEWORK}).insert(
+	"""Create the NAAC AQAR framework with its nodes and publish it; a published framework is left alone.
+
+	A Draft left by an earlier install gets its missing nodes added and its blank fields filled, never overwritten."""
+	if frappe.db.exists("Accreditation Framework", FRAMEWORK):
+		framework = frappe.get_doc("Accreditation Framework", FRAMEWORK)
+	else:
+		framework = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": FRAMEWORK}).insert(
 			ignore_permissions=True
 		)
-	for code, title, node_type, parent, formula in NODES:
-		if frappe.db.exists("Framework Node", f"{FRAMEWORK}-{code}"):
-			continue
-		frappe.get_doc(
-			{
-				"doctype": "Framework Node", "framework": FRAMEWORK, "code": code, "title": title,
-				"node_type": node_type, "formula": formula,
-				"parent_node": parent and f"{FRAMEWORK}-{parent}",
-			}  # fmt: skip
-		).insert(ignore_permissions=True)
+	if framework.status in ("Published", "Retired"):
+		return
+	fill_blanks(framework, FRAMEWORK_VALUES)
+	for spec in seed_nodes():
+		seed_node(spec)
+	framework.status = "Published"
+	framework.save(ignore_permissions=True)
+
+
+def seed_node(spec):
+	name = f"{FRAMEWORK}-{spec['code']}"
+	values = {**spec, "parent_node": spec["parent"] and f"{FRAMEWORK}-{spec['parent']}"}
+	del values["parent"]
+	if not frappe.db.exists("Framework Node", name):
+		frappe.get_doc({"doctype": "Framework Node", "framework": FRAMEWORK, **values}).insert(ignore_permissions=True)
+		return
+	node = frappe.get_doc("Framework Node", name)
+	if fill_blanks(node, values):
+		node.save(ignore_permissions=True)
+
+
+def fill_blanks(doc, values):
+	"""Set the fields of `doc` that are still empty; True when something changed."""
+	blank = {field: value for field, value in values.items() if value and not doc.get(field)}
+	doc.update(blank)
+	return bool(blank)
