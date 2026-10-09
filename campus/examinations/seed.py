@@ -96,6 +96,9 @@ CLASSES = {
 		("Second Class", "Regular", 0, 0, 0, 0, 0),
 	],
 }  # fmt: skip
+# Credits of Honours / Minor courses for the Honours / Minor variant: R2022 "+18 credits" (note, section 3); R2026 says
+# only "+additional courses", so it takes the R2022 value until confirmed. AU-R2021 has no Honours variant.
+HONOURS_CREDITS = {"AU-R2021": 0, "R2022": 18, "R2026": 18}
 
 
 # M06-08 CIA templates: course type -> (converted CIA max, attendance marks max, [(component, out of, weight)]).
@@ -145,6 +148,7 @@ def classification_rule(regulation, code):
 		"doctype": "Classification Rule",
 		"regulation": regulation,
 		"classes": rows(CLASS_FIELDS, CLASSES[code]),
+		"honours_credits": HONOURS_CREDITS[code],
 	}
 
 
@@ -191,3 +195,12 @@ def fill_lateral_distinction_years():
 			pluck="name",
 		):
 			frappe.db.set_value("Classification Rule Class", name, "max_years_lateral", years, update_modified=False)
+
+
+def fill_honours_credits():
+	"""Classification Rules seeded before honours_credits existed keep 0 (no Honours variant): give those of each
+	HONOURS_CREDITS regulation (by code, the company suffix ignored) their value. DML only; run by a patch."""
+	for code, credits in HONOURS_CREDITS.items():
+		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name") if credits else []
+		for name in frappe.get_all("Classification Rule", {"regulation": ["in", regulations or [""]], "honours_credits": 0}, pluck="name"):
+			frappe.db.set_value("Classification Rule", name, "honours_credits", credits, update_modified=False)

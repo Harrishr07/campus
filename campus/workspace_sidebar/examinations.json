@@ -67,6 +67,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Progression Rule",
+   "link_to": "Progression Rule",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "CIA Component Template",
    "link_to": "CIA Component Template",
    "link_type": "DocType",
@@ -146,6 +157,28 @@
    "keep_closed": 0,
    "label": "Mark Moderation",
    "link_to": "Mark Moderation",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Progression Run",
+   "link_to": "Progression Run",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Convocation List",
+   "link_to": "Convocation List",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -406,7 +439,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

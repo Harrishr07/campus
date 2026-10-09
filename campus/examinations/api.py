@@ -39,6 +39,30 @@ def issue_grade_sheet(student_result):
 
 
 @frappe.whitelist(methods=["POST"])
+def fill_convocation_list(convocation_list):
+	"""Fill a Convocation List with the eligible graduates (write access to it); returns their number (P2-T22)."""
+	from campus.examinations import convocation
+
+	return convocation.fill_graduates(convocation_list)
+
+
+@frappe.whitelist()
+def download_convocation_list(convocation_list):
+	"""The Convocation List as CSV in its column format (read access to it)."""
+	from campus.examinations import convocation
+
+	convocation.download(convocation_list)
+
+
+@frappe.whitelist(methods=["POST"])
+def rerun_progression(progression_run):
+	"""Queue a submitted Progression Run again (COE only, idempotent); returns the Bulk Run name."""
+	from campus.examinations import progression
+
+	return progression.rerun(progression_run)
+
+
+@frappe.whitelist(methods=["POST"])
 def start_registration(exam_session, program=None):
 	"""Queue the bulk Exam Registration of the session (COE only); returns the Bulk Run name.
 

@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Convocation List Graduate",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "register_no",
+   "fieldtype": "Data",
+   "label": "Register Number",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "read_only": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cgpa",
+   "fieldtype": "Float",
+   "label": "CGPA",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "percentage",
+   "fieldtype": "Float",
+   "label": "Percentage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Data",
+   "label": "Classification",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "variant",
+   "fieldtype": "Data",
+   "label": "Variant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completion_term",
+   "fieldtype": "Link",
+   "label": "Completion Term",
+   "options": "Academic Term",
+   "read_only": 1
+  }
+ ],
+ "field_order": [
+  "student",
+  "student_name",
+  "register_no",
+  "date_of_birth",
+  "program",
+  "regulation",
+  "cgpa",
+  "percentage",
+  "classification",
+  "variant",
+  "completion_term"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

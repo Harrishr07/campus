@@ -1,0 +1,19 @@
+{
+ "creation": "2026-10-09 15:00:00.000000",
+ "custom_format": 1,
+ "default_print_language": "en",
+ "disabled": 0,
+ "doc_type": "Certificate Request",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font_size": 14,
+ "html": "{%- set r = oc_graduate_record(doc, \"Provisional Certificate\") -%}\n<h3 style=\"text-align:center\">{{ _(\"Provisional Certificate\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company|e }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Student\") }}</th><td>{{ r.student_name|e }} ({{ (r.register_no or r.student)|e }})</td>\n      <th>{{ _(\"Programme\") }}</th><td>{{ r.program|e }}</td></tr>\n  <tr><th>{{ _(\"Regulation\") }}</th><td>{{ r.regulation|e }}</td>\n      <th>{{ _(\"Certificate No.\") }}</th><td>{{ (doc.certificate_number or \"\")|e }}</td></tr>\n</table>\n<p>{{ _(\"This is to certify that\") }} <strong>{{ r.student_name|e }}</strong>\n  ({{ (r.register_no or r.student)|e }}) {{ _(\"has completed the programme\") }} <strong>{{ r.program|e }}</strong>\n  {{ _(\"under regulation\") }} {{ r.regulation|e }} {{ _(\"in\") }} {{ (r.completion_term or \"\")|e }}\n  {{ _(\"and has qualified for the degree, pending its award.\") }}</p>\n<p><strong>{{ _(\"CGPA\") }}:</strong> {{ \"%.2f\"|format(r.cgpa or 0) }} &nbsp;\n   <strong>{{ _(\"Percentage (CGPA x 10)\") }}:</strong> {{ \"%.2f\"|format(r.percentage or 0) }} &nbsp;\n   <strong>{{ _(\"Classification\") }}:</strong> {{ (r.classification or \"\")|e }}{% if r.class_variant and r.class_variant != \"Regular\" %} ({{ _(r.class_variant)|e }}){% endif %}</p>\n<p><strong>{{ _(\"Issued by\") }}:</strong> {{ r.provisional_issuer|e }}</p>\n{{ oc_qr_block(doc) }}\n",
+ "idx": 0,
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Provisional Certificate",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "standard": "Yes"
+}

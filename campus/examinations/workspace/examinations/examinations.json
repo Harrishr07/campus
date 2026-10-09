@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 6,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -50,6 +50,17 @@
    "label": "Classification Rule",
    "link_count": 0,
    "link_to": "Classification Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Progression Rule",
+   "link_count": 0,
+   "link_to": "Progression Rule",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -91,7 +102,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 19,
+   "link_count": 21,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -135,6 +146,28 @@
    "label": "Mark Moderation",
    "link_count": 0,
    "link_to": "Mark Moderation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Progression Run",
+   "link_count": 0,
+   "link_to": "Progression Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Convocation List",
+   "link_count": 0,
+   "link_to": "Convocation List",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -376,7 +409,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-09 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

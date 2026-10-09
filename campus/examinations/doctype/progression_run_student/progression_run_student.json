@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Progression Run Student",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "from_semester",
+   "fieldtype": "Int",
+   "label": "From Semester",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cgpa",
+   "fieldtype": "Float",
+   "label": "CGPA",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "arrear_count",
+   "fieldtype": "Int",
+   "label": "Arrears",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "Promote\nDetain\nProbation",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "field_order": [
+  "student",
+  "student_name",
+  "from_semester",
+  "cgpa",
+  "arrear_count",
+  "outcome"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

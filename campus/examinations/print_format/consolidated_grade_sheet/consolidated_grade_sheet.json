@@ -1,0 +1,19 @@
+{
+ "creation": "2026-10-09 15:00:00.000000",
+ "custom_format": 1,
+ "default_print_language": "en",
+ "disabled": 0,
+ "doc_type": "Certificate Request",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font_size": 14,
+ "html": "{%- set r = oc_graduate_record(doc, \"Consolidated Grade Sheet\") -%}\n<h3 style=\"text-align:center\">{{ _(\"Consolidated Grade Sheet\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company|e }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Student\") }}</th><td>{{ r.student_name|e }} ({{ (r.register_no or r.student)|e }})</td>\n      <th>{{ _(\"Programme\") }}</th><td>{{ r.program|e }}</td></tr>\n  <tr><th>{{ _(\"Regulation\") }}</th><td>{{ r.regulation|e }}</td>\n      <th>{{ _(\"Certificate No.\") }}</th><td>{{ (doc.certificate_number or \"\")|e }}</td></tr>\n</table>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Course\") }}</th><th>{{ _(\"Title\") }}</th><th class=\"text-right\">{{ _(\"Credits\") }}</th>\n    <th>{{ _(\"Grade\") }}</th><th class=\"text-right\">{{ _(\"GP\") }}</th></tr></thead>\n  <tbody>\n  {% for row in r.core_courses %}\n    <tr><td>{{ row.course|e }}</td><td>{{ (row.course_name or \"\")|e }}</td><td class=\"text-right\">{{ row.credits }}</td>\n      <td>{{ (row.grade or \"\")|e }}</td><td class=\"text-right\">{{ row.grade_point }}</td></tr>\n  {% endfor %}\n  </tbody>\n</table>\n{% if r.additional_courses %}\n<h5>{{ _(\"Additional, Honours and Minor courses\") }}</h5>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Course\") }}</th><th>{{ _(\"Title\") }}</th><th class=\"text-right\">{{ _(\"Credits\") }}</th>\n    <th>{{ _(\"Grade\") }}</th><th class=\"text-right\">{{ _(\"GP\") }}</th><th>{{ _(\"Type\") }}</th><th>{{ _(\"CGPA\") }}</th></tr></thead>\n  <tbody>\n  {% for row in r.additional_courses %}\n    <tr><td>{{ row.course|e }}</td><td>{{ (row.course_name or \"\")|e }}</td><td class=\"text-right\">{{ row.credits }}</td>\n      <td>{{ (row.grade or \"\")|e }}</td><td class=\"text-right\">{{ row.grade_point }}</td><td>{{ _(row.registration_type)|e }}</td><td>{% if row.in_cgpa %}{{ _(\"Counted in CGPA\") }}{% else %}{{ _(\"Not counted in CGPA\") }}{% endif %}</td></tr>\n  {% endfor %}\n  </tbody>\n</table>\n{% endif %}\n<p><strong>{{ _(\"CGPA\") }}:</strong> {{ \"%.2f\"|format(r.cgpa or 0) }} &nbsp;\n   <strong>{{ _(\"Percentage (CGPA x 10)\") }}:</strong> {{ \"%.2f\"|format(r.percentage or 0) }} &nbsp;\n   <strong>{{ _(\"Classification\") }}:</strong> {{ (r.classification or \"\")|e }}{% if r.class_variant and r.class_variant != \"Regular\" %} ({{ _(r.class_variant)|e }}){% endif %}</p>\n{{ oc_qr_block(doc) }}\n",
+ "idx": 0,
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Consolidated Grade Sheet",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "standard": "Yes"
+}

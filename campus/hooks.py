@@ -205,6 +205,7 @@ doc_events["User Permission"] = {
 doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
 doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
+doc_events["Certificate Request"] = {"validate": "campus.examinations.exam_certificates.validate_request"}  # P2-T22
 doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.clear_draft_tags"}
 doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
@@ -464,6 +465,7 @@ jinja = {
 		"campus.curriculum.structure.curriculum_structure",
 		"campus.campus_finance.challan.challan_details",
 		"campus.faculty.cv.faculty_cv_sections",
+		"campus.examinations.exam_certificates.oc_graduate_record",
 	]
 }
 

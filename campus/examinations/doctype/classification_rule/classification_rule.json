@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-09 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Classification Rule",
@@ -66,10 +66,18 @@
    "options": "Classification Rule Class",
    "reqd": 1,
    "description": "Checked in row order: the first class whose conditions the student meets is awarded."
+  },
+  {
+   "fieldname": "honours_credits",
+   "fieldtype": "Float",
+   "label": "Honours or Minor Credits",
+   "non_negative": 1,
+   "description": "Credits of Honours (or Minor) courses a student must pass for the Honours (or Minor) variant; their additional courses then count in the CGPA when the Grading Scheme says so. 0: not offered."
   }
  ],
  "field_order": [
   "regulation",
-  "classes"
+  "classes",
+  "honours_credits"
  ]
 }

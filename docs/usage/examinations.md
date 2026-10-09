@@ -191,3 +191,22 @@ Notifications, Webhooks and Version history on these DocTypes are refused. Bank 
 2. On the Exam Session, **Publish Results**: the meeting, the resolution number and **Release At** (e.g. 10:00 the next day). The resolution must be Approved, of a quorate, uncancelled Passing Board meeting of the same college, and unused by another session. The session becomes Published with Publish At = Release At; setting the status to Published by hand is refused.
 3. Until Release At, Student Results are read only by the COE, System Manager and Dean Academics: Academics Users, teachers, students and guardians see nothing, on the desk, the API and `/campus-portal/results`. After it, staff read the session's results; students and guardians the latest version of their own.
 4. Within 15 minutes of Release At the scheduler queues the release notice (template `exam.result_published`: SMS, WhatsApp, email by consent) to every student and guardian, once per session.
+
+## Grade sheets, certificates and transcripts (COE, P2-T22)
+Every print below reads **published** results only (latest version, session Published, Release At passed) and carries a QR verifiable at `/verify/<code>`.
+1. **Semester grade sheet**: on a Student Result, **Issue Grade Sheet** (refused before release), then print **Grade Sheet**.
+2. The other prints are **Certificate Types** issued through a **Certificate Request** (desk or `/campus-portal/certificates`; numbered, verifiable, fee if the type has one):
+   - **Transcript**: every published semester with its SGPA, then the CGPA. This is the Transcript Request; a student asks for it in the portal.
+   - **Consolidated Grade Sheet**: core courses, then the Additional / Honours / Minor courses (from the student's Course Registrations) marked counted or not counted in the CGPA, the CGPA, % = CGPA × 10 and the class.
+   - **Provisional Certificate**: the issuer is the college or the affiliating university, per the Institution Profile's Provisional Certificate Issuer.
+   - **Degree Certificate** only where the Institution Profile's Degree Awarding Body is College; otherwise the **Degree Data Sheet** for the university. Switching the setting withdraws the other print at once.
+   The graduate prints (all but the transcript) are refused until the programme is completed: a published final-year result and no core arrear.
+3. **Classification** follows the regulation's Classification Rule with the entry type (lateral), years of study and break of study. Additional courses enter the CGPA only when the Grading Scheme counts them and the student passed the Classification Rule's Honours or Minor credits.
+
+## Progression Run (COE, term end)
+1. Set a **Progression Rule** per regulation: maximum arrears to proceed (more detains: year back) and the CGPA below which a promoted student is on probation (0: none). It locks with its Effective regulation.
+2. Create a **Progression Run** (company, term, programme; one per term and programme) and submit it: a bulk run promotes, detains or promotes on probation each Active student enrolled that year (students on a break of study are skipped). Promoted students move to the next semester; detained ones get the academic status Detained. **Re-run** is idempotent.
+
+## Convocation List (COE)
+1. Create a **Convocation List** (company, optionally programme) and **Get Graduates**: students with the programme completed from published results, not already on another list.
+2. **Download** exports CSV in the list's **Export Format** columns. The default columns are a placeholder: the university's format is not known yet, so set the headings and order to match it. Cells that look like spreadsheet formulas are neutralised.

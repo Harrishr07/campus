@@ -128,3 +128,11 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | # | Item | Implemented |
 |---|------|-------------|
 | 1 | Withdrawal window: before or after the exam | after: an application up to the Exam Rule Set's days (10) after the course's exam date is in time, per the P2-T21 acceptance criterion; any time before the exam is in time. The AU text reads "within 10 days prior to the commencement of the examination" |
+
+### Pending confirmation (P2-T22)
+| # | Item | Implemented |
+|---|------|-------------|
+| 1 | Honours / Minor credits | 18 for R2022 (note: "+18 credits") and for R2026 (the note says only "+additional courses"); 0 (no variant) for AU-R2021 |
+| 2 | Additional courses in the CGPA | Additional, Honours and Minor registrations count only once the Honours or Minor credits are passed and the Grading Scheme counts them |
+| 3 | Progression Rule values | not seeded (the note gives none): each college sets the arrear limit and probation CGPA per regulation |
+| 4 | Convocation export format | placeholder columns (register no, name, date of birth, programme, regulation, CGPA, %, class, completion term) until the university's format is known |

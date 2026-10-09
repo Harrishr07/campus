@@ -1,6 +1,6 @@
 """M12-02, M06-08, M06-02, M06-05 Examinations setup: the COE role used by the exam doctypes' permissions, the seed
 approval policies of CIA Unlock Requests, Malpractice Reports and Mark Moderations, the result release notice
-template, and the Exam Hall seat layout fields on Room."""
+template, the Exam Hall seat layout fields on Room and the examination Certificate Types (P2-T22)."""
 
 import frappe
 
@@ -18,6 +18,7 @@ def ensure_coe_role():
 
 
 def setup_examinations():
+	from campus.examinations.exam_certificates import seed_certificate_types
 	from campus.examinations.exam_halls import setup_exam_halls
 	from campus.examinations.publication import seed_release_template
 
@@ -26,6 +27,7 @@ def setup_examinations():
 	seed_coe_policy(MALPRACTICE_POLICY, "Malpractice Report", MALPRACTICE_DECISION_FIELDS)
 	seed_coe_policy(MODERATION_POLICY, "Mark Moderation", position="PRINCIPAL", title="Principal")  # the COE proposes it
 	seed_release_template()
+	seed_certificate_types()
 
 
 def open_decision_to_approver():
