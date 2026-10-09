@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -61,6 +61,17 @@
    "label": "Validation Rule",
    "link_count": 0,
    "link_to": "Validation Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Export Template",
+   "link_count": 0,
+   "link_to": "Export Template",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

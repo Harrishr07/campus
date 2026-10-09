@@ -4,6 +4,7 @@ import frappe
 
 from campus.campus_platform.api import request_approval
 from campus.iqac import compute, evidence, metric_values, validation
+from campus.iqac import export as exporter
 from campus.iqac.access import OWNER_ROLE, ROLES
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
@@ -99,3 +100,10 @@ def evidence_slot_status(cycle, node=None):
 	"""Filled / missing evidence slots of a node (or the whole framework) for a cycle."""
 	frappe.has_permission("Accreditation Cycle", "read", cycle, throw=True)
 	return evidence.slot_status(cycle, node)
+
+
+@frappe.whitelist(methods=["POST"])
+def export_cycle(cycle, template):
+	"""Download the cycle as the Excel / PDF of an Export Template (IQAC staff and the Principal, within their company)."""
+	filename, content = exporter.export(cycle, template)
+	frappe.response.update({"filename": filename, "filecontent": content, "type": "download"})

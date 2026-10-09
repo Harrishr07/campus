@@ -14,6 +14,7 @@ from campus.examinations.question_paper_setup import setup_question_papers
 from campus.examinations.remuneration_payment import setup_remuneration
 from campus.examinations.setup import ensure_coe_role, setup_examinations
 from campus.faculty.setup import seed_course_allocation_policy, setup_faculty
+from campus.iqac.export_seed import seed_export_templates
 from campus.iqac.setup import (
 	ensure_iqac_role,
 	seed_evidence_sources,
@@ -59,6 +60,7 @@ def after_install():
 	setup_academic_governance()
 	setup_remuneration()
 	seed_framework()
+	seed_export_templates()
 	sync_data_points()
 	seed_iqac_policies()
 	seed_evidence_sources()
@@ -85,6 +87,7 @@ def after_migrate():
 	setup_academic_governance()
 	setup_remuneration()
 	seed_framework()
+	seed_export_templates()
 	sync_data_points()
 	seed_iqac_policies()
 	seed_evidence_sources()
