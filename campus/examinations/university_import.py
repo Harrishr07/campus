@@ -1,12 +1,12 @@
 """M06-10 University result import (Affiliated mode): University Result Import.
 
 Flow (COE): an import of an Affiliated Exam Session in an Import format with the university's result file (private)
-is previewed (`validate_import`): every file row becomes a University Result Import Row - Valid, Correction (it
-changes a result already imported), Unchanged (the same result is there already) or Rejected with its reason (a
-required cell is blank; no student of the college has the university register number; the course code is not mapped
-to one of our courses; the row repeats an earlier row's student and course; the student is not registered for the
-course in this session; the grade or result is not in the code mapping and the student's Grading Scheme; a mark is not
-a number). Nothing is written to the results. `start_import` (refused while a Correction row has no correction reason)
+is previewed (`validate_import`, a background job on queue long; the import is Validating meanwhile): every file row
+becomes a University Result Import Row - Valid, Correction (it changes a result already imported), Unchanged (the
+same result is there already) or Rejected with its reason (a required cell is blank; no student of the college has
+the university register number; the course code is not mapped to one of our courses; the row repeats an earlier row's
+student and course; the student is not registered for the course in this session; the grade or result is not in the
+code mapping and the student's Grading Scheme; a mark is not a number). Nothing is written to the results. `start_import` (refused while a Correction row has no correction reason)
 queues one bulk item per student (queue long, chunk 1).
 
 Each student's import rows are written to the same Student Result our published results use (one per student and
@@ -14,12 +14,14 @@ session), so transcripts, arrears, progression, graduation and attainment read t
 the grade, the grade point from the student's Grading Scheme, credits and type from the course offering (an arrear's
 from its earlier attempt), SGPA / CGPA / arrears computed as the Result Run does; source University and the import as
 its reference. A first result is version 1. The same rows again change nothing (Unchanged). A changed result is never
-overwritten: it becomes a new version linked to the one it replaces, with its change log and the correction reason,
-and only the new one is the latest.
+overwritten: it becomes a new version linked to the one it replaces, with its change log, and only the new one is
+the latest. Only a change to a course row already imported needs the correction reason; a later instalment that adds
+courses (theory, then practicals) makes the new version without one.
 
 The first import that writes a result publishes the session (publish_at = the import's Result Date, else now); later
 imports leave it published. A run that ends with rows still waiting (a lost transaction) is finished by `reconcile`
-(hourly): those rows become Error rows asking for a new import, so an import never stays Importing.
+(hourly): those rows become Error rows with the runner's error, or asking for a new import, so an import never stays
+Importing; a preview whose job is gone returns to Draft.
 """
 
 import hashlib
@@ -48,22 +50,50 @@ WRITTEN = (IMPORTED, UNCHANGED)
 SPECIAL_GRADES = {"AB": "AB", "SA": "SA", **{code: "WD" for code in rules.WITHDRAWAL_CODES}}
 COMPARED = ("grade", "result", "cia", "ese", "total")
 SAVEPOINT = "university_import_student"
+VALIDATING = "Validating"
+PREVIEW_JOB = "campus.examinations.university_import.run_preview"
+PREVIEW_SAVEPOINT = "university_import_preview"
 UNIVERSITY = "University"
 
 
 @frappe.whitelist(methods=["POST"])
 def validate_import(name):
-	"""Preview the file: one University Result Import Row per file row with its status; returns {status: count}."""
+	"""Queue the preview of the file (queue long); the import is Validating until it is done."""
 	doc = locked_import(name, ("Draft", "Validated"), _("This import has already been started."))
-	fmt = frappe.get_doc("University Exam Format", doc.import_format)
-	content = read_private_file(doc.result_file)
-	records = university_files.parse_file(fmt, doc.result_file, content)
-	frappe.db.delete(ROW, {"university_result_import": name})
-	check = RowCheck(doc, fmt)
-	for row_no, values in records:
-		save_row(doc, row_no, values, check.preview(row_no, values))
-	doc.db_set({"status": "Validated", "total_rows": len(records), "file_sha256": hashlib.sha256(content).hexdigest()})
-	return refresh_summary(name)
+	if not doc.result_file:
+		frappe.throw(_("Attach the university's result file first."))
+	frappe.db.set_value(IMPORT, name, {"status": VALIDATING, "summary": _("Checking the file...")})
+	frappe.enqueue(PREVIEW_JOB, queue="long", name=name, job_id=preview_job_id(name), deduplicate=True, enqueue_after_commit=True)
+	return VALIDATING
+
+
+def run_preview(name):
+	"""Background job: one University Result Import Row per file row with its status, then Validated. A failure
+	(an unreadable file, a wrong format) records why in the summary and returns the import to Draft."""
+	frappe.db.savepoint(PREVIEW_SAVEPOINT)
+	try:
+		if frappe.db.get_value(IMPORT, name, "status", for_update=True) != VALIDATING:
+			return
+		doc = frappe.get_doc(IMPORT, name)
+		doc.check_permission("write")
+		fmt = frappe.get_doc("University Exam Format", doc.import_format)
+		content = read_private_file(doc.result_file)
+		records = university_files.parse_file(fmt, doc.result_file, content)
+		frappe.db.delete(ROW, {"university_result_import": name})
+		check = RowCheck(doc, fmt)
+		for row_no, values in records:
+			save_row(doc, row_no, values, check.preview(row_no, values))
+		frappe.db.set_value(IMPORT, name, {"status": "Validated", "total_rows": len(records), "file_sha256": hashlib.sha256(content).hexdigest()})
+		refresh_summary(name)
+	except Exception as error:  # noqa: BLE001 - recorded on the import, never left Validating
+		frappe.db.rollback(save_point=PREVIEW_SAVEPOINT)
+		message = _("Checking the file failed: {0}").format(frappe.utils.strip_html(cstr(error)))[:500]
+		frappe.db.set_value(IMPORT, name, {"status": "Draft", "summary": message})
+	frappe.db.commit()  # nosemgrep: a background job's own transaction
+
+
+def preview_job_id(name):
+	return f"campus-uri-preview-{name}"
 
 
 @frappe.whitelist(methods=["POST"])
@@ -231,7 +261,11 @@ def save_row(doc, row_no, values, found):
 
 
 def import_student(item, run):
-	"""Bulk handler: write one student's queued rows to their Student Result; DB-only, no commit."""
+	"""Bulk handler: write one student's queued rows to their Student Result; DB-only, no commit.
+
+	The session row is locked first, so this transaction's reads see the writes of an import committed meanwhile."""
+	exam_session = frappe.db.get_value(IMPORT, item["import"], "exam_session", for_update=True)
+	frappe.db.get_value("Exam Session", exam_session, "name", for_update=True)
 	rows = frappe.get_all(
 		ROW, {"university_result_import": item["import"], "student": item["student"], "status": ["in", QUEUED]},
 		["name", "course", "grade", "result", "cia", "ese", "total"], order_by="row_no",
@@ -251,27 +285,38 @@ def import_student(item, run):
 
 
 def write_result(import_name, student, rows):
-	"""({course: Imported / Unchanged}, Student Result name) after writing `rows` to the student's result."""
+	"""({course: Imported / Unchanged}, Student Result name) after writing `rows` to the student's result.
+
+	A result already there is never edited: any change makes version n+1. Only a change to a course row that was
+	there needs the import's correction reason; courses added by a later instalment do not."""
 	doc = frappe.db.get_value(IMPORT, import_name, ["name", "exam_session", "correction_reason"], as_dict=True)
 	session = frappe.db.get_value(
 		"Exam Session", doc.exam_session, ["name", "company", "academic_term", "examination_mode"], as_dict=True, for_update=True
 	)
 	if session.examination_mode != AFFILIATED:
 		frappe.throw(_("{0} is not an Affiliated session.").format(session.name))
-	latest = frappe.db.get_value(RESULT, {"student": student, "exam_session": session.name, "is_latest": 1}, ["name", "version"], as_dict=True, for_update=True)
+	table = frappe.qb.DocType(RESULT)
+	versions = (
+		frappe.qb.from_(table).select(table.name, table.version, table.is_latest)
+		.where((table.student == student) & (table.exam_session == session.name)).for_update().run(as_dict=True)
+	)  # fmt: skip  (locking read: another import may have added a version)
+	latest = next((v for v in versions if v.is_latest), None)
 	old = frappe.get_doc(RESULT, latest.name) if latest else None
 	courses = {c.course: {f: c.get(f) for f in results.ROW_FIELDS} for c in (old.courses if old else [])}
 	writer = ResultValues(student, session)
-	changed = {}
+	changed, corrected = {}, []
 	for row in rows:
 		new = writer.course_row(row)
 		was = courses.get(row.course)
 		changed[row.course] = UNCHANGED if was and same_outcome(was, new) else IMPORTED
+		if was and changed[row.course] == IMPORTED:
+			corrected.append(row.course)
 		courses[row.course] = new if changed[row.course] == IMPORTED else was
 	if old and IMPORTED not in changed.values():
 		return changed, old.name
-	if old and not (doc.correction_reason or "").strip():
-		frappe.throw(_("This changes a result already imported; give the import a Correction Reason."))
+	reason = (doc.correction_reason or "").strip()
+	if corrected and not reason:
+		frappe.throw(_("This changes the imported result of {0}; give the import a Correction Reason.").format(", ".join(corrected)))
 	values = writer.values(list(courses.values()))
 	values.update({"source": UNIVERSITY, "university_result_import": import_name, "pending_ratification": 0})
 	if not old:
@@ -280,9 +325,9 @@ def write_result(import_name, student, rows):
 		result.insert(ignore_permissions=True)
 		return changed, result.name
 	log = result_rules.change_log(results.summary(old.as_dict()), results.summary(values))
-	version = max(frappe.get_all(RESULT, {"student": student, "exam_session": session.name}, pluck="version") or [0]) + 1
-	result = new_result(student, session, version)
-	result.update({**values, "previous_version": old.name, "change_log": "\n".join(filter(None, [log, _("Correction: {0}").format(doc.correction_reason.strip())]))})
+	note = _("Correction: {0}").format(reason) if corrected else _("Courses added by {0}").format(import_name)
+	result = new_result(student, session, max(v.version or 0 for v in versions) + 1)
+	result.update({**values, "previous_version": old.name, "change_log": "\n".join(filter(None, [log, note]))})
 	frappe.db.set_value(RESULT, old.name, "is_latest", 0, update_modified=False)
 	result.insert(ignore_permissions=True)
 	return changed, result.name
@@ -356,7 +401,17 @@ def refresh_status(name):
 		status = "Imported"
 	frappe.db.set_value(IMPORT, name, "status", status)
 	if counts.get(IMPORTED):
-		publish_session(doc.exam_session, doc.result_date)
+		frappe.db.savepoint("university_import_publish")
+		try:
+			publish_session(doc.exam_session, doc.result_date)
+		except Exception as error:  # noqa: BLE001 - the import still finishes; the COE publishes the session after fixing it
+			if frappe.db.is_deadlocked(error) or frappe.db.is_timedout(error):
+				raise
+			frappe.db.rollback(save_point="university_import_publish")
+			frappe.log_error(
+				title=_("Session not published after the university result import {0}").format(name),
+				message=_("{0} was not published: {1}").format(doc.exam_session, frappe.utils.strip_html(cstr(error))),
+			)
 
 
 def publish_session(exam_session, result_date):
@@ -379,20 +434,31 @@ def refresh_summary(name):
 
 
 def reconcile(name):
-	"""Finish an import whose bulk run ended while rows still wait: they become Error rows asking for a new import."""
+	"""Finish an import whose bulk run ended while rows still wait: they become Error rows - with the runner's error
+	when the student's item failed, else asking for a new import."""
 	doc = frappe.db.get_value(IMPORT, name, ["status", "bulk_run"], as_dict=True, for_update=True)
 	if not doc or doc.status != "Importing" or not doc.bulk_run:
 		return
 	if frappe.db.get_value("Bulk Run", doc.bulk_run, "status") not in ("Completed", "Completed with errors", "Failed"):
 		return
-	message = _("Not imported: the import was interrupted at this row. Import the file again to retry it.")
-	for row in frappe.get_all(ROW, {"university_result_import": name, "status": ["in", QUEUED]}, pluck="name"):
-		frappe.db.set_value(ROW, row, {"status": ERROR, "message": message})
+	errors = dict(frappe.get_all("Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], as_list=True, limit=0))
+	interrupted = _("Not imported: the import was interrupted at this row. Import the file again to retry it.")
+	for row in frappe.get_all(ROW, {"university_result_import": name, "status": ["in", QUEUED]}, ["name", "student"]):
+		error = errors.get(item_key({"import": name, "student": row.student}))
+		message = _("Not imported: {0}").format(frappe.utils.strip_html(cstr(error))) if error else interrupted
+		frappe.db.set_value(ROW, row.name, {"status": ERROR, "message": message[:500]})
 	refresh_status(name)
 
 
 def reconcile_finished_imports():
-	"""Scheduler (hourly): complete imports whose bulk run has finished; one bad import never stops the others."""
+	"""Scheduler (hourly): complete imports whose bulk run has finished, and return to Draft a preview whose job is
+	gone; one bad import never stops the others."""
+	from frappe.utils.background_jobs import is_job_enqueued
+
+	for name in frappe.get_all(IMPORT, {"status": VALIDATING}, pluck="name"):
+		if not is_job_enqueued(preview_job_id(name)):
+			frappe.db.set_value(IMPORT, name, {"status": "Draft", "summary": _("Checking the file was interrupted; validate it again.")})
+			frappe.db.commit()  # nosemgrep: one import per transaction
 	for name in frappe.get_all(IMPORT, {"status": "Importing"}, pluck="name"):
 		try:
 			reconcile(name)
@@ -402,14 +468,21 @@ def reconcile_finished_imports():
 			frappe.log_error(title=f"University result import reconcile failed: {name}", message=frappe.get_traceback(with_context=False))
 
 
+def trash_import(doc):
+	"""Controller on_trash: refused once the import has started or a row was written; else its rows are deleted."""
+	if doc.status in ("Importing", "Imported", "Partly Imported") or frappe.db.exists(
+		ROW, {"university_result_import": doc.name, "student_result": ["is", "set"]}
+	):
+		frappe.throw(_("{0} has written results: it is kept as their reference.").format(frappe.bold(doc.name)))
+	frappe.db.delete(ROW, {"university_result_import": doc.name})
+
+
 def validate_import_doc(doc):
 	"""Controller validate: an Affiliated session and an Import format; status and run fields are the import code's."""
 	session = frappe.db.get_value("Exam Session", doc.exam_session, ["company", "examination_mode"], as_dict=True)
 	if session.examination_mode != AFFILIATED:
 		frappe.throw(_("{0} is not an Affiliated session; its results are the college's.").format(frappe.bold(doc.exam_session)))
-	fmt = frappe.db.get_value("University Exam Format", doc.import_format, ["direction", "university"], as_dict=True)
-	if fmt.direction != "Import":
-		frappe.throw(_("{0} is not an Import format.").format(frappe.bold(doc.import_format)))
+	fmt = university_files.format_for(doc.import_format, "Import", session.company)
 	doc.update({"company": session.company, "university": fmt.university})
 	system = ("status", "bulk_run", "file_sha256", "total_rows", "summary")
 	if doc.is_new():

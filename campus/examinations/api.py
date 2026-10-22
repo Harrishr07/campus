@@ -158,7 +158,12 @@ def student_registrations(student):
 
 def refresh_student_result(student, exam_session):
 	"""Recompute the student's Student Result of the session when the Result Run has made one (an approved or
-	cancelled exam withdrawal changes a course's code). After publication this makes a new result version."""
+	cancelled exam withdrawal changes a course's code). After publication this makes a new result version. An
+	Affiliated session's results are the university's (M06-10): nothing is recomputed."""
+	from campus.examinations.affiliation import AFFILIATED, session_mode
+
+	if session_mode(exam_session) == AFFILIATED:
+		return
 	if frappe.db.exists(results.RESULT, {"student": student, "exam_session": exam_session}):
 		results.compute_student_result(student, exam_session)
 

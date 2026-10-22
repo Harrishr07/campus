@@ -217,6 +217,7 @@ doc_events["Institution Profile"] = {"after_insert": "campus.student_services.on
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
 doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
 doc_events["Student"]["validate"].append("campus.student_services.corrections.guard_locked_fields")  # L-08
+doc_events["Student"]["validate"].append("campus.examinations.affiliation.validate_university_register_no")  # M06-10
 _after_insert = doc_events["Student"].get("after_insert")
 doc_events["Student"]["after_insert"] = [
 	*([_after_insert] if isinstance(_after_insert, str) else _after_insert or []),
@@ -433,6 +434,7 @@ scheduler_events = {
 		"campus.admissions.applicant_upload.reconcile_finished_uploads",
 		"campus.examinations.cia.lock_due_schedules",
 		"campus.examinations.university_import.reconcile_finished_imports",  # M06-10
+		"campus.examinations.university_export.reconcile_building",  # M06-10
 	],
 	"weekly": [
 		"campus.academic_governance.actions.notify_overdue",

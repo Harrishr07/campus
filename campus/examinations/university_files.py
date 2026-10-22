@@ -48,6 +48,17 @@ class CodeMap:
 		return mapped.get(cstr(university).strip().upper()) if mapped else cstr(university).strip()
 
 
+def format_for(name, direction, company):
+	"""The University Exam Format `name` ({direction, university}); refused unless it is a `direction` format of
+	`company` or a shared one."""
+	fmt = frappe.db.get_value("University Exam Format", name, ["direction", "university", "company"], as_dict=True)
+	if fmt.direction != direction:
+		frappe.throw(_("{0} is not an {1} format.").format(frappe.bold(name), _(direction)))
+	if fmt.company and fmt.company != company:
+		frappe.throw(_("{0} is the format of {1}.").format(frappe.bold(name), frappe.bold(fmt.company)))
+	return fmt
+
+
 def validate_format(fmt):
 	"""Refuse a format whose columns or code mappings cannot be used for its direction."""
 	allowed = SOURCES[fmt.direction]

@@ -208,7 +208,9 @@ def compute_student_result(student, exam_session, cohorts=None):
 		"Exam Session", exam_session, ["name", "company", "academic_term", "status", "is_final_year"], as_dict=True, for_update=True
 	)
 	refuse_affiliated_session(exam_session, _("the Result Run"))
-	if examination_mode(student) == AFFILIATED:
+	if not frappe.db.exists(RESULT, {"student": student, "exam_session": exam_session}) and examination_mode(student) == AFFILIATED:
+		# a first result only: a result the college made before the student's regulation became Affiliated is still
+		# recomputed (revaluation, ratification, withdrawal) in its own Autonomous session
 		frappe.throw(_("The university grades {0} (Affiliated mode); import the university's results.").format(frappe.bold(student)))
 	run = StudentRun(student, session, cohorts or new_cohorts(exam_session))
 	return save_version(student, session, run.values())

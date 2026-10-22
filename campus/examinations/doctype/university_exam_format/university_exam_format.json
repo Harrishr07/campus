@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "University Exam Format",
@@ -65,6 +65,14 @@
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "in_standard_filter": 1,
+   "description": "The college that uses this format. Blank: shared by every college, and only a System Manager edits it."
   },
   {
    "fieldname": "direction",
@@ -136,6 +144,7 @@
  "field_order": [
   "format_name",
   "university",
+  "company",
   "direction",
   "column_break_1",
   "file_type",

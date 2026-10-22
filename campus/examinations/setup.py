@@ -1,6 +1,7 @@
 """M12-02, M06-08, M06-02, M06-05 Examinations setup: the COE role used by the exam doctypes' permissions, the seed
 approval policies of CIA Unlock Requests, Malpractice Reports and Mark Moderations, the result release notice
-and revaluation outcome templates, the Exam Hall seat layout fields on Room, the examination Certificate Types (P2-T22)\nand the Affiliated mode field and placeholder formats (M06-10)."""
+and revaluation outcome templates, the Exam Hall seat layout fields on Room, the examination Certificate Types (P2-T22)
+and the Affiliated mode field and placeholder formats (M06-10)."""
 
 import frappe
 

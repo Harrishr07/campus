@@ -70,9 +70,11 @@ class TestInstitution(CampusTestCase):
 		for code in SEED_PACKS:
 			self.assertTrue(frappe.db.exists("Module Pack", code), code)
 		self.assertEqual(len(SEED_PACKS), 11)
-		for code in ("COE", "GOVERNANCE"):
-			statuses = frappe.get_all("Module Pack Status", filters={"parent": code}, pluck="status")
-			self.assertEqual(sorted(statuses), ["Autonomous", "Deemed"], code)
+		statuses = frappe.get_all("Module Pack Status", filters={"parent": "GOVERNANCE"}, pluck="status")
+		self.assertEqual(sorted(statuses), ["Autonomous", "Deemed"])
+		# M06-10: the Examinations pack follows Examination Mode (seeded, or added by a patch on an upgraded site)
+		statuses = frappe.get_all("Module Pack Status", filters={"parent": "COE"}, pluck="status")
+		self.assertEqual(sorted(statuses), ["Affiliated", "Autonomous", "Deemed"])
 		statuses = frappe.get_all("Module Pack Status", filters={"parent": "HOSTEL"}, pluck="status")
 		self.assertEqual(sorted(statuses), ["Affiliated", "Autonomous", "Deemed"])
 
@@ -102,15 +104,15 @@ class TestInstitution(CampusTestCase):
 		self.assertIsNone(get_institution(OTHER))
 
 	# pack toggling by status
-	def test_affiliated_hides_coe_and_governance(self):
+	def test_affiliated_hides_governance_but_keeps_examinations(self):
 		make_profile(DEMO, "Affiliated")
-		self.assertFalse(pack_enabled(DEMO, "COE"))
 		self.assertFalse(pack_enabled(DEMO, "GOVERNANCE"))
+		self.assertTrue(pack_enabled(DEMO, "COE"))  # M06-10: CIA and the university exchange
 		self.assertTrue(pack_enabled(DEMO, "HOSTEL"))
 
 	def test_switch_to_autonomous_enables_without_data_change(self):
 		profile = make_profile(DEMO, "Affiliated")
-		self.assertFalse(pack_enabled(DEMO, "COE"))
+		self.assertFalse(pack_enabled(DEMO, "GOVERNANCE"))
 		profile.institution_status = "Autonomous"
 		profile.status_effective_from = today()
 		profile.save()
@@ -119,7 +121,7 @@ class TestInstitution(CampusTestCase):
 
 	def test_future_effective_date_keeps_packs_off(self):
 		make_profile(DEMO, "Autonomous", add_days(today(), 5))
-		self.assertFalse(pack_enabled(DEMO, "COE"))
+		self.assertFalse(pack_enabled(DEMO, "GOVERNANCE"))
 
 	def test_no_profile_means_disabled(self):
 		self.assertFalse(pack_enabled(OTHER, "HOSTEL"))
@@ -146,13 +148,13 @@ class TestInstitution(CampusTestCase):
 	# cache
 	def test_pack_enabled_is_cached_and_invalidated_on_save(self):
 		profile = make_profile(DEMO, "Affiliated")
-		self.assertFalse(pack_enabled(DEMO, "COE"))
+		self.assertFalse(pack_enabled(DEMO, "GOVERNANCE"))
 		# a write that bypasses hooks must not be seen: the answer comes from the cache
 		frappe.db.set_value("Institution Profile", DEMO, "institution_status", "Autonomous")
-		self.assertFalse(pack_enabled(DEMO, "COE"))
+		self.assertFalse(pack_enabled(DEMO, "GOVERNANCE"))
 		profile.reload()
 		profile.save()
-		self.assertTrue(pack_enabled(DEMO, "COE"))
+		self.assertTrue(pack_enabled(DEMO, "GOVERNANCE"))
 
 	def test_cache_invalidated_on_module_pack_save(self):
 		make_profile(DEMO, "Affiliated")

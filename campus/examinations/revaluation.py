@@ -35,6 +35,7 @@ from campus.campus_messaging.api import send
 from campus.campus_platform.api import get_rule
 from campus.examinations import revaluation_rules
 from campus.examinations.access import MARKS_ROLES
+from campus.examinations.affiliation import refuse_affiliated_session
 from campus.examinations.courses import offering_course, rule_limits, student_limits
 
 PHOTOCOPY, REVALUATION, REVIEW = "Photocopy", "Revaluation", "Review"
@@ -58,7 +59,10 @@ OUTCOME_TEMPLATE = (
 
 
 def validate_application(doc):
-	"""Window, eligibility, duplicates, the photocopy / justification / revaluation prerequisites and the fee."""
+	"""Window, eligibility, duplicates, the photocopy / justification / revaluation prerequisites and the fee. An
+	Affiliated session is refused before anything else: the university revalues its scripts (its outcome arrives as a
+	correction import, M06-10)."""
+	refuse_affiliated_session(doc.exam_session, _("college photocopy, revaluation and review"))
 	doc.company = frappe.db.get_value(SESSION, doc.exam_session, "company")
 	doc.application_date = today()
 	rule_set = get_rule(doc.student, "Exam Rule Set")

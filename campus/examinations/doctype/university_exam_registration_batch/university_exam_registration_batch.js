@@ -1,7 +1,9 @@
 frappe.ui.form.on("University Exam Registration Batch", {
 	setup(frm) {
 		frm.set_query("exam_session", () => ({ filters: { examination_mode: "Affiliated" } }));
-		frm.set_query("export_format", () => ({ filters: { direction: "Export" } }));
+		frm.set_query("export_format", () => ({
+			filters: { direction: "Export", ...(frm.doc.company ? { company: ["in", [frm.doc.company, ""]] } : {}) },
+		}));
 	},
 	refresh(frm) {
 		if (frm.is_new()) return;
@@ -22,8 +24,14 @@ frappe.ui.form.on("University Exam Registration Batch", {
 				__(title)
 			);
 		const status = frm.doc.status;
+		if (status === "Building") {
+			frm.set_intro(__("The rows are being built in the background. Reload to see them."), "blue");
+			frm.add_custom_button(__("Reload"), () => frm.reload_doc());
+		}
 		if (status === "Draft") {
-			frm.add_custom_button(__("Build Rows"), () => call("build_rows"));
+			frm.add_custom_button(__("Build Rows"), () =>
+				call("build_rows").then(() => frappe.show_alert({ message: __("Building the rows in the background"), indicator: "blue" }))
+			);
 			frm.add_custom_button(__("Export"), () => call("export")).addClass("btn-primary");
 		}
 		if (status === "Exported") {

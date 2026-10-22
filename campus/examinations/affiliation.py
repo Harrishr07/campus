@@ -8,8 +8,9 @@ Publish Results refuse an Affiliated session and leave Affiliated students out o
 college's in both modes; in Affiliated mode it is exported to the university (campus.examinations.university_export)
 and the university's results come back through campus.examinations.university_import.
 
-Setup: the Student field oc_university_register_no (the university's register number, unique) and one placeholder
-University Exam Format per direction, to be replaced with the university's agreed format.
+Setup: the Student field oc_university_register_no (the university's register number, unique within the college:
+colleges of one trust may be affiliated to different universities) and one placeholder University Exam Format per
+direction, shared by every college, to be replaced with the university's agreed format.
 """
 
 import frappe
@@ -84,10 +85,23 @@ def student_fields():
 	return [
 		{
 			"fieldname": UNIVERSITY_REGISTER_FIELD, "label": "University Register No", "fieldtype": "Data", "insert_after": "oc_register_no",
-			"unique": 1, "no_copy": 1, "search_index": 1, "module": "Examinations",
+			"unique": 0, "no_copy": 1, "search_index": 1, "module": "Examinations",
 			"description": "The register number the affiliating university gave the student (Affiliated mode exports and result imports).",
 		}
 	]  # fmt: skip
+
+
+def validate_university_register_no(doc, method=None):
+	"""Student validate: the university register number is unique within the student's college."""
+	register_no = (doc.get(UNIVERSITY_REGISTER_FIELD) or "").strip()
+	doc.set(UNIVERSITY_REGISTER_FIELD, register_no or None)
+	if not register_no or not (doc.has_value_changed(UNIVERSITY_REGISTER_FIELD) or doc.has_value_changed("oc_company")):
+		return
+	other = frappe.db.get_value(
+		"Student", {UNIVERSITY_REGISTER_FIELD: register_no, "oc_company": doc.get("oc_company"), "name": ["!=", doc.name or ""]}
+	)
+	if other:
+		frappe.throw(_("University register number {0} is already {1}'s.").format(frappe.bold(register_no), frappe.bold(other)))
 
 
 def seed_placeholder_formats():

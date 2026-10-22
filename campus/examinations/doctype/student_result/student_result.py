@@ -1,7 +1,8 @@
 """M12-02, M06-05 Student Result: a student's course grades, SGPA, CGPA, result, arrears and (final year)
 classification for one Exam Session.
 
-Created by the Result Run only (campus.examinations.results). Versioned: version 1 is SR-<session>-<student>,
+Created by the Result Run (campus.examinations.results) or, for an Affiliated session, by a University Result Import
+(campus.examinations.university_import; source University). Versioned: version 1 is SR-<session>-<student>,
 a later version (a re-run after publication) SR-<session>-<student>-V<n>, linked to the one it replaces with
 its change log; only the latest has is_latest set. Read access follows publication (campus.examinations.access).
 """

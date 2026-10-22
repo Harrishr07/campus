@@ -1,7 +1,9 @@
 frappe.ui.form.on("University Result Import", {
 	setup(frm) {
 		frm.set_query("exam_session", () => ({ filters: { examination_mode: "Affiliated" } }));
-		frm.set_query("import_format", () => ({ filters: { direction: "Import" } }));
+		frm.set_query("import_format", () => ({
+			filters: { direction: "Import", ...(frm.doc.company ? { company: ["in", [frm.doc.company, ""]] } : {}) },
+		}));
 	},
 	refresh(frm) {
 		if (frm.is_new()) return;
@@ -12,8 +14,14 @@ frappe.ui.form.on("University Result Import", {
 				freeze: true,
 				callback: () => frm.reload_doc(),
 			});
+		if (frm.doc.status === "Validating") {
+			frm.set_intro(__("The file is being checked in the background. Reload to see the rows."), "blue");
+			frm.add_custom_button(__("Reload"), () => frm.reload_doc());
+		}
 		if (["Draft", "Validated"].includes(frm.doc.status)) {
-			frm.add_custom_button(__("Validate"), () => call("validate_import"));
+			frm.add_custom_button(__("Validate"), () =>
+				call("validate_import").then(() => frappe.show_alert({ message: __("Checking the file in the background"), indicator: "blue" }))
+			);
 		}
 		if (frm.doc.status === "Validated") {
 			frm.add_custom_button(__("Import"), () => call("start_import")).addClass("btn-primary");

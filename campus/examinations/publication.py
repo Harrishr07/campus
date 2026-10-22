@@ -188,11 +188,13 @@ def freeze_bands(exam_session):
 
 
 def notify_released_results():
-	"""Scheduler: queue the release notice of every session published through a Passing Board whose release time
-	has come and whose notice is not queued yet."""
+	"""Scheduler: queue the release notice of every session published through a Passing Board, or by its first
+	University Result Import (Affiliated, M06-10), whose release time has come and whose notice is not queued yet.
+	The notice goes once per session: results a later import adds are not announced again."""
 	due = frappe.get_all(
 		SESSION,
-		{"status": "Published", "publish_at": ["<=", now_datetime()], "passing_board_meeting": ["is", "set"], "results_notified_on": ["is", "not set"]},
+		{"status": "Published", "publish_at": ["<=", now_datetime()], "results_notified_on": ["is", "not set"]},
+		or_filters={"passing_board_meeting": ["is", "set"], "examination_mode": "Affiliated"},
 		pluck="name",
 	)
 	for name in due:

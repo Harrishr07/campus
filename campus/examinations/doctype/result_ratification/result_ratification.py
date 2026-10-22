@@ -20,6 +20,7 @@ from frappe.model.document import Document
 
 from campus.campus_messaging.api import send
 from campus.campus_platform.api import ApprovableDocument, is_approved
+from campus.examinations.affiliation import AFFILIATED, refuse_affiliated_session
 
 RESULT = "Student Result"
 REVISED_EVENT = "exam.result_revised"
@@ -30,6 +31,7 @@ REISSUE_JOB = "campus.examinations.doctype.result_ratification.result_ratificati
 class ResultRatification(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
+		refuse_affiliated_session(self.exam_session, _("Result Ratification"))  # M06-10: imported results need none
 		if frappe.db.get_value("Exam Session", self.exam_session, "status") != "Published":
 			frappe.throw(_("Only the results of a published Exam Session are ratified."))
 		if self.docstatus == 0 and not approval_requested(self):  # the approver ratifies the list they were asked about
@@ -138,19 +140,22 @@ def issue_grade_sheet(student_result, ratification):
 def refresh_later_results(student, exam_session, ratification):
 	"""Recompute the student's results of the sessions that read the ratified version (P2-T20): those of later terms
 	and the other sessions of the same term (a supplementary; results.earlier_rows reads terms starting no later), as
-	their CGPA and arrears read it. A published session gets a pending version (its own ratification publishes it and
-	re-issues its sheet); an unpublished one is replaced in place. A session that cannot be recomputed is logged with
+	their CGPA and arrears read it; an Affiliated session's imported results are the university's and are not
+	recomputed. A published session gets a pending version (its own ratification publishes it and re-issues its
+	sheet); an unpublished one is replaced in place. A session that cannot be recomputed is logged with
 	an explicit message and never blocks this one or the others, except a deadlock or lock wait timeout, which is
 	raised (the transaction is gone)."""
 	from campus.examinations.results import compute_student_result
 
 	start = frappe.db.get_value("Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date")
-	result, term = frappe.qb.DocType(RESULT), frappe.qb.DocType("Academic Term")
+	result, term, session = frappe.qb.DocType(RESULT), frappe.qb.DocType("Academic Term"), frappe.qb.DocType("Exam Session")
 	later = (
 		frappe.qb.from_(result)
 		.join(term).on(term.name == result.academic_term)
+		.join(session).on(session.name == result.exam_session)
 		.select(result.exam_session).distinct()
 		.where((result.student == student) & (result.is_latest == 1) & (result.exam_session != exam_session) & (term.term_start_date >= start))
+		.where(session.examination_mode.isnull() | (session.examination_mode != AFFILIATED))  # the university's results stay
 		.orderby(term.term_start_date)
 		.run(pluck=True)
 	)  # fmt: skip
