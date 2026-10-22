@@ -280,6 +280,35 @@ class TestApplicationRules(ScholarshipFixture):
 				frappe.set_user("Administrator")
 		self.assertEqual(frappe.db.get_value("Scholarship Application", doc.name, ["docstatus", "status"]), (1, "Sanctioned"))
 
+	def test_the_principal_alone_can_open_and_approve_a_sanction(self):
+		principal = "sch-principal@example.com"
+		make_user(principal, [COLLEGE])
+		frappe.get_doc("User", principal).add_roles("Principal")
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": "SCH Principal Policy", "document_type": "Scholarship Application", "levels": [level("User", principal, title="Principal")]}
+		).insert()  # fmt: skip
+		doc = self.application(self.a, self.govt, submit=False)
+		with approval_not_required(required=True):
+			request = request_approval("Scholarship Application", doc.name)
+			frappe.set_user(principal)
+			try:
+				self.assertTrue(frappe.has_permission("Scholarship Application", "read", doc.name))
+				approve(request, None)
+			finally:
+				frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Scholarship Application", doc.name, ["docstatus", "status"]), (1, "Sanctioned"))
+
+	def test_an_approver_who_cannot_open_the_document_is_refused_when_the_level_starts(self):
+		blind = "sch-blind@example.com"
+		make_user(blind, [COLLEGE])
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": "SCH Blind Policy", "document_type": "Scholarship Application", "levels": [level("User", blind, title="Blind")]}
+		).insert()  # fmt: skip
+		doc = self.application(self.a, self.govt, submit=False)
+		with approval_not_required(required=True):
+			with self.assertRaisesRegex(frappe.ValidationError, "cannot open Scholarship Application"):
+				request_approval("Scholarship Application", doc.name)
+
 	def test_the_sanctioned_amount_defaults_to_the_rule_and_may_only_be_lowered(self):
 		doc = self.application(self.a, self.govt, submit=False)
 		self.assertEqual(doc.sanctioned_amount, 50000)

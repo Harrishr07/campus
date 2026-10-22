@@ -235,6 +235,12 @@
    "create": 1,
    "report": 1,
    "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
   }
  ],
  "sort_field": "creation",

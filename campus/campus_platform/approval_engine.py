@@ -100,6 +100,13 @@ def start_level(request, policy, doc, level_no):
 		level.approver_type, level.approver, doc, level.scope_field, level.limit_to_company
 	)
 	users = [u for u in users if u not in excluded]
+	unable = [u for u in users if not frappe.has_permission(doc.doctype, "read", user=u)]
+	if unable:
+		frappe.throw(
+			_("Approvers {0} cannot open {1} {2}; give their role read access to {1}.").format(
+				", ".join(unable), _(doc.doctype), doc.name
+			)
+		)
 	needed = max(level.min_approvals or 1, 1)
 	if len(users) < needed:
 		frappe.throw(
