@@ -15,7 +15,7 @@ from campus.campus_finance.report.scholarship_beneficiaries import scholarship_b
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations.arrears import arrear_courses, outstanding_arrears
 from campus.iqac.registry import data_point
-from campus.tests.approval_fixtures import level
+from campus.tests.approval_fixtures import approval_not_required, level
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import (
 	make_account, make_enrolled_students, make_finance_company, make_year_and_program,
@@ -108,6 +108,9 @@ class ScholarshipFixture(CampusTestCase):
 	def setUp(self):
 		frappe.db.savepoint("scholarship_test")
 		self.addCleanup(frappe.db.rollback, save_point="scholarship_test")
+		mandatory = approval_not_required()  # these tests sanction by submitting; TestMandatoryApproval covers the list
+		mandatory.start()
+		self.addCleanup(mandatory.stop)
 		self.addCleanup(frappe.set_user, "Administrator")
 		self.govt = self.make_scheme(GOVT, "Government", self.college["bank"])
 		self.inst = self.make_scheme(INST, "Institutional", self.expense, renewable=1, renewal_min_attendance_pct=75, renewal_max_arrears=1)
@@ -251,6 +254,30 @@ class TestDisbursement(ScholarshipFixture):
 
 
 class TestApplicationRules(ScholarshipFixture):
+	def test_a_listed_sanction_without_an_approval_policy_is_refused(self):
+		frappe.db.delete("Approval Policy", {"document_type": "Scholarship Application"})
+		doc = self.application(self.a, self.govt, submit=False)
+		with approval_not_required(required=True):
+			with self.assertRaisesRegex(frappe.ValidationError, "No approval policy is configured for Scholarship Application"):
+				request_approval("Scholarship Application", doc.name)
+			with self.assertRaisesRegex(frappe.ValidationError, "No approval policy is configured"):
+				doc.reload().submit()
+		self.assertEqual(frappe.db.get_value("Scholarship Application", doc.name, "docstatus"), 0)
+
+	def test_a_listed_sanction_with_an_approval_policy_is_sanctioned_on_approval(self):
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": "SCH Test Sanction Policy", "document_type": "Scholarship Application", "levels": [level("User", APPROVER, title="Principal")]}
+		).insert()  # fmt: skip
+		doc = self.application(self.a, self.govt, submit=False)
+		with approval_not_required(required=True):
+			request = request_approval("Scholarship Application", doc.name)
+			frappe.set_user(APPROVER)
+			try:
+				approve(request, None)
+			finally:
+				frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Scholarship Application", doc.name, ["docstatus", "status"]), (1, "Sanctioned"))
+
 	def test_the_sanctioned_amount_defaults_to_the_rule_and_may_only_be_lowered(self):
 		doc = self.application(self.a, self.govt, submit=False)
 		self.assertEqual(doc.sanctioned_amount, 50000)

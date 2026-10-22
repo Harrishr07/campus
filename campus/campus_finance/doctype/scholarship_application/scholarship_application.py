@@ -3,8 +3,9 @@
 New applications check the scheme's eligibility rule; a renewal also needs the earlier sanctioned application and is
 blocked, with every reason listed, while the student has more arrears than the scheme allows or attendance below its
 bar (campus.campus_finance.scholarships.renewal_check). The sanctioned amount defaults to the scheme's amount rule
-and may only be lowered. If an Approval Policy covers the doctype, sanction goes through the approval engine; without one
-the submitter sanctions alone (no separation of duties), so colleges should add a policy.
+and may only be lowered. Sanction goes through the approval engine. The doctype is on the Campus Settings mandatory
+approval list by default, so without a matching Approval Policy the sanction is refused; a college that takes it off the
+list lets the submitter sanction alone (no separation of duties) when no policy matches.
 Disbursements are rows linking Payment Entries or Journal Entries (campus.campus_finance.scholarships.disburse).
 """
 

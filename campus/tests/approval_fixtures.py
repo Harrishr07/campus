@@ -1,5 +1,7 @@
 """Shared fixtures for the M17-03 approval engine tests (test doctype: Approval Test Document)."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import add_days, today
 
@@ -152,3 +154,9 @@ def notified(user):
 	return frappe.get_all(
 		"Notification Log", filters={"for_user": user, "document_type": DOCTYPE}, pluck="subject"
 	)
+
+
+def approval_not_required(required=False):
+	"""Patch the Campus Settings mandatory approval list check, for fixtures that sanction documents (e.g. a
+	Scholarship Application) without setting up their approval; `required=True` forces it on."""
+	return patch("campus.campus_platform.mandatory_approval.approval_required", return_value=required)

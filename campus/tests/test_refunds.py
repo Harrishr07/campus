@@ -13,7 +13,7 @@ from campus.campus_finance import api as finance
 from campus.campus_finance import fee_refunds, refunds, scholarships
 from campus.campus_finance.fee_heads import category_for_type
 from campus.campus_platform.approvals import approve, request_approval
-from campus.tests.approval_fixtures import level
+from campus.tests.approval_fixtures import approval_not_required, level
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import (
 	make_account,
@@ -529,9 +529,10 @@ class TestScholarshipMoneyIsNotRefunded(RefundFixture):
 				{"doctype": "Scholarship Scheme", "scheme_name": name, "company": COLLEGE, "scheme_type": scheme_type,
 				 "account": account, "amount_type": "Fixed", "amount": amount}
 			).insert()  # fmt: skip
-		application = frappe.get_doc(
-			{"doctype": "Scholarship Application", "student": student, "scheme": name, "academic_year": YEAR}
-		).insert().submit()  # fmt: skip
+		with approval_not_required():  # sanctioned by submitting; test_mandatory_approval covers the approval list
+			application = frappe.get_doc(
+				{"doctype": "Scholarship Application", "student": student, "scheme": name, "academic_year": YEAR}
+			).insert().submit()  # fmt: skip
 		return scholarships.disburse(application.name, amount, "SCH-UTR")
 
 	def test_paid_by_the_student_leaves_out_both_kinds_of_scholarship(self):

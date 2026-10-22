@@ -12,6 +12,7 @@ from campus.admissions import numbers, refund
 from campus.admissions.api import admit, check_seat_available
 from campus.admissions.report.admissions_by_quota_and_category import admissions_by_quota_and_category as quota_report
 from campus.admissions.report.refund_register import refund_register
+from campus.tests.approval_fixtures import approval_not_required
 from campus.tests.factories import make_company, make_user
 from campus.tests.finance_factories import make_account, make_finance_company, make_fee_structure
 from campus.tests.test_admissions import VALID, delete_log_rows, log_rows, own_connection
@@ -520,9 +521,10 @@ class TestCancellation(AdmitTestCase):
 			{"doctype": "Scholarship Scheme", "scheme_name": f"AF {scheme_type} Scheme", "company": COLLEGE,
 			 "scheme_type": scheme_type, "account": account, "amount_type": "Fixed", "amount": amount}
 		).insert()  # fmt: skip
-		application = frappe.get_doc(
-			{"doctype": "Scholarship Application", "student": student, "scheme": scheme.name, "academic_year": YEAR}
-		).insert().submit()  # fmt: skip
+		with approval_not_required():  # sanctioned by submitting; test_mandatory_approval covers the approval list
+			application = frappe.get_doc(
+				{"doctype": "Scholarship Application", "student": student, "scheme": scheme.name, "academic_year": YEAR}
+			).insert().submit()  # fmt: skip
 		row = scholarships.disburse(application.name, amount, "SCH-UTR")
 		return frappe.get_doc(row["voucher_type"], row["voucher"])
 

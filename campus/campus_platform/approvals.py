@@ -3,7 +3,9 @@
 A submittable DocType opts in with `class MyDoc(ApprovableDocument, Document)`. Its owner calls
 `request_approval`; the matching Approval Policy's levels are worked through by `approve`; the final
 approval runs the policy's on-final action (submit by default). Submitting directly is blocked while
-a policy matches and no approval exists. With no matching policy the document submits directly.
+a policy matches and no approval exists. With no matching policy the document submits directly, unless
+its DocType is on the Campus Settings mandatory approval list (NFR Mandatory approval,
+`mandatory_approval.py`): then submitting is refused.
 
 The engine itself lives in `approval_engine.py`; this module holds the mixin, the whitelisted API,
 the submit/edit guards and the form summary.
@@ -13,6 +15,7 @@ import frappe
 from frappe import _
 
 from campus.campus_platform import approval_rules as rules
+from campus.campus_platform import mandatory_approval
 from campus.campus_platform.approval_changes import changed_fields
 from campus.campus_platform.approval_engine import (
 	act,
@@ -87,6 +90,7 @@ def guard_submit(doc):
 		frappe.throw(
 			_("{0} needs approval before it can be submitted. Use Request Approval.").format(doc.name)
 		)
+	mandatory_approval.refuse_without_policy(doc)
 
 
 def guard_edits(doc):

@@ -17,6 +17,7 @@ from frappe import _
 from frappe.utils import now_datetime, today
 
 from campus.campus_platform import approval_rules as rules
+from campus.campus_platform import mandatory_approval
 from campus.campus_platform.approver_resolution import document_company, resolve_approvers
 from campus.campus_platform.notify import notify
 
@@ -35,6 +36,7 @@ def start_request(doc, policy=None, level=1):
 		before_request()  # optional hook: a document may refuse a request that could never be approved
 	policy = policy or find_policy(doc)
 	if not policy:
+		mandatory_approval.refuse_without_policy(doc)
 		doc.flags.ignore_permissions = True
 		doc.submit()
 		return None

@@ -5,6 +5,7 @@ from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
 from campus.campus_finance.setup import setup_finance
 from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
+from campus.campus_platform.mandatory_approval import seed_mandatory_approval
 from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
@@ -71,6 +72,7 @@ def after_install():
 	seed_regulator_templates()
 	seed_evidence_sources()
 	setup_research()
+	seed_mandatory_approval()  # once; a patch seeds existing sites, so the college's edits to the list stand
 
 
 def after_migrate():
