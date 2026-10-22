@@ -55,7 +55,17 @@ def flag_title(doctype):
 
 
 def flag_for_configuration(doctype, user):
-	"""After the refused transaction rolled back: an Error Log and a System Manager alert, unless flagged today."""
+	"""After the refused transaction rolled back: an Error Log and a System Manager alert, unless flagged today.
+
+	Best effort: it runs inside frappe.db.rollback(), so any failure here is swallowed and must never replace
+	the refusal the user sees or stop the other rollback callbacks."""
+	try:
+		write_flag(doctype, user)
+	except Exception:
+		pass  # the alert is optional; the refusal already stands
+
+
+def write_flag(doctype, user):
 	title = flag_title(doctype)
 	if frappe.db.exists("Error Log", {"method": title, "creation": [">=", today()]}):
 		return

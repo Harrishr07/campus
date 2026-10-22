@@ -166,6 +166,14 @@ class TestFlaggedForConfiguration(ApprovalTestCase):
 		self.assertEqual(len(self.flags("Fee Refund")), 1)
 		self.assertEqual(len(self.alerts()), 2)
 
+	def test_a_failing_flag_never_breaks_the_rollback_or_later_callbacks(self):
+		self.refuse(fx.DOCTYPE)
+		later = []
+		frappe.db.after_rollback.add(lambda: later.append(True))
+		with patch.object(mandatory_approval, "enqueue_create_notification", side_effect=RuntimeError("redis down")):
+			self.run_after_rollback()  # must not raise
+		self.assertEqual(later, [True])
+
 	def test_yesterdays_flag_does_not_silence_today(self):
 		self.refuse(fx.DOCTYPE)
 		self.run_after_rollback()
