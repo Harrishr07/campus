@@ -3,8 +3,9 @@ query hooks, listed under the `restricted_record_doctypes` hook. Frappe would st
 doors; this closes those for every registered DocType:
 - Comment: a comment on a restricted record is listed and read only by someone who can read the record;
 - File: a File attached to one is listed and read only by a reader of the record (changed only by a writer), and is
-  always private, whatever the uploader ticks. Its URL is downloaded only by a reader of such a record, even through
-  another File row with the same URL or by the File's owner; it cannot be made public or detached;
+  always private, whatever the uploader ticks. Its URL is downloaded or zipped only by a reader of such a record, even
+  through another File row with the same URL or by the File's owner; only a reader adds such a row; it cannot be
+  made public or detached, and the attached row is not deleted while other rows carry its URL;
 - Sharing: neither a restricted record nor such a File can be shared (a share grants what the hooks refuse);
 - Connections (frappe.desk.form.linked_with.get) and dashboard counts (frappe.desk.notifications.get_open_count):
   a related form shows only the records the caller can read, never how many it cannot.
@@ -52,8 +53,13 @@ class PrivateAttachmentMixin:
 	Set before the upload is written to disk on insert, and before File.validate moves it when edited."""
 
 	def before_insert(self):
+		self.refuse_foreign_copy()
 		self.keep_private()
 		super().before_insert()
+
+	def on_trash(self):
+		self.refuse_orphaning_copies()
+		super().on_trash()
 
 	def validate(self):
 		self.refuse_detaching()
@@ -71,6 +77,19 @@ class PrivateAttachmentMixin:
 			self.is_private = 1
 		elif restricted_attachments(self.file_url, exclude=self.name):
 			frappe.throw(_("This file belongs to a confidential record and cannot be made public."), frappe.PermissionError)
+
+	def refuse_foreign_copy(self):
+		"""Frappe lets the owner of the first row add another row for a private URL; the record decides instead."""
+		if not url_readable(self.file_url, exclude=self.name):
+			frappe.throw(_("This file belongs to a confidential record you cannot read."), frappe.PermissionError)
+
+	def refuse_orphaning_copies(self):
+		"""The guard follows the attached row: deleting it would leave other rows with its URL unguarded."""
+		if self.attached_to_doctype not in restricted_doctypes() or not self.file_url:
+			return
+		others = frappe.get_all("File", {"file_url": self.file_url, "name": ["!=", self.name]}, pluck="attached_to_doctype")
+		if any(doctype not in restricted_doctypes() for doctype in others):
+			frappe.throw(_("Delete the other File rows with this URL first: it belongs to a confidential record."), frappe.PermissionError)
 
 	def refuse_detaching(self):
 		before = self.get_doc_before_save()
@@ -106,6 +125,17 @@ def get_linked_docs(doctype: str, docname: str):
 		else:
 			del result[restricted]
 	return result
+
+
+@frappe.whitelist()
+def zip_files(files: str):
+	"""Override of frappe.core.api.file.zip_files (and its legacy path), which checks only File's own rule: keep the
+	Files the caller may read through every permission hook."""
+	from frappe.core.api.file import zip_files as frappe_zip_files
+
+	names = frappe.parse_json(files) or []
+	readable = [n for n in names if isinstance(n, str) and frappe.db.exists("File", n) and frappe.has_permission("File", "read", doc=n)]
+	return frappe_zip_files(frappe.as_json(readable))
 
 
 @frappe.whitelist()

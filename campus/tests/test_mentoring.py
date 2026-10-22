@@ -5,6 +5,8 @@ Follow-up reminders go once through the messaging bus without the note text; the
 activity report shows counts only.
 """
 
+import io
+import zipfile
 from unittest import mock
 
 import frappe
@@ -442,6 +444,43 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 		self.assertIsNone(self.as_user(MENTOR_B, find_file_by_url, url))
 		with self.assertRaisesRegex(frappe.PermissionError, "cannot be made public"):
 			frappe.get_doc({**copy, "file_name": "public.txt", "is_private": 0}).insert(ignore_permissions=True)
+
+	def former_mentors_file(self):
+		"""A counsellor's note File owned by mentor A, who is then reallocated away from the student."""
+		name = self.attach(COUNSELLOR, self.add_note(COUNSELLOR, self.a_student))
+		frappe.db.set_value("File", name, "owner", MENTOR_A)
+		frappe.db.set_value("Student", self.a_student, "oc_mentor", demo.employee_of("faculty_2"))
+		return name, frappe.db.get_value("File", name, "file_url")
+
+	def zipped(self, user, names):
+		self.as_user(user, restricted_records.zip_files, frappe.as_json(names))
+		return zipfile.ZipFile(io.BytesIO(frappe.response.pop("filecontent"))).namelist()
+
+	def test_a_former_mentor_owner_cannot_add_a_row_for_the_note_files_url(self):
+		_name, url = self.former_mentors_file()
+		copy = {"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}
+		with self.assertRaises(frappe.PermissionError):  # the File permission hook refuses the create
+			self.as_user(MENTOR_A, lambda: frappe.get_doc(copy).insert())
+		with self.assertRaisesRegex(frappe.PermissionError, "cannot read"):  # and so does before_insert, past it
+			self.as_user(MENTOR_A, lambda: frappe.get_doc(copy).insert(ignore_permissions=True))
+
+	def test_a_former_mentor_owner_cannot_zip_the_note_file(self):
+		name, _url = self.former_mentors_file()
+		self.assertEqual(self.zipped(MENTOR_A, [name]), [])
+		self.assertEqual(self.zipped(COUNSELLOR, [name]), [frappe.db.get_value("File", name, "file_name")])
+		overrides = frappe.get_hooks("override_whitelisted_methods")
+		for path in ("frappe.core.api.file.zip_files", "frappe.core.doctype.file.file.zip_files"):
+			self.assertEqual(overrides[path][-1], "campus.campus_platform.restricted_records.zip_files", path)
+
+	def test_the_attached_row_is_not_deleted_while_another_row_carries_its_url(self):
+		name = self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student))
+		url = frappe.db.get_value("File", name, "file_url")
+		copy = frappe.get_doc({"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}).insert().name
+		with self.assertRaises(frappe.PermissionError):
+			frappe.delete_doc("File", name)
+		frappe.delete_doc("File", copy)
+		frappe.delete_doc("File", name)
+		self.assertFalse(frappe.db.exists("File", name))
 
 	def test_a_note_file_cannot_be_detached_or_shared(self):
 		name = self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student))

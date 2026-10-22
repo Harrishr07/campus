@@ -583,4 +583,6 @@ has_permission["File"] = [has_permission["File"], f"{_restricted}.file_has_permi
 extend_doctype_class["File"] = [f"{_restricted}.PrivateAttachmentMixin"]
 override_whitelisted_methods["frappe.desk.form.linked_with.get"] = f"{_restricted}.get_linked_docs"
 override_whitelisted_methods["frappe.desk.notifications.get_open_count"] = f"{_restricted}.get_open_count"
+for _zip in ("frappe.core.api.file.zip_files", "frappe.core.doctype.file.file.zip_files"):
+	override_whitelisted_methods[_zip] = f"{_restricted}.zip_files"
 doc_events["DocShare"]["validate"].append(f"{_restricted}.block_share")
