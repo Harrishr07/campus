@@ -13,6 +13,12 @@ Leave kinds (Student Leave Application `oc_leave_kind`), per the rule:
 Attendance marks (CIA): the course % rounded to a whole number picks the Attendance Rule's mark band.
 Overall % is all attended / all conducted (`sum_based`) or the mean of the course % (`course_average`).
 With nothing conducted at all there is nothing to fall short of: Eligible, overall None.
+
+M05-12 class sessions (Course Schedule `oc_session_state`): only held sessions are conducted. A session counts when it
+is Conducted, a Makeup, or Scheduled (a past session nobody cancelled is taken as held, as before session states
+existed); Cancelled and Rescheduled sessions drop out, and so does a session a Makeup replaces. A Rescheduled
+session's new session counts on its own date, so the period counts once. Per counted session the student's mark is
+their record; an approved leave covering the session turns anything but Present into Leave of that kind.
 """
 
 ELIGIBLE = "Eligible"
@@ -24,6 +30,10 @@ MEDICAL_LEAVE = "leave"
 
 PRESENT, ON_LEAVE = "Present", "Leave"
 ON_DUTY, MEDICAL = "On Duty", "Medical"
+
+SCHEDULED, CONDUCTED, CANCELLED, RESCHEDULED, MAKEUP = "Scheduled", "Conducted", "Cancelled", "Rescheduled", "Makeup"
+SESSION_STATES = (SCHEDULED, CONDUCTED, CANCELLED, RESCHEDULED, MAKEUP)
+HELD_STATES = (SCHEDULED, CONDUCTED, MAKEUP)
 
 
 def bucket(status, leave_kind, rule):
@@ -40,6 +50,23 @@ def bucket(status, leave_kind, rule):
 	if leave_kind == MEDICAL and rule["medical_counts"]:
 		return MEDICAL_LEAVE
 	return None
+
+
+def session_counts(state, replaced):
+	"""Whether a class session dated in the window is conducted (in the denominator). A blank state is Scheduled."""
+	return (state or SCHEDULED) in HELD_STATES and not replaced
+
+
+def session_mark(status, leave_kind, covering_kind):
+	"""(status, leave kind) of one counted session for the student.
+
+	`status` / `leave_kind` come from the student's record (None when unmarked), `covering_kind` is the kind of a
+	submitted Student Leave Application covering the session, else None. Present, and a Leave record backed by its own
+	application, stand; otherwise a covering leave makes the session Leave of its kind.
+	"""
+	if status == PRESENT or (status == ON_LEAVE and leave_kind) or not covering_kind:
+		return status, leave_kind
+	return ON_LEAVE, covering_kind
 
 
 def attendance_marks(bands, pct):

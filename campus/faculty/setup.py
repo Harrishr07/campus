@@ -4,6 +4,7 @@ qualification fields on Job Applicant. HRMS Employee is the faculty profile; no 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from campus.faculty.attendance_corrections import seed_policy as seed_attendance_correction_policy
 from campus.faculty.payroll_setup import FUNDING_MODES, setup_payroll
 from campus.faculty.timetable.setup import setup_timetable
 
@@ -27,6 +28,7 @@ def setup_faculty():
 	setup_timetable()
 	seed_substitution_template()
 	seed_appraisal_review_policy()
+	seed_attendance_correction_policy()
 	setup_payroll()
 
 

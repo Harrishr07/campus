@@ -322,6 +322,7 @@ def make_attendance(students, offerings):
 	term = frappe.db.get_value("Student Group", offerings[0], "academic_term")
 	room = demo.get_or_insert("Room", {"room_name": ROOM}, {"room_number": "101", "seating_capacity": "60", "oc_company": demo.ENGINEERING})
 	dates = session_dates(term)
+	attend_from_term_start(students, term)
 	leave = make_medical_leave(students[MEDICAL_STUDENT], dates[MEDICAL_SESSIONS[0]], dates[MEDICAL_SESSIONS[-1]])
 	for course_number, offering in enumerate(offerings):
 		if frappe.db.count("Course Schedule", {"student_group": offering}):
@@ -331,6 +332,14 @@ def make_attendance(students, offerings):
 			schedule = make_schedule(offering, instructor, room, date, course_number)
 			for number, student in enumerate(students):
 				mark_attendance(student, offering, schedule, date, status_for(number, n, course_number), leave)
+
+
+def attend_from_term_start(students, term):
+	"""The demo students join today (the joining date cannot be backdated) but attend from the term start: their
+	attendance start date (M05-12) is moved back so the seeded sessions count."""
+	start = frappe.db.get_value("Academic Term", term, "term_start_date")
+	for student in students:
+		frappe.db.set_value("Program Enrollment", {"student": student, "docstatus": 1}, "oc_attendance_start_date", start)
 
 
 def status_for(number, session, course_number):

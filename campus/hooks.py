@@ -192,6 +192,11 @@ doc_events["Student Applicant"]["validate"] += [
 	"campus.admissions.documents.validate_applicant",
 	"campus.admissions.duplicates.validate_applicant",
 ]
+doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
+	doc_events["Course Schedule"]["validate"],
+	"campus.faculty.session_states.validate_session",
+]
+doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
 doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
