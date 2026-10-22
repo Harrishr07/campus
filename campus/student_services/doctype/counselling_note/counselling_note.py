@@ -1,15 +1,19 @@
 """M05-13 Counselling Note (L-09): what a mentor or student counsellor discussed with a student, the agreed actions
 with owners and due dates, and a follow-up date. Read rules: campus.student_services.mentoring_access. The author is
-the user who wrote it, the mentor the student's mentor at that time; neither changes later. Version history is off
-so the note text is never copied into Version rows.
+the user who wrote it, the mentor the student's mentor at that time; neither (nor the company and department that
+scope its readers) changes later. Version history is off so the note text is never copied into Version rows.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from campus.campus_platform.company_scope import permitted_companies
 from campus.student_services import mentoring_access
 from campus.student_services.mentoring import COUNSELLOR_ROLE, student_department
+
+
+FIXED_FIELDS = ("author", "mentor", "company", "department")
 
 
 class CounsellingNote(Document):
@@ -21,12 +25,22 @@ class CounsellingNote(Document):
 		self.department = student_department(self.student)
 
 	def validate(self):
+		self.keep_fixed_fields()
 		self.check_counsellor()
 		self.check_action_owners()
 
+	def keep_fixed_fields(self):
+		if before := self.get_doc_before_save():
+			for field in FIXED_FIELDS:
+				self.set(field, before.get(field))
+
 	def check_counsellor(self):
-		if self.counsellor and COUNSELLOR_ROLE not in frappe.get_roles(self.counsellor):
+		if not self.counsellor:
+			return
+		if COUNSELLOR_ROLE not in frappe.get_roles(self.counsellor):
 			frappe.throw(_("The designated counsellor {0} does not hold the {1} role.").format(self.counsellor, _(COUNSELLOR_ROLE)))
+		if self.company not in (permitted_companies(self.counsellor) or []):
+			frappe.throw(_("The designated counsellor {0} does not belong to {1}.").format(self.counsellor, self.company))
 
 	def check_action_owners(self):
 		"""An action owner must be able to read the note, or the reminder would point to a note they cannot open."""

@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
-from campus.examinations.access import instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
+from campus.examinations.access import held_scopes, instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses, has_passed  # noqa: F401  (public API)
 from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)

@@ -10,6 +10,9 @@ from campus.student_services import mentoring_access
 from campus.student_services.mentoring import student_department
 
 
+FIXED_FIELDS = ("recorded_by", "company", "department")
+
+
 class ParentInteraction(Document):
 	def before_insert(self):
 		self.recorded_by = frappe.session.user
@@ -18,8 +21,14 @@ class ParentInteraction(Document):
 		self.department = student_department(self.student)
 
 	def validate(self):
+		self.keep_fixed_fields()
 		self.check_guardian()
 		self.check_follow_up()
+
+	def keep_fixed_fields(self):
+		if before := self.get_doc_before_save():
+			for field in FIXED_FIELDS:
+				self.set(field, before.get(field))
 
 	def check_guardian(self):
 		linked = {"parent": self.student, "parenttype": "Student", "guardian": self.guardian}
@@ -29,6 +38,5 @@ class ParentInteraction(Document):
 	def check_follow_up(self):
 		if bool(self.follow_up_owner) != bool(self.follow_up_due):
 			frappe.throw(_("Set both the follow-up owner and the due date, or neither."))
-		staff = {"user_id": self.follow_up_owner, "status": "Active"}
-		if self.follow_up_owner and not frappe.db.exists("Employee", staff):
-			frappe.throw(_("The follow-up owner must be a staff member with an active Employee record."))
+		if self.follow_up_owner and not mentoring_access.reads_interaction(self, self.follow_up_owner):
+			frappe.throw(_("The follow-up owner {0} cannot read this interaction.").format(self.follow_up_owner))

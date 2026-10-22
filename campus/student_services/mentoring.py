@@ -104,5 +104,5 @@ def remind(item):
 	context = {"due_date": item.due_date, "kind": item.kind, "dedupe_token": item.token}
 	try:
 		send(FOLLOW_UP_EVENT, stand_in, [f"User:{item.user}"], context=context)
-	except Exception:
+	except (frappe.ValidationError, frappe.OutgoingEmailError):
 		frappe.log_error(title=f"Mentoring follow-up reminder failed for {item.doctype} {item.name}")  # keep the rest going

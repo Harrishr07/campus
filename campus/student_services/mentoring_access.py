@@ -3,15 +3,15 @@
 Counselling Note: the author and the designated counsellor always; when not confidential also the student's current
 mentor (Student.oc_mentor), Student Counsellors, the Principal and the HOD of the note's department. Only the author
 edits. Only the student's current mentor or a Student Counsellor writes a note.
-Parent Interaction: who recorded it, its follow-up owner, the student's current mentor and class advisor, the HOD of
-its department and the office roles. Its recorder, follow-up owner and the office roles edit. No guardian or student
-role has any right on either. Both are never shared (a share would grant what these rules refuse).
+Parent Interaction: who recorded it, the student's current mentor and class advisor, the HOD of its department and
+the office roles. The current mentor, the class advisor and the office roles edit; a follow-up owner must already be
+one of its readers. No guardian or student role has any right on either. Both are never shared (a share would grant
+what these rules refuse). Their Comments, Files and Connections counts: campus.campus_platform.restricted_records.
 Company scope comes from the User Permissions on the `company` field.
 """
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, today
 
 from campus.student_services.mentoring import (
 	COUNSELLOR_ROLE,
@@ -73,10 +73,7 @@ def interaction_permission_query(user=None):
 		return ""
 	table, escaped = f"`tab{INTERACTION}`", frappe.db.escape(user)
 	advised = f"select name from `tabStudent` where oc_class_advisor = {escaped}"
-	return (
-		f"({table}.recorded_by = {escaped} or {table}.follow_up_owner = {escaped}"
-		f" or {table}.student in ({advised}) or {scoped_student_rule(user, table)})"
-	)
+	return f"({table}.recorded_by = {escaped} or {table}.student in ({advised}) or {scoped_student_rule(user, table)})"
 
 
 def interaction_has_permission(doc, ptype=None, user=None):
@@ -88,22 +85,19 @@ def interaction_has_permission(doc, ptype=None, user=None):
 		return True
 	if ptype in READ_TYPES:
 		return reads_interaction(doc, user, roles)
-	return ptype == "write" and user in (doc.recorded_by, doc.follow_up_owner)
+	return ptype == "write" and (is_mentor_of(user, doc.student) or is_class_advisor_of(user, doc.student))
 
 
-def reads_interaction(doc, user, roles):
-	if user in (doc.recorded_by, doc.follow_up_owner):
-		return True
-	if frappe.db.get_value("Student", doc.student, "oc_class_advisor") == user:
+def reads_interaction(doc, user, roles=None):
+	roles = roles if roles is not None else set(frappe.get_roles(user))
+	if user == doc.recorded_by or set(OFFICE_ROLES) & roles or is_class_advisor_of(user, doc.student):
 		return True
 	return in_student_scope(doc, user, roles)
 
 
 def check_may_record_interaction(user, student):
 	roles = set(frappe.get_roles(user))
-	if user == "Administrator" or set(OFFICE_ROLES) & roles or is_mentor_of(user, student):
-		return
-	if frappe.db.get_value("Student", student, "oc_class_advisor") == user:
+	if user == "Administrator" or set(OFFICE_ROLES) & roles or is_mentor_of(user, student) or is_class_advisor_of(user, student):
 		return
 	frappe.throw(_("Only the student's mentor, class advisor or the office may record a parent interaction."), frappe.PermissionError)
 
@@ -142,11 +136,12 @@ def is_mentor_of(user, student):
 	return bool(mentor) and frappe.db.get_value("Employee", mentor, "user_id") == user
 
 
+def is_class_advisor_of(user, student):
+	return bool(student) and frappe.db.get_value("Student", student, "oc_class_advisor") == user
+
+
 def hod_departments(user):
 	"""Departments of the user's active HOD Position Holder seats (a blank scope gives none)."""
-	on_date = getdate(today())
-	scopes = frappe.get_all(
-		"Position Holder", {"user": user, "position": "HOD", "from_date": ["<=", on_date]},
-		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", on_date]], pluck="scope_value",
-	)  # fmt: skip
-	return [scope for scope in scopes if scope]
+	from campus.examinations.api import held_scopes  # imported here: examinations imports student_services
+
+	return held_scopes(user, "HOD")
