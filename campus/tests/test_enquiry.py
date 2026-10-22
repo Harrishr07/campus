@@ -25,6 +25,7 @@ OUTSIDER = "enquiry-outsider@example.com"
 MOBILE = "9876543210"
 EMAILS = itertools.count(1)  # distinct addresses: Lead emails must be unique
 OFFICER_C = "enquiry-c@example.com"
+NO_ROLE = "enquiry-norole@example.com"
 
 
 def submit_web_form(company=COLLEGE, **values):
@@ -274,6 +275,26 @@ class TestConversion(EnquiryTestCase):
 		first = convert_lead_to_applicant(lead.name, year_name("2026"))
 		self.assertEqual(convert_lead_to_applicant(lead.name, year_name("2026")), first)
 		self.assertEqual(frappe.db.count("Student Applicant", {"oc_lead": lead.name}), 1)
+
+	def test_an_admission_officer_converts_through_the_desk_method(self):
+		lead = self.make_lead()
+		frappe.set_user(OFFICER_A)
+		try:
+			name = convert_lead_to_applicant(lead.name, year_name("2026"))
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Lead", lead.name, "oc_applicant"), name)
+
+	def test_a_user_without_the_officer_role_cannot_convert(self):
+		lead = self.make_lead()
+		make_user(NO_ROLE, [COLLEGE])
+		frappe.set_user(NO_ROLE)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				convert_lead_to_applicant(lead.name, year_name("2026"))
+		finally:
+			frappe.set_user("Administrator")
+		self.assertFalse(frappe.db.exists("Student Applicant", {"oc_lead": lead.name}))
 
 	def test_conversion_needs_a_program(self):
 		lead = self.make_lead(oc_program_interest=None)

@@ -483,6 +483,7 @@ doctype_js = {
 	"Student Result": "public/js/student_result.js",
 }
 
+doctype_js["Lead"] = "public/js/lead_convert.js"  # M04-01 Convert to Applicant button
 doctype_js["Employee"] = "public/js/employee_faculty.js"  # P2-T09 self-appraisal button
 doctype_js["Appraisal"] = "public/js/appraisal_review.js"  # P2-T09 request HOD review
 doctype_js["Exam Session"] = "public/js/exam_session_question_paper.js"  # P2-T17 withdraw a course's paper
