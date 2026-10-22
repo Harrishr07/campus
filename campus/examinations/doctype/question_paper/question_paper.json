@@ -1,0 +1,250 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "company",
+  "course",
+  "total_marks",
+  "column_break_release",
+  "release_at",
+  "moderation_status",
+  "download_opens_at",
+  "download_closes_at",
+  "withdrawal_reason",
+  "section_pattern",
+  "blueprint",
+  "blueprint_issues",
+  "section_questions",
+  "questions",
+  "section_papers",
+  "set_a_file",
+  "column_break_files",
+  "set_b_file",
+  "section_audit",
+  "editors",
+  "set_a_file_id",
+  "set_a_file_sha256",
+  "column_break_audit",
+  "set_b_file_id",
+  "set_b_file_sha256",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "exam_session.company"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "total_marks",
+   "fieldtype": "Float",
+   "label": "Total Marks",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_release",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "release_at",
+   "fieldtype": "Datetime",
+   "label": "Release At",
+   "in_list_view": 1,
+   "description": "Always the slot start of the course in the session's schedule (slot times in Question Paper Settings). The download window is fixed on approval.",
+   "read_only": 1
+  },
+  {
+   "fieldname": "moderation_status",
+   "fieldtype": "Select",
+   "label": "Moderation Status",
+   "options": "Draft\nUnder Moderation\nApproved\nWithdrawn",
+   "default": "Draft",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Request Approval sends the paper to a moderator (Exam Confidential of the college; never its setter). Approval seals it: nobody, System Manager included, can open it until its download window. Withdraw retires it for good.",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "download_opens_at",
+   "fieldtype": "Datetime",
+   "label": "Downloads Open At",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "download_closes_at",
+   "fieldtype": "Datetime",
+   "label": "Downloads Close At",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "withdrawal_reason",
+   "fieldtype": "Small Text",
+   "label": "Withdrawal Reason",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.moderation_status=='Withdrawn'"
+  },
+  {
+   "fieldname": "section_pattern",
+   "fieldtype": "Section Break",
+   "label": "Pattern"
+  },
+  {
+   "fieldname": "blueprint",
+   "fieldtype": "Table",
+   "label": "Blueprint",
+   "options": "Question Paper Blueprint"
+  },
+  {
+   "fieldname": "blueprint_issues",
+   "fieldtype": "Small Text",
+   "label": "Blueprint Issues",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_questions",
+   "fieldtype": "Section Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "Question Paper Question"
+  },
+  {
+   "fieldname": "section_papers",
+   "fieldtype": "Section Break",
+   "label": "Paper Files",
+   "description": "PDFs. Encrypted when saved; download them only with the Download button inside the window (watermarked)."
+  },
+  {
+   "fieldname": "set_a_file",
+   "fieldtype": "Attach",
+   "label": "Set A (PDF)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_files",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "set_b_file",
+   "fieldtype": "Attach",
+   "label": "Set B (PDF)",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_audit",
+   "fieldtype": "Section Break",
+   "label": "Sealing",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "editors",
+   "fieldtype": "Small Text",
+   "label": "Editors",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Users who changed the questions, pattern or files; they never approve this paper."
+  },
+  {
+   "fieldname": "set_a_file_id",
+   "fieldtype": "Data",
+   "label": "Set A File (sealed)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "set_a_file_sha256",
+   "fieldtype": "Data",
+   "label": "Set A SHA-256",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_audit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "set_b_file_id",
+   "fieldtype": "Data",
+   "label": "Set B File (sealed)",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "set_b_file_sha256",
+   "fieldtype": "Data",
+   "label": "Set B SHA-256",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Question Paper",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Question Paper",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "submit": 1,
+   "cancel": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "QP-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 0,
+ "max_attachments": 8,
+ "is_submittable": 1,
+ "protect_attached_files": 1
+}

@@ -1,0 +1,120 @@
+{
+ "actions": [],
+ "autoname": "field:template_name",
+ "creation": "2026-10-09 22:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "template_name",
+  "framework",
+  "export_format",
+  "is_placeholder",
+  "column_break_cover",
+  "cover_heading",
+  "description",
+  "section_break_mappings",
+  "mappings"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "framework",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Framework",
+   "options": "Accreditation Framework",
+   "reqd": 1
+  },
+  {
+   "default": "Excel",
+   "fieldname": "export_format",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Format",
+   "options": "Excel\nPDF",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "The layout is a stand-in: the regulator's official template was not available. Replace the mappings with the official layout.",
+   "fieldname": "is_placeholder",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Placeholder Layout"
+  },
+  {
+   "fieldname": "column_break_cover",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Part A - Institutional Details",
+   "depends_on": "eval:doc.export_format=='PDF'",
+   "description": "Heading of the first block of the PDF (the institution and cycle details).",
+   "fieldname": "cover_heading",
+   "fieldtype": "Data",
+   "label": "Cover Heading"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "section_break_mappings",
+   "fieldtype": "Section Break",
+   "label": "Mapping"
+  },
+  {
+   "fieldname": "mappings",
+   "fieldtype": "Table",
+   "label": "Node Mapping",
+   "options": "Export Template Mapping"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Export Template",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "IQAC Coordinator",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Principal"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "template_name",
+ "track_changes": 1
+}

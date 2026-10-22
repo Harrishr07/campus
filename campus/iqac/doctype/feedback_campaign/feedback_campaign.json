@@ -1,0 +1,219 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-09 23:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "campaign_title",
+  "form",
+  "company",
+  "academic_year",
+  "column_break_audience",
+  "audience",
+  "course_offering",
+  "instructor",
+  "audience_rule",
+  "section_break_window",
+  "start_date",
+  "end_date",
+  "column_break_window",
+  "is_anonymous",
+  "reminder_every_days",
+  "invitations_sent",
+  "section_break_invitees",
+  "invitees",
+  "section_break_action",
+  "action_taken",
+  "action_taken_report"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "FBC-.YYYY.-",
+   "default": "FBC-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "campaign_title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "form",
+   "fieldtype": "Link",
+   "label": "Form",
+   "options": "Feedback Form",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_audience",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "audience",
+   "fieldtype": "Select",
+   "label": "Audience",
+   "options": "Course Offering Students\nStudents\nParents\nTeachers\nAlumni\nEmployers",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "in_standard_filter": 1,
+   "description": "The course offering the feedback is about; its students, their parents or its instructors answer unless an Audience Rule is set."
+  },
+  {
+   "fieldname": "instructor",
+   "fieldtype": "Link",
+   "label": "Instructor",
+   "options": "Instructor",
+   "description": "For the per-faculty analysis; defaults to the offering's first instructor."
+  },
+  {
+   "fieldname": "audience_rule",
+   "fieldtype": "Link",
+   "label": "Audience Rule",
+   "options": "Audience Rule",
+   "description": "Students, parents or staff chosen by a messaging Audience Rule (of this college)."
+  },
+  {
+   "fieldname": "section_break_window",
+   "fieldtype": "Section Break",
+   "label": "Window"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Opens On",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "Closes On",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_window",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_anonymous",
+   "fieldtype": "Check",
+   "label": "Anonymous",
+   "default": "1",
+   "description": "An anonymous response keeps no link to its respondent: no user, no record, no time finer than the day."
+  },
+  {
+   "fieldname": "reminder_every_days",
+   "fieldtype": "Int",
+   "label": "Remind Every (Days)",
+   "default": "0",
+   "non_negative": 1,
+   "description": "0 for no reminders. Reminders go to everyone invited, so no log shows who has answered."
+  },
+  {
+   "fieldname": "invitations_sent",
+   "fieldtype": "Check",
+   "label": "Invitations Sent",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_break_invitees",
+   "fieldtype": "Section Break",
+   "label": "Invitees",
+   "depends_on": "eval:['Alumni','Employers'].includes(doc.audience)"
+  },
+  {
+   "fieldname": "invitees",
+   "fieldtype": "Table",
+   "label": "Invitees",
+   "options": "Feedback Campaign Invitee"
+  },
+  {
+   "fieldname": "section_break_action",
+   "fieldtype": "Section Break",
+   "label": "Action Taken"
+  },
+  {
+   "fieldname": "action_taken",
+   "fieldtype": "Text Editor",
+   "label": "Action Taken"
+  },
+  {
+   "fieldname": "action_taken_report",
+   "fieldtype": "Attach",
+   "label": "Action Taken Report",
+   "description": "The feedback analysis and action-taken report; attach as evidence (NAAC 1.4)."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Feedback Campaign",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "campaign_title",
+ "track_changes": 1
+}

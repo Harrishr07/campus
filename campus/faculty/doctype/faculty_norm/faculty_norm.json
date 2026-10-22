@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "norm_name",
+  "company",
+  "effective_from",
+  "column_break_norm",
+  "regulator",
+  "student_faculty_ratio",
+  "overload_block_margin_hours",
+  "cadres_section",
+  "cadres"
+ ],
+ "fields": [
+  {
+   "fieldname": "norm_name",
+   "fieldtype": "Data",
+   "label": "Norm Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "e.g. AICTE APH 2026-27."
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "label": "Effective From",
+   "reqd": 1,
+   "in_list_view": 1,
+   "set_only_once": 1,
+   "description": "The norm in force on a date is the one with the latest Effective From on or before it."
+  },
+  {
+   "fieldname": "column_break_norm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "regulator",
+   "fieldtype": "Data",
+   "label": "Regulator",
+   "description": "AICTE, UGC, ..."
+  },
+  {
+   "fieldname": "student_faculty_ratio",
+   "fieldtype": "Float",
+   "label": "Students per Faculty",
+   "reqd": 1,
+   "non_negative": 1,
+   "description": "Student-faculty ratio norm (e.g. 20 for 1:20)."
+  },
+  {
+   "fieldname": "overload_block_margin_hours",
+   "fieldtype": "Float",
+   "label": "Overload Block Margin (Hours)",
+   "default": "2",
+   "non_negative": 1,
+   "description": "A teacher may be allocated up to the cadre maximum plus this many hours with a warning; beyond it a Dean override is needed."
+  },
+  {
+   "fieldname": "cadres_section",
+   "fieldtype": "Section Break",
+   "label": "Cadres"
+  },
+  {
+   "fieldname": "cadres",
+   "fieldtype": "Table",
+   "label": "Cadre Requirements",
+   "options": "Faculty Norm Cadre",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-08 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "Faculty Norm",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "norm_name",
+ "show_title_field_in_link": 1,
+ "search_fields": "norm_name,company",
+ "naming_rule": "By script"
+}

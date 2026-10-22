@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "program",
+  "academic_year",
+  "quota",
+  "category",
+  "applicant",
+  "column_break",
+  "user",
+  "overridden_on",
+  "reason",
+  "sanctioned",
+  "filled"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quota",
+   "fieldtype": "Link",
+   "label": "Quota",
+   "options": "Admission Quota",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Student Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Student Applicant"
+  },
+  {
+   "fieldname": "column_break",
+   "fieldtype": "Column Break",
+   "label": null
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "Overridden By",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "overridden_on",
+   "fieldtype": "Datetime",
+   "label": "Overridden On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Reason",
+   "options": "Row Full\nNo Seat Matrix\nNo Seat Matrix Row",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sanctioned",
+   "fieldtype": "Int",
+   "label": "Sanctioned"
+  },
+  {
+   "fieldname": "filled",
+   "fieldtype": "Int",
+   "label": "Filled Before"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Seat Override Log",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "hash"
+}

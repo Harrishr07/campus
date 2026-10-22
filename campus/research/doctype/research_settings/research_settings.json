@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "accounts_section",
+  "grant_liability_parent",
+  "grant_income_account",
+  "deferred_capital_grant_account",
+  "research_cost_center",
+  "column_break_1",
+  "interest_treatment",
+  "interest_income_account",
+  "pfms_section",
+  "pfms_unique_agency_code",
+  "uc_section",
+  "uc_due_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "accounts_section",
+   "fieldtype": "Section Break",
+   "label": "Grant Accounting (blueprint D9)"
+  },
+  {
+   "fieldname": "grant_liability_parent",
+   "fieldtype": "Link",
+   "label": "Grant Liability Account Parent",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Liability group under which each sanction's 'Grant Received in Advance' ledger is created."
+  },
+  {
+   "fieldname": "grant_income_account",
+   "fieldtype": "Link",
+   "label": "Grant Income Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Credited by period-end grant income recognition for revenue expenditure."
+  },
+  {
+   "fieldname": "deferred_capital_grant_account",
+   "fieldtype": "Link",
+   "label": "Deferred Capital Grant Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Liability holding grants spent on capitalised assets, released in line with depreciation."
+  },
+  {
+   "fieldname": "research_cost_center",
+   "fieldtype": "Link",
+   "label": "Research Cost Centre",
+   "options": "Cost Center",
+   "description": "Group cost centre under which each sanction gets its own cost centre."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "interest_treatment",
+   "fieldtype": "Select",
+   "label": "Interest Treatment",
+   "options": "Grant Liability\nInterest Income",
+   "default": "Grant Liability",
+   "reqd": 1,
+   "description": "Default for interest on grant funds; a Funding Agency can override it."
+  },
+  {
+   "fieldname": "interest_income_account",
+   "fieldtype": "Link",
+   "label": "Interest Income Account",
+   "options": "Account",
+   "mandatory_depends_on": "eval:doc.interest_treatment=='Interest Income'",
+   "description": "Needed when interest is treated as income."
+  },
+  {
+   "fieldname": "pfms_section",
+   "fieldtype": "Section Break",
+   "label": "PFMS"
+  },
+  {
+   "fieldname": "pfms_unique_agency_code",
+   "fieldtype": "Data",
+   "label": "PFMS Unique Agency Code"
+  },
+  {
+   "fieldname": "uc_section",
+   "fieldtype": "Section Break",
+   "label": "Utilisation Certificates"
+  },
+  {
+   "fieldname": "uc_due_days",
+   "fieldtype": "Int",
+   "label": "UC Due Days",
+   "non_negative": 1,
+   "description": "Days after each fiscal year's end (or the sanction's end) a Utilisation Certificate is due. Placeholder until the agency's terms are known (GFR 2017 allows up to 12 months)."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-10 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research Settings",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "field:company"
+}

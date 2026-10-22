@@ -1,0 +1,178 @@
+"""M06-01, M05-03 unit tests: exam withdrawal rules, break of study limits, the bridge course kind, and the T12
+classification reading a withdrawal as no appearance."""
+
+from datetime import date
+
+from frappe.tests import UnitTestCase
+
+from campus.examinations import registration_rules, rules
+from campus.student_services import withdrawal_rules as wr
+from campus.student_services.exam_portal import withdrawable
+
+EXAM = date(2026, 11, 2)
+
+
+class TestWithdrawalRefusal(UnitTestCase):
+	def test_days_after_exam(self):
+		self.assertEqual(wr.days_after_exam(EXAM, date(2026, 11, 12)), 10)
+		self.assertEqual(wr.days_after_exam(EXAM, date(2026, 11, 13)), 11)
+		self.assertEqual(wr.days_after_exam(EXAM, date(2026, 10, 30)), -3)  # before the exam
+
+	def test_first_withdrawal_within_the_window_is_allowed(self):
+		self.assertIsNone(wr.withdrawal_refusal(0, 10, 10, special_case=False))
+		self.assertIsNone(wr.withdrawal_refusal(0, -3, 10, special_case=False))
+
+	def test_a_second_withdrawal_in_the_programme_is_refused(self):
+		self.assertEqual(wr.withdrawal_refusal(1, 0, 10, special_case=False), wr.REPEAT)
+
+	def test_the_special_case_does_not_lift_once_per_programme(self):
+		self.assertEqual(wr.withdrawal_refusal(1, 0, 10, special_case=True), wr.REPEAT)
+
+	def test_eleven_days_after_the_exam_is_late(self):
+		self.assertEqual(wr.withdrawal_refusal(0, 11, 10, special_case=False), wr.LATE)
+
+	def test_the_special_case_lifts_the_window(self):
+		self.assertIsNone(wr.withdrawal_refusal(0, 11, 10, special_case=True))
+
+	def test_the_window_is_the_record_value(self):
+		self.assertIsNone(wr.withdrawal_refusal(0, 14, 15, special_case=False))
+		self.assertEqual(wr.withdrawal_refusal(0, 6, 5, special_case=False), wr.LATE)
+
+
+class TestWithdrawalCode(UnitTestCase):
+	def test_the_regulation_code_comes_from_the_scheme(self):
+		self.assertEqual(wr.withdrawal_code(["U", "SA", "AB", "WD"], rules.WITHDRAWAL_CODES), "WD")
+		self.assertEqual(wr.withdrawal_code(["U", "SA", "AB", "WC"], rules.WITHDRAWAL_CODES), "WC")
+		self.assertEqual(wr.withdrawal_code(["U", "W"], rules.WITHDRAWAL_CODES), "W")
+
+	def test_a_scheme_without_a_withdrawal_code_gives_none(self):
+		self.assertIsNone(wr.withdrawal_code(["U", "SA", "AB"], rules.WITHDRAWAL_CODES))
+
+
+class TestWithdrawalIsNotAnAttempt(UnitTestCase):
+	"""The Result Run writes result WD and grade WD/WC; T12 must read both as no appearance."""
+
+	def test_distinction_survives_a_withdrawal(self):
+		for grade in ("WD", "WC"):
+			self.assertTrue(rules.passed_at_first_appearance({"C1": [wr.WITHDRAWN, "Pass"], "C2": ["Pass"]}))
+			self.assertTrue(rules.passed_at_first_appearance({"C1": [grade, "Pass"]}))
+		self.assertFalse(rules.passed_at_first_appearance({"C1": [wr.WITHDRAWN, "Fail", "Pass"]}))
+
+	def test_a_withdrawal_is_not_counted_as_an_attempt(self):
+		self.assertEqual(rules.attempt_number([wr.WITHDRAWN], absent_counts_as_attempt=True), 1)
+		self.assertEqual(rules.attempt_number([wr.WITHDRAWN, "Fail"], absent_counts_as_attempt=True), 2)
+
+	def test_classify_gives_distinction_after_a_withdrawal(self):
+		classes = [
+			{"class_name": "First Class with Distinction", "variant": "Regular", "cgpa_min": 8.5,
+				"first_appearance_required": 1, "max_years": 0, "max_years_lateral": 0, "break_of_study_included": 1},
+		]  # fmt: skip
+		first = rules.passed_at_first_appearance({"C1": [wr.WITHDRAWN, "Pass"]})
+		self.assertEqual(rules.classify(8.7, classes, first_appearance=first), ("First Class with Distinction", "Regular"))
+
+
+class TestBreakOfStudy(UnitTestCase):
+	def test_break_days_are_inclusive(self):
+		self.assertEqual(wr.break_days(date(2026, 6, 1), date(2026, 6, 1)), 1)
+		self.assertEqual(wr.break_days(date(2026, 6, 1), date(2027, 5, 31)), 365)
+
+	def test_one_calendar_year_fits_even_across_a_leap_day(self):
+		self.assertIsNone(wr.break_refusal(0, wr.break_days(date(2027, 6, 1), date(2028, 5, 31)), 1, 1, False))
+
+	def test_more_than_the_maximum_needs_the_exceptional_year(self):
+		self.assertEqual(wr.break_refusal(0, 400, 1, 1, exceptional=False), wr.EXCEEDS)
+		self.assertIsNone(wr.break_refusal(0, 400, 1, 1, exceptional=True))
+
+	def test_earlier_breaks_count_towards_the_limit(self):
+		self.assertEqual(wr.break_refusal(300, 100, 1, 1, exceptional=False), wr.EXCEEDS)
+		self.assertIsNone(wr.break_refusal(300, 66, 1, 1, exceptional=False))
+
+	def test_the_exceptional_year_is_capped_too(self):
+		self.assertEqual(wr.break_refusal(0, 2 * wr.YEAR_DAYS + 1, 1, 1, exceptional=True), wr.EXCEEDS)
+		self.assertIsNone(wr.break_refusal(0, 2 * wr.YEAR_DAYS, 1, 1, exceptional=True))
+
+	def test_limits_are_record_values(self):
+		self.assertIsNone(wr.break_refusal(0, 700, 2, 0, exceptional=False))
+		self.assertEqual(wr.break_refusal(0, 400, 1, 0, exceptional=True), wr.EXCEEDS)
+
+	def test_an_end_before_the_start_is_refused(self):
+		self.assertEqual(wr.break_refusal(0, 0, 1, 1, exceptional=False), wr.BAD_DATES)
+
+
+class TestBridgeKind(UnitTestCase):
+	"""An offered bridge course is attended in the term: it is barred like a current course."""
+
+	def test_a_bridge_course_is_eligible_like_a_current_course(self):
+		bridge, rr = registration_rules.BRIDGE, registration_rules
+		self.assertEqual(rr.course_eligibility(bridge, shortage=False), rr.ELIGIBLE)
+		self.assertEqual(rr.course_eligibility(bridge, shortage=True), rr.SHORTAGE)
+		self.assertEqual(rr.course_eligibility(bridge, False, detained=True), rr.DETAINED)
+		self.assertEqual(rr.course_eligibility(bridge, False, debarred=True), rr.DEBARRED)
+
+	def test_a_bridge_course_is_not_a_withdrawable_term_course(self):
+		self.assertNotIn(registration_rules.BRIDGE, registration_rules.TERM_KINDS)
+		self.assertIn(registration_rules.BRIDGE, registration_rules.ATTENDED_KINDS)
+
+
+class TestRejoinCohort(UnitTestCase):
+	def test_the_cohort_is_the_rejoin_year_less_the_years_completed(self):
+		self.assertEqual(wr.rejoin_cohort_year(2022, 2024, 2026), 2024)  # two years done, back after two
+		self.assertEqual(wr.rejoin_cohort_year(2022, 2023, 2024), 2023)
+		self.assertEqual(wr.rejoin_cohort_year(2026, 2026, 2027), 2027)  # broke off in the first year
+
+	def test_a_break_before_admission_has_no_cohort(self):
+		self.assertIsNone(wr.rejoin_cohort_year(2026, 2025, 2026))
+
+
+class TestBreakOverlap(UnitTestCase):
+	def test_ranges_overlap_inclusively(self):
+		d = date
+		self.assertTrue(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2024, 10, 1), d(2024, 11, 30)))
+		self.assertTrue(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2024, 12, 31), d(2025, 1, 31)))
+		self.assertFalse(wr.ranges_overlap(d(2024, 6, 1), d(2024, 12, 31), d(2025, 1, 1), d(2025, 1, 31)))
+		self.assertFalse(wr.ranges_overlap(d(2025, 1, 1), d(2025, 1, 31), d(2024, 6, 1), d(2024, 12, 31)))
+
+
+class TestCohortAcademicYear(UnitTestCase):
+	"""The cohort's Academic Year is found by start year; the batch's naming pattern breaks ties."""
+
+	def test_the_batch_naming_pattern_wins(self):
+		candidates = [("2024-25", date(2024, 6, 1)), ("RT-2024", date(2024, 6, 1)), ("AY 2024", date(2024, 7, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "RT-2022", 2022, 2024), "RT-2024")
+
+	def test_one_start_date_takes_the_earliest_name(self):
+		candidates = [("B-2024", date(2024, 6, 1)), ("A-2024", date(2024, 6, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "Batch 22", 2022, 2024), "A-2024")
+
+	def test_different_start_dates_without_the_pattern_are_ambiguous(self):
+		candidates = [("B-2024", date(2024, 6, 1)), ("A-2024", date(2024, 7, 1))]
+		self.assertEqual(wr.pick_cohort_year(candidates, "Batch 22", 2022, 2024), wr.AMBIGUOUS)
+
+	def test_a_single_year_is_taken_whatever_its_day(self):
+		self.assertEqual(wr.pick_cohort_year([("AY24", date(2024, 7, 15))], "RT-2022", 2022, 2024), "AY24")
+
+	def test_no_year_gives_none(self):
+		self.assertIsNone(wr.pick_cohort_year([], "RT-2022", 2022, 2024))
+
+
+class TestPortalWithdrawable(UnitTestCase):
+	"""The portal offers a course again when its only application was Rejected or Returned (the controller counts
+	approved withdrawals only); a Draft, Pending or Approved application still holds it."""
+
+	REGISTRATIONS = [{"exam_session": "S1", "courses": [{"course": c, "kind": "Current", "eligibility": "Eligible"} for c in ("A", "B")]}]
+
+	def offered(self, status, docstatus=0):
+		withdrawals = [{"exam_session": "S1", "courses": ["A"], "status": status, "docstatus": docstatus}]
+		found = withdrawable(self.REGISTRATIONS, withdrawals)
+		return found[0]["courses"] if found else []
+
+	def test_a_rejected_or_returned_application_frees_its_courses(self):
+		for status in ("Rejected", "Returned"):
+			self.assertEqual(self.offered(status), ["A", "B"], status)
+
+	def test_a_live_application_holds_its_courses(self):
+		for status, docstatus in (("Draft", 0), ("Pending", 0), ("Approved", 1)):
+			self.assertEqual(self.offered(status, docstatus), ["B"], status)
+
+	def test_a_cancelled_application_frees_its_courses(self):
+		self.assertEqual(self.offered("Cancelled", 2), ["A", "B"])

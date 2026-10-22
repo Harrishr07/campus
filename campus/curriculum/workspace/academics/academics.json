@@ -1,0 +1,336 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academics</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Registration\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Curriculum\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Program\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Group\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Registration Window\", \"col\": 3}}, {\"id\": \"sp0008\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-06 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "book-open-text",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Academics",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 13,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program",
+   "link_count": 0,
+   "link_to": "Program",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course",
+   "link_count": 0,
+   "link_to": "Course",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Category",
+   "link_count": 0,
+   "link_to": "Course Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Year",
+   "link_count": 0,
+   "link_to": "Academic Year",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Term",
+   "link_count": 0,
+   "link_to": "Academic Term",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Elective Group",
+   "link_count": 0,
+   "link_to": "Elective Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Curriculum Rule",
+   "link_count": 0,
+   "link_to": "Curriculum Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Registration Rule",
+   "link_count": 0,
+   "link_to": "Registration Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Department Mission",
+   "link_count": 0,
+   "link_to": "Department Mission",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Educational Objective",
+   "link_count": 0,
+   "link_to": "Program Educational Objective",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Outcome",
+   "link_count": 0,
+   "link_to": "Program Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Program Specific Outcome",
+   "link_count": 0,
+   "link_to": "Program Specific Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Outcome",
+   "link_count": 0,
+   "link_to": "Course Outcome",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Curriculum",
+   "link_count": 0,
+   "link_to": "Curriculum",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Registration Window",
+   "link_count": 0,
+   "link_to": "Registration Window",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Registration",
+   "link_count": 0,
+   "link_to": "Course Registration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Group",
+   "link_count": 0,
+   "link_to": "Student Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CO-PO Matrix",
+   "link_count": 0,
+   "link_to": "CO-PO Matrix",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "Course Registration",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Elective Enrolment",
+   "link_count": 0,
+   "link_to": "Elective Enrolment",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "CO-PO Matrix",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "CO-PO Coverage",
+   "link_count": 0,
+   "link_to": "CO-PO Coverage",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Academics",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "Instructor"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 41.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Course Registration",
+   "link_to": "Course Registration",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Curriculum",
+   "link_to": "Curriculum",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Program",
+   "link_to": "Program",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Course",
+   "link_to": "Course",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Student Group",
+   "link_to": "Student Group",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Registration Window",
+   "link_to": "Registration Window",
+   "type": "DocType"
+  }
+ ],
+ "title": "Academics"
+}

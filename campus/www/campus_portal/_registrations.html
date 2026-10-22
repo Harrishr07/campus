@@ -1,0 +1,38 @@
+{# P1-T26 / P2-T25 exam registration cards: courses, confirmation, the exam fee (and its payment when the row has
+   its invoice), the hall ticket. Every value is escaped. #}
+{% for r in registrations %}
+<div class="cp-card">
+	<strong>{{ r.exam_session|e }}</strong> ({{ r.academic_term|e }})
+	<span class="cp-badge">{{ _("Confirmed") if r.confirmed else _("Not confirmed") }}</span>
+	<ul class="cp-list">
+		{% for c in r.courses %}
+		<li>{{ c.course|e }} <small>{{ _(c.kind)|e }}</small> <span class="cp-badge">{{ _(c.eligibility)|e }}</span></li>
+		{% endfor %}
+	</ul>
+	{% if r.confirmed %}
+	<p>{{ _("Exam fee") }}: {{ frappe.utils.fmt_money(r.fee_total, currency="INR") }}{% if r.late_fee %} ({{ _("includes late fee") }} {{ frappe.utils.fmt_money(r.late_fee, currency="INR") }}){% endif %}</p>
+	{% set inv = r.invoice %}
+	{% if inv %}
+	<p>{{ _("Invoice") }} {{ inv.name|e }} &middot; {{ _("Outstanding") }} {{ frappe.utils.fmt_money(inv.outstanding_amount, currency=inv.currency) }}
+		{% if inv.can_pay %}<br><button class="cp-btn" data-pay="{{ inv.name|e }}" data-student="{{ student|e }}">{{ _("Pay online") }}</button>
+		<span class="cp-message" role="alert"></span>{% endif %}</p>
+	{% endif %}
+	{% elif r.can_confirm %}
+	<form class="cp-form" data-method="campus.student_services.portal.confirm_exam_registration">
+		<input type="hidden" name="student" value="{{ student|e }}">
+		<input type="hidden" name="registration" value="{{ r.name|e }}">
+		<p>{{ _("Only eligible courses are charged. A late fee applies after the closing date.") }}</p>
+		<button class="cp-btn" type="submit">{{ _("Confirm registration") }}</button>
+		<p class="cp-message" role="alert"></p>
+	</form>
+	{% endif %}
+	{% set ht = r.hall_ticket %}
+	{% if ht %}
+	<p><strong>{{ _("Hall ticket") }}</strong>: <span class="cp-badge">{{ _(ht.status)|e }}</span>
+	{% if ht.status == "Withheld" %}<br>{{ _("Reason") }}: {{ (ht.reasons or "")|e }}
+	{% elif ht.download_url %}<a class="cp-btn" href="{{ ht.download_url|e }}">{{ _("Download hall ticket") }}</a>
+	{% elif ht.release_on %}{{ _("Available from {0}").format(frappe.utils.format_datetime(ht.release_on)) }}
+	{% else %}{{ _("Not released yet") }}{% endif %}</p>
+	{% endif %}
+</div>
+{% endfor %}

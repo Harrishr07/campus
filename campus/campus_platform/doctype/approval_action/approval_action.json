@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cycle",
+  "level",
+  "action",
+  "approver",
+  "on_behalf_of",
+  "comment",
+  "timestamp"
+ ],
+ "fields": [
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Int",
+   "label": "Cycle",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "level",
+   "fieldtype": "Int",
+   "label": "Level",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "label": "Action",
+   "options": "Request\nApprove\nReject\nReturn\nEscalate",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "By",
+   "options": "User",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "on_behalf_of",
+   "fieldtype": "Link",
+   "label": "On Behalf Of",
+   "options": "User",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "comment",
+   "fieldtype": "Small Text",
+   "label": "Comment",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "label": "Timestamp",
+   "in_list_view": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Approval Action",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

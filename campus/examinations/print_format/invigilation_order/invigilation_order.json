@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Invigilation Order",
+ "doc_type": "Invigilation Roster",
+ "module": "Examinations",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 12,
+ "creation": "2026-10-08 18:00:00.000000",
+ "modified": "2026-10-08 18:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Invigilation Order\") }}</h3>\n<p style=\"text-align:center\">{{ (doc.company or \"\")|e }} &middot; {{ doc.exam_session|e }}</p>\n<p>{{ _(\"The following faculty are appointed to invigilate the examinations as listed below.\") }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr><th>{{ _(\"Date\") }}</th><th>{{ _(\"Session\") }}</th><th>{{ _(\"Exam Hall\") }}</th><th>{{ _(\"Invigilator\") }}</th><th>{{ _(\"Signature\") }}</th></tr></thead>\n  <tbody>\n  {% for duty in doc.duties %}\n    <tr><td>{{ frappe.utils.formatdate(duty.exam_date)|e }}</td><td>{{ (duty.slot or \"\")|e }}</td><td>{{ (duty.room or \"\")|e }}</td><td>{{ (duty.employee_name or duty.employee or \"\")|e }}</td><td></td></tr>\n  {% endfor %}\n  </tbody>\n</table>\n<p style=\"text-align:right\">{{ _(\"Controller of Examinations\") }}</p>\n"
+}

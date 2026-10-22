@@ -1,0 +1,166 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "course_offering",
+  "course",
+  "academic_term",
+  "company",
+  "column_break_main",
+  "template",
+  "entry_deadline",
+  "locked_on",
+  "section_components",
+  "components",
+  "section_questions",
+  "questions"
+ ],
+ "fields": [
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "fetch_from": "course_offering.course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "fetch_from": "course_offering.academic_term",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "course_offering.oc_company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "template",
+   "fieldtype": "Link",
+   "label": "CIA Component Template",
+   "options": "CIA Component Template",
+   "read_only": 1,
+   "description": "Set from the offering's curriculum regulation and course type."
+  },
+  {
+   "fieldname": "entry_deadline",
+   "fieldtype": "Datetime",
+   "label": "Entry Deadline",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "CIA marks lock at this time; later edits need an approved CIA Unlock Request."
+  },
+  {
+   "fieldname": "locked_on",
+   "fieldtype": "Datetime",
+   "label": "Locked On",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "When the lock job last consolidated the marks after the deadline."
+  },
+  {
+   "fieldname": "section_components",
+   "fieldtype": "Section Break",
+   "label": "Component Dates"
+  },
+  {
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "CIA Schedule Component"
+  },
+  {
+   "fieldname": "section_questions",
+   "fieldtype": "Section Break",
+   "label": "Question Pattern",
+   "description": "Every template component needs questions whose maxima add up to the component's entered-out-of marks."
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "CIA Schedule Question"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "CIA Schedule",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "CIAS-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "course_offering",
+ "track_changes": 1
+}

@@ -1,0 +1,26 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container my-5" style="max-width: 560px">
+	<h2>{{ _("Document verification") }}</h2>
+	{% if record.status == "Valid" %}
+	<div class="alert alert-success" role="status"><strong>{{ _("Valid") }}</strong></div>
+	{% else %}
+	<div class="alert alert-danger" role="status">
+		<strong>{{ _("Revoked") }}</strong>
+		{{ _("Revoked on {0}").format(revoked_on) }}.
+		{{ _("Reason") }}: {{ (record.revocation_reason or "")|e }}
+	</div>
+	{% endif %}
+	<table class="table">
+		<tr><th>{{ _("Issued by") }}</th><td>{{ record.company or "" }}</td></tr>
+		<tr><th>{{ _("Document type") }}</th><td>{{ record.document_type }}</td></tr>
+		<tr><th>{{ _("Holder") }}</th><td>{{ record.holder_name }}</td></tr>
+		<tr><th>{{ _("Issue date") }}</th><td>{{ issued_on }}</td></tr>
+		<tr><th>{{ _("Code") }}</th><td><code>{{ record.code }}</code></td></tr>
+		{% for label, value in record.details or [] %}
+		<tr><th>{{ label|e }}</th><td>{{ (value or "")|e }}</td></tr>
+		{% endfor %}
+	</table>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "title",
+  "company",
+  "research_call",
+  "research_centre",
+  "column_break_1",
+  "status",
+  "funding_agency",
+  "funding_scheme",
+  "deadline",
+  "investigators_section",
+  "principal_investigator",
+  "pi_name",
+  "co_investigators",
+  "budget_section",
+  "currency",
+  "budget",
+  "total_budget",
+  "agency_section",
+  "submission_date",
+  "agency_reference",
+  "column_break_2",
+  "outcome",
+  "outcome_date",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "RPROP-.YYYY.-",
+   "default": "RPROP-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "research_call",
+   "fieldtype": "Link",
+   "label": "Research Call",
+   "options": "Research Call",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "research_centre",
+   "fieldtype": "Link",
+   "label": "Research Centre",
+   "options": "Research Centre"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nApproved\nSubmitted to Agency\nSanctioned\nNot Sanctioned\nCancelled",
+   "default": "Draft",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_agency",
+   "fieldtype": "Link",
+   "label": "Funding Agency",
+   "options": "Funding Agency",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_scheme",
+   "fieldtype": "Link",
+   "label": "Funding Scheme",
+   "options": "Funding Scheme",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deadline",
+   "fieldtype": "Date",
+   "label": "Deadline",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "From the Research Call."
+  },
+  {
+   "fieldname": "investigators_section",
+   "fieldtype": "Section Break",
+   "label": "Investigators"
+  },
+  {
+   "fieldname": "principal_investigator",
+   "fieldtype": "Link",
+   "label": "Principal Investigator",
+   "options": "Employee",
+   "reqd": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "pi_name",
+   "fieldtype": "Data",
+   "label": "PI Name",
+   "fetch_from": "principal_investigator.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "co_investigators",
+   "fieldtype": "Table",
+   "label": "Co-Investigators",
+   "options": "Research Proposal Investigator"
+  },
+  {
+   "fieldname": "budget_section",
+   "fieldtype": "Section Break",
+   "label": "Budget"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "budget",
+   "fieldtype": "Table",
+   "label": "Budget by Head",
+   "options": "Research Proposal Budget",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_budget",
+   "fieldtype": "Currency",
+   "label": "Total Budget",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agency_section",
+   "fieldtype": "Section Break",
+   "label": "Agency Submission and Outcome"
+  },
+  {
+   "fieldname": "submission_date",
+   "fieldtype": "Date",
+   "label": "Submitted to Agency On",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "agency_reference",
+   "fieldtype": "Data",
+   "label": "Agency Reference",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "\nSanctioned\nNot Sanctioned",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "outcome_date",
+   "fieldtype": "Date",
+   "label": "Outcome Date",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Research Proposal",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "link_doctype": "Sanction",
+   "link_fieldname": "research_proposal"
+  }
+ ],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research Proposal",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "if_owner": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}

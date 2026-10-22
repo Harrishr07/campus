@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Timetable Slot Template",
+ "field_order": [
+  "template_name",
+  "company",
+  "column_break_1",
+  "lab_block_periods",
+  "max_faculty_periods_per_day",
+  "section_days",
+  "days",
+  "section_periods",
+  "periods"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "label": "Template Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lab_block_periods",
+   "fieldtype": "Int",
+   "label": "Practical Block (Periods)",
+   "default": "2",
+   "reqd": 1,
+   "description": "Practical hours are placed in blocks of this many consecutive periods."
+  },
+  {
+   "fieldname": "max_faculty_periods_per_day",
+   "fieldtype": "Int",
+   "label": "Max Periods per Teacher per Day",
+   "default": "6",
+   "description": "Soft limit: the solver avoids it and manual edits over it are warned."
+  },
+  {
+   "fieldname": "section_days",
+   "fieldtype": "Section Break",
+   "label": "Days"
+  },
+  {
+   "fieldname": "days",
+   "fieldtype": "Table",
+   "label": "Days",
+   "options": "Timetable Slot Day",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_periods",
+   "fieldtype": "Section Break",
+   "label": "Periods and Breaks"
+  },
+  {
+   "fieldname": "periods",
+   "fieldtype": "Table",
+   "label": "Periods",
+   "options": "Timetable Slot",
+   "reqd": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "autoname": "field:template_name",
+ "title_field": "template_name",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ]
+}

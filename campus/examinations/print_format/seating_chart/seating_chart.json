@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Seating Chart",
+ "doc_type": "Seating Plan",
+ "module": "Examinations",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 12,
+ "creation": "2026-10-08 18:00:00.000000",
+ "modified": "2026-10-08 18:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Seating Chart\") }}</h3>\n<p style=\"text-align:center\">{{ (doc.company or \"\")|e }} &middot; {{ doc.exam_session|e }} &middot; {{ frappe.utils.formatdate(doc.exam_date)|e }} {{ (doc.slot or \"\")|e }}</p>\n{% for hall in doc.halls %}\n<h4>{{ hall.room|e }} <small>({{ hall.seated }} / {{ hall.capacity }})</small></h4>\n<table class=\"table table-bordered table-condensed\" style=\"table-layout:fixed\">\n  {% for r in range(1, (hall.seat_rows or 0) + 1) %}\n  <tr>\n    {% for c in range(1, (hall.seat_columns or 0) + 1) %}\n    {% set seat = doc.seats|selectattr(\"room\", \"equalto\", hall.room)|selectattr(\"seat_row\", \"equalto\", r)|selectattr(\"seat_column\", \"equalto\", c)|first %}\n    <td style=\"text-align:center;font-size:11px\">\n      <strong>R{{ r }}C{{ c }}</strong><br>\n      {% if seat %}{{ seat.student|e }}<br>{{ (seat.student_name or \"\")|e }}<br>{{ seat.course|e }}{% else %}&mdash;{% endif %}\n    </td>\n    {% endfor %}\n  </tr>\n  {% endfor %}\n</table>\n<p style=\"font-size:11px\">{{ _(\"Front of the hall is row 1.\") }}</p>\n{% endfor %}\n"
+}

@@ -1,0 +1,84 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "title",
+  "mandatory",
+  "requires_attachment",
+  "status",
+  "attachment",
+  "done_by",
+  "done_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mandatory",
+   "fieldtype": "Check",
+   "label": "Mandatory",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "requires_attachment",
+   "fieldtype": "Check",
+   "label": "Requires Attachment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nDone\nWaived",
+   "default": "Pending",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "Attachment",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "done_by",
+   "fieldtype": "Link",
+   "label": "Done By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "done_on",
+   "fieldtype": "Datetime",
+   "label": "Done On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Student Onboarding Item",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

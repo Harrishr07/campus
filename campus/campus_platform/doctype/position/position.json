@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "autoname": "field:code",
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "code",
+  "scope_type",
+  "role",
+  "single_holder",
+  "company"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "set_only_once": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "scope_type",
+   "fieldtype": "Select",
+   "label": "Scope Type",
+   "options": "Institution\nDepartment\nStudent Group\nHostel\nBody\nLab",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Link",
+   "label": "Role Granted",
+   "options": "Role",
+   "description": "Granted to the user while they hold this position; removed when the holding ends."
+  },
+  {
+   "default": "1",
+   "fieldname": "single_holder",
+   "fieldtype": "Check",
+   "label": "Single Holder",
+   "description": "Only one holder at a time for a given scope. Untick for positions like Mentor."
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "description": "Leave blank if the position applies to any company.",
+   "in_standard_filter": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Position",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "report": 1, "export": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Academics User", "read": 1, "report": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

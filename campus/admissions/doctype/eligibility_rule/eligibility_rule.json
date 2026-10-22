@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "program",
+  "regulation",
+  "enabled",
+  "qualifying_exam",
+  "required_subjects",
+  "marks_section",
+  "category_marks"
+ ],
+ "fields": [
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1"
+  },
+  {
+   "fieldname": "qualifying_exam",
+   "fieldtype": "Data",
+   "label": "Qualifying Examination",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "For example HSC."
+  },
+  {
+   "fieldname": "required_subjects",
+   "fieldtype": "Small Text",
+   "label": "Required Subjects",
+   "description": "One per line. Minimum marks are measured on these subjects together (all subjects when blank)."
+  },
+  {
+   "fieldname": "marks_section",
+   "fieldtype": "Section Break",
+   "label": "Minimum Marks"
+  },
+  {
+   "fieldname": "category_marks",
+   "fieldtype": "Table",
+   "label": "Minimum Marks % by Category",
+   "options": "Eligibility Category Mark"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Eligibility Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "hash",
+ "title_field": "program"
+}

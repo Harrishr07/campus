@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Timetable Slot",
+ "field_order": [
+  "period",
+  "label",
+  "from_time",
+  "to_time",
+  "is_break"
+ ],
+ "fields": [
+  {
+   "fieldname": "period",
+   "fieldtype": "Int",
+   "label": "Period",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": "From",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_break",
+   "fieldtype": "Check",
+   "label": "Break",
+   "in_list_view": 1,
+   "description": "A break or lunch period: nothing is scheduled in it and it splits practical blocks."
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "istable": 1,
+ "editable_grid": 1,
+ "permissions": []
+}

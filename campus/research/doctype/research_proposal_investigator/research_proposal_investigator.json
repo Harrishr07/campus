@@ -1,0 +1,42 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research Proposal Investigator",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "istable": 1,
+ "editable_grid": 1
+}

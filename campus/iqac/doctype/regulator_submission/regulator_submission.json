@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "submission_type",
+  "company",
+  "period_end",
+  "column_break_1",
+  "due_date",
+  "owner_employee",
+  "status",
+  "filing_section",
+  "submitted_on",
+  "reference_no",
+  "documents",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "submission_type",
+   "fieldtype": "Link",
+   "label": "Submission Type",
+   "options": "Regulator Submission Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "period_end",
+   "fieldtype": "Date",
+   "label": "Period End",
+   "reqd": 1,
+   "description": "End of the period the return covers; the due date follows from it."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "owner_employee",
+   "fieldtype": "Link",
+   "label": "Owner",
+   "options": "Employee",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nSubmitted\nAcknowledged\nWaived",
+   "default": "Pending",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "filing_section",
+   "fieldtype": "Section Break",
+   "label": "Filing"
+  },
+  {
+   "fieldname": "submitted_on",
+   "fieldtype": "Date",
+   "label": "Submitted On",
+   "depends_on": "eval:doc.status=='Submitted'||doc.status=='Acknowledged'"
+  },
+  {
+   "fieldname": "reference_no",
+   "fieldtype": "Data",
+   "label": "Acknowledgement / Reference No"
+  },
+  {
+   "fieldname": "documents",
+   "fieldtype": "Table",
+   "label": "Documents",
+   "options": "Regulator Submission Document"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Regulator Submission",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "format:RSUB-{YYYY}-{#####}",
+ "track_changes": 1
+}

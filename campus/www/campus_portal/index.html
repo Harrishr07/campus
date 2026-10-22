@@ -1,0 +1,42 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Dashboard") }}</h2>
+<div class="cp-cards">
+	<a class="cp-card" href="/campus-portal/fees?student={{ student }}">
+		<span class="cp-label">{{ _("Fees outstanding") }}</span>
+		<span class="cp-value">{{ frappe.utils.fmt_money(fees.total_outstanding, currency="INR") }}</span>
+	</a>
+	<a class="cp-card" href="/campus-portal/attendance?student={{ student }}">
+		<span class="cp-label">{{ _("Attendance") }}{% if attendance.academic_term %} ({{ attendance.academic_term }}){% endif %}</span>
+		<span class="cp-value">
+			{% if attendance.summary %}{{ attendance.summary.overall_pct if attendance.summary.overall_pct is not none else "-" }}%
+			<small class="cp-badge cp-{{ attendance.summary.status|lower|replace(' ', '-') }}">{{ _(attendance.summary.status) }}</small>
+			{% else %}-{% endif %}
+		</span>
+	</a>
+	<a class="cp-card" href="/campus-portal/results?student={{ student }}">
+		<span class="cp-label">{{ _("Latest result") }}</span>
+		<span class="cp-value">
+			{% if latest_result %}{{ _("SGPA") }} {{ "%.2f"|format(latest_result.sgpa or 0) }} / {{ _("CGPA") }} {{ "%.2f"|format(latest_result.cgpa or 0) }}
+			{% else %}{{ _("Not published") }}{% endif %}
+		</span>
+	</a>
+	<a class="cp-card" href="/campus-portal/circulars?student={{ student }}">
+		<span class="cp-label">{{ _("Circulars to acknowledge") }}</span>
+		<span class="cp-value">{{ pending_circulars }}</span>
+	</a>
+</div>
+{% if exam_registrations %}
+<h2>{{ _("Exam registration") }}</h2>
+{% set registrations = exam_registrations %}
+{% include "campus/www/campus_portal/_registrations.html" %}
+{% endif %}
+{% if onboarding %}
+<h2>{{ _("Onboarding") }} ({{ onboarding.completion or 0 }}%)</h2>
+<ul class="cp-list">
+	{% for item in onboarding["items"] %}
+	<li>{{ item.title|e }}{% if item.mandatory %} *{% endif %} <span class="cp-badge">{{ _(item.status) }}</span></li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

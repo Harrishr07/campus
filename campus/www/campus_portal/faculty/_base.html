@@ -1,0 +1,23 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<link rel="stylesheet" href="/assets/campus/css/campus_portal.css">
+<div class="cp">
+	<nav class="cp-nav" aria-label="{{ _('Faculty portal') }}">
+		{% for key, label, href in [("timetable", _("My timetable"), "/campus-portal/faculty"),
+			("attendance", _("Attendance"), "/campus-portal/faculty/attendance"), ("cia", _("CIA marks"), "/campus-portal/faculty/cia"),
+			("course_plan", _("Course plan"), "/campus-portal/faculty/course-plan"), ("leave", _("Leave"), "/campus-portal/faculty/leave"),
+			("mentees", _("My students"), "/campus-portal/faculty/mentees")] %}
+		<a href="{{ href }}" {% if key == active %}aria-current="page"{% endif %}>{{ label }}</a>
+		{% endfor %}
+	</nav>
+	{% if not employee %}
+	<p class="cp-empty">{{ _("The faculty portal is for staff with an active Employee record. Please contact the college office.") }}</p>
+	{% else %}
+	{% block faculty_body %}{% endblock %}
+	{% endif %}
+</div>
+<script>document.body.dataset.cpError = {{ _("Network error. Please try again.")|tojson }};</script>
+<script src="/assets/campus/js/campus_portal.js"></script>
+<script src="/assets/campus/js/campus_faculty_portal.js"></script>
+{% endblock %}

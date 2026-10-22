@@ -1,0 +1,346 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>IQAC</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Cycle\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Value\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Accreditation Framework\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Metric Drill-down\", \"col\": 3}}, {\"id\": \"sp0006\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0007\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-06 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "award",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "IQAC",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 8,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Accreditation Framework",
+   "link_count": 0,
+   "link_to": "Accreditation Framework",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Framework Node",
+   "link_count": 0,
+   "link_to": "Framework Node",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Data Point",
+   "link_count": 0,
+   "link_to": "Data Point",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Validation Rule",
+   "link_count": 0,
+   "link_to": "Validation Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Export Template",
+   "link_count": 0,
+   "link_to": "Export Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Form",
+   "link_count": 0,
+   "link_to": "Feedback Form",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Regulator Submission Type",
+   "link_count": 0,
+   "link_to": "Regulator Submission Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Institutional MoU",
+   "link_count": 0,
+   "link_to": "Institutional MoU",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 9,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Accreditation Cycle",
+   "link_count": 0,
+   "link_to": "Accreditation Cycle",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Metric Value",
+   "link_count": 0,
+   "link_to": "Metric Value",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Metric Override",
+   "link_count": 0,
+   "link_to": "Metric Override",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Evidence",
+   "link_count": 0,
+   "link_to": "Evidence",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Validation Run",
+   "link_count": 0,
+   "link_to": "Validation Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Campaign",
+   "link_count": 0,
+   "link_to": "Feedback Campaign",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Response",
+   "link_count": 0,
+   "link_to": "Feedback Response",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Feedback Response Token",
+   "link_count": 0,
+   "link_to": "Feedback Response Token",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Regulator Submission",
+   "link_count": 0,
+   "link_to": "Regulator Submission",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "Metric Value",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Metric Drill-down",
+   "link_count": 0,
+   "link_to": "Metric Drill-down",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Cycle Readiness",
+   "link_count": 0,
+   "link_to": "Cycle Readiness",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Feedback Analysis",
+   "link_count": 0,
+   "link_to": "Feedback Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Committee Compliance",
+   "link_count": 0,
+   "link_to": "Committee Compliance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "IQAC Calendar",
+   "link_count": 0,
+   "link_to": "IQAC Calendar",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "IQAC Action Taken Report",
+   "link_count": 0,
+   "link_to": "IQAC Action Taken Report",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "IQAC",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 46.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Accreditation Cycle",
+   "link_to": "Accreditation Cycle",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Metric Value",
+   "link_to": "Metric Value",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Accreditation Framework",
+   "link_to": "Accreditation Framework",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Metric Drill-down",
+   "link_to": "Metric Drill-down",
+   "report_ref_doctype": "Metric Value",
+   "type": "Report"
+  }
+ ],
+ "title": "IQAC"
+}

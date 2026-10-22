@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "title",
+  "is_supernumerary",
+  "counts_in_seat_matrix"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_supernumerary",
+   "fieldtype": "Check",
+   "label": "Supernumerary",
+   "in_list_view": 1,
+   "description": "Seats beyond the sanctioned intake."
+  },
+  {
+   "fieldname": "counts_in_seat_matrix",
+   "fieldtype": "Check",
+   "label": "Counts in Seat Matrix",
+   "default": "1",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Admission Quota",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:code",
+ "naming_rule": "By fieldname",
+ "title_field": "title"
+}

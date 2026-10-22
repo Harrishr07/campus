@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "company",
+  "from_date",
+  "to_date",
+  "column_break_1",
+  "posting_date",
+  "journal_entry",
+  "sanctions_section",
+  "sanctions",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "GIR-.YYYY.-",
+   "default": "GIR-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Period end: spending and depreciation up to this date are recognised, and the entry is posted on it."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sanctions_section",
+   "fieldtype": "Section Break",
+   "label": "Sanctions"
+  },
+  {
+   "fieldname": "sanctions",
+   "fieldtype": "Table",
+   "label": "Sanctions",
+   "options": "Grant Income Recognition Sanction",
+   "description": "Leave empty for every submitted sanction of the college started by the period end. Sanctions already recognised for the period, or with nothing to recognise, are dropped on submit."
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Grant Income Recognition",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Grant Income Recognition",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "track_changes": 1
+}

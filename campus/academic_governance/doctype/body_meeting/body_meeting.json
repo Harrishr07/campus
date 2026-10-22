@@ -1,0 +1,264 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "body",
+  "company",
+  "body_type",
+  "column_break_when",
+  "meeting_date",
+  "start_time",
+  "venue",
+  "online_link",
+  "status",
+  "notice_section",
+  "notice_sent_on",
+  "column_break_notice",
+  "notice_override_reason",
+  "agenda_section",
+  "agenda",
+  "attendance_section",
+  "attendance",
+  "quorum_status",
+  "in_office_count",
+  "column_break_quorum",
+  "quorum_required",
+  "present_count",
+  "quorum_note",
+  "minutes_section",
+  "minutes",
+  "resolutions"
+ ],
+ "fields": [
+  {
+   "fieldname": "body",
+   "fieldtype": "Link",
+   "label": "Body",
+   "options": "Body",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "body_type",
+   "fieldtype": "Link",
+   "label": "Body Type",
+   "options": "Body Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "meeting_date",
+   "fieldtype": "Date",
+   "label": "Meeting Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Time",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "venue",
+   "fieldtype": "Data",
+   "label": "Venue"
+  },
+  {
+   "fieldname": "online_link",
+   "fieldtype": "Data",
+   "label": "Online Link",
+   "options": "URL"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Scheduled\nHeld\nCancelled",
+   "default": "Scheduled",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "notice_section",
+   "fieldtype": "Section Break",
+   "label": "Notice"
+  },
+  {
+   "fieldname": "notice_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Notice Sent On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_notice",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notice_override_reason",
+   "fieldtype": "Small Text",
+   "label": "Late Notice Reason",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Recorded when the notice went out later than the Governance Settings notice days."
+  },
+  {
+   "fieldname": "agenda_section",
+   "fieldtype": "Section Break",
+   "label": "Agenda"
+  },
+  {
+   "fieldname": "agenda",
+   "fieldtype": "Table",
+   "label": "Agenda",
+   "options": "Meeting Agenda Item"
+  },
+  {
+   "fieldname": "attendance_section",
+   "fieldtype": "Section Break",
+   "label": "Attendance and Quorum"
+  },
+  {
+   "fieldname": "attendance",
+   "fieldtype": "Table",
+   "label": "Attendance",
+   "options": "Meeting Attendance",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "quorum_status",
+   "fieldtype": "Select",
+   "label": "Quorum",
+   "options": "\nMet\nNot met",
+   "read_only": 1,
+   "in_list_view": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "in_office_count",
+   "fieldtype": "Int",
+   "label": "Members in Office",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_quorum",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quorum_required",
+   "fieldtype": "Int",
+   "label": "Present Needed",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "present_count",
+   "fieldtype": "Int",
+   "label": "Present",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "quorum_note",
+   "fieldtype": "Small Text",
+   "label": "Quorum Note",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "minutes_section",
+   "fieldtype": "Section Break",
+   "label": "Minutes and Resolutions"
+  },
+  {
+   "fieldname": "minutes",
+   "fieldtype": "Text Editor",
+   "label": "Minutes"
+  },
+  {
+   "fieldname": "resolutions",
+   "fieldtype": "Table",
+   "label": "Resolutions",
+   "options": "Meeting Resolution",
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Body Meeting",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:BMTG-{YYYY}-{#####}",
+ "title_field": "body",
+ "search_fields": "body,meeting_date",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

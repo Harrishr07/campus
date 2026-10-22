@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Exam Hall Blocked Seat",
+ "field_order": [
+  "seat_row",
+  "seat_column"
+ ],
+ "fields": [
+  {
+   "fieldname": "seat_row",
+   "fieldtype": "Int",
+   "label": "Row",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "seat_column",
+   "fieldtype": "Int",
+   "label": "Column",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1
+  }
+ ],
+ "permissions": [],
+ "istable": 1
+}

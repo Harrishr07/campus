@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-09 23:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "campaign",
+  "form",
+  "company",
+  "course_offering",
+  "instructor",
+  "response_date",
+  "respondent",
+  "section_break_answers",
+  "answers"
+ ],
+ "fields": [
+  {
+   "fieldname": "campaign",
+   "fieldtype": "Link",
+   "label": "Campaign",
+   "options": "Feedback Campaign",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "form",
+   "fieldtype": "Link",
+   "label": "Form",
+   "options": "Feedback Form",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "instructor",
+   "fieldtype": "Link",
+   "label": "Instructor",
+   "options": "Instructor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "response_date",
+   "fieldtype": "Date",
+   "label": "Response Date",
+   "read_only": 1,
+   "description": "The day only: no time is kept."
+  },
+  {
+   "fieldname": "respondent",
+   "fieldtype": "Data",
+   "label": "Respondent",
+   "read_only": 1,
+   "description": "Only for a campaign that is not anonymous."
+  },
+  {
+   "fieldname": "section_break_answers",
+   "fieldtype": "Section Break",
+   "label": "Answers"
+  },
+  {
+   "fieldname": "answers",
+   "fieldtype": "Table",
+   "label": "Answers",
+   "options": "Feedback Answer",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Feedback Response",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

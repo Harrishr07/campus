@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bank_collection_import",
+  "company",
+  "row_no",
+  "challan_no",
+  "amount",
+  "collection_date",
+  "bank_reference",
+  "status",
+  "message",
+  "sales_invoice",
+  "payment_entry",
+  "reference_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "bank_collection_import",
+   "fieldtype": "Link",
+   "label": "Import",
+   "options": "Bank Collection Import",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "row_no",
+   "fieldtype": "Int",
+   "label": "Row",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "challan_no",
+   "fieldtype": "Data",
+   "label": "Challan No",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "collection_date",
+   "fieldtype": "Date",
+   "label": "Collection Date"
+  },
+  {
+   "fieldname": "bank_reference",
+   "fieldtype": "Data",
+   "label": "Bank Reference",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Matched\nUnmatched\nDuplicate\nInvalid",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "fieldname": "reference_key",
+   "fieldtype": "Data",
+   "label": "Reference Key",
+   "unique": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "hidden": 1,
+   "description": "Company and bank reference; set only on rows that created a Payment Entry."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Bank Collection Row",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "hash",
+ "title_field": "challan_no"
+}

@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 23:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "member",
+  "member_name",
+  "organisation"
+ ],
+ "fields": [
+  {
+   "fieldname": "member",
+   "fieldtype": "Link",
+   "label": "Member",
+   "options": "External Member",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "member_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "fetch_from": "member.member_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "organisation",
+   "fieldtype": "Data",
+   "label": "Organisation",
+   "fetch_from": "member.organisation",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-09 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Feedback Campaign Invitee",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

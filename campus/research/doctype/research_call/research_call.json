@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "call_title",
+  "funding_agency",
+  "funding_scheme",
+  "column_break_1",
+  "deadline",
+  "reminder_days",
+  "call_url",
+  "details_section",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "RCALL-.YYYY.-",
+   "default": "RCALL-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "call_title",
+   "fieldtype": "Data",
+   "label": "Call Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "funding_agency",
+   "fieldtype": "Link",
+   "label": "Funding Agency",
+   "options": "Funding Agency",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_scheme",
+   "fieldtype": "Link",
+   "label": "Funding Scheme",
+   "options": "Funding Scheme",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deadline",
+   "fieldtype": "Date",
+   "label": "Deadline",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reminder_days",
+   "fieldtype": "Int",
+   "label": "Remind PIs (Days Before Deadline)",
+   "default": "7",
+   "non_negative": 1,
+   "description": "Principal investigators of proposals not yet submitted to the agency get a daily reminder from this many days before the deadline."
+  },
+  {
+   "fieldname": "call_url",
+   "fieldtype": "Data",
+   "label": "Call URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research Call",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "title_field": "call_title",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}

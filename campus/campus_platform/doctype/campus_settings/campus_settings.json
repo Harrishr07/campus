@@ -9,7 +9,15 @@
   "verification_base_url",
   "data_retention_days",
   "languages_enabled",
-  "default_company"
+  "default_company",
+  "no_dues_section",
+  "no_dues_office_roles",
+  "evidence_section",
+  "evidence_sources",
+  "feedback_section",
+  "feedback_minimum_group_size",
+  "approvals_section",
+  "approval_required_doctypes"
  ],
  "fields": [
   {
@@ -49,13 +57,62 @@
    "label": "Default Company",
    "options": "Company",
    "description": "Default company for trust users."
+  },
+  {
+   "fieldname": "no_dues_section",
+   "fieldtype": "Section Break",
+   "label": "No Dues"
+  },
+  {
+   "fieldname": "no_dues_office_roles",
+   "fieldtype": "Table",
+   "label": "No Dues Office Roles",
+   "options": "No Dues Office Role",
+   "description": "Roles allowed to clear each office on a No Dues Clearance. Offices without a row can be cleared by anyone who can edit the clearance."
+  },
+  {
+   "fieldname": "evidence_section",
+   "fieldtype": "Section Break",
+   "label": "Evidence"
+  },
+  {
+   "fieldname": "evidence_sources",
+   "fieldtype": "Table",
+   "label": "Evidence Sources",
+   "options": "Evidence Source Doctype",
+   "description": "Document types that get an Attach as Evidence action, and the Attach field holding their file."
+  },
+  {
+   "fieldname": "feedback_section",
+   "fieldtype": "Section Break",
+   "label": "Feedback"
+  },
+  {
+   "default": "5",
+   "description": "Feedback reports and CO scores never show a group (question, course, faculty, CO) answered by fewer respondents than this.",
+   "fieldname": "feedback_minimum_group_size",
+   "fieldtype": "Int",
+   "label": "Feedback Minimum Group Size",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "approvals_section",
+   "fieldtype": "Section Break",
+   "label": "Approvals"
+  },
+  {
+   "description": "Sensitive document types that are never submitted when no Approval Policy matches: the attempt is refused until a policy is configured. Unlisted document types submit directly when no policy matches.",
+   "fieldname": "approval_required_doctypes",
+   "fieldtype": "Table",
+   "label": "Approval Required DocTypes",
+   "options": "Approval Required Doctype"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Campus Settings",

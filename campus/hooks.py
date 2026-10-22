@@ -1,3 +1,5 @@
+from campus.examinations.access import OFFERING_SCOPED, PORTAL_SCOPES
+
 app_name = "campus"
 app_title = "OneBook Campus"
 app_publisher = "OneBook"
@@ -8,7 +10,7 @@ app_license = "gpl-3.0"
 # Apps
 # ------------------
 
-required_apps = ["erpnext", "hrms", "education", "india_compliance"]
+required_apps = ["erpnext", "hrms", "education", "india_compliance", "frappe_whatsapp"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -60,9 +62,7 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance"]
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {"Student": "campus-portal", "Guardian": "campus-portal"}
 
 # Generators
 # ----------
@@ -85,7 +85,8 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance"]
 # Installation
 # ------------
 
-# before_install = "campus.install.before_install"
+before_install = "campus.install.before_install"
+before_migrate = "campus.install.before_migrate"
 after_install = "campus.install.after_install"
 after_migrate = "campus.install.after_migrate"
 
@@ -177,10 +178,104 @@ for _dt in [
 
 _regulation_rules = "campus.campus_platform.regulation_rules"
 doc_events["Student"]["validate"] = f"{_regulation_rules}.validate_regulation_change"
+_aadhaar = "campus.admissions.aadhaar.validate_aadhaar"
+doc_events["Student"]["validate"] = [doc_events["Student"]["validate"], _aadhaar]
+doc_events["Student Applicant"]["validate"] = [doc_events["Student Applicant"]["validate"], _aadhaar]
 doc_events["Program Enrollment"]["validate"] = [
 	doc_events["Program Enrollment"]["validate"],
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
 ]
+
+doc_events["Student Applicant"]["validate"] += [
+	"campus.admissions.allotment_import.set_allotment_key",
+	"campus.admissions.documents.validate_applicant",
+]
+doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
+doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
+
+doc_events["Lead"] = {
+	"before_insert": "campus.admissions.enquiry.before_insert",
+	"validate": "campus.admissions.enquiry.validate",
+	"after_insert": "campus.admissions.enquiry.after_insert",
+}
+doc_events["User Permission"] = {
+	"on_update": "campus.admissions.enquiry.user_permission_changed",
+	"after_delete": "campus.admissions.enquiry.user_permission_changed",
+}
+doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
+
+doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
+doc_events["Certificate Request"] = {  # P2-T22
+	"validate": "campus.examinations.exam_certificates.validate_request",
+	"before_submit": "campus.examinations.exam_certificates.before_submit_request",
+}
+doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.clear_draft_tags"}
+doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
+doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
+doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
+doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
+doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
+doc_events["Sales Invoice"] = {
+	"before_validate": "campus.campus_finance.concessions.apply_to_invoice",
+	"validate": "campus.campus_finance.fee_heads.validate_invoice_accounts",
+	"before_submit": "campus.campus_finance.challan.assign_challan_no",
+	"on_submit": "campus.campus_finance.concessions.mark_applied",
+	"on_cancel": "campus.campus_finance.concessions.release",
+}
+doc_events["Payment Entry"] = {
+	"validate": "campus.campus_finance.challan.set_payment_student",
+	"before_submit": "campus.campus_finance.challan.assign_receipt_no",
+	"on_cancel": [
+		"campus.campus_finance.scholarships.refresh_after_voucher_cancel",
+		"campus.campus_finance.fee_refunds.allow_payment_cancel",  # after ERPNext's own on_cancel, which sets the ignore list
+	],
+}
+doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
+doc_events["Journal Entry"] = {
+	"validate": "campus.campus_finance.scholarships.block_amend",
+	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
+}
+doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee", "on_update": "campus.faculty.setup.grant_employee_role"}
+doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
+doc_events["Room"]["validate"] = "campus.examinations.exam_halls.validate_room"
+doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
+doc_events["Employee Performance Feedback"] = {
+	e: "campus.faculty.self_appraisal.block_feedback_on_self_appraisal" for e in ("validate", "before_submit", "before_cancel")
+}
+doc_events["Appraisal"] = {
+	"before_validate": "campus.faculty.self_appraisal.before_validate",
+	"before_submit": "campus.faculty.self_appraisal.before_submit",
+}
+doc_events["Purchase Invoice"] = {
+	"on_submit": ["campus.academic_governance.honorarium.refresh_claim", "campus.examinations.remuneration_payment.refresh_claim"],
+	"on_cancel": "campus.academic_governance.honorarium.refresh_claim",
+	"before_submit": "campus.examinations.remuneration_payment.check_invoice",  # P2-T23
+	"before_cancel": "campus.examinations.remuneration_payment.refuse_invoice_cancel",  # P2-T23
+}
+_budget_control = "campus.research.budget_control"  # P3-T15: grant budget heads on spending lines
+doc_events["Purchase Invoice"]["validate"] = f"{_budget_control}.validate_lines"
+doc_events["Purchase Invoice"]["before_submit"] = [doc_events["Purchase Invoice"]["before_submit"], f"{_budget_control}.check_capital_limits"]
+doc_events["Purchase Order"] = {"validate": f"{_budget_control}.validate_lines", "before_submit": f"{_budget_control}.check_capital_limits"}
+doc_events["Journal Entry"]["validate"] = [doc_events["Journal Entry"]["validate"], f"{_budget_control}.validate_lines"]
+doc_events["Journal Entry"]["before_submit"] = f"{_budget_control}.check_capital_limits"
+doc_events["Expense Claim"] = {"validate": f"{_budget_control}.validate_lines"}
+doc_events["Purchase Order"]["before_update_after_submit"] = f"{_budget_control}.validate_updated_order"  # Update Items
+doc_events["Purchase Invoice"]["before_cancel"] = [doc_events["Purchase Invoice"]["before_cancel"], f"{_budget_control}.check_capital_credit_cancel"]
+doc_events["Journal Entry"]["before_cancel"] = f"{_budget_control}.check_capital_credit_cancel"
+for _dt in ("Payment Entry", "Journal Entry"):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
+	_before = doc_events.setdefault(_dt, {}).get("before_submit")
+	doc_events[_dt]["before_submit"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.examinations.remuneration_payment.check_paid_invoice"]
+for _dt in ("Payment Entry", "Purchase Invoice"):  # P3-T18: a payment exported to PFMS is withdrawn there before a cancel
+	_before = doc_events[_dt].get("before_cancel")
+	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.research.pfms.refuse_exported_cancel"]
+	_on = doc_events[_dt].get("on_cancel")
+	doc_events[_dt]["on_cancel"] = [*([_on] if isinstance(_on, str) else _on or []), "campus.research.pfms.allow_withdrawn_cancel"]
+for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Claim"):  # P3-T19: a closed sanction's lines stay
+	_before = doc_events.setdefault(_dt, {}).get("before_cancel")
+	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), f"{_budget_control}.refuse_cancel_on_closed"]
+_validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
+doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
+doc_events["Payment Entry"]["before_cancel"].append(f"{_budget_control}.refuse_payment_cancel_on_closed")  # P3-T19: its deductions stay
 
 # Scheduled Tasks
 # ---------------
@@ -219,6 +314,12 @@ doc_events["Program Enrollment"]["validate"] = [
 # Overriding Methods
 # ------------------------------
 #
+extend_doctype_class = {
+	"Student": ["campus.admissions.aadhaar.AadhaarMixin"],
+	"Student Applicant": ["campus.admissions.aadhaar.AadhaarMixin"],
+	"Program Enrollment": ["campus.admissions.seat_matrix.EnrollmentSeatLockMixin"],
+}
+override_whitelisted_methods = {"frappe.client.get_password": "campus.admissions.aadhaar.get_password"}
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "campus.event.get_events"
 # }
@@ -294,3 +395,148 @@ doc_events["Program Enrollment"]["validate"] = [
 
 
 boot_session = "campus.campus_platform.pack_visibility.boot_session"
+
+scheduler_events = {
+	"daily": [
+		"campus.campus_platform.positions.sync_all_roles",
+		"campus.campus_finance.fines.daily_fine_run",
+		"campus.admissions.documents.send_daily_reminders",
+		"campus.admissions.enquiry_followup.create_due_todos",
+		"campus.examinations.question_paper_files.sweep_plaintext",
+		"campus.research.proposals.send_deadline_reminders",
+		"campus.iqac.feedback_invites.send_reminders",
+		"campus.iqac.regulator.send_reminders",
+	],
+	"hourly": [
+		"campus.campus_platform.approval_escalation.escalate_overdue",
+		"campus.student_services.grievances.escalate_overdue",
+		"campus.admissions.allotment_import.reconcile_finished_imports",
+		"campus.examinations.cia.lock_due_schedules",
+	],
+	"weekly": [
+		"campus.academic_governance.actions.notify_overdue",
+	],
+	"cron": {
+		"*/15 * * * *": [
+			"campus.campus_messaging.delivery.dispatch_due",
+			"campus.campus_messaging.doctype.broadcast.broadcast.release_due",
+			"campus.campus_messaging.doctype.circular.circular.publish_due",
+			"campus.examinations.publication.notify_released_results",
+		]
+	},
+}
+
+# Delivery status webhooks (frappe_whatsapp updates WhatsApp Message) update the Message Log.
+doc_events["Approval Request"] = {"on_update": "campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status"}
+doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
+
+app_include_js = ["/assets/campus/js/approvals.js", "/assets/campus/js/attach_evidence.js"]  # P3-T04 Attach as Evidence
+
+doctype_js = {
+	"Student Applicant": "public/js/student_applicant.js",
+	"Student": "public/js/student.js",
+	"Student Result": "public/js/student_result.js",
+}
+
+doctype_js["Employee"] = "public/js/employee_faculty.js"  # P2-T09 self-appraisal button
+doctype_js["Appraisal"] = "public/js/appraisal_review.js"  # P2-T09 request HOD review
+doctype_js["Exam Session"] = "public/js/exam_session_question_paper.js"  # P2-T17 withdraw a course's paper
+doctype_list_js = {"Student": "public/js/student_list.js"}
+
+PORTAL_SCOPED = list(PORTAL_SCOPES)  # Student/Guardian roles are scoped to their own / linked students
+
+permission_query_conditions = {
+	"Circular": "campus.campus_messaging.circulars.get_permission_query_conditions",
+	"Approval Request": "campus.campus_platform.approval_access.get_permission_query_conditions",
+	"Lead": "campus.admissions.enquiry.get_permission_query_conditions",
+	**{dt: "campus.examinations.access.portal_permission_query" for dt in PORTAL_SCOPED},
+	**{dt: "campus.examinations.access.offering_permission_query" for dt in OFFERING_SCOPED},
+	"Student Result": "campus.examinations.access.result_permission_query",
+	**{dt: "campus.academic_governance.access.permission_query" for dt in ("Body Meeting", "Meeting Action Item")},
+	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
+	"Substitution": "campus.faculty.substitution_access.permission_query",
+	"Question Paper": "campus.examinations.question_papers.permission_query",
+	**{dt: "campus.examinations.question_papers.confidential_query" for dt in ("QP Setter Nomination", "QP Access Log")},
+	"Question Bank Item": "campus.examinations.question_papers.bank_item_query",
+}
+has_permission = {
+	"Circular": "campus.campus_messaging.circulars.has_permission",
+	"Approval Request": "campus.campus_platform.approval_access.has_permission",
+	"Lead": "campus.admissions.enquiry.has_permission",
+	**{dt: "campus.examinations.access.portal_has_permission" for dt in PORTAL_SCOPED},
+	**{dt: "campus.examinations.access.offering_has_permission" for dt in OFFERING_SCOPED},
+	"Student Result": "campus.examinations.access.result_has_permission",
+	**{dt: "campus.academic_governance.access.has_permission" for dt in ("Body Meeting", "Meeting Action Item")},
+	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
+	"Substitution": "campus.faculty.substitution_access.has_permission",
+	"Question Paper": "campus.examinations.question_papers.has_permission",
+	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("QP Setter Nomination", "QP Access Log")},
+	"Question Bank Item": "campus.examinations.question_papers.bank_item_has_permission",
+	"File": "campus.examinations.question_papers.file_has_permission",
+}
+has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
+# P3-T03: a criterion owner sees and edits only the Metric Values under their criteria
+permission_query_conditions["Metric Value"] = "campus.iqac.access.permission_query"
+has_permission["Metric Value"] = "campus.iqac.access.has_permission"
+permission_query_conditions["Metric Override"] = "campus.iqac.access.override_permission_query"
+has_permission["Metric Override"] = "campus.iqac.access.override_has_permission"
+# Frappe lets a share grant what has_permission refuses: confidential exam documents are never shared.
+doc_events["DocShare"] = {"validate": "campus.examinations.question_papers.block_confidential_share"}
+_qp = "campus.examinations.question_papers"
+doc_events["Version"] = {"before_insert": f"{_qp}.refuse_confidential_version"}
+doc_events["Notification"] = {"validate": f"{_qp}.refuse_confidential_notification"}
+doc_events["Webhook"] = {"validate": f"{_qp}.refuse_confidential_webhook"}
+# P2-T18 valuation: the dummy-number map is Exam Confidential only; examiners reach only their own allocations.
+_valuation = "campus.examinations.valuation_access"
+permission_query_conditions["Dummy Number Map"] = f"{_valuation}.map_query"
+has_permission["Dummy Number Map"] = f"{_valuation}.map_has_permission"
+# P2-T20: a teacher reads only the draft revaluations of a course they teach (to justify them)
+permission_query_conditions["Revaluation Application"] = "campus.examinations.revaluation.permission_query"
+has_permission["Revaluation Application"] = "campus.examinations.revaluation.has_permission"
+for _dt in ("Valuation Allocation", "Valuation Entry"):
+	permission_query_conditions[_dt] = f"{_valuation}.examiner_query"
+	has_permission[_dt] = f"{_valuation}.examiner_has_permission"
+doc_events["DocShare"]["validate"] = [doc_events["DocShare"]["validate"], f"{_valuation}.block_map_share"]
+# P3-T17: an approved Utilisation Certificate is rechecked when a ledger entry can move it; the PI reads their own
+doc_events["GL Entry"] = {"on_submit": "campus.research.utilisation.note_ledger_change"}
+permission_query_conditions["Utilisation Certificate"] = "campus.research.utilisation.permission_query"
+has_permission["Utilisation Certificate"] = "campus.research.utilisation.has_permission"
+# P3-T19: a sanctioned project's Project Update is its progress report / mid-term review
+doc_events["Project Update"] = {"validate": "campus.research.progress.validate_project_update"}
+# P3-T09: CO tags of CIA questions and bank items are codes of the course's Course Outcomes once it has any
+for _dt in ("CIA Schedule", "Question Bank Item"):
+	doc_events.setdefault(_dt, {})["validate"] = "campus.curriculum.outcomes.validate_co_tags"
+
+# Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
+# Any app may add its own; nothing else can be called.
+approval_final_actions = []
+
+jinja = {
+	"methods": [
+		"campus.campus_platform.verification.oc_qr_block",
+		"campus.curriculum.structure.curriculum_structure",
+		"campus.curriculum.outcomes.co_po_grid",
+		"campus.campus_finance.challan.challan_details",
+		"campus.faculty.cv.faculty_cv_sections",
+		"campus.examinations.exam_certificates.oc_graduate_record",
+	]
+}
+
+website_route_rules = [
+	{"from_route": "/verify/<code>", "to_route": "verify"},
+	{"from_route": "/disclosure/<slug>", "to_route": "disclosure"},  # P3-T04 public evidence
+	{"from_route": "/feedback/<campaign>", "to_route": "feedback"},  # P3-T07 answer a feedback campaign
+	{"from_route": "/campus-portal", "to_route": "campus_portal"},
+	*(
+		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
+		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback")
+	),
+	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
+	*(
+		{"from_route": f"/campus-portal/faculty/{page.replace('_', '-')}", "to_route": f"campus_portal/faculty/{page}"}
+		for page in ("attendance", "cia", "course_plan", "leave", "mentees")
+	),
+]
+
+# Message Logs are an audit trail: they must not block deleting the documents they refer to.
+ignore_links_on_delete = ["Message Log"]

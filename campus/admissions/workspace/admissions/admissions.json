@@ -1,0 +1,361 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Admissions</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Applicant\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Seat Matrix\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Allotment Import\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lead\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Live Seat Matrix\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Admission Enquiry Form\", \"col\": 3}}, {\"id\": \"sp0008\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0012\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-10-06 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "graduation-cap",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Admissions",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 8,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Admission",
+   "link_count": 0,
+   "link_to": "Student Admission",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Admission Quota",
+   "link_count": 0,
+   "link_to": "Admission Quota",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Counselling Authority",
+   "link_count": 0,
+   "link_to": "Counselling Authority",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Admission Document Rule",
+   "link_count": 0,
+   "link_to": "Admission Document Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Eligibility Rule",
+   "link_count": 0,
+   "link_to": "Eligibility Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Refund Rule",
+   "link_count": 0,
+   "link_to": "Refund Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Enquiry Follow-up Rule",
+   "link_count": 0,
+   "link_to": "Enquiry Follow-up Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seat Matrix",
+   "link_count": 0,
+   "link_to": "Seat Matrix",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lead",
+   "link_count": 0,
+   "link_to": "Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Applicant",
+   "link_count": 0,
+   "link_to": "Student Applicant",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Allotment Import",
+   "link_count": 0,
+   "link_to": "Allotment Import",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Admission Cancellation",
+   "link_count": 0,
+   "link_to": "Admission Cancellation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 9,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "Seat Matrix",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Live Seat Matrix",
+   "link_count": 0,
+   "link_to": "Live Seat Matrix",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Student Applicant",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Pending Documents",
+   "link_count": 0,
+   "link_to": "Pending Documents",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Program Enrollment",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Admissions by Quota and Category",
+   "link_count": 0,
+   "link_to": "Admissions by Quota and Category",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Admission Cancellation",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Refund Register",
+   "link_count": 0,
+   "link_to": "Refund Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Lead",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Enquiry Funnel by Source",
+   "link_count": 0,
+   "link_to": "Enquiry Funnel by Source",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Data Import",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Import Check",
+   "link_count": 0,
+   "link_to": "Import Check",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Allotment Import Row",
+   "link_count": 0,
+   "link_to": "Allotment Import Row",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seat Override Log",
+   "link_count": 0,
+   "link_to": "Seat Override Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Aadhaar Access Log",
+   "link_count": 0,
+   "link_to": "Aadhaar Access Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Admission Settings",
+   "link_count": 0,
+   "link_to": "Admission Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Admissions",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Admission Officer"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 40.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": "{} Approved",
+   "label": "Student Applicant",
+   "link_to": "Student Applicant",
+   "stats_filter": "{\"application_status\": \"Approved\"}",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Seat Matrix",
+   "link_to": "Seat Matrix",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Allotment Import",
+   "link_to": "Allotment Import",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Lead",
+   "link_to": "Lead",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Live Seat Matrix",
+   "link_to": "Live Seat Matrix",
+   "report_ref_doctype": "Seat Matrix",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "label": "Admission Enquiry Form",
+   "type": "URL",
+   "url": "/admission-enquiry"
+  }
+ ],
+ "title": "Admissions"
+}

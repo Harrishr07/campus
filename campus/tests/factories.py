@@ -3,7 +3,7 @@
 import frappe
 
 
-def make_company(name, abbr):
+def make_company(name, abbr, is_group=0, parent_company=None):
 	if frappe.db.exists("Company", name):
 		return
 	if not frappe.db.exists("Warehouse Type", "Transit"):  # test site has no ERPNext setup data
@@ -15,6 +15,8 @@ def make_company(name, abbr):
 			"abbr": abbr,
 			"default_currency": "INR",
 			"country": "India",
+			"is_group": is_group,
+			"parent_company": parent_company,
 		}
 	).insert()
 

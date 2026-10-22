@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "company",
+  "audience_rule",
+  "column_break_1",
+  "publish_from",
+  "publish_until",
+  "acknowledgement_required",
+  "published_on",
+  "body_section",
+  "body",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "audience_rule",
+   "fieldtype": "Link",
+   "label": "Audience Rule",
+   "options": "Audience Rule",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "publish_from",
+   "fieldtype": "Datetime",
+   "label": "Publish From",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "publish_until",
+   "fieldtype": "Datetime",
+   "label": "Publish Until"
+  },
+  {
+   "fieldname": "acknowledgement_required",
+   "fieldtype": "Check",
+   "label": "Acknowledgement Required"
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Published On",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "When the audience was notified."
+  },
+  {
+   "fieldname": "body_section",
+   "fieldtype": "Section Break",
+   "label": "Circular"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Text Editor",
+   "label": "Body",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Circular",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Circular",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "submit": 1
+  },
+  {
+   "role": "Student",
+   "read": 1
+  },
+  {
+   "role": "Guardian",
+   "read": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "is_submittable": 1,
+ "autoname": "CIR-.YYYY.-.#####",
+ "title_field": "title",
+ "track_changes": 1,
+ "description": "Visible to the audience only once approved and inside its publish window."
+}

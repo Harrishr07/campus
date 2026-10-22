@@ -1,0 +1,444 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-10 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sanction",
+  "title",
+  "company",
+  "funding_agency",
+  "funding_scheme",
+  "sanction_order_no",
+  "column_break_1",
+  "from_date",
+  "to_date",
+  "version",
+  "principal_investigator",
+  "pi_name",
+  "pi_user",
+  "section_accounts",
+  "project",
+  "cost_center",
+  "column_break_2",
+  "liability_account",
+  "currency",
+  "section_figures",
+  "opening_unspent",
+  "grants_received",
+  "interest_earned",
+  "other_adjustments",
+  "total_available",
+  "column_break_3",
+  "total_expenditure",
+  "closing_unspent",
+  "unreconciled_entries",
+  "unreconciled_amount",
+  "heads",
+  "section_certification",
+  "certificate_text",
+  "pi_certified_by",
+  "accounts_certified_by",
+  "principal_certified_by",
+  "column_break_4",
+  "print_format",
+  "verification_code",
+  "remarks",
+  "section_source",
+  "source_changed",
+  "source_changed_on",
+  "snapshot",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "UC-.YYYY.-",
+   "default": "UC-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "sanction",
+   "fieldtype": "Link",
+   "label": "Sanction",
+   "options": "Sanction",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Project Title",
+   "read_only": 1,
+   "fetch_from": "sanction.title"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_agency",
+   "fieldtype": "Link",
+   "label": "Funding Agency",
+   "options": "Funding Agency",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "funding_scheme",
+   "fieldtype": "Link",
+   "label": "Funding Scheme",
+   "options": "Funding Scheme",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sanction_order_no",
+   "fieldtype": "Data",
+   "label": "Sanction Order No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "principal_investigator",
+   "fieldtype": "Link",
+   "label": "Principal Investigator",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pi_name",
+   "fieldtype": "Data",
+   "label": "PI Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pi_user",
+   "fieldtype": "Link",
+   "label": "PI User",
+   "options": "User",
+   "read_only": 1,
+   "description": "The PI certifies first (approval level 1)."
+  },
+  {
+   "fieldname": "section_accounts",
+   "fieldtype": "Section Break",
+   "label": "Sanction Accounts",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Centre",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "liability_account",
+   "fieldtype": "Link",
+   "label": "Grant Liability Account",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_figures",
+   "fieldtype": "Section Break",
+   "label": "Utilisation",
+   "description": "Read from the general ledger of the sanction when the certificate is saved."
+  },
+  {
+   "fieldname": "opening_unspent",
+   "fieldtype": "Currency",
+   "label": "Opening Unspent Balance",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grants_received",
+   "fieldtype": "Currency",
+   "label": "Grants Received in the Period",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "interest_earned",
+   "fieldtype": "Currency",
+   "label": "Interest Earned (Grant Liability)",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "other_adjustments",
+   "fieldtype": "Currency",
+   "label": "Refunds and Other Adjustments",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Other postings to the grant liability, e.g. unspent balance refunded to the agency (negative)."
+  },
+  {
+   "fieldname": "total_available",
+   "fieldtype": "Currency",
+   "label": "Total Available",
+   "options": "currency",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_expenditure",
+   "fieldtype": "Currency",
+   "label": "Expenditure in the Period",
+   "options": "currency",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "closing_unspent",
+   "fieldtype": "Currency",
+   "label": "Closing Unspent Balance",
+   "options": "currency",
+   "read_only": 1,
+   "bold": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "unreconciled_entries",
+   "fieldtype": "Int",
+   "label": "Unreconciled Entries",
+   "read_only": 1,
+   "description": "Spending on the project or cost centre outside the sanction's budget heads, up to the period end. The certificate can't be approved while there are any."
+  },
+  {
+   "fieldname": "unreconciled_amount",
+   "fieldtype": "Currency",
+   "label": "Unreconciled Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "heads",
+   "fieldtype": "Table",
+   "label": "Expenditure by Head",
+   "options": "Utilisation Certificate Head",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_certification",
+   "fieldtype": "Section Break",
+   "label": "Certification"
+  },
+  {
+   "fieldname": "certificate_text",
+   "fieldtype": "Text Editor",
+   "label": "Certificate",
+   "description": "Placeholder wording until the agency's format is supplied; printed on the certificate."
+  },
+  {
+   "fieldname": "pi_certified_by",
+   "fieldtype": "Link",
+   "label": "Certified by PI",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "accounts_certified_by",
+   "fieldtype": "Link",
+   "label": "Certified by Accounts",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "principal_certified_by",
+   "fieldtype": "Link",
+   "label": "Certified by Principal",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "print_format",
+   "fieldtype": "Data",
+   "label": "Certificate Format",
+   "read_only": 1,
+   "description": "The scheme's UC Format, else the agency's, else the placeholder Utilisation Certificate print format."
+  },
+  {
+   "fieldname": "verification_code",
+   "fieldtype": "Data",
+   "label": "Verification Code",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "section_source",
+   "fieldtype": "Section Break",
+   "label": "Source",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "source_changed",
+   "fieldtype": "Check",
+   "label": "Source Changed",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_standard_filter": 1,
+   "description": "A ledger entry dated in or before the period moved the figures after approval. The approved figures stay; cancel and amend to revise."
+  },
+  {
+   "fieldname": "source_changed_on",
+   "fieldtype": "Datetime",
+   "label": "Source Changed On",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.source_changed"
+  },
+  {
+   "fieldname": "snapshot",
+   "fieldtype": "Code",
+   "label": "Approved Figures",
+   "options": "JSON",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Utilisation Certificate",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-11 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Utilisation Certificate",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

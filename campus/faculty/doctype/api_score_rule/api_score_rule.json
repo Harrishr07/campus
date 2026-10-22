@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "company",
+  "effective_from",
+  "kras_section",
+  "kras",
+  "rows_section",
+  "rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "label": "Rule Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "e.g. UGC API 2026-27."
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "label": "Effective From",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The version in force for an appraisal period is the latest one effective on or before the period end."
+  },
+  {
+   "fieldname": "kras_section",
+   "fieldtype": "Section Break",
+   "label": "KRAs"
+  },
+  {
+   "fieldname": "kras",
+   "fieldtype": "Table",
+   "label": "KRAs",
+   "options": "API Score KRA",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rows_section",
+   "fieldtype": "Section Break",
+   "label": "Activity Points"
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Activity Points",
+   "options": "API Score Rule Row",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "API Score Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "rule_name"
+}

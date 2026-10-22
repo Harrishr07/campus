@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "authority_name",
+  "enabled",
+  "mapping_section",
+  "column_mapping"
+ ],
+ "fields": [
+  {
+   "fieldname": "authority_name",
+   "fieldtype": "Data",
+   "label": "Authority Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1"
+  },
+  {
+   "fieldname": "mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Allotment Import Columns"
+  },
+  {
+   "fieldname": "column_mapping",
+   "fieldtype": "Table",
+   "label": "Column Mapping",
+   "options": "Import Column Mapping",
+   "description": "Maps each column of the authority's allotment file to a Student Applicant field."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Counselling Authority",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:authority_name",
+ "naming_rule": "By fieldname",
+ "title_field": "authority_name"
+}

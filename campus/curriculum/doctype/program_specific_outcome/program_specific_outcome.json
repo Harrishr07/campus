@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "program",
+  "regulation",
+  "pso_code",
+  "company",
+  "statement"
+ ],
+ "fields": [
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "pso_code",
+   "fieldtype": "Data",
+   "label": "PSO Code",
+   "reqd": 1,
+   "in_list_view": 1,
+   "set_only_once": 1,
+   "description": "e.g. PSO1"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "fetch_from": "program.oc_company"
+  },
+  {
+   "fieldname": "statement",
+   "fieldtype": "Small Text",
+   "label": "Statement",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Program Specific Outcome",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "search_fields": "program,regulation,pso_code",
+ "title_field": "pso_code"
+}

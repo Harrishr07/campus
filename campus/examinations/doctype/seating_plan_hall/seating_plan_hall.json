@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Seating Plan Hall",
+ "field_order": [
+  "room",
+  "seat_rows",
+  "seat_columns",
+  "capacity",
+  "seated"
+ ],
+ "fields": [
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Exam Hall",
+   "options": "Room",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seat_rows",
+   "fieldtype": "Int",
+   "label": "Rows",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seat_columns",
+   "fieldtype": "Int",
+   "label": "Columns",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Capacity",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seated",
+   "fieldtype": "Int",
+   "label": "Seated",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "permissions": [],
+ "istable": 1
+}

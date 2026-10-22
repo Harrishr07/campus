@@ -7,8 +7,11 @@ from frappe.tests import IntegrationTestCase
 class CampusTestCase(IntegrationTestCase):
 	"""Base class for campus integration tests.
 
-	Subclasses that need demo data override `load_demo_data`; it runs once per class.
+	Subclasses that need demo data set `demo_scale` ("small" or "full") or override
+	`load_demo_data`; it runs once per class.
 	"""
+
+	demo_scale = None
 
 	@classmethod
 	def setUpClass(cls):
@@ -17,4 +20,8 @@ class CampusTestCase(IntegrationTestCase):
 
 	@classmethod
 	def load_demo_data(cls):
-		"""Hook for loading demo data. No-op until the demo-data loader exists."""
+		"""Hook for loading demo data: the standard set at `demo_scale`, nothing when unset."""
+		if cls.demo_scale:
+			from campus.tests.demo import make_demo
+
+			make_demo(cls.demo_scale)

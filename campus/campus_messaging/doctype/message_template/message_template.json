@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "event_key",
+  "enabled",
+  "purpose",
+  "urgent",
+  "channels_section",
+  "channels",
+  "whatsapp_template",
+  "sms_dlt_template_id",
+  "variables",
+  "bodies_section",
+  "bodies"
+ ],
+ "fields": [
+  {
+   "fieldname": "event_key",
+   "fieldtype": "Data",
+   "label": "Event Key",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "e.g. fees.due"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "label": "Purpose",
+   "options": "transactional\npromotional",
+   "default": "transactional",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "urgent",
+   "fieldtype": "Check",
+   "label": "Urgent",
+   "description": "Urgent messages ignore quiet hours."
+  },
+  {
+   "fieldname": "channels_section",
+   "fieldtype": "Section Break",
+   "label": "Channels"
+  },
+  {
+   "fieldname": "channels",
+   "fieldtype": "Table",
+   "label": "Channels",
+   "options": "Message Template Channel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "whatsapp_template",
+   "fieldtype": "Link",
+   "label": "WhatsApp Template",
+   "options": "WhatsApp Templates"
+  },
+  {
+   "fieldname": "sms_dlt_template_id",
+   "fieldtype": "Data",
+   "label": "SMS DLT Template ID"
+  },
+  {
+   "fieldname": "variables",
+   "fieldtype": "Small Text",
+   "label": "Variables",
+   "description": "WhatsApp template variables: one Jinja expression per line, in order (e.g. doc.name)."
+  },
+  {
+   "fieldname": "bodies_section",
+   "fieldtype": "Section Break",
+   "label": "Language Variants"
+  },
+  {
+   "fieldname": "bodies",
+   "fieldtype": "Table",
+   "label": "Bodies",
+   "options": "Message Template Body",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Message Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:event_key"
+}

@@ -1,0 +1,29 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Attendance") }}</h2>
+{% if attendance.terms|length > 1 %}
+<form class="cp-switch" method="get">
+	<input type="hidden" name="student" value="{{ student }}">
+	<label for="cp-term">{{ _("Term") }}</label>
+	<select id="cp-term" name="term" onchange="this.form.submit()">
+		{% for t in attendance.terms %}<option {% if t == attendance.academic_term %}selected{% endif %}>{{ t }}</option>{% endfor %}
+	</select>
+</form>
+{% endif %}
+{% if not attendance.summary %}
+<p class="cp-empty">{{ _("No attendance recorded yet.") }}</p>
+{% else %}
+{% set s = attendance.summary %}
+<div class="cp-card">
+	<span class="cp-label">{{ _("Overall") }}</span>
+	<span class="cp-value">{{ s.overall_pct if s.overall_pct is not none else "-" }}%
+		<small class="cp-badge cp-{{ s.status|lower|replace(' ', '-') }}">{{ _(s.status) }}</small></span>
+</div>
+<ul class="cp-list">
+	{% for o in s.offerings %}
+	<li><strong>{{ o.course }}</strong><br>
+		{{ _("Attended") }} {{ o.attended }} / {{ o.conducted }} &middot; {{ o.pct if o.pct is not none else "-" }}%</li>
+	{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "campus/www/campus_portal/faculty/_base.html" %}
+{% block faculty_body %}
+<h2>{{ _("My timetable") }}</h2>
+<form class="cp-switch" method="get">
+	<label for="cp-from">{{ _("Week from") }}</label>
+	<input id="cp-from" name="from_date" type="date" value="{{ timetable.from_date }}" onchange="this.form.submit()">
+</form>
+{% if not timetable.periods %}<p class="cp-empty">{{ _("No periods this week.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for p in timetable.periods %}
+	<li>
+		<strong>{{ frappe.utils.formatdate(p.schedule_date) }} {{ p.from_time|string|e }}-{{ p.to_time|string|e }}</strong>
+		{% if p.grant == "Substitution" %}<span class="cp-badge">{{ _("Substitution") }}</span>{% endif %}<br>
+		{{ p.course|e }} &middot; {{ p.student_group|e }}{% if p.room %} &middot; {{ p.room|e }}{% endif %}<br>
+		<a class="cp-btn" href="/campus-portal/faculty/attendance?course_schedule={{ p.course_schedule|urlencode }}">
+			{{ _("Mark attendance") if not p.marked else _("Attendance marked ({0})").format(p.marked) }}</a>
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

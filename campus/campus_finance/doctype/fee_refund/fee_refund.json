@@ -1,0 +1,268 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "refund_type",
+  "student",
+  "student_name",
+  "company",
+  "column_break_1",
+  "fee_invoice",
+  "fee_head",
+  "amount",
+  "deduction",
+  "section_reason",
+  "reason",
+  "section_figures",
+  "amount_paid",
+  "already_refunded",
+  "available",
+  "column_break_2",
+  "dues_netted",
+  "cash_refund",
+  "section_vouchers",
+  "credit_note",
+  "payment_entry",
+  "adjustment_entry",
+  "damages_entry"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "FRF-.YYYY.-",
+   "default": "FRF-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "refund_type",
+   "fieldtype": "Select",
+   "label": "Refund Type",
+   "options": "Fee Refund\nCaution Deposit",
+   "default": "Fee Refund",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1,
+   "description": "A Caution Deposit refund returns the deposit less damages, and is set against the student's dues."
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "in_standard_filter": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "fee_invoice",
+   "fieldtype": "Link",
+   "label": "Fee Invoice",
+   "options": "Sales Invoice",
+   "reqd": 1,
+   "set_only_once": 1,
+   "description": "The paid invoice the refund is credited against."
+  },
+  {
+   "fieldname": "fee_head",
+   "fieldtype": "Select",
+   "label": "Fee Head",
+   "options": "Tuition\nExam\nDevelopment\nLibrary\nLab\nHostel\nMess\nTransport\nCaution Deposit\nFine\nCondonation\nCertificate",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Refund Amount",
+   "in_list_view": 1,
+   "description": "Credited to the student. For a Caution Deposit it is the deposit available less the damages."
+  },
+  {
+   "fieldname": "deduction",
+   "fieldtype": "Currency",
+   "label": "Damages Deducted",
+   "depends_on": "eval:doc.refund_type=='Caution Deposit'",
+   "description": "Caution Deposit only: kept from the deposit. Accounts moves it from the deposit liability to income."
+  },
+  {
+   "fieldname": "section_reason",
+   "fieldtype": "Section Break",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_figures",
+   "fieldtype": "Section Break",
+   "label": "Figures"
+  },
+  {
+   "fieldname": "amount_paid",
+   "fieldtype": "Currency",
+   "label": "Paid for the Head",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "already_refunded",
+   "fieldtype": "Currency",
+   "label": "Already Refunded or Deducted",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "available",
+   "fieldtype": "Currency",
+   "label": "Available to Refund",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "dues_netted",
+   "fieldtype": "Currency",
+   "label": "Set Against Dues",
+   "description": "Caution Deposit only: settles the student's dues in this company before any cash goes back.",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "cash_refund",
+   "fieldtype": "Currency",
+   "label": "Cash Refund",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_vouchers",
+   "fieldtype": "Section Break",
+   "label": "Vouchers"
+  },
+  {
+   "fieldname": "credit_note",
+   "fieldtype": "Link",
+   "label": "Credit Note",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Refund Payment",
+   "options": "Payment Entry",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "adjustment_entry",
+   "fieldtype": "Link",
+   "label": "Dues Adjustment",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "damages_entry",
+   "fieldtype": "Link",
+   "label": "Damages Entry",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-08 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Fee Refund",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "delete": 1,
+   "export": 1,
+   "cancel": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "export": 1,
+   "cancel": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name"
+}

@@ -1,0 +1,27 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Grievances") }}</h2>
+<form class="cp-card cp-form" data-method="campus.student_services.portal.raise_grievance">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<label for="cp-category">{{ _("Category") }}</label>
+	<select id="cp-category" name="category" required>
+		{% for c in categories %}<option value="{{ c.name|e }}">{{ c.name|e }}</option>{% endfor %}
+	</select>
+	<label for="cp-description">{{ _("Describe the problem") }}</label>
+	<textarea id="cp-description" name="description" rows="4" required></textarea>
+	<label for="cp-file">{{ _("Attachment (PDF, JPG or PNG, optional; kept private)") }}</label>
+	<input id="cp-file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png">
+	<button class="cp-btn" type="submit">{{ _("Submit") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% if not grievances %}<p class="cp-empty">{{ _("No grievances raised.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for g in grievances %}
+	<li>
+		<strong>{{ g.category|e }}</strong> <span class="cp-badge">{{ g.status|e }}</span><br>
+		{{ g.description|e }}
+		{% if g.resolution %}<br>{{ _("Resolution") }}: {{ g.resolution|e }}{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

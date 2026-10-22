@@ -1,0 +1,22 @@
+{
+ "absolute_value": 0,
+ "align_labels_right": 0,
+ "creation": "2026-10-05 00:00:00.000000",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "Payment Entry",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "html": "{% set c = challan_details(doc) %}\n<style>.oc-receipt{font-size:13px}.oc-receipt td,.oc-receipt th{padding:4px 6px}</style>\n<div class=\"oc-receipt\">\n\t<h2 style=\"text-align:center\">{{ doc.company }}</h2>\n\t<h4 style=\"text-align:center\">{{ _(\"Fee Receipt\") }}</h4>\n\t<table style=\"width:100%\">\n\t\t<tr><td>{{ _(\"Receipt No\") }}</td><td><b>{{ doc.oc_receipt_no or doc.name }}</b></td><td>{{ _(\"Date\") }}</td><td>{{ frappe.format(doc.posting_date, {\"fieldtype\": \"Date\"}) }}</td></tr>\n\t\t<tr><td>{{ _(\"Student\") }}</td><td>{{ c.student.student_name if c.student else doc.party_name }} {% if c.student %}({{ c.student.name }}){% endif %}</td><td>{{ _(\"Reference\") }}</td><td>{{ doc.reference_no or \"\" }}</td></tr>\n\t\t<tr><td>{{ _(\"Amount Received\") }}</td><td><b>{{ doc.get_formatted(\"paid_amount\") }}</b></td><td>{{ _(\"Mode\") }}</td><td>{{ doc.mode_of_payment or \"\" }}</td></tr>\n\t</table>\n\t<table style=\"width:100%;border-top:1px solid #000;margin-top:8px\">\n\t\t<tr><th>{{ _(\"Invoice\") }}</th><th>{{ _(\"Challan No\") }}</th><th style=\"text-align:right\">{{ _(\"Allocated\") }}</th></tr>\n\t\t{% for row in doc.references %}<tr><td>{{ row.reference_name }}</td><td>{{ frappe.db.get_value(row.reference_doctype, row.reference_name, \"oc_challan_no\") if row.reference_doctype == \"Sales Invoice\" else \"\" }}</td><td style=\"text-align:right\">{{ row.get_formatted(\"allocated_amount\") }}</td></tr>{% endfor %}\n\t</table>\n\t<p style=\"margin-top:8px\">{{ doc.get_formatted(\"paid_amount\") }} {{ _(\"received in words\") }}: {{ doc.base_in_words or \"\" }}</p>\n\t<p style=\"text-align:right;margin-top:40px\">{{ _(\"Authorised Signatory\") }}</p>\n</div>\n",
+ "idx": 0,
+ "line_breaks": 0,
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Fee Receipt",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "raw_printing": 0,
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

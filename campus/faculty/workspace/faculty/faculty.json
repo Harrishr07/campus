@@ -1,0 +1,364 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Faculty</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Norm\", \"col\": 3}}, {\"id\": \"sc0011\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Allocation\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty vs Sanctioned Posts\", \"col\": 3}}, {\"id\": \"sc0012\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workload Balance\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student-Teacher Ratio\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}]",
+ "creation": "2026-10-08 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "users",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Faculty",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Norm",
+   "link_count": 0,
+   "link_to": "Faculty Norm",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sanctioned Post",
+   "link_count": 0,
+   "link_to": "Sanctioned Post",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "API Score Rule",
+   "link_count": 0,
+   "link_to": "API Score Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Timetable Slot Template",
+   "link_count": 0,
+   "link_to": "Timetable Slot Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 9,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Employee",
+   "link_count": 0,
+   "link_to": "Employee",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Job Applicant",
+   "link_count": 0,
+   "link_to": "Job Applicant",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Allocation",
+   "link_count": 0,
+   "link_to": "Course Allocation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Timetable",
+   "link_count": 0,
+   "link_to": "Timetable",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Timetable Generation Run",
+   "link_count": 0,
+   "link_to": "Timetable Generation Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Substitution",
+   "link_count": 0,
+   "link_to": "Substitution",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Achievement",
+   "link_count": 0,
+   "link_to": "Faculty Achievement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Appraisal",
+   "link_count": 0,
+   "link_to": "Appraisal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Appraisal Review",
+   "link_count": 0,
+   "link_to": "Appraisal Review",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 9,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Faculty vs Sanctioned Posts",
+   "link_count": 0,
+   "link_to": "Faculty vs Sanctioned Posts",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "PhD Faculty",
+   "link_count": 0,
+   "link_to": "PhD Faculty",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Teaching Experience",
+   "link_count": 0,
+   "link_to": "Teaching Experience",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Cadre Ratio",
+   "link_count": 0,
+   "link_to": "Cadre Ratio",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Student-Teacher Ratio",
+   "link_count": 0,
+   "link_to": "Student-Teacher Ratio",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Workload Balance",
+   "link_count": 0,
+   "link_to": "Workload Balance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "FDP Participation",
+   "link_count": 0,
+   "link_to": "FDP Participation",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Conference Financial Support",
+   "link_count": 0,
+   "link_to": "Conference Financial Support",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Timetable Clash Checker",
+   "link_count": 0,
+   "link_to": "Timetable Clash Checker",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-09 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "Faculty",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "HR User"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
+  }
+ ],
+ "sequence_id": 49.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "label": "Employee",
+   "link_to": "Employee",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Faculty Norm",
+   "link_to": "Faculty Norm",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Course Allocation",
+   "link_to": "Course Allocation",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Faculty vs Sanctioned Posts",
+   "link_to": "Faculty vs Sanctioned Posts",
+   "type": "Report",
+   "report_ref_doctype": "Sanctioned Post"
+  },
+  {
+   "color": "Grey",
+   "label": "Workload Balance",
+   "link_to": "Workload Balance",
+   "type": "Report",
+   "report_ref_doctype": "Course Allocation"
+  },
+  {
+   "color": "Grey",
+   "label": "Student-Teacher Ratio",
+   "link_to": "Student-Teacher Ratio",
+   "type": "Report",
+   "report_ref_doctype": "Faculty Norm"
+  }
+ ],
+ "title": "Faculty"
+}

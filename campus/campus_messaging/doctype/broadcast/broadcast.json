@@ -1,0 +1,168 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "company",
+  "status",
+  "column_break_1",
+  "audience_rule",
+  "message_template",
+  "schedule_at",
+  "context",
+  "results_section",
+  "recipients_count",
+  "queued_count",
+  "skipped_count",
+  "failed_count",
+  "bulk_run",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending Approval\nScheduled\nSending\nSent\nFailed",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "audience_rule",
+   "fieldtype": "Link",
+   "label": "Audience Rule",
+   "options": "Audience Rule",
+   "reqd": 1
+  },
+  {
+   "fieldname": "message_template",
+   "fieldtype": "Link",
+   "label": "Message Template",
+   "options": "Message Template",
+   "reqd": 1,
+   "description": "Promotional templates reach only guardians and students who opted in."
+  },
+  {
+   "fieldname": "schedule_at",
+   "fieldtype": "Datetime",
+   "label": "Schedule At",
+   "description": "Leave empty to send as soon as the broadcast is submitted."
+  },
+  {
+   "fieldname": "context",
+   "fieldtype": "Code",
+   "label": "Context",
+   "options": "JSON",
+   "description": "Optional values for the template, as a JSON object."
+  },
+  {
+   "fieldname": "results_section",
+   "fieldtype": "Section Break",
+   "label": "Results"
+  },
+  {
+   "fieldname": "recipients_count",
+   "fieldtype": "Int",
+   "label": "Recipients",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "queued_count",
+   "fieldtype": "Int",
+   "label": "Queued",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "skipped_count",
+   "fieldtype": "Int",
+   "label": "Skipped",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "failed_count",
+   "fieldtype": "Int",
+   "label": "Failed",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "options": "Bulk Run",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Broadcast",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Broadcast",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "submit": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "is_submittable": 1,
+ "autoname": "BC-.YYYY.-.#####",
+ "title_field": "title"
+}

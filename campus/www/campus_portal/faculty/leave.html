@@ -1,0 +1,26 @@
+{% extends "campus/www/campus_portal/faculty/_base.html" %}
+{% block faculty_body %}
+<h2>{{ _("Leave") }}</h2>
+<form class="cp-card cp-form" data-method="campus.faculty.portal.apply_leave">
+	<label for="cp-type">{{ _("Leave type") }}</label>
+	<select id="cp-type" name="leave_type" required>
+		{% for t in leave_types %}<option value="{{ t|e }}">{{ t|e }}</option>{% endfor %}
+	</select>
+	<label for="cp-from">{{ _("From") }}</label>
+	<input id="cp-from" name="from_date" type="date" required>
+	<label for="cp-to">{{ _("To") }}</label>
+	<input id="cp-to" name="to_date" type="date" required>
+	<label class="cp-check"><input name="half_day" type="checkbox" value="1"> {{ _("Half day (on the From date)") }}</label>
+	<label for="cp-reason">{{ _("Reason") }}</label>
+	<textarea id="cp-reason" name="reason" rows="3"></textarea>
+	<button class="cp-btn" type="submit">{{ _("Apply") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% if not leaves %}<p class="cp-empty">{{ _("No leave applications.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for l in leaves %}
+	<li><strong>{{ l.leave_type|e }}</strong> <span class="cp-badge">{{ _(l.status)|e }}</span><br>
+		{{ frappe.utils.formatdate(l.from_date) }} - {{ frappe.utils.formatdate(l.to_date) }} ({{ l.total_leave_days }})</li>
+	{% endfor %}
+</ul>
+{% endblock %}

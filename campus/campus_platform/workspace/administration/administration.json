@@ -1,0 +1,206 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Administration</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Institution Profile\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Regulation\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Position Holder\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Bulk Run\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Module Pack\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Campus Settings\", \"col\": 3}}, {\"id\": \"sp0008\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-10-06 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "landmark",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Administration",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Institution Profile",
+   "link_count": 0,
+   "link_to": "Institution Profile",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Regulation",
+   "link_count": 0,
+   "link_to": "Regulation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Position",
+   "link_count": 0,
+   "link_to": "Position",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Module Pack",
+   "link_count": 0,
+   "link_to": "Module Pack",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Shared Service Agreement",
+   "link_count": 0,
+   "link_to": "Shared Service Agreement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Position Holder",
+   "link_count": 0,
+   "link_to": "Position Holder",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Verifiable Document",
+   "link_count": 0,
+   "link_to": "Verifiable Document",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bulk Run",
+   "link_count": 0,
+   "link_to": "Bulk Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Campus Settings",
+   "link_count": 0,
+   "link_to": "Campus Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Administration",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 47.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Institution Profile",
+   "link_to": "Institution Profile",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Regulation",
+   "link_to": "Regulation",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Position Holder",
+   "link_to": "Position Holder",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Bulk Run",
+   "link_to": "Bulk Run",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Module Pack",
+   "link_to": "Module Pack",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Campus Settings",
+   "link_to": "Campus Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Administration"
+}

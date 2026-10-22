@@ -1,0 +1,157 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "course",
+  "course_offering",
+  "course_type",
+  "credits",
+  "cia",
+  "ese",
+  "total",
+  "grade",
+  "grade_point",
+  "result",
+  "kind",
+  "attempt",
+  "moderation",
+  "grace",
+  "grace_rule",
+  "grading_method",
+  "in_gpa"
+ ],
+ "fields": [
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Offering",
+   "options": "Student Group",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course_type",
+   "fieldtype": "Data",
+   "label": "Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "credits",
+   "fieldtype": "Float",
+   "label": "Credits",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cia",
+   "fieldtype": "Float",
+   "label": "CIA",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ese",
+   "fieldtype": "Float",
+   "label": "ESE",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Float",
+   "label": "Total %",
+   "read_only": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "label": "Grade",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "grade_point",
+   "fieldtype": "Float",
+   "label": "GP",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "Pass\nFail\nSA\nAB\nWD\nPending",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Data",
+   "label": "Kind",
+   "read_only": 1,
+   "description": "Current or Arrear."
+  },
+  {
+   "fieldname": "attempt",
+   "fieldtype": "Int",
+   "label": "Attempt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "moderation",
+   "fieldtype": "Float",
+   "label": "Moderation",
+   "read_only": 1,
+   "description": "ESE marks from the approved Mark Moderation of the course."
+  },
+  {
+   "fieldname": "grace",
+   "fieldtype": "Float",
+   "label": "Grace",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grace_rule",
+   "fieldtype": "Link",
+   "label": "Grace Rule",
+   "options": "Exam Rule Set",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grading_method",
+   "fieldtype": "Data",
+   "label": "Grading Method",
+   "read_only": 1
+  },
+  {
+   "fieldname": "in_gpa",
+   "fieldtype": "Check",
+   "label": "Counts in GPA",
+   "default": "1",
+   "read_only": 1,
+   "description": "Off for a course category the Grading Scheme excludes from SGPA and CGPA (e.g. mandatory courses)."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Student Result Course",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}

@@ -6,7 +6,7 @@ import frappe
 
 from campus.tests.utils import CampusTestCase
 
-REQUIRED_APPS = ["erpnext", "hrms", "education", "india_compliance"]
+REQUIRED_APPS = ["erpnext", "hrms", "education", "india_compliance", "frappe_whatsapp"]
 
 
 def module_packages():

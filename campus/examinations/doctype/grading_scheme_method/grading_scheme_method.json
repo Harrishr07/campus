@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "course_type",
+  "method",
+  "min_cohort"
+ ],
+ "fields": [
+  {
+   "fieldname": "course_type",
+   "fieldtype": "Select",
+   "label": "Course Type",
+   "options": "Theory\nLab\nTheory with Lab\nProject\nOnline",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "method",
+   "fieldtype": "Select",
+   "label": "Method",
+   "options": "Absolute\nRelative Box-Cox\nOnline Table",
+   "default": "Absolute",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_cohort",
+   "fieldtype": "Int",
+   "label": "Minimum Cohort",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Relative grading applies only when more students than this passed the course."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Grading Scheme Method",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}

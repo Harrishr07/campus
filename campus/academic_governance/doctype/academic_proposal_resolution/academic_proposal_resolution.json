@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "stage",
+  "body_type",
+  "body",
+  "body_meeting",
+  "resolution_no",
+  "decision",
+  "resolution_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "stage",
+   "fieldtype": "Int",
+   "label": "Stage",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "body_type",
+   "fieldtype": "Link",
+   "label": "Body Type",
+   "options": "Body Type",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Link",
+   "label": "Body",
+   "options": "Body",
+   "read_only": 1
+  },
+  {
+   "fieldname": "body_meeting",
+   "fieldtype": "Link",
+   "label": "Body Meeting",
+   "options": "Body Meeting",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolution_no",
+   "fieldtype": "Data",
+   "label": "Resolution No",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Data",
+   "label": "Decision",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "resolution_date",
+   "fieldtype": "Date",
+   "label": "Resolution Date",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Academic Proposal Resolution",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

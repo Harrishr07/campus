@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "voucher_type",
+  "voucher_no",
+  "reference_doctype",
+  "reference_name",
+  "supplier",
+  "amount",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "voucher_type",
+   "fieldtype": "Link",
+   "label": "Voucher Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "voucher_no",
+   "fieldtype": "Dynamic Link",
+   "label": "Voucher No",
+   "options": "voucher_type",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Paid Against Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Paid Against",
+   "options": "reference_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "PFMS Export Batch Exclusion",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "istable": 1
+}

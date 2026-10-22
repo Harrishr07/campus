@@ -1,0 +1,199 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "academic_term",
+  "program",
+  "semester",
+  "send_guardian_alerts",
+  "column_break_1",
+  "run_on",
+  "bulk_run",
+  "locked",
+  "locked_by",
+  "locked_on",
+  "run_key",
+  "section_counts",
+  "eligible_count",
+  "condonation_count",
+  "detained_count",
+  "section_rows",
+  "rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "semester",
+   "fieldtype": "Int",
+   "label": "Semester",
+   "description": "Only students with a submitted Course Registration of this semester in the term."
+  },
+  {
+   "fieldname": "send_guardian_alerts",
+   "fieldtype": "Check",
+   "label": "Alert Guardians of Shortages",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "run_on",
+   "fieldtype": "Datetime",
+   "label": "Last Run On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "options": "Bulk Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "locked",
+   "fieldtype": "Check",
+   "label": "Locked",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "A locked run is a frozen snapshot and cannot be re-run."
+  },
+  {
+   "fieldname": "locked_by",
+   "fieldtype": "Link",
+   "label": "Locked By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "locked_on",
+   "fieldtype": "Datetime",
+   "label": "Locked On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "run_key",
+   "fieldtype": "Data",
+   "label": "Run Key",
+   "read_only": 1,
+   "hidden": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "section_counts",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "eligible_count",
+   "fieldtype": "Int",
+   "label": "Eligible",
+   "read_only": 1
+  },
+  {
+   "fieldname": "condonation_count",
+   "fieldtype": "Int",
+   "label": "Condonation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "detained_count",
+   "fieldtype": "Int",
+   "label": "Detained (SA)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_rows",
+   "fieldtype": "Section Break",
+   "label": "Students"
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Students",
+   "options": "Attendance Eligibility Row",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Attendance Eligibility Run",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "AER-.#####",
+ "title_field": "academic_term"
+}

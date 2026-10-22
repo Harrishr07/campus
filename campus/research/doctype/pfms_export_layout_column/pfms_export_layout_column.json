@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "column_header",
+  "source",
+  "fixed_value"
+ ],
+ "fields": [
+  {
+   "fieldname": "column_header",
+   "fieldtype": "Data",
+   "label": "Column Header",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "Row Reference\nAgency Unique Code\nFunding Agency Code\nSanction Order No\nProject\nPayment Date\nVoucher Type\nVoucher No\nInvoice or Order No\nAmount\nVendor Name\nPFMS Vendor Code\nBank Account No\nIFSC\nBudget Head\nFixed Value"
+  },
+  {
+   "fieldname": "fixed_value",
+   "fieldtype": "Data",
+   "label": "Fixed Value",
+   "in_list_view": 1,
+   "depends_on": "eval:doc.source==\"Fixed Value\"",
+   "mandatory_depends_on": "eval:doc.source==\"Fixed Value\""
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "PFMS Export Layout Column",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "istable": 1,
+ "editable_grid": 1
+}

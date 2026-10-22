@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "owner": "Administrator",
+ "doctype": "DocType",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Admission Settings",
+ "issingle": 1,
+ "field_order": [
+  "active_admission_year",
+  "register_no_pattern",
+  "roll_no_pattern",
+  "strict_seat_matrix",
+  "enquiry_section",
+  "enquiry_ack_dedupe_hours",
+  "enquiry_ack_hourly_cap"
+ ],
+ "fields": [
+  {
+   "fieldname": "active_admission_year",
+   "fieldtype": "Link",
+   "label": "Active Admission Year",
+   "options": "Academic Year",
+   "description": "Used when an applicant has no academic year."
+  },
+  {
+   "fieldname": "register_no_pattern",
+   "fieldtype": "Data",
+   "label": "Register No Pattern",
+   "default": "{abbr}{yy}{program_code}{####}",
+   "reqd": 1,
+   "description": "Placeholders: {abbr} company abbreviation, {yy} / {yyyy} start year of the admission year, {program_code} program abbreviation. Must end with the counter, e.g. {####}."
+  },
+  {
+   "fieldname": "roll_no_pattern",
+   "fieldtype": "Data",
+   "label": "Roll No Pattern (optional)",
+   "description": "Same placeholders as the register number; use a different prefix so the counters are separate."
+  },
+  {
+   "fieldname": "strict_seat_matrix",
+   "fieldtype": "Check",
+   "label": "Strict Seat Matrix",
+   "default": "1",
+   "description": "When on, a program and year without a Seat Matrix, or a quota and category without a row in it, cannot be admitted into unless the user holds Admission Override (the override is logged). Supernumerary quotas and quotas not counted in the matrix are never checked."
+  },
+  {
+   "fieldname": "enquiry_section",
+   "fieldtype": "Section Break",
+   "label": "Enquiry Acknowledgements"
+  },
+  {
+   "fieldname": "enquiry_ack_dedupe_hours",
+   "fieldtype": "Int",
+   "label": "Acknowledge a Number Once Per (Hours)",
+   "default": "24",
+   "description": "A number that already received the enquiry acknowledgement inside this window gets none. 0 disables the check."
+  },
+  {
+   "fieldname": "enquiry_ack_hourly_cap",
+   "fieldtype": "Int",
+   "label": "Acknowledgements Per College Per Hour",
+   "default": "100",
+   "description": "Past this ceiling the enquiry is still saved but no WhatsApp acknowledgement is sent. 0 disables the ceiling."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1
+  }
+ ]
+}

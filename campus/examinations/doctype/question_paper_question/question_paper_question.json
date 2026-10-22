@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "paper_set",
+  "question_item",
+  "course_outcome",
+  "bloom_level",
+  "marks"
+ ],
+ "fields": [
+  {
+   "fieldname": "paper_set",
+   "fieldtype": "Select",
+   "label": "Set",
+   "options": "A\nB",
+   "reqd": 1,
+   "in_list_view": 1,
+   "default": "A"
+  },
+  {
+   "fieldname": "question_item",
+   "fieldtype": "Link",
+   "label": "Question Bank Item",
+   "options": "Question Bank Item",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_outcome",
+   "fieldtype": "Data",
+   "label": "CO",
+   "fetch_from": "question_item.course_outcome",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bloom_level",
+   "fieldtype": "Data",
+   "label": "Bloom Level",
+   "fetch_from": "question_item.bloom_level",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "marks",
+   "fieldtype": "Float",
+   "label": "Marks",
+   "fetch_from": "question_item.marks",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Question Paper Question",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

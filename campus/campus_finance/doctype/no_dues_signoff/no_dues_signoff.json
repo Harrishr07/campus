@@ -1,0 +1,27 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "istable": 1,
+ "editable_grid": 1,
+ "field_order": ["office", "mandatory", "status", "cleared_by", "cleared_on", "remarks"],
+ "fields": [
+  {"fieldname": "office", "fieldtype": "Data", "label": "Office", "reqd": 1, "in_list_view": 1,
+   "description": "Accounts, Library, Hostel, Lab or any other office."},
+  {"fieldname": "mandatory", "fieldtype": "Check", "label": "Mandatory", "default": "1", "in_list_view": 1},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Pending\nCleared", "default": "Pending", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "cleared_by", "fieldtype": "Link", "label": "Cleared By", "options": "User", "read_only": 1, "no_copy": 1, "in_list_view": 1},
+  {"fieldname": "cleared_on", "fieldtype": "Datetime", "label": "Cleared On", "read_only": 1, "no_copy": 1},
+  {"fieldname": "remarks", "fieldtype": "Data", "label": "Remarks"}
+ ],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "No Dues Signoff",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

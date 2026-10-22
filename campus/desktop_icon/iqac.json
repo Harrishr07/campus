@@ -1,0 +1,32 @@
+{
+ "app": "campus",
+ "bg_color": "gray",
+ "creation": "2026-10-06 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "award",
+ "icon_type": "Link",
+ "idx": 7,
+ "label": "IQAC",
+ "link_to": "IQAC",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "IQAC",
+ "owner": "Administrator",
+ "parent_icon": "OneBook Campus",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": 1
+}

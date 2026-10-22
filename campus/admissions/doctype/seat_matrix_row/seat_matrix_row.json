@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "quota",
+  "category",
+  "sanctioned",
+  "allotted",
+  "filled",
+  "vacant"
+ ],
+ "fields": [
+  {
+   "fieldname": "quota",
+   "fieldtype": "Link",
+   "label": "Quota",
+   "options": "Admission Quota",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Student Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sanctioned",
+   "fieldtype": "Int",
+   "label": "Sanctioned",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "allotted",
+   "fieldtype": "Int",
+   "label": "Allotted",
+   "in_list_view": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Applicants allotted this row."
+  },
+  {
+   "fieldname": "filled",
+   "fieldtype": "Int",
+   "label": "Filled",
+   "in_list_view": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Submitted Program Enrollments."
+  },
+  {
+   "fieldname": "vacant",
+   "fieldtype": "Int",
+   "label": "Vacant",
+   "in_list_view": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Sanctioned minus filled; negative means over-admitted."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Seat Matrix Row",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

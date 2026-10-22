@@ -1,0 +1,10 @@
+{% extends "campus/www/campus_portal/faculty/_base.html" %}
+{% block faculty_body %}
+<h2>{{ _("My students") }}</h2>
+{% if not mentees %}<p class="cp-empty">{{ _("No mentees are allocated to you.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for m in mentees %}
+	<li><strong>{{ m.student_name|e }}</strong> <small>{{ m.student|e }}</small>{% if m.program %}<br>{{ m.program|e }}{% endif %}</li>
+	{% endfor %}
+</ul>
+{% endblock %}

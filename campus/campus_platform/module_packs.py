@@ -19,6 +19,14 @@ SEED_PACKS = {
 	"IQAC": ("IQAC", ALL_STATUSES),
 }
 
+# Packs whose module has a desk area: the area's workspace goes with the pack (hidden when the pack is off).
+PACK_WORKSPACES = {
+	"COE": ["Examinations"],
+	"GOVERNANCE": ["Academic Governance"],
+	"IQAC": ["IQAC"],
+	"RESEARCH": ["Research"],
+}
+
 
 def seed_module_packs():
 	for code, (title, statuses) in SEED_PACKS.items():
@@ -30,5 +38,19 @@ def seed_module_packs():
 				"code": code,
 				"title": title,
 				"allowed_statuses": [{"status": s} for s in statuses],
+				"workspaces": [{"workspace": w} for w in PACK_WORKSPACES.get(code, [])],
 			}
 		).insert(ignore_permissions=True)
+
+
+def link_pack_workspaces():
+	"""One-off for packs seeded before their workspaces existed: fill an empty workspace list."""
+	for code, workspaces in PACK_WORKSPACES.items():
+		if not frappe.db.exists("Module Pack", code):
+			continue
+		pack = frappe.get_doc("Module Pack", code)
+		if pack.workspaces:
+			continue
+		for workspace in workspaces:
+			pack.append("workspaces", {"workspace": workspace})
+		pack.save(ignore_permissions=True)

@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "title",
+  "counts_toward_credits"
+ ],
+ "fields": [
+  {
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "counts_toward_credits",
+   "fieldtype": "Check",
+   "label": "Counts Toward Programme Credits",
+   "default": "1",
+   "in_list_view": 1,
+   "description": "Mandatory, audit and value-added courses are earned but not counted in the programme total."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Course Category",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:code",
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "search_fields": "code,title",
+ "naming_rule": "By fieldname"
+}

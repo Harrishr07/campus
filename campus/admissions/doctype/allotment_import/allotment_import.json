@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "counselling_authority",
+  "academic_year",
+  "import_file",
+  "status",
+  "bulk_run",
+  "file_sha256",
+  "mapping_section",
+  "program_mapping",
+  "summary_section",
+  "total_rows",
+  "created_rows",
+  "updated_rows",
+  "unchanged_rows",
+  "error_rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "counselling_authority",
+   "fieldtype": "Link",
+   "label": "Counselling Authority",
+   "options": "Counselling Authority",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "import_file",
+   "fieldtype": "Attach",
+   "label": "Allotment File (CSV or XLSX)",
+   "mandatory_depends_on": "eval:doc.status=='Draft'"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nProcessing\nCompleted\nCompleted with errors",
+   "default": "Draft",
+   "in_list_view": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "options": "Bulk Run",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "file_sha256",
+   "fieldtype": "Data",
+   "label": "File SHA-256",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Kept as the audit trail after the file is deleted on completion."
+  },
+  {
+   "fieldname": "mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Branch Codes"
+  },
+  {
+   "fieldname": "program_mapping",
+   "fieldtype": "Table",
+   "label": "Program Mapping",
+   "options": "Allotment Program Mapping",
+   "description": "Maps the branch code of the file to a Program of this company."
+  },
+  {
+   "fieldname": "summary_section",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "total_rows",
+   "fieldtype": "Int",
+   "label": "Rows",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "created_rows",
+   "fieldtype": "Int",
+   "label": "Created",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "updated_rows",
+   "fieldtype": "Int",
+   "label": "Updated",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "unchanged_rows",
+   "fieldtype": "Int",
+   "label": "Unchanged",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "error_rows",
+   "fieldtype": "Int",
+   "label": "Errors",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Allotment Import",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "autoname": "format:ALTIMP-{#####}",
+ "naming_rule": "Expression"
+}

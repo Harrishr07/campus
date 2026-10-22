@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "type_name",
+  "regulator",
+  "column_break_1",
+  "reminder_days",
+  "rule_section",
+  "due_basis",
+  "due_month",
+  "due_day",
+  "days_after",
+  "details_section",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "type_name",
+   "fieldtype": "Data",
+   "label": "Type Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "regulator",
+   "fieldtype": "Data",
+   "label": "Regulator",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The body the return is made to (UGC, AICTE, NAAC, AISHE, the affiliating university ...)."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reminder_days",
+   "fieldtype": "Data",
+   "label": "Remind Owner (Days Before Due)",
+   "default": "30,7,1",
+   "description": "Comma separated. The owner is messaged that many days before the due date."
+  },
+  {
+   "fieldname": "rule_section",
+   "fieldtype": "Section Break",
+   "label": "Due Rule"
+  },
+  {
+   "fieldname": "due_basis",
+   "fieldtype": "Select",
+   "label": "Due Basis",
+   "options": "Fixed Date Each Year\nDays After Period End",
+   "reqd": 1,
+   "default": "Days After Period End"
+  },
+  {
+   "fieldname": "due_month",
+   "fieldtype": "Int",
+   "label": "Due Month",
+   "depends_on": "eval:doc.due_basis=='Fixed Date Each Year'",
+   "non_negative": 1,
+   "description": "1 to 12"
+  },
+  {
+   "fieldname": "due_day",
+   "fieldtype": "Int",
+   "label": "Due Day",
+   "depends_on": "eval:doc.due_basis=='Fixed Date Each Year'",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "days_after",
+   "fieldtype": "Int",
+   "label": "Days After Period End",
+   "depends_on": "eval:doc.due_basis=='Days After Period End'",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Regulator Submission Type",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "field:type_name",
+ "title_field": "type_name"
+}

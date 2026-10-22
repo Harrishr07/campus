@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "bank_section",
+  "bank_name",
+  "branch",
+  "account_name",
+  "account_number",
+  "ifsc",
+  "receiving_account",
+  "challan_section",
+  "challan_prefix",
+  "challan_digits",
+  "header_note",
+  "instructions",
+  "receipt_section",
+  "receipt_prefix",
+  "receipt_digits",
+  "letter_head"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bank_section",
+   "fieldtype": "Section Break",
+   "label": "Bank"
+  },
+  {
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "branch",
+   "fieldtype": "Data",
+   "label": "Branch"
+  },
+  {
+   "fieldname": "account_name",
+   "fieldtype": "Data",
+   "label": "Account Name"
+  },
+  {
+   "fieldname": "account_number",
+   "fieldtype": "Data",
+   "label": "Account Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ifsc",
+   "fieldtype": "Data",
+   "label": "IFSC",
+   "reqd": 1
+  },
+  {
+   "fieldname": "receiving_account",
+   "fieldtype": "Link",
+   "label": "Receiving Account (GL)",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Ledger account debited when a bank collection is imported."
+  },
+  {
+   "fieldname": "challan_section",
+   "fieldtype": "Section Break",
+   "label": "Challan"
+  },
+  {
+   "fieldname": "challan_prefix",
+   "fieldtype": "Data",
+   "label": "Challan Prefix",
+   "default": "CH-{abbr}-{yy}-",
+   "reqd": 1,
+   "description": "Placeholders: {abbr} company abbreviation, {yy}/{yyyy} posting year."
+  },
+  {
+   "fieldname": "challan_digits",
+   "fieldtype": "Int",
+   "label": "Challan Digits",
+   "default": "6",
+   "reqd": 1
+  },
+  {
+   "fieldname": "header_note",
+   "fieldtype": "Data",
+   "label": "Header Note"
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Small Text",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "receipt_section",
+   "fieldtype": "Section Break",
+   "label": "Fee Receipt"
+  },
+  {
+   "fieldname": "receipt_prefix",
+   "fieldtype": "Data",
+   "label": "Receipt Prefix",
+   "default": "FR-{abbr}-{yy}-",
+   "reqd": 1,
+   "description": "Same placeholders as the challan prefix."
+  },
+  {
+   "fieldname": "receipt_digits",
+   "fieldtype": "Int",
+   "label": "Receipt Digits",
+   "default": "6",
+   "reqd": 1
+  },
+  {
+   "fieldname": "letter_head",
+   "fieldtype": "Link",
+   "label": "Letter Head",
+   "options": "Letter Head"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Challan Format",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "field:company",
+ "title_field": "company"
+}

@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "partner",
+  "partner_type",
+  "column_break_1",
+  "used_for",
+  "valid_from",
+  "valid_to",
+  "terminated",
+  "status",
+  "purpose_section",
+  "purpose",
+  "signed_copy",
+  "activities_section",
+  "activities"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "partner",
+   "fieldtype": "Data",
+   "label": "Partner",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "partner_type",
+   "fieldtype": "Select",
+   "label": "Partner Type",
+   "options": "Industry\nAcademic Institution\nGovernment\nNGO\nOther",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "used_for",
+   "fieldtype": "Select",
+   "label": "Used For",
+   "options": "General\nPlacement\nResearch\nTeaching-Learning\nExtension",
+   "default": "General",
+   "in_standard_filter": 1,
+   "description": "The area that claims this MoU (AQAR 3.7.2, placement, research)."
+  },
+  {
+   "fieldname": "valid_from",
+   "fieldtype": "Date",
+   "label": "Valid From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valid_to",
+   "fieldtype": "Date",
+   "label": "Valid To",
+   "reqd": 1
+  },
+  {
+   "fieldname": "terminated",
+   "fieldtype": "Check",
+   "label": "Terminated"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Upcoming\nActive\nExpired\nTerminated",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "purpose_section",
+   "fieldtype": "Section Break",
+   "label": "Purpose"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Small Text",
+   "label": "Purpose",
+   "reqd": 1
+  },
+  {
+   "fieldname": "signed_copy",
+   "fieldtype": "Attach",
+   "label": "Signed Copy"
+  },
+  {
+   "fieldname": "activities_section",
+   "fieldtype": "Section Break",
+   "label": "Activities"
+  },
+  {
+   "fieldname": "activities",
+   "fieldtype": "Table",
+   "label": "Activities",
+   "options": "Institutional MoU Activity"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Institutional MoU",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "format:MOU-{YYYY}-{#####}",
+ "track_changes": 1,
+ "title_field": "partner"
+}

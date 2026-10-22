@@ -1,0 +1,289 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cycle",
+  "node",
+  "node_title",
+  "column_break_scope",
+  "department",
+  "company",
+  "academic_year",
+  "status",
+  "section_break_value",
+  "value",
+  "computed_value",
+  "computed_at",
+  "column_break_value",
+  "manual_value",
+  "answered",
+  "override_approved",
+  "override_reason",
+  "override_request",
+  "section_break_source",
+  "source_changed",
+  "recomputed_value",
+  "section_break_answer",
+  "choice",
+  "word_count",
+  "narrative",
+  "section_break_trail",
+  "verified_by",
+  "verified_on",
+  "snapshot"
+ ],
+ "fields": [
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Link",
+   "label": "Cycle",
+   "options": "Accreditation Cycle",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "node",
+   "fieldtype": "Link",
+   "label": "Node",
+   "options": "Framework Node",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "node_title",
+   "fieldtype": "Data",
+   "label": "Metric",
+   "fetch_from": "node.title",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "set_only_once": 1,
+   "in_standard_filter": 1,
+   "description": "Set on the department rows of a department-wise metric; empty on the college's own value."
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "cycle.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "fetch_from": "cycle.academic_year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nComputed\nVerified\nLocked",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_break_value",
+   "fieldtype": "Section Break",
+   "label": "Value"
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Float",
+   "label": "Effective Value",
+   "read_only": 1,
+   "in_list_view": 1,
+   "precision": "2",
+   "description": "What the exports use: the computed value, or the manual value when the node has no formula or an override was approved."
+  },
+  {
+   "fieldname": "computed_value",
+   "fieldtype": "Float",
+   "label": "Computed Value",
+   "read_only": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "computed_at",
+   "fieldtype": "Datetime",
+   "label": "Computed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_value",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "manual_value",
+   "fieldtype": "Float",
+   "label": "Manual Value",
+   "precision": "2",
+   "description": "The answer of a node without a formula. On a computed node it is set only by an approved Metric Override."
+  },
+  {
+   "fieldname": "answered",
+   "fieldtype": "Check",
+   "label": "Answered",
+   "no_copy": 1,
+   "description": "Set automatically once there is an answer; tick it yourself to record a zero."
+  },
+  {
+   "fieldname": "override_approved",
+   "fieldtype": "Check",
+   "label": "Override Approved",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "override_reason",
+   "fieldtype": "Small Text",
+   "label": "Override Reason",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "override_request",
+   "fieldtype": "Link",
+   "label": "Override",
+   "options": "Metric Override",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_break_source",
+   "fieldtype": "Section Break",
+   "label": "Source Check",
+   "depends_on": "eval:doc.source_changed"
+  },
+  {
+   "fieldname": "source_changed",
+   "fieldtype": "Check",
+   "label": "Source Changed",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The data behind this verified or locked value has changed since it was computed; the value was not touched."
+  },
+  {
+   "fieldname": "recomputed_value",
+   "fieldtype": "Float",
+   "label": "Value on Recompute",
+   "read_only": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_break_answer",
+   "fieldtype": "Section Break",
+   "label": "Answer"
+  },
+  {
+   "fieldname": "choice",
+   "fieldtype": "Data",
+   "label": "Choice"
+  },
+  {
+   "fieldname": "word_count",
+   "fieldtype": "Int",
+   "label": "Word Count",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "narrative",
+   "fieldtype": "Text Editor",
+   "label": "Narrative"
+  },
+  {
+   "fieldname": "section_break_trail",
+   "fieldtype": "Section Break",
+   "label": "Trail",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "verified_on",
+   "fieldtype": "Datetime",
+   "label": "Verified On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "snapshot",
+   "fieldtype": "Code",
+   "label": "Snapshot",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "Inputs with their source records, the formula and the time of computation."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Metric Value",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Criterion Owner",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "title_field": "node_title",
+ "track_changes": 1
+}

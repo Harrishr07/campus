@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "body_type_name",
+  "statutory",
+  "confidential",
+  "column_break_terms",
+  "term_years",
+  "min_meetings_per_year",
+  "quorum_percent",
+  "composition_section",
+  "composition"
+ ],
+ "fields": [
+  {
+   "fieldname": "body_type_name",
+   "fieldtype": "Data",
+   "label": "Body Type",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "statutory",
+   "fieldtype": "Check",
+   "label": "Statutory",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Required by regulation (UGC 2023 cl. 12), not just institutional practice."
+  },
+  {
+   "fieldname": "confidential",
+   "fieldtype": "Check",
+   "label": "Confidential",
+   "description": "Meetings and action items of its bodies are readable only by the bodies' members in office, the Principal and the System Manager."
+  },
+  {
+   "fieldname": "column_break_terms",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "term_years",
+   "fieldtype": "Int",
+   "label": "Term (Years)",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Length of a member's term. 0 when the body has no fixed term."
+  },
+  {
+   "fieldname": "min_meetings_per_year",
+   "fieldtype": "Int",
+   "label": "Minimum Meetings per Year",
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "quorum_percent",
+   "fieldtype": "Percent",
+   "label": "Quorum (% of Members in Office)",
+   "description": "0 means no percentage requirement; mandatory categories below still apply."
+  },
+  {
+   "fieldname": "composition_section",
+   "fieldtype": "Section Break",
+   "label": "Composition Rule"
+  },
+  {
+   "fieldname": "composition",
+   "fieldtype": "Table",
+   "label": "Required Composition",
+   "options": "Body Type Composition Rule"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Body Type",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:body_type_name",
+ "title_field": "body_type_name",
+ "search_fields": "body_type_name",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

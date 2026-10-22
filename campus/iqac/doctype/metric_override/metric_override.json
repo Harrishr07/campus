@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "MOV-.#####",
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Metric Override",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "node_title",
+ "fields": [
+  {
+   "fieldname": "metric_value",
+   "fieldtype": "Link",
+   "label": "Metric Value",
+   "options": "Metric Value",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "node_title",
+   "fieldtype": "Data",
+   "label": "Metric",
+   "fetch_from": "metric_value.node_title",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cycle",
+   "fieldtype": "Link",
+   "label": "Cycle",
+   "options": "Accreditation Cycle",
+   "fetch_from": "metric_value.cycle",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "metric_value.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_value",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "computed_value",
+   "fieldtype": "Float",
+   "label": "Computed Value",
+   "read_only": 1,
+   "precision": "2",
+   "description": "The computed value when the override was requested."
+  },
+  {
+   "fieldname": "proposed_value",
+   "fieldtype": "Float",
+   "label": "Proposed Value",
+   "reqd": 1,
+   "precision": "2",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_reason",
+   "fieldtype": "Section Break",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1,
+   "description": "Why the computed value is not the right answer. Shown with the value in the cycle."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Metric Override",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "field_order": [
+  "metric_value",
+  "node_title",
+  "cycle",
+  "company",
+  "column_break_value",
+  "computed_value",
+  "proposed_value",
+  "section_break_reason",
+  "reason",
+  "amended_from"
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1
+  },
+  {
+   "role": "IQAC Criterion Owner",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "submit": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1
+  }
+ ]
+}

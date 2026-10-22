@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Convocation List",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "CONV-.YYYY.-",
+   "default": "CONV-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Leave blank for every programme of the company."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "convocation_date",
+   "fieldtype": "Date",
+   "label": "Convocation Date",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "graduates_section",
+   "fieldtype": "Section Break",
+   "label": "Graduates"
+  },
+  {
+   "fieldname": "graduates",
+   "fieldtype": "Table",
+   "label": "Graduates",
+   "options": "Convocation List Graduate",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Filled by Get Graduates: students whose published results complete the programme with no arrear, not on another Convocation List."
+  },
+  {
+   "fieldname": "export_section",
+   "fieldtype": "Section Break",
+   "label": "Export Format",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "columns",
+   "fieldtype": "Table",
+   "label": "Columns",
+   "options": "Convocation Export Column",
+   "description": "Placeholder format: the university's convocation format is not known yet. Set the headings and their order to match it; the export follows this table."
+  }
+ ],
+ "field_order": [
+  "naming_series",
+  "company",
+  "program",
+  "column_break_1",
+  "convocation_date",
+  "graduates_section",
+  "graduates",
+  "export_section",
+  "columns"
+ ],
+ "autoname": "naming_series:",
+ "naming_rule": "By \"Naming Series\" field",
+ "title_field": "company"
+}

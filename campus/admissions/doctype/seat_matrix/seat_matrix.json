@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "program",
+  "academic_year",
+  "matrix_key",
+  "rows_section",
+  "rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "matrix_key",
+   "fieldtype": "Data",
+   "label": "Matrix Key",
+   "unique": 1,
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Company, program and year: one matrix per combination."
+  },
+  {
+   "fieldname": "rows_section",
+   "fieldtype": "Section Break",
+   "label": "Seats"
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Quota and Category Seats",
+   "options": "Seat Matrix Row"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Seat Matrix",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "autoname": "format:SEATM-{#####}",
+ "naming_rule": "Expression"
+}

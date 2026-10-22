@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "exam_session",
+  "company",
+  "column_break_main",
+  "application_type",
+  "application_date",
+  "program",
+  "section_courses",
+  "courses",
+  "section_fee",
+  "fee_amount",
+  "fee_invoice",
+  "column_break_fee",
+  "photocopy_issued_on",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "exam_session.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "application_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Photocopy\nRevaluation\nReview",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "application_date",
+   "fieldtype": "Date",
+   "label": "Application Date",
+   "read_only": 1,
+   "description": "Set when saved and when submitted; it must fall within the regulation's window from the release of the results."
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_courses",
+   "fieldtype": "Section Break",
+   "label": "Courses"
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Revaluation Application Course",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Fee"
+  },
+  {
+   "fieldname": "fee_amount",
+   "fieldtype": "Currency",
+   "label": "Fee",
+   "read_only": 1,
+   "description": "The Exam Fee Rate's fee of this type per course."
+  },
+  {
+   "fieldname": "fee_invoice",
+   "fieldtype": "Link",
+   "label": "Fee Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_fee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "photocopy_issued_on",
+   "fieldtype": "Datetime",
+   "label": "Photocopy Issued On",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.application_type=='Photocopy'"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Revaluation Application",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 23:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Revaluation Application",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1
+  }
+ ],
+ "track_changes": 1,
+ "autoname": "RVA-.#####",
+ "naming_rule": "Expression (old style)",
+ "is_submittable": 1,
+ "title_field": "student_name"
+}

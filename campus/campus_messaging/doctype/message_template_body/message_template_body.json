@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "language",
+  "subject",
+  "body"
+ ],
+ "fields": [
+  {
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "label": "Language",
+   "options": "en\nta",
+   "reqd": 1,
+   "in_list_view": 1,
+   "default": "en"
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "label": "Subject",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Text",
+   "label": "Body",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Message Template Body",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

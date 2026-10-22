@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student_category",
+  "min_percent"
+ ],
+ "fields": [
+  {
+   "fieldname": "student_category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Student Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_percent",
+   "fieldtype": "Percent",
+   "label": "Minimum Marks %",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Eligibility Category Mark",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

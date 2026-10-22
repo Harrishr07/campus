@@ -1,0 +1,31 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Certificates") }}</h2>
+<form class="cp-card cp-form" data-method="campus.student_services.portal.request_certificate">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<label for="cp-type">{{ _("Certificate") }}</label>
+	<select id="cp-type" name="certificate_type" required>
+		{% for t in types %}<option value="{{ t.name|e }}">{{ t.name|e }}{% if t.fee_amount %} ({{ frappe.utils.fmt_money(t.fee_amount, currency="INR") }}){% endif %}</option>{% endfor %}
+	</select>
+	<label for="cp-purpose">{{ _("Purpose") }}</label>
+	<input id="cp-purpose" name="purpose" required maxlength="140">
+	<label for="cp-leaving">{{ _("Leaving date (Transfer Certificate only)") }}</label>
+	<input id="cp-leaving" name="leaving_date" type="date">
+	<label for="cp-reason">{{ _("Reason for leaving (Transfer Certificate only)") }}</label>
+	<input id="cp-reason" name="reason_for_leaving" maxlength="140">
+	<button class="cp-btn" type="submit">{{ _("Request") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% if not certificates %}<p class="cp-empty">{{ _("No certificate requests yet.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for c in certificates %}
+	<li>
+		<strong>{{ c.certificate_type|e }}</strong> <span class="cp-badge">{{ c.status|e }}</span><br>
+		{{ c.purpose|e }}
+		{% if c.certificate_number %}<br>{{ c.certificate_number|e }}{% endif %}
+		{% if c.pdf_url %}<br><a href="{{ c.pdf_url|e }}">{{ _("Download") }}</a>{% endif %}
+		{% if c.verification_code %}<br><a href="/verify/{{ c.verification_code|e }}">{{ _("Verification page") }}</a>{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

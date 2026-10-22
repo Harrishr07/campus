@@ -1,0 +1,166 @@
+{
+ "actions": [],
+ "autoname": "format:BULK-{#####}",
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "run_type",
+  "status",
+  "column_break_1",
+  "total",
+  "done",
+  "failed",
+  "section_timing",
+  "started_at",
+  "column_break_2",
+  "finished_at",
+  "section_config",
+  "handler",
+  "key_function",
+  "chunk_size",
+  "parameters",
+  "items",
+  "section_errors",
+  "errors",
+  "processed_keys"
+ ],
+ "fields": [
+  {
+   "fieldname": "run_type",
+   "fieldtype": "Data",
+   "label": "Run Type",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Queued\nRunning\nCompleted\nCompleted with errors\nFailed",
+   "default": "Queued",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Int",
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "done",
+   "fieldtype": "Int",
+   "label": "Done",
+   "read_only": 1
+  },
+  {
+   "fieldname": "failed",
+   "fieldtype": "Int",
+   "label": "Failed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_timing",
+   "fieldtype": "Section Break",
+   "label": "Timing"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "finished_at",
+   "fieldtype": "Datetime",
+   "label": "Finished",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_config",
+   "fieldtype": "Section Break",
+   "label": "Configuration",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "handler",
+   "fieldtype": "Data",
+   "label": "Handler",
+   "read_only": 1
+  },
+  {
+   "fieldname": "key_function",
+   "fieldtype": "Data",
+   "label": "Key Function",
+   "read_only": 1
+  },
+  {
+   "fieldname": "chunk_size",
+   "fieldtype": "Int",
+   "label": "Chunk Size",
+   "read_only": 1
+  },
+  {
+   "fieldname": "parameters",
+   "fieldtype": "JSON",
+   "label": "Parameters",
+   "read_only": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Long Text",
+   "label": "Items (JSON)",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_errors",
+   "fieldtype": "Section Break",
+   "label": "Row Errors"
+  },
+  {
+   "fieldname": "errors",
+   "fieldtype": "Table",
+   "label": "Row Errors",
+   "options": "Bulk Run Row Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "processed_keys",
+   "fieldtype": "Table",
+   "label": "Processed Keys",
+   "options": "Bulk Run Item Key",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Bulk Run",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "role": "System Manager"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

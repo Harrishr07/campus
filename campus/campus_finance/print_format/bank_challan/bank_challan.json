@@ -1,0 +1,22 @@
+{
+ "absolute_value": 0,
+ "align_labels_right": 0,
+ "creation": "2026-10-05 00:00:00.000000",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "Sales Invoice",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "html": "{% set c = challan_details(doc) %}\n<style>.oc-challan{font-size:12px;border:1px solid #000;padding:12px;margin-bottom:16px}.oc-challan td,.oc-challan th{padding:3px 6px}.oc-challan h3{margin:0 0 6px}</style>\n{% for copy in [_(\"Bank Copy\"), _(\"College Copy\"), _(\"Student Copy\")] %}\n<div class=\"oc-challan\">\n\t<table style=\"width:100%\"><tr><td><h3>{{ doc.company }}</h3>{% if c.header_note %}<div>{{ c.header_note }}</div>{% endif %}</td>\n\t<td style=\"text-align:right\"><b>{{ _(\"Fee Challan\") }}</b><br>{{ copy }}</td></tr></table>\n\t<table style=\"width:100%\">\n\t\t<tr><td>{{ _(\"Challan No\") }}</td><td><b>{{ doc.oc_challan_no or \"\" }}</b></td><td>{{ _(\"Invoice\") }}</td><td>{{ doc.name }}</td></tr>\n\t\t<tr><td>{{ _(\"Student\") }}</td><td>{{ c.student.student_name if c.student else doc.customer_name }} {% if c.student %}({{ c.student.name }}){% endif %}</td><td>{{ _(\"Due Date\") }}</td><td>{{ frappe.format(doc.due_date, {\"fieldtype\": \"Date\"}) }}</td></tr>\n\t\t<tr><td>{{ _(\"Bank\") }}</td><td>{{ c.bank_name or \"\" }} {{ c.branch or \"\" }}</td><td>{{ _(\"Account No\") }}</td><td>{{ c.account_number or \"\" }}</td></tr>\n\t\t<tr><td>{{ _(\"Account Name\") }}</td><td>{{ c.account_name or doc.company }}</td><td>{{ _(\"IFSC\") }}</td><td>{{ c.ifsc or \"\" }}</td></tr>\n\t</table>\n\t<table style=\"width:100%;border-top:1px solid #000;margin-top:6px\">\n\t\t<tr><th>{{ _(\"Fee\") }}</th><th style=\"text-align:right\">{{ _(\"Amount\") }}</th></tr>\n\t\t{% for row in doc.items %}<tr><td>{{ row.item_name or row.item_code }}</td><td style=\"text-align:right\">{{ row.get_formatted(\"amount\") }}</td></tr>{% endfor %}\n\t\t<tr><td><b>{{ _(\"Total Payable\") }}</b></td><td style=\"text-align:right\"><b>{{ doc.get_formatted(\"outstanding_amount\") }}</b></td></tr>\n\t</table>\n\t{% if c.instructions %}<div style=\"margin-top:6px\">{{ c.instructions }}</div>{% endif %}\n</div>\n{% endfor %}\n",
+ "idx": 0,
+ "line_breaks": 0,
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Bank Challan",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "raw_printing": 0,
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

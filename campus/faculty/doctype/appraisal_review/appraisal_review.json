@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "appraisal",
+  "employee",
+  "employee_name",
+  "company",
+  "department",
+  "appraisee_is_hod",
+  "column_break_1",
+  "appraisal_cycle",
+  "api_total",
+  "total_score",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "APRV-.YYYY.-",
+   "default": "APRV-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "appraisal",
+   "fieldtype": "Link",
+   "label": "Appraisal",
+   "options": "Appraisal",
+   "reqd": 1,
+   "in_list_view": 1,
+   "set_only_once": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "fetch_from": "appraisal.employee",
+   "read_only": 1,
+   "in_list_view": 1,
+   "ignore_user_permissions": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "appraisal.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "appraisal.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "fetch_from": "appraisal.department",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "appraisee_is_hod",
+   "fieldtype": "Check",
+   "label": "Appraisee Is an HOD",
+   "read_only": 1,
+   "description": "Then the Principal reviews."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "appraisal_cycle",
+   "fieldtype": "Link",
+   "label": "Appraisal Cycle",
+   "options": "Appraisal Cycle",
+   "fetch_from": "appraisal.appraisal_cycle",
+   "read_only": 1
+  },
+  {
+   "fieldname": "api_total",
+   "fieldtype": "Float",
+   "label": "API Points",
+   "fetch_from": "appraisal.oc_api_total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_score",
+   "fieldtype": "Float",
+   "label": "KRA Score (out of 5)",
+   "fetch_from": "appraisal.total_score",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "HOD Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Appraisal Review",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "name": "Appraisal Review",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "HR User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "if_owner": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "if_owner": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "is_submittable": 1,
+ "autoname": "naming_series:",
+ "title_field": "employee_name"
+}

@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "allotment_import",
+  "row_no",
+  "allotment_no",
+  "status",
+  "applicant",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "allotment_import",
+   "fieldtype": "Link",
+   "label": "Import",
+   "options": "Allotment Import",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "row_no",
+   "fieldtype": "Int",
+   "label": "Row",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "allotment_no",
+   "fieldtype": "Data",
+   "label": "Allotment No",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Created\nUpdated\nUnchanged\nError",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Student Applicant"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Allotment Import Row",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "autoname": "hash"
+}

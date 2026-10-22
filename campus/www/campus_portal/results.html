@@ -1,0 +1,22 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Results") }}</h2>
+{% if not results %}<p class="cp-empty">{{ _("No results have been published yet.") }}</p>{% endif %}
+{% for r in results %}
+<section class="cp-card cp-block">
+	<h3>{{ r.academic_term|e }}</h3>
+	<p>{{ _("SGPA") }} <strong>{{ "%.2f"|format(r.sgpa or 0) }}</strong> &middot; {{ _("CGPA") }}
+		<strong>{{ "%.2f"|format(r.cgpa or 0) }}</strong> &middot; {{ _("Credits earned") }} {{ r.credits_earned|e }}</p>
+	<div class="cp-scroll"><table class="cp-table">
+		<thead><tr><th>{{ _("Course") }}</th><th>{{ _("Grade") }}</th><th>{{ _("GP") }}</th><th>{{ _("Result") }}</th></tr></thead>
+		<tbody>
+		{% for c in r.courses %}
+		<tr><td>{{ c.course|e }}</td><td>{{ c.grade|e }}</td><td>{{ c.grade_point|e }}</td><td>{{ _(c.result)|e }}</td></tr>
+		{% endfor %}
+		</tbody>
+	</table></div>
+	<a class="cp-btn" href="{{ r.grade_sheet_url|e }}">{{ _("Download grade sheet") }}</a>
+</section>
+{% endfor %}
+{% if results %}<p><a href="/campus-portal/revaluation?student={{ student|e }}">{{ _("Apply for a photocopy, revaluation or review") }}</a></p>{% endif %}
+{% endblock %}

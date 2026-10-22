@@ -1,0 +1,37 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<link rel="stylesheet" href="/assets/campus/css/campus_portal.css">
+<div class="cp">
+	<nav class="cp-nav" aria-label="{{ _('Portal') }}">
+		{% for key, label, href in [("home", _("Dashboard"), "/campus-portal"), ("fees", _("Fees"), "/campus-portal/fees"),
+			("attendance", _("Attendance"), "/campus-portal/attendance"), ("results", _("Results"), "/campus-portal/results"),
+			("exams", _("Exams"), "/campus-portal/exams"), ("revaluation", _("Revaluation"), "/campus-portal/revaluation"),
+			("circulars", _("Circulars"), "/campus-portal/circulars"),
+			("certificates", _("Certificates"), "/campus-portal/certificates"), ("grievances", _("Grievances"), "/campus-portal/grievances"),
+			("leave", _("Leave"), "/campus-portal/leave"), ("feedback", _("Feedback"), "/campus-portal/feedback")] %}
+		<a href="{{ href }}{% if student and students|length > 1 %}?student={{ student }}{% endif %}"
+			{% if key == active %}aria-current="page"{% endif %}>{{ label }}</a>
+		{% endfor %}
+	</nav>
+	{% if students|length > 1 %}
+	<form class="cp-switch" method="get">
+		<label for="cp-student">{{ _("Student") }}</label>
+		<select id="cp-student" name="student" onchange="this.form.submit()">
+			{% for s in students %}
+			<option value="{{ s.name|e }}" {% if s.name == student %}selected{% endif %}>{{ s.student_name|e }} ({{ s.name|e }})</option>
+			{% endfor %}
+		</select>
+	</form>
+	{% elif student %}
+	<p class="cp-who">{{ student_name|e }} ({{ student|e }})</p>
+	{% endif %}
+	{% if not student %}
+	<p class="cp-empty">{{ _("No student is linked to your account. Please contact the college office.") }}</p>
+	{% else %}
+	{% block portal_body %}{% endblock %}
+	{% endif %}
+</div>
+<script>document.body.dataset.cpError = {{ _("Network error. Please try again.")|tojson }};</script>
+<script src="/assets/campus/js/campus_portal.js"></script>
+{% endblock %}

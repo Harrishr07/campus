@@ -1,0 +1,371 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Research</b></span>\", \"col\": 12}}, {\"id\": \"sc0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Research Proposal\", \"col\": 3}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Funding Scheme\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Funding Agency\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grant Budget Head\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Indexed Journal\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Research Settings\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-10-09 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "flask-conical",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Research",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Funding Agency",
+   "link_count": 0,
+   "link_to": "Funding Agency",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Funding Scheme",
+   "link_count": 0,
+   "link_to": "Funding Scheme",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grant Budget Head",
+   "link_count": 0,
+   "link_to": "Grant Budget Head",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Research Centre",
+   "link_count": 0,
+   "link_to": "Research Centre",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Indexed Journal",
+   "link_count": 0,
+   "link_to": "Indexed Journal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "IPR Type",
+   "link_count": 0,
+   "link_to": "IPR Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 12,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Research Call",
+   "link_count": 0,
+   "link_to": "Research Call",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Research Proposal",
+   "link_count": 0,
+   "link_to": "Research Proposal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sanction",
+   "link_count": 0,
+   "link_to": "Sanction",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grant Receipt",
+   "link_count": 0,
+   "link_to": "Grant Receipt",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grant Interest",
+   "link_count": 0,
+   "link_to": "Grant Interest",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grant Income Recognition",
+   "link_count": 0,
+   "link_to": "Grant Income Recognition",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Re-appropriation Request",
+   "link_count": 0,
+   "link_to": "Re-appropriation Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Utilisation Certificate",
+   "link_count": 0,
+   "link_to": "Utilisation Certificate",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Update",
+   "link_count": 0,
+   "link_to": "Project Update",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Staff Appointment",
+   "link_count": 0,
+   "link_to": "Project Staff Appointment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Closure",
+   "link_count": 0,
+   "link_to": "Project Closure",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "PFMS Export Batch",
+   "link_count": 0,
+   "link_to": "PFMS Export Batch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Research Proposal Pipeline",
+   "link_count": 0,
+   "link_to": "Research Proposal Pipeline",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Utilisation Certificate Status",
+   "link_count": 0,
+   "link_to": "Utilisation Certificate Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Grant Ledger by Head",
+   "link_count": 0,
+   "link_to": "Grant Ledger by Head",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Research Settings",
+   "link_count": 0,
+   "link_to": "Research Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "PFMS Export Layout",
+   "link_count": 0,
+   "link_to": "PFMS Export Layout",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 50.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Research Proposal",
+   "link_to": "Research Proposal",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Funding Scheme",
+   "link_to": "Funding Scheme",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Funding Agency",
+   "link_to": "Funding Agency",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Grant Budget Head",
+   "link_to": "Grant Budget Head",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Indexed Journal",
+   "link_to": "Indexed Journal",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Research Settings",
+   "link_to": "Research Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Research"
+}

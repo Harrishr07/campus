@@ -1,0 +1,102 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Course Allocation Row",
+ "istable": 1,
+ "editable_grid": 1,
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "offering",
+  "course",
+  "faculty",
+  "faculty_name",
+  "lecture_hours",
+  "tutorial_hours",
+  "practical_hours",
+  "total_hours",
+  "added_instructor"
+ ],
+ "fields": [
+  {
+   "fieldname": "offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The course-based Student Group of the term."
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "fetch_from": "offering.course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "faculty",
+   "fieldtype": "Link",
+   "label": "Faculty",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "faculty_name",
+   "fieldtype": "Data",
+   "label": "Faculty Name",
+   "fetch_from": "faculty.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lecture_hours",
+   "fieldtype": "Float",
+   "label": "Lecture Hrs / Week",
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "tutorial_hours",
+   "fieldtype": "Float",
+   "label": "Tutorial Hrs / Week",
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "practical_hours",
+   "fieldtype": "Float",
+   "label": "Practical Hrs / Week",
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "total_hours",
+   "fieldtype": "Float",
+   "label": "Total Hrs / Week",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "added_instructor",
+   "fieldtype": "Link",
+   "label": "Instructor Added",
+   "options": "Instructor",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Set on submit when this row made the faculty an instructor of the offering; cancel removes only these."
+  }
+ ]
+}

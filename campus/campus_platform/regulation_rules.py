@@ -37,20 +37,26 @@ def resolve_regulation(company, program, batch):
 
 def get_regulation(student):
 	"""Regulation of `student`: the assigned one, else resolved from the latest enrollment."""
+	if not frappe.db.exists("Student", student):
+		raise frappe.DoesNotExistError(_("Student {0} does not exist.").format(frappe.bold(student)))
 	assigned, company, batch = frappe.db.get_value(
 		"Student", student, ["oc_regulation", "oc_company", "oc_batch"]
 	)
 	if assigned:
 		return assigned
-	enrollment = frappe.db.get_value(
+	enrollment = latest_enrollment(student)
+	if enrollment:
+		return resolve_regulation(company, enrollment.program, batch or enrollment.academic_year)
+
+
+def latest_enrollment(student):
+	return frappe.db.get_value(
 		"Program Enrollment",
 		{"student": student, "docstatus": ["<", 2]},
-		["program", "academic_year"],
+		["program", "academic_year", "name"],
 		order_by="enrollment_date desc, creation desc",
 		as_dict=True,
 	)
-	if enrollment:
-		return resolve_regulation(company, enrollment.program, batch or enrollment.academic_year)
 
 
 def get_rule(student, rule_doctype, **filters):
@@ -103,6 +109,15 @@ def validate_regulation_change(doc, method=None):
 def change_regulation(student, to_regulation, reason, bridge_courses=None):
 	"""Move `student` to `to_regulation` (e.g. rejoin after a break) and log it. Dean Academics only."""
 	frappe.only_for(DEAN_ROLE)
+	frappe.has_permission("Student", "read", doc=student, throw=True)
+	return apply_regulation_change(student, to_regulation, reason, bridge_courses)
+
+
+def apply_regulation_change(student, to_regulation, reason, bridge_courses=None):
+	"""Move `student` to `to_regulation` and log it in the regulation history; returns the new regulation.
+
+	No role check: for service code with its own authorisation (an approved Rejoin Application, M05-03).
+	"""
 	if not (reason or "").strip():
 		frappe.throw(_("A reason is required to change the regulation."))
 	doc = frappe.get_doc("Student", student)
@@ -111,6 +126,7 @@ def change_regulation(student, to_regulation, reason, bridge_courses=None):
 		frappe.throw(_("Regulation {0} is not Effective.").format(frappe.bold(to_regulation)))
 	if regulation.company != doc.oc_company:
 		frappe.throw(_("Regulation {0} belongs to another company.").format(frappe.bold(to_regulation)))
+	validate_covers_enrolled_program(doc.name, to_regulation)
 	if doc.oc_regulation == to_regulation:
 		frappe.throw(_("Student is already on regulation {0}.").format(frappe.bold(to_regulation)))
 	doc.append(
@@ -127,3 +143,15 @@ def change_regulation(student, to_regulation, reason, bridge_courses=None):
 	doc.flags.in_change_regulation = True
 	doc.save(ignore_permissions=True)
 	return doc.oc_regulation
+
+
+def validate_covers_enrolled_program(student, regulation):
+	enrollment = latest_enrollment(student)
+	if enrollment and not frappe.db.exists(
+		"Regulation Program", {"parent": regulation, "program": enrollment.program}
+	):
+		frappe.throw(
+			_("Regulation {0} does not cover the student's program {1}.").format(
+				frappe.bold(regulation), frappe.bold(enrollment.program)
+			)
+		)

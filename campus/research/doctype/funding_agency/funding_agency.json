@@ -1,0 +1,96 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agency_name",
+  "abbreviation",
+  "agency_type",
+  "pfms_agency_code",
+  "uc_format",
+  "interest_treatment"
+ ],
+ "fields": [
+  {
+   "fieldname": "agency_name",
+   "fieldtype": "Data",
+   "label": "Agency Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "abbreviation",
+   "fieldtype": "Data",
+   "label": "Abbreviation",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "agency_type",
+   "fieldtype": "Select",
+   "label": "Agency Type",
+   "options": "\nCentral Government\nState Government\nPrivate\nInternational\nInstitution",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "pfms_agency_code",
+   "fieldtype": "Data",
+   "label": "PFMS Agency Code"
+  },
+  {
+   "fieldname": "uc_format",
+   "fieldtype": "Data",
+   "label": "UC Format",
+   "description": "Name of the agency's Utilisation Certificate / SOE format (placeholder until the official template is supplied)."
+  },
+  {
+   "fieldname": "interest_treatment",
+   "fieldtype": "Select",
+   "label": "Interest Treatment",
+   "options": "\nGrant Liability\nInterest Income",
+   "description": "Where interest earned on this agency's grant funds goes. Leave blank to use the college's Research Settings (Grant Liability by default)."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Funding Agency",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "field:agency_name",
+ "search_fields": "abbreviation"
+}

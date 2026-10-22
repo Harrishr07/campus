@@ -1,0 +1,215 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "application",
+  "application_type",
+  "student",
+  "exam_session",
+  "company",
+  "course",
+  "column_break_examiner",
+  "examiner_type",
+  "employee",
+  "external_member",
+  "revaluer",
+  "section_marks",
+  "original_ese",
+  "new_ese",
+  "ese_change",
+  "column_break_marks",
+  "original_grade",
+  "revised_grade",
+  "result_version",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "application",
+   "fieldtype": "Link",
+   "label": "Revaluation Application",
+   "options": "Revaluation Application",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "application_type",
+   "fieldtype": "Data",
+   "label": "Type",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_examiner",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "examiner_type",
+   "fieldtype": "Select",
+   "label": "Examiner Type",
+   "options": "Internal\nExternal",
+   "default": "Internal"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "depends_on": "eval:doc.examiner_type=='Internal'"
+  },
+  {
+   "fieldname": "external_member",
+   "fieldtype": "Link",
+   "label": "External Member",
+   "options": "External Member",
+   "depends_on": "eval:doc.examiner_type=='External'"
+  },
+  {
+   "fieldname": "revaluer",
+   "fieldtype": "Link",
+   "label": "Revaluer",
+   "options": "User",
+   "read_only": 1,
+   "description": "Never an examiner who valued the script, the revaluer of an earlier outcome of it, or (unless the Exam Rule Set allows it) a teacher of the course."
+  },
+  {
+   "fieldname": "section_marks",
+   "fieldtype": "Section Break",
+   "label": "Marks"
+  },
+  {
+   "fieldname": "original_ese",
+   "fieldtype": "Float",
+   "label": "ESE Before",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_ese",
+   "fieldtype": "Float",
+   "label": "ESE on Revaluation",
+   "reqd": 1,
+   "description": "The script's ESE out of the course maximum, before moderation and grace."
+  },
+  {
+   "fieldname": "ese_change",
+   "fieldtype": "Float",
+   "label": "Change",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_marks",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "original_grade",
+   "fieldtype": "Data",
+   "label": "Grade Before",
+   "read_only": 1
+  },
+  {
+   "fieldname": "revised_grade",
+   "fieldtype": "Data",
+   "label": "Grade After",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result_version",
+   "fieldtype": "Link",
+   "label": "Student Result Version",
+   "options": "Student Result",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The pending version the outcome made (published by a Result Ratification), or the unchanged published one."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Revaluation Outcome",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Revaluation Outcome",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "track_changes": 1,
+ "autoname": "RVO-.#####",
+ "naming_rule": "Expression (old style)",
+ "is_submittable": 1,
+ "title_field": "course"
+}

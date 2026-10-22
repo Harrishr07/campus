@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "channel_order",
+  "quiet_hours_start",
+  "quiet_hours_end",
+  "sms_dlt_param_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "channel_order",
+   "fieldtype": "Table",
+   "label": "Channel Fallback Order",
+   "options": "Messaging Channel Order"
+  },
+  {
+   "fieldname": "quiet_hours_start",
+   "fieldtype": "Time",
+   "label": "Quiet Hours Start",
+   "default": "21:00:00"
+  },
+  {
+   "fieldname": "quiet_hours_end",
+   "fieldtype": "Time",
+   "label": "Quiet Hours End",
+   "default": "07:00:00"
+  },
+  {
+   "fieldname": "sms_dlt_param_name",
+   "fieldtype": "Data",
+   "label": "SMS DLT Template ID Parameter",
+   "default": "template_id"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Messaging",
+ "name": "Messaging Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1
+}

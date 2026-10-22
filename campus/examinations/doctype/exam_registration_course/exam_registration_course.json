@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "course",
+  "course_offering",
+  "kind",
+  "eligibility"
+ ],
+ "fields": [
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "in_list_view": 1,
+   "description": "Blank for an arrear the student writes without attending."
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Current\nArrear\nDropped\nBridge",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "eligibility",
+   "fieldtype": "Select",
+   "label": "Eligibility",
+   "options": "Eligible\nNot eligible (SA)\nNot eligible (Detained)\nNot eligible (Debarred)",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Exam Registration Course",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}

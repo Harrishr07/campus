@@ -1,0 +1,251 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "exam_session",
+  "company",
+  "academic_term",
+  "program",
+  "regulation",
+  "courses",
+  "sgpa",
+  "cgpa",
+  "credits_earned",
+  "result",
+  "arrear_count",
+  "classification",
+  "version_section",
+  "version",
+  "is_latest",
+  "previous_version",
+  "pending_ratification",
+  "ratification",
+  "column_break_version",
+  "change_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "read_only": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Student Result Course",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sgpa",
+   "fieldtype": "Float",
+   "label": "SGPA",
+   "read_only": 1,
+   "precision": "2",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cgpa",
+   "fieldtype": "Float",
+   "label": "CGPA",
+   "read_only": 1,
+   "precision": "2",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "credits_earned",
+   "fieldtype": "Float",
+   "label": "Credits Earned",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "\nPass\nReappear",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Pass when every course passed."
+  },
+  {
+   "fieldname": "arrear_count",
+   "fieldtype": "Int",
+   "label": "Arrears",
+   "read_only": 1,
+   "description": "Courses not yet passed after this result, earlier sessions included."
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Data",
+   "label": "Classification",
+   "read_only": 1,
+   "description": "Final-year session with no arrears: the class by the regulation's Classification Rule."
+  },
+  {
+   "fieldname": "version_section",
+   "fieldtype": "Section Break",
+   "label": "Version"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_latest",
+   "fieldtype": "Check",
+   "label": "Latest Version",
+   "default": "1",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "Students and guardians see only the latest version; COE reads every version."
+  },
+  {
+   "fieldname": "previous_version",
+   "fieldtype": "Link",
+   "label": "Previous Version",
+   "options": "Student Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pending_ratification",
+   "fieldtype": "Check",
+   "label": "Pending Ratification",
+   "default": "0",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "A version made after publication: the published version stays the latest until a Result Ratification is approved."
+  },
+  {
+   "fieldname": "ratification",
+   "fieldtype": "Link",
+   "label": "Ratified By",
+   "options": "Result Ratification",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_version",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "change_log",
+   "fieldtype": "Small Text",
+   "label": "Changes from the Previous Version",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Student Result",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Student",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Guardian",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "",
+ "naming_rule": "By script",
+ "title_field": "student_name"
+}

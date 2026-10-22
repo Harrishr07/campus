@@ -4,7 +4,11 @@ import frappe
 from frappe.utils import today
 
 from campus.campus_platform.api import get_regulation, get_rule
-from campus.campus_platform.doctype.regulation.regulation import amend_as_new_version, next_version_code
+from campus.campus_platform.doctype.regulation.regulation import (
+	amend_as_new_version,
+	next_version_code,
+	regulation_name,
+)
 from campus.campus_platform.regulation_rules import change_regulation, resolve_regulation
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
@@ -13,8 +17,8 @@ COLLEGE = "Regulation Test College"
 OTHER_COLLEGE = "Regulation Test Other College"
 DEAN = "campus-dean@example.com"
 PLAIN_USER = "campus-regulation-plain@example.com"
-YEARS = {"2020": "2020-06-01", "2021": "2021-06-01", "2022": "2022-06-01", "2023": "2023-06-01", "2026": "2026-06-01"}
-RULE_DOCTYPE = "Campus Test Rule"
+YEARS = {year: f"{year}-06-01" for year in ("2020", "2021", "2022", "2023", "2026")}
+RULE_DOCTYPE = "Eligibility Rule"  # a real rule set with a `regulation` link; a test DocType would be DDL
 
 
 def year_name(year):
@@ -41,8 +45,10 @@ def make_program(name, company):
 
 
 def make_regulation(code, company, programs, year, status="Effective", **extra):
-	if frappe.db.exists("Regulation", code):
-		frappe.delete_doc("Regulation", code, force=True)
+	name = regulation_name(code, company)
+	if frappe.db.exists("Regulation", name):
+		frappe.db.delete("Regulation Program", {"parent": name})
+		frappe.db.delete("Regulation", {"name": name})
 	return frappe.get_doc(
 		{
 			"doctype": "Regulation",
@@ -83,27 +89,14 @@ def enroll(student, program, year, submit=False):
 	return enrollment
 
 
-def make_rule_doctype():
-	if not frappe.db.exists("DocType", RULE_DOCTYPE):
-		frappe.get_doc(
-			{
-				"doctype": "DocType",
-				"name": RULE_DOCTYPE,
-				"module": "Campus Platform",
-				"custom": 1,
-				"autoname": "hash",
-				"fields": [
-					{"fieldname": "regulation", "fieldtype": "Link", "label": "Regulation", "options": "Regulation"},
-					{"fieldname": "kind", "fieldtype": "Data", "label": "Kind"},
-				],
-				"permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1}],
-			}
-		).insert()
+def make_rule(regulation, program, kind):
+	"""An Eligibility Rule of `regulation`; `kind` goes in qualifying_exam, the field the test filters on."""
+	return frappe.get_doc({"doctype": RULE_DOCTYPE, "program": program, "regulation": regulation, "qualifying_exam": kind}).insert()
 
 
 def clear_previous_run():
 	"""Test data may be committed by an earlier run; remove it so every run starts clean."""
-	students = frappe.get_all("Student", filters={"oc_company": COLLEGE}, pluck="name")
+	students = frappe.get_all("Student", filters={"oc_company": ["in", [COLLEGE, OTHER_COLLEGE]]}, pluck="name")
 	if students:
 		frappe.db.delete("Program Enrollment", {"student": ["in", students]})
 		frappe.db.delete("Regulation History", {"parent": ["in", students]})
@@ -112,8 +105,6 @@ def clear_previous_run():
 	if regulations:
 		frappe.db.delete("Regulation Program", {"parent": ["in", regulations]})
 		frappe.db.delete("Regulation", {"name": ["in", regulations]})
-	if frappe.db.exists("DocType", RULE_DOCTYPE):
-		frappe.db.delete(RULE_DOCTYPE)
 
 
 class TestRegulation(CampusTestCase):
@@ -143,6 +134,22 @@ class TestRegulation(CampusTestCase):
 		for batch, expected in cases.items():
 			with self.subTest(batch=batch):
 				self.assertEqual(resolve_regulation(COLLEGE, self.program, year_name(batch)), expected)
+
+	def test_same_code_allowed_in_two_companies_but_not_twice_in_one(self):
+		other_program = make_program("Regulation Test Other BSc", OTHER_COLLEGE)
+		other = make_regulation("R2022", OTHER_COLLEGE, [other_program], "2022")
+		self.assertEqual((other.name, self.r2022), ("R2022-RTO", "R2022-RTC"))
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc(
+				{
+					"doctype": "Regulation",
+					"code": "R2022",
+					"company": COLLEGE,
+					"effective_from_year": year_name("2023"),
+					"status": "Draft",
+					"programs": [{"program": self.program}],
+				}
+			).insert()
 
 	def test_resolution_before_first_regulation_is_none(self):
 		self.assertIsNone(resolve_regulation(COLLEGE, self.program, year_name("2020")))
@@ -233,11 +240,44 @@ class TestRegulation(CampusTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			regulation.save()
 
+	def test_change_regulation_respects_company_user_permission(self):
+		student = make_student("RegOtherCollege", OTHER_COLLEGE, batch="2023")
+		frappe.set_user(DEAN)
+		with self.assertRaises(frappe.PermissionError):
+			change_regulation(student.name, self.r2026, "rejoined")
+
+	def test_change_regulation_requires_program_coverage(self):
+		student = make_student("RegWrongProgram", COLLEGE, batch="2023")
+		enroll(student, self.other_program, "2023")
+		with self.assertRaises(frappe.ValidationError):
+			change_regulation(student.name, self.r2026, "rejoined")
+
+	def test_retired_cannot_be_reinstated(self):
+		regulation = make_regulation("R-TERMINAL", COLLEGE, [self.scratch_program], "2023")
+		regulation.status = "Retired"
+		regulation.save()
+		regulation.status = "Effective"
+		with self.assertRaises(frappe.ValidationError):
+			regulation.save()
+
+	def test_effective_and_retired_cannot_be_deleted(self):
+		regulation = make_regulation("R-NODELETE", COLLEGE, [self.scratch_program], "2023")
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc("Regulation", regulation.name)
+		regulation.status = "Retired"
+		regulation.save()
+		with self.assertRaises(frappe.ValidationError):
+			frappe.delete_doc("Regulation", regulation.name)
+
+	def test_get_regulation_of_missing_student(self):
+		with self.assertRaises(frappe.DoesNotExistError):
+			get_regulation("EDU-STU-MISSING")
+
 	def test_effective_regulation_can_be_retired(self):
 		regulation = make_regulation("R-RETIRE", COLLEGE, [self.scratch_program], "2023")
 		regulation.status = "Retired"
 		regulation.save()
-		self.assertEqual(frappe.db.get_value("Regulation", "R-RETIRE", "status"), "Retired")
+		self.assertEqual(frappe.db.get_value("Regulation", regulation.name, "status"), "Retired")
 
 	def test_draft_regulation_is_editable(self):
 		regulation = make_regulation("R-DRAFT-EDIT", COLLEGE, [self.scratch_program], "2023", status="Draft")
@@ -247,11 +287,11 @@ class TestRegulation(CampusTestCase):
 	def test_amend_creates_draft_version_and_retires_previous_when_effective(self):
 		original = make_regulation("R-AMEND", COLLEGE, [self.scratch_program], "2023", notes="v1")
 		new_name = amend_as_new_version(original.name)
-		self.assertEqual(new_name, "R-AMEND-V2")
+		self.assertEqual(new_name, "R-AMEND-V2-RTC")
 		new = frappe.get_doc("Regulation", new_name)
 		self.assertEqual((new.status, new.previous_version, new.notes), ("Draft", original.name, "v1"))
 		self.assertEqual([r.program for r in new.programs], [self.scratch_program])
-		self.assertEqual(next_version_code(new_name), "R-AMEND-V3")
+		self.assertEqual(next_version_code("R-AMEND-V2", COLLEGE), "R-AMEND-V3")
 		new.notes = "v2"
 		new.status = "Effective"
 		new.save()
@@ -263,18 +303,17 @@ class TestRegulation(CampusTestCase):
 			amend_as_new_version(draft.name)
 
 	def test_get_rule(self):
-		make_rule_doctype()
 		student = make_student("RegRule", COLLEGE, batch="2023")
 		enroll(student, self.program, "2023")
 		with self.assertRaises(frappe.ValidationError):
 			get_rule(student.name, RULE_DOCTYPE)  # none defined yet
-		rule = frappe.get_doc({"doctype": RULE_DOCTYPE, "regulation": self.r2022, "kind": "attendance"}).insert()
-		frappe.get_doc({"doctype": RULE_DOCTYPE, "regulation": self.r2026, "kind": "attendance"}).insert()
+		rule = make_rule(self.r2022, self.program, "attendance")
+		make_rule(self.r2026, self.program, "attendance")
 		self.assertEqual(get_rule(student.name, RULE_DOCTYPE).name, rule.name)
-		other = frappe.get_doc({"doctype": RULE_DOCTYPE, "regulation": self.r2022, "kind": "grading"}).insert()
+		other = make_rule(self.r2022, self.other_program, "grading")
 		with self.assertRaises(frappe.ValidationError):
 			get_rule(student.name, RULE_DOCTYPE)  # ambiguous
-		self.assertEqual(get_rule(student.name, RULE_DOCTYPE, kind="grading").name, other.name)
+		self.assertEqual(get_rule(student.name, RULE_DOCTYPE, qualifying_exam="grading").name, other.name)
 
 	def test_get_rule_without_regulation_or_regulation_field(self):
 		student = make_student("RegNoRule", COLLEGE)

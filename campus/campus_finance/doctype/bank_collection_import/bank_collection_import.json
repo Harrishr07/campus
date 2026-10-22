@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "collection_file",
+  "status",
+  "bulk_run",
+  "summary_section",
+  "total_rows",
+  "matched_rows",
+  "unmatched_rows",
+  "duplicate_rows",
+  "invalid_rows"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "collection_file",
+   "fieldtype": "Attach",
+   "label": "Bank File (CSV)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nProcessing\nCompleted\nCompleted with errors",
+   "default": "Draft",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "options": "Bulk Run",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "summary_section",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "total_rows",
+   "fieldtype": "Int",
+   "label": "Rows",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "matched_rows",
+   "fieldtype": "Int",
+   "label": "Matched",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "unmatched_rows",
+   "fieldtype": "Int",
+   "label": "Unmatched",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "duplicate_rows",
+   "fieldtype": "Int",
+   "label": "Duplicates",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "invalid_rows",
+   "fieldtype": "Int",
+   "label": "Invalid",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Bank Collection Import",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "autoname": "BCI-.#####"
+}

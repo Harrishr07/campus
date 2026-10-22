@@ -1,0 +1,245 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Governance</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Type\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Meeting\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Proposal\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Meeting Action Item\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Body Composition Compliance\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Proposal Tracker\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 3}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 3}}]",
+ "creation": "2026-10-08 14:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "landmark",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Academic Governance",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Body Type",
+   "link_count": 0,
+   "link_to": "Body Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Body",
+   "link_count": 0,
+   "link_to": "Body",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "External Member",
+   "link_count": 0,
+   "link_to": "External Member",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Proposal Type",
+   "link_count": 0,
+   "link_to": "Proposal Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Proposal",
+   "link_count": 0,
+   "link_to": "Academic Proposal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Body Meeting",
+   "link_count": 0,
+   "link_to": "Body Meeting",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Meeting Action Item",
+   "link_count": 0,
+   "link_to": "Meeting Action Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Honorarium Claim",
+   "link_count": 0,
+   "link_to": "Honorarium Claim",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Proposal Tracker",
+   "link_count": 0,
+   "link_to": "Proposal Tracker",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Body Composition Compliance",
+   "link_count": 0,
+   "link_to": "Body Composition Compliance",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Governance Settings",
+   "link_count": 0,
+   "link_to": "Governance Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Academic Governance",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 49.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "label": "Body Type",
+   "link_to": "Body Type",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Body Meeting",
+   "link_to": "Body Meeting",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Academic Proposal",
+   "link_to": "Academic Proposal",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Meeting Action Item",
+   "link_to": "Meeting Action Item",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Body Composition Compliance",
+   "link_to": "Body Composition Compliance",
+   "type": "Report",
+   "report_ref_doctype": "Body"
+  },
+  {
+   "color": "Grey",
+   "label": "Proposal Tracker",
+   "link_to": "Proposal Tracker",
+   "type": "Report",
+   "report_ref_doctype": "Academic Proposal"
+  }
+ ],
+ "title": "Academic Governance"
+}

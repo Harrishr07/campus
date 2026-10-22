@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "notice_days",
+  "honorarium_section",
+  "honorarium_item",
+  "travel_item",
+  "daily_allowance_item"
+ ],
+ "fields": [
+  {
+   "fieldname": "notice_days",
+   "fieldtype": "Int",
+   "label": "Notice Days",
+   "default": "7",
+   "non_negative": 1,
+   "description": "A meeting notice must be sent at least this many days before the meeting, unless an override reason is given."
+  },
+  {
+   "fieldname": "honorarium_section",
+   "fieldtype": "Section Break",
+   "label": "Honorarium"
+  },
+  {
+   "fieldname": "honorarium_item",
+   "fieldtype": "Link",
+   "label": "Honorarium Item",
+   "options": "Item",
+   "description": "Service Item for the honorarium line of the Purchase Invoice an Honorarium Claim drafts. Its Item Defaults give the expense account."
+  },
+  {
+   "fieldname": "travel_item",
+   "fieldtype": "Link",
+   "label": "Travel Allowance Item",
+   "options": "Item",
+   "description": "Service Item for the TA line."
+  },
+  {
+   "fieldname": "daily_allowance_item",
+   "fieldtype": "Link",
+   "label": "Daily Allowance Item",
+   "options": "Item",
+   "description": "Service Item for the DA line (a different Item from the TA one: an invoice cannot repeat an Item)."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-10-11 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Academic Governance",
+ "name": "Governance Settings",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1
+  }
+ ]
+}

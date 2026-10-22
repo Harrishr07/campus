@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "exam_session",
+  "course_offering",
+  "company",
+  "course",
+  "cia_schedule",
+  "marks",
+  "section_cia_marks",
+  "cia_marks"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "exam_session.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "fetch_from": "course_offering.course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cia_schedule",
+   "fieldtype": "Link",
+   "label": "CIA Schedule",
+   "options": "CIA Schedule",
+   "read_only": 1,
+   "description": "With a CIA Schedule the CIA column is consolidated from the question marks below and locks at the entry deadline."
+  },
+  {
+   "fieldname": "marks",
+   "fieldtype": "Table",
+   "label": "Marks",
+   "options": "Mark Sheet Entry Row"
+  },
+  {
+   "fieldname": "section_cia_marks",
+   "fieldtype": "Section Break",
+   "label": "CIA Question Marks",
+   "depends_on": "cia_schedule"
+  },
+  {
+   "fieldname": "cia_marks",
+   "fieldtype": "Table",
+   "label": "CIA Question Marks",
+   "options": "Mark Sheet CIA Mark"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Mark Sheet Entry",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "MSE-.#####",
+ "naming_rule": "Expression (old style)",
+ "track_changes": 1
+}

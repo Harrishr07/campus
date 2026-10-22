@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Convocation Export Column",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "heading",
+   "fieldtype": "Data",
+   "label": "Heading",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "Register Number\nStudent\nStudent Name\nDate of Birth\nProgram\nRegulation\nCGPA\nPercentage\nClassification\nVariant\nCompletion Term"
+  }
+ ],
+ "field_order": [
+  "heading",
+  "source"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

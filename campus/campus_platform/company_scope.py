@@ -7,6 +7,7 @@ company from parent links and rejects links across companies.
 
 import frappe
 from frappe import _
+from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 MODULE = "Campus Platform"
@@ -27,7 +28,11 @@ COMPANY_SCOPED_DOCTYPES = [
 ]
 
 # Company fieldname per scoped doctype; Fee Schedule keeps its own standard field.
-COMPANY_FIELD = {**dict.fromkeys(COMPANY_SCOPED_DOCTYPES, "oc_company"), "Fee Schedule": "company", "Regulation": "company"}
+COMPANY_FIELD = {
+	**dict.fromkeys(COMPANY_SCOPED_DOCTYPES, "oc_company"),
+	"Fee Schedule": "company",
+	"Regulation": "company",
+}
 
 # doctype -> (link field on the doc, doctype it points to) whose company is inherited.
 PARENT_LINKS = {
@@ -80,6 +85,12 @@ def setup_company_fields():
 		"module": MODULE,
 	}
 	create_custom_fields({dt: [field] for dt in COMPANY_SCOPED_DOCTYPES}, update=True)
+
+
+def permitted_companies(user):
+	"""Companies the user is restricted to by User Permission, or None when unrestricted."""
+	restricted = get_user_permissions(user).get("Company")
+	return [p["doc"] for p in restricted] if restricted else None
 
 
 def before_validate(doc, method=None):

@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regulation",
+  "credit_section",
+  "max_credits_per_semester",
+  "excluded_types",
+  "max_credits_clause",
+  "drop_section",
+  "max_drop_credits",
+  "drop_window_days",
+  "drop_clause",
+  "add_section",
+  "add_from_semester",
+  "max_add_credits",
+  "max_add_courses",
+  "add_clause",
+  "elective_section",
+  "elective_min_enrolment",
+  "elective_clause",
+  "honours_section",
+  "honours_min_cgpa",
+  "honours_cgpa_upto_semester",
+  "honours_no_arrears",
+  "honours_clause"
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "credit_section",
+   "fieldtype": "Section Break",
+   "label": "Credit Limit"
+  },
+  {
+   "fieldname": "max_credits_per_semester",
+   "fieldtype": "Float",
+   "label": "Maximum Credits per Semester",
+   "reqd": 1,
+   "description": "Credits of the excluded registration types do not count."
+  },
+  {
+   "fieldname": "excluded_types",
+   "fieldtype": "Small Text",
+   "label": "Excluded Registration Types",
+   "default": "Arrear\nDropped",
+   "description": "One per line: Regular, Arrear, Dropped, Additional, Honours or Minor. Dropped covers withdrawal."
+  },
+  {
+   "fieldname": "max_credits_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  },
+  {
+   "fieldname": "drop_section",
+   "fieldtype": "Section Break",
+   "label": "Drop"
+  },
+  {
+   "fieldname": "max_drop_credits",
+   "fieldtype": "Float",
+   "label": "Maximum Credits Dropped"
+  },
+  {
+   "fieldname": "drop_window_days",
+   "fieldtype": "Int",
+   "label": "Drop Window (Days from Term Start)"
+  },
+  {
+   "fieldname": "drop_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  },
+  {
+   "fieldname": "add_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Courses"
+  },
+  {
+   "fieldname": "add_from_semester",
+   "fieldtype": "Int",
+   "label": "Additional Courses Allowed from Semester"
+  },
+  {
+   "fieldname": "max_add_credits",
+   "fieldtype": "Float",
+   "label": "Maximum Additional Credits"
+  },
+  {
+   "fieldname": "max_add_courses",
+   "fieldtype": "Int",
+   "label": "Maximum Additional Courses"
+  },
+  {
+   "fieldname": "add_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  },
+  {
+   "fieldname": "elective_section",
+   "fieldtype": "Section Break",
+   "label": "Electives"
+  },
+  {
+   "fieldname": "elective_min_enrolment",
+   "fieldtype": "Int",
+   "label": "Elective Minimum Enrolment"
+  },
+  {
+   "fieldname": "elective_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  },
+  {
+   "fieldname": "honours_section",
+   "fieldtype": "Section Break",
+   "label": "Honours and Minor",
+   "description": "Eligibility to register Honours or Minor courses (M03-04, M05-03). A blank minimum CGPA means no CGPA check."
+  },
+  {
+   "fieldname": "honours_min_cgpa",
+   "fieldtype": "Float",
+   "label": "Minimum CGPA"
+  },
+  {
+   "fieldname": "honours_cgpa_upto_semester",
+   "fieldtype": "Int",
+   "label": "CGPA Over Semesters Up To",
+   "description": "The CGPA counts the published results of the curriculum's courses of semesters up to this one (0: all)."
+  },
+  {
+   "fieldname": "honours_no_arrears",
+   "fieldtype": "Check",
+   "label": "Honours Needs No Outstanding Arrear"
+  },
+  {
+   "fieldname": "honours_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Registration Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:regulation",
+ "title_field": "regulation",
+ "naming_rule": "By fieldname"
+}

@@ -1,0 +1,184 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "academic_term",
+  "company",
+  "column_break_1",
+  "evidence_kind",
+  "evidence",
+  "overall_pct",
+  "section_reason",
+  "reason",
+  "section_fee",
+  "fee_amount",
+  "fee_invoice",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "evidence_kind",
+   "fieldtype": "Select",
+   "label": "Evidence Kind",
+   "options": "Medical\nSports",
+   "reqd": 1
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Evidence",
+   "reqd": 1,
+   "description": "Medical certificate or sports participation proof."
+  },
+  {
+   "fieldname": "overall_pct",
+   "fieldtype": "Percent",
+   "label": "Overall % at Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_reason",
+   "fieldtype": "Section Break",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Fee"
+  },
+  {
+   "fieldname": "fee_amount",
+   "fieldtype": "Currency",
+   "label": "Condonation Fee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fee_invoice",
+   "fieldtype": "Link",
+   "label": "Fee Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Condonation Request",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Condonation Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Student",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Guardian",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "CND-.#####",
+ "is_submittable": 1,
+ "title_field": "student_name"
+}

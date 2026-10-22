@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "autoname": "VRL-.#####",
+ "creation": "2026-10-09 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "framework",
+  "rule_type",
+  "column_break_rule",
+  "severity",
+  "enabled",
+  "section_break_node",
+  "node",
+  "slot_name",
+  "compare_node",
+  "operator",
+  "limit",
+  "minimum",
+  "maximum",
+  "section_break_message",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "framework",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Framework",
+   "options": "Accreditation Framework",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "rule_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Rule Type",
+   "options": "Required Evidence\nWord Limit\nComparison\nRange\nNon-empty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_rule",
+   "fieldtype": "Column Break",
+   "label": "Column Break Rule"
+  },
+  {
+   "default": "Blocking",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Severity",
+   "options": "Blocking\nWarning",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_break_node",
+   "fieldtype": "Section Break",
+   "label": "Applies to"
+  },
+  {
+   "fieldname": "node",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Node",
+   "options": "Framework Node",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Required Evidence'",
+   "description": "Leave blank to check every slot of the node marked Required.",
+   "fieldname": "slot_name",
+   "fieldtype": "Data",
+   "label": "Evidence Slot"
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Comparison'",
+   "fieldname": "compare_node",
+   "fieldtype": "Link",
+   "label": "Compare With Node",
+   "options": "Framework Node"
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Comparison'",
+   "description": "The node's value must satisfy this against the compared node; a value that does not is flagged.",
+   "fieldname": "operator",
+   "fieldtype": "Select",
+   "label": "Node Must Be",
+   "options": "\n<=\n<\n>=\n>\n="
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Word Limit'",
+   "description": "Blank: use the word limit of the node.",
+   "fieldname": "limit",
+   "fieldtype": "Int",
+   "label": "Word Limit"
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Range'",
+   "description": "A number; blank for no bound.",
+   "fieldname": "minimum",
+   "fieldtype": "Data",
+   "label": "Minimum"
+  },
+  {
+   "depends_on": "eval:doc.rule_type=='Range'",
+   "description": "A number; blank for no bound.",
+   "fieldname": "maximum",
+   "fieldtype": "Data",
+   "label": "Maximum"
+  },
+  {
+   "fieldname": "section_break_message",
+   "fieldtype": "Section Break",
+   "label": "Section Break Message"
+  },
+  {
+   "description": "Shown to the criterion owner when the rule fails.",
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "name": "Validation Rule",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "IQAC Coordinator",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Principal"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "message",
+ "track_changes": 1
+}

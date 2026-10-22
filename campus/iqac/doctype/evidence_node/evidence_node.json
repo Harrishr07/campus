@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1,
+ "istable": 1,
+ "name": "Evidence Node",
+ "permissions": [],
+ "field_order": [
+  "node",
+  "slot_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "node",
+   "fieldtype": "Link",
+   "label": "Node",
+   "options": "Framework Node",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "slot_name",
+   "fieldtype": "Data",
+   "label": "Evidence Slot",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The slot of the node this evidence fills, e.g. Data Template."
+  }
+ ]
+}

@@ -14,14 +14,42 @@ NO_VALUE_FIELDS = frappe.model.no_value_fields
 NEW_VERSION_FIELDS = ("company", "effective_from_year", "approving_resolution", "notes")
 
 
+def regulation_name(code, company):
+	"""Document name of the regulation `code` of `company`: codes repeat across colleges."""
+	abbr = company and frappe.db.get_value("Company", company, "abbr")
+	if not (code and abbr):
+		frappe.throw(_("A regulation needs a code and a company with an abbreviation."))
+	return f"{code}-{abbr}"
+
+
 class Regulation(Document):
+	def autoname(self):
+		self.validate_unique_code()  # the name would collide before validate runs
+		self.name = regulation_name(self.code, self.company)
+
 	def validate(self):
+		self.validate_unique_code()
 		self.validate_unique_programs()
 		self.validate_effective_lock()
 
 	def on_update(self):
 		if self.status == "Effective":
 			self.retire_previous_version()
+
+	def on_trash(self):
+		if self.status in ("Effective", "Retired"):
+			frappe.throw(_("An {0} regulation cannot be deleted.").format(_(self.status)))
+
+	def validate_unique_code(self):
+		clash = frappe.db.exists(
+			"Regulation", {"code": self.code, "company": self.company, "name": ["!=", self.name or ""]}
+		)
+		if clash:
+			frappe.throw(
+				_("Regulation code {0} already exists for {1}.").format(
+					frappe.bold(self.code), frappe.bold(self.company)
+				)
+			)
 
 	def validate_unique_programs(self):
 		programs = [row.program for row in self.programs]
@@ -30,6 +58,8 @@ class Regulation(Document):
 
 	def validate_effective_lock(self):
 		before = self.get_doc_before_save()
+		if before and before.status == "Retired" and self.status != "Retired":
+			frappe.throw(_("A Retired regulation cannot be reinstated. Amend it as a new version."))
 		if not before or before.status != "Effective":
 			return
 		if self.status not in ("Effective", "Retired"):
@@ -53,7 +83,10 @@ class Regulation(Document):
 		return values
 
 	def retire_previous_version(self):
-		if self.previous_version and frappe.db.get_value("Regulation", self.previous_version, "status") == "Effective":
+		if (
+			self.previous_version
+			and frappe.db.get_value("Regulation", self.previous_version, "status") == "Effective"
+		):
 			frappe.db.set_value("Regulation", self.previous_version, "status", "Retired")
 
 
@@ -67,7 +100,7 @@ def amend_as_new_version(regulation):
 		frappe.throw(_("Only an Approved or Effective regulation can be amended."))
 	new = frappe.new_doc("Regulation")
 	new.update({field: source.get(field) for field in NEW_VERSION_FIELDS})
-	new.code = next_version_code(source.code)
+	new.code = next_version_code(source.code, source.company)
 	new.status = "Draft"
 	new.previous_version = source.name
 	for row in source.programs:
@@ -75,9 +108,9 @@ def amend_as_new_version(regulation):
 	return new.insert().name
 
 
-def next_version_code(code):
+def next_version_code(code, company):
 	base = re.sub(r"-V\d+$", "", code)
 	version = 2
-	while frappe.db.exists("Regulation", f"{base}-V{version}"):
+	while frappe.db.exists("Regulation", {"code": f"{base}-V{version}", "company": company}):
 		version += 1
 	return f"{base}-V{version}"

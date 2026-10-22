@@ -1,0 +1,125 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regulation",
+  "grades",
+  "codes",
+  "methods_section",
+  "methods",
+  "online_grades",
+  "gpa_section",
+  "gpa_excluded_categories",
+  "count_additional_with_honours"
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "grades",
+   "fieldtype": "Table",
+   "label": "Grades",
+   "options": "Grading Scheme Grade",
+   "reqd": 1
+  },
+  {
+   "fieldname": "codes",
+   "fieldtype": "Table",
+   "label": "Result Codes",
+   "options": "Grading Scheme Code",
+   "description": "U (fail), SA (shortage of attendance) and AB (absent) are required."
+  },
+  {
+   "fieldname": "methods_section",
+   "fieldtype": "Section Break",
+   "label": "Grading Methods"
+  },
+  {
+   "fieldname": "methods",
+   "fieldtype": "Table",
+   "label": "Methods",
+   "options": "Grading Scheme Method",
+   "description": "Grading method per course type. A course type without a row is graded absolutely. Lab and Project are always absolute."
+  },
+  {
+   "fieldname": "online_grades",
+   "fieldtype": "Table",
+   "label": "Online Course Grades",
+   "options": "Grading Scheme Grade",
+   "description": "Mark ranges for online (NPTEL / SWAYAM) courses."
+  },
+  {
+   "fieldname": "gpa_section",
+   "fieldtype": "Section Break",
+   "label": "SGPA / CGPA"
+  },
+  {
+   "fieldname": "gpa_excluded_categories",
+   "fieldtype": "Table MultiSelect",
+   "label": "Categories Excluded from GPA",
+   "options": "Grading Scheme Excluded Category"
+  },
+  {
+   "fieldname": "count_additional_with_honours",
+   "fieldtype": "Check",
+   "label": "Count Additional Courses Once Honours or Minor Is Completed",
+   "default": "0",
+   "description": "Additional courses are always excluded from SGPA/CGPA unless this is set and the student completed the Honours or Minor."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Grading Scheme",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "autoname": "field:regulation",
+ "naming_rule": "By fieldname",
+ "title_field": "regulation"
+}

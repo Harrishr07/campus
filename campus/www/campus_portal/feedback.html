@@ -1,0 +1,13 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Feedback") }}</h2>
+{% if not campaigns %}<p class="cp-empty">{{ _("No feedback is waiting for you.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for c in campaigns %}
+	<li>
+		<a href="/feedback/{{ c.name|urlencode }}"><strong>{{ c.campaign_title|e }}</strong></a><br>
+		{{ _("Open until {0}").format(frappe.format(c.end_date, {"fieldtype": "Date"})) }}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

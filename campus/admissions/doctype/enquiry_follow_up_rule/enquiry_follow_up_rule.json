@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "enabled",
+  "days_after",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "days_after",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Days After Enquiry",
+   "reqd": 1,
+   "description": "A reminder ToDo is created for the assigned officer once an enquiry is this many days old and still open."
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Reminder Message",
+   "reqd": 1,
+   "description": "Jinja template; the enquiry is available as doc, e.g. Call {{ doc.lead_name }} about {{ doc.oc_program_interest }}."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Enquiry Follow-up Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "company"
+}

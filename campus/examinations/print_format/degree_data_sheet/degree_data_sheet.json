@@ -1,0 +1,19 @@
+{
+ "creation": "2026-10-09 15:00:00.000000",
+ "custom_format": 1,
+ "default_print_language": "en",
+ "disabled": 0,
+ "doc_type": "Certificate Request",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font_size": 14,
+ "html": "{%- set r = oc_graduate_record(doc, \"Degree Data Sheet\") -%}\n{% if r.draft_preview %}<div style=\"border:3px solid #c0392b;color:#c0392b;font-size:28px;font-weight:bold;text-align:center;padding:8px;margin-bottom:12px;letter-spacing:4px\">{{ _(\"DRAFT - NOT VALID\") }}</div>{% endif %}\n<h3 style=\"text-align:center\">{{ _(\"Degree Data Sheet\") }}</h3>\n<p style=\"text-align:center\">{{ doc.company|e }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Student\") }}</th><td>{{ r.student_name|e }} ({{ (r.register_no or r.student)|e }})</td>\n      <th>{{ _(\"Programme\") }}</th><td>{{ r.program|e }}</td></tr>\n  <tr><th>{{ _(\"Regulation\") }}</th><td>{{ r.regulation|e }}</td>\n      <th>{{ _(\"Certificate No.\") }}</th><td>{{ (doc.certificate_number or \"\")|e }}</td></tr>\n</table>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Date of Birth\") }}</th><td>{{ (r.date_of_birth or \"\")|e }}</td></tr>\n  <tr><th>{{ _(\"Completion Term\") }}</th><td>{{ (r.completion_term or \"\")|e }}</td></tr>\n  <tr><th>{{ _(\"CGPA\") }}</th><td>{{ \"%.2f\"|format(r.cgpa or 0) }}</td></tr>\n  <tr><th>{{ _(\"Percentage (CGPA x 10)\") }}</th><td>{{ \"%.2f\"|format(r.percentage or 0) }}</td></tr>\n  <tr><th>{{ _(\"Classification\") }}</th><td>{{ (r.classification or \"\")|e }}{% if r.class_variant and r.class_variant != \"Regular\" %} ({{ _(r.class_variant)|e }}){% endif %}</td></tr>\n  <tr><th>{{ _(\"Degree to be awarded by\") }}</th><td>{{ r.university|e }}</td></tr>\n</table>\n{{ oc_qr_block(doc) }}\n",
+ "idx": 0,
+ "modified": "2026-10-09 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Degree Data Sheet",
+ "owner": "Administrator",
+ "print_format_type": "Jinja",
+ "standard": "Yes"
+}

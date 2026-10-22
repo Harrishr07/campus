@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Substitution Order",
+ "doc_type": "Substitution",
+ "module": "Faculty",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "<h3 style=\"text-align:center\">{{ _(\"Substitution Order\") }}</h3>\n<p style=\"text-align:center\">{{ doc.name | e }} &middot; {{ _(doc.status) }}</p>\n<table class=\"table table-bordered table-condensed\">\n  <tr><th>{{ _(\"Date\") }}</th><td>{{ frappe.format(doc.schedule_date, {\"fieldtype\": \"Date\"}) }}</td><th>{{ _(\"Time\") }}</th><td>{{ doc.from_time }} - {{ doc.to_time }}</td></tr>\n  <tr><th>{{ _(\"Class\") }}</th><td>{{ doc.student_group | e }}</td><th>{{ _(\"Course\") }}</th><td>{{ doc.course | e }}</td></tr>\n  <tr><th>{{ _(\"Room\") }}</th><td>{{ (doc.room or \"\") | e }}</td><th>{{ _(\"Department\") }}</th><td>{{ (doc.department or \"\") | e }}</td></tr>\n  <tr><th>{{ _(\"Absent teacher\") }}</th><td>{{ doc.absent_faculty_name | e }} ({{ doc.absent_faculty | e }})</td><th>{{ _(\"Substitute\") }}</th><td>{{ (doc.substitute_name or \"\") | e }} ({{ (doc.substitute or \"\") | e }})</td></tr>\n  <tr><th>{{ _(\"Reason\") }}</th><td colspan=\"3\">{{ (doc.reason or \"\") | e }}</td></tr>\n  {% if doc.leave_application %}<tr><th>{{ _(\"Leave Application\") }}</th><td colspan=\"3\">{{ doc.leave_application | e }}</td></tr>{% endif %}\n</table>\n<p>{{ _(\"The substitute is requested to take this class and mark its attendance.\") }}</p>\n<br><br>\n<table style=\"width:100%\"><tr><td>{{ _(\"Head of Department\") }}</td><td style=\"text-align:right\">{{ _(\"Principal\") }}</td></tr></table>\n",
+ "creation": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-09 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

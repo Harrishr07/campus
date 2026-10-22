@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "criterion",
+  "value",
+  "min_percent",
+  "max_percent"
+ ],
+ "fields": [
+  {
+   "fieldname": "criterion",
+   "fieldtype": "Select",
+   "label": "Criterion",
+   "options": "Course Outcome\nBloom Level",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Data",
+   "label": "Value",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "e.g. CO1, or a Bloom level such as Apply"
+  },
+  {
+   "fieldname": "min_percent",
+   "fieldtype": "Percent",
+   "label": "Min % of Marks",
+   "in_list_view": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "max_percent",
+   "fieldtype": "Percent",
+   "label": "Max % of Marks",
+   "in_list_view": 1,
+   "default": "100"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Question Paper Blueprint",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

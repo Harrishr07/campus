@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Invigilation Duty",
+ "field_order": [
+  "exam_date",
+  "slot",
+  "room",
+  "employee",
+  "employee_name"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_date",
+   "fieldtype": "Date",
+   "label": "Exam Date",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "slot",
+   "fieldtype": "Select",
+   "label": "Slot",
+   "options": "FN\nAN",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Exam Hall",
+   "options": "Room",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Invigilator",
+   "options": "Employee",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "permissions": [],
+ "istable": 1
+}

@@ -1,0 +1,126 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "question_paper",
+  "company",
+  "paper_set",
+  "action",
+  "result",
+  "reason",
+  "column_break_who",
+  "user",
+  "accessed_at",
+  "ip_address",
+  "room",
+  "copies"
+ ],
+ "fields": [
+  {
+   "fieldname": "question_paper",
+   "fieldtype": "Data",
+   "label": "Question Paper",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "paper_set",
+   "fieldtype": "Data",
+   "label": "Set",
+   "read_only": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "label": "Action",
+   "options": "View\nPrint View\nList\nDownload\nPrint\nWithdraw",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "Allowed\nDenied",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "accessed_at",
+   "fieldtype": "Datetime",
+   "label": "Accessed At",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Hall",
+   "options": "Room",
+   "read_only": 1
+  },
+  {
+   "fieldname": "copies",
+   "fieldtype": "Int",
+   "label": "Copies",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "QP Access Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "accessed_at",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "in_create": 1
+}

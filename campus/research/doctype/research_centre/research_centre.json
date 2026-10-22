@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "centre_name",
+  "company",
+  "department",
+  "column_break_1",
+  "centre_head",
+  "centre_head_name",
+  "recognised_by",
+  "recognition_valid_upto"
+ ],
+ "fields": [
+  {
+   "fieldname": "centre_name",
+   "fieldtype": "Data",
+   "label": "Centre Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "centre_head",
+   "fieldtype": "Link",
+   "label": "Head",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "centre_head_name",
+   "fieldtype": "Data",
+   "label": "Head Name",
+   "fetch_from": "centre_head.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recognised_by",
+   "fieldtype": "Data",
+   "label": "Recognised By",
+   "description": "e.g. the affiliating university that recognised the centre."
+  },
+  {
+   "fieldname": "recognition_valid_upto",
+   "fieldtype": "Date",
+   "label": "Recognition Valid Upto"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Research Centre",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "share": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "field:centre_name"
+}

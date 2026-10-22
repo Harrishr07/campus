@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "creation": "2026-10-04 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "position",
+  "scope_doctype",
+  "scope_value",
+  "column_break_1",
+  "employee",
+  "user",
+  "from_date",
+  "to_date",
+  "role_granted"
+ ],
+ "fields": [
+  {
+   "fieldname": "position",
+   "fieldtype": "Link",
+   "label": "Position",
+   "options": "Position",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "scope_doctype",
+   "fieldtype": "Data",
+   "label": "Scope Type",
+   "read_only": 1,
+   "description": "Derived from the position's scope type."
+  },
+  {
+   "fieldname": "scope_value",
+   "fieldtype": "Data",
+   "label": "Scope",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Name of the Company, Department or Student Group; free text for Hostel, Body and Lab scopes."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "in_list_view": 1,
+   "description": "Taken from the employee's user when an employee is chosen."
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "description": "Leave blank for an open-ended holding.",
+   "in_list_view": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "role_granted",
+   "fieldtype": "Check",
+   "label": "Role Granted By This Holding",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-04 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Platform",
+ "name": "Position Holder",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "report": 1, "export": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Academics User", "read": 1, "report": 1}
+ ],
+ "sort_field": "from_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -1,0 +1,173 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 23:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bundle",
+  "exam_session",
+  "company",
+  "course",
+  "valuation_round",
+  "column_break_examiner",
+  "examiner_type",
+  "employee",
+  "external_member",
+  "examiner",
+  "deadline",
+  "status",
+  "section_scripts",
+  "scripts"
+ ],
+ "fields": [
+  {
+   "fieldname": "bundle",
+   "fieldtype": "Link",
+   "label": "Answer Script Bundle",
+   "options": "Answer Script Bundle",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "read_only": 1,
+   "fetch_from": "bundle.exam_session",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "fetch_from": "bundle.company"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "fetch_from": "bundle.course",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "valuation_round",
+   "fieldtype": "Select",
+   "label": "Valuation Round",
+   "options": "1\n2\n3",
+   "reqd": 1,
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_examiner",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "examiner_type",
+   "fieldtype": "Select",
+   "label": "Examiner Type",
+   "options": "Internal\nExternal",
+   "default": "Internal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "depends_on": "eval:doc.examiner_type=='Internal'"
+  },
+  {
+   "fieldname": "external_member",
+   "fieldtype": "Link",
+   "label": "External Member",
+   "options": "External Member",
+   "depends_on": "eval:doc.examiner_type=='External'"
+  },
+  {
+   "fieldname": "examiner",
+   "fieldtype": "Link",
+   "label": "Examiner (User)",
+   "options": "User",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "The examiner's login. Filled from the Employee's user when blank."
+  },
+  {
+   "fieldname": "deadline",
+   "fieldtype": "Date",
+   "label": "Deadline"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Unassigned\nAllocated\nCompleted",
+   "read_only": 1,
+   "default": "Allocated",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_scripts",
+   "fieldtype": "Section Break",
+   "label": "Scripts"
+  },
+  {
+   "fieldname": "scripts",
+   "fieldtype": "Table",
+   "label": "Scripts",
+   "options": "Valuation Allocation Script",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "Valuation Allocation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Exam Confidential",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Examiner",
+   "read": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "VA-.#####",
+ "track_changes": 1,
+ "naming_rule": "Expression (old style)"
+}

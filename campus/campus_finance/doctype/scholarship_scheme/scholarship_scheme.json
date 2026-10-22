@@ -1,0 +1,195 @@
+{
+ "actions": [],
+ "creation": "2026-10-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "scheme_name",
+  "company",
+  "scheme_type",
+  "enabled",
+  "column_break_1",
+  "account",
+  "cost_center",
+  "section_eligibility",
+  "eligible_student_category",
+  "section_amount",
+  "amount_type",
+  "amount",
+  "percent",
+  "max_amount",
+  "section_renewal",
+  "renewable",
+  "renewal_min_attendance_pct",
+  "renewal_max_arrears"
+ ],
+ "fields": [
+  {
+   "fieldname": "scheme_name",
+   "fieldtype": "Data",
+   "label": "Scheme Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "scheme_type",
+   "fieldtype": "Select",
+   "label": "Scheme Type",
+   "options": "Government\nInstitutional",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1,
+   "description": "Government counts under AQAR 5.1.1, Institutional under AQAR 5.1.2."
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Government: the bank or cash account the award is received into. Institutional: the expense account the waiver is booked to."
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "description": "For the waiver of an Institutional scheme; the company default when blank."
+  },
+  {
+   "fieldname": "section_eligibility",
+   "fieldtype": "Section Break",
+   "label": "Eligibility"
+  },
+  {
+   "fieldname": "eligible_student_category",
+   "fieldtype": "Link",
+   "label": "Eligible Student Category",
+   "options": "Student Category",
+   "description": "Blank means every student."
+  },
+  {
+   "fieldname": "section_amount",
+   "fieldtype": "Section Break",
+   "label": "Amount Rule"
+  },
+  {
+   "fieldname": "amount_type",
+   "fieldtype": "Select",
+   "label": "Amount Type",
+   "options": "Fixed\nPercent of Fee",
+   "default": "Fixed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "depends_on": "eval:doc.amount_type=='Fixed'"
+  },
+  {
+   "fieldname": "percent",
+   "fieldtype": "Percent",
+   "label": "Percent of Fee",
+   "depends_on": "eval:doc.amount_type!='Fixed'"
+  },
+  {
+   "fieldname": "max_amount",
+   "fieldtype": "Currency",
+   "label": "Maximum Amount",
+   "description": "Cap per application; zero means no cap."
+  },
+  {
+   "fieldname": "section_renewal",
+   "fieldtype": "Section Break",
+   "label": "Renewal Criteria"
+  },
+  {
+   "fieldname": "renewable",
+   "fieldtype": "Check",
+   "label": "Renewable"
+  },
+  {
+   "fieldname": "renewal_min_attendance_pct",
+   "fieldtype": "Percent",
+   "label": "Minimum Attendance %",
+   "depends_on": "renewable",
+   "description": "Of the student's latest term; zero means attendance is not checked."
+  },
+  {
+   "fieldname": "renewal_max_arrears",
+   "fieldtype": "Int",
+   "label": "Maximum Arrears",
+   "depends_on": "renewable",
+   "default": "0",
+   "description": "Pending arrear courses allowed at renewal."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Scholarship Scheme",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Student Affairs",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:scheme_name"
+}

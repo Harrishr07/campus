@@ -1,0 +1,223 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "exam_session",
+  "application_date",
+  "column_break_1",
+  "company",
+  "program",
+  "department",
+  "withdrawal_code",
+  "window_days",
+  "section_courses",
+  "courses",
+  "reason",
+  "section_special",
+  "special_case",
+  "special_case_reason",
+  "special_case_by",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "application_date",
+   "fieldtype": "Date",
+   "label": "Application Date",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Set when the application is made."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1,
+   "description": "The HOD of this department recommends."
+  },
+  {
+   "fieldname": "withdrawal_code",
+   "fieldtype": "Data",
+   "label": "Withdrawal Code",
+   "read_only": 1,
+   "description": "The regulation's code (WD, WC) the Result Run gives the courses."
+  },
+  {
+   "fieldname": "window_days",
+   "fieldtype": "Int",
+   "label": "Window (days after the exam)",
+   "read_only": 1,
+   "description": "From the regulation's Exam Rule Set."
+  },
+  {
+   "fieldname": "section_courses",
+   "fieldtype": "Section Break",
+   "label": "Courses"
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Exam Withdrawal Course",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_special",
+   "fieldtype": "Section Break",
+   "label": "Special Case",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "special_case",
+   "fieldtype": "Check",
+   "label": "Special Case (Principal)",
+   "description": "Lifts the withdrawal window. Only the Principal may set it."
+  },
+  {
+   "fieldname": "special_case_reason",
+   "fieldtype": "Small Text",
+   "label": "Special Case Reason",
+   "depends_on": "special_case",
+   "mandatory_depends_on": "special_case"
+  },
+  {
+   "fieldname": "special_case_by",
+   "fieldtype": "Link",
+   "label": "Special Case By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Exam Withdrawal Application",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Exam Withdrawal Application",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "EWA-.#####",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "title_field": "student_name"
+}

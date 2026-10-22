@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "journal_title",
+  "issn",
+  "e_issn",
+  "publisher",
+  "indexing_section",
+  "scopus",
+  "web_of_science",
+  "column_break_1",
+  "ugc_care",
+  "ugc_care_group",
+  "other_indexing"
+ ],
+ "fields": [
+  {
+   "fieldname": "journal_title",
+   "fieldtype": "Data",
+   "label": "Journal Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "issn",
+   "fieldtype": "Data",
+   "label": "ISSN",
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Print ISSN, NNNN-NNNC. At least one of ISSN / e-ISSN is required."
+  },
+  {
+   "fieldname": "e_issn",
+   "fieldtype": "Data",
+   "label": "e-ISSN"
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Data",
+   "label": "Publisher"
+  },
+  {
+   "fieldname": "indexing_section",
+   "fieldtype": "Section Break",
+   "label": "Indexing"
+  },
+  {
+   "fieldname": "scopus",
+   "fieldtype": "Check",
+   "label": "Scopus",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "web_of_science",
+   "fieldtype": "Check",
+   "label": "Web of Science",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ugc_care",
+   "fieldtype": "Check",
+   "label": "UGC-CARE Listed",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "ugc_care_group",
+   "fieldtype": "Select",
+   "label": "UGC-CARE Group",
+   "options": "\nGroup I\nGroup II",
+   "depends_on": "ugc_care"
+  },
+  {
+   "fieldname": "other_indexing",
+   "fieldtype": "Data",
+   "label": "Other Indexing"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Indexed Journal",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "share": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "hash",
+ "title_field": "journal_title",
+ "show_title_field_in_link": 1,
+ "search_fields": "issn,e_issn"
+}

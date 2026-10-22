@@ -1,0 +1,165 @@
+{
+ "actions": [],
+ "creation": "2026-10-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Faculty",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Timetable Generation Run",
+ "field_order": [
+  "naming_series",
+  "timetable",
+  "status",
+  "time_limit",
+  "column_break_1",
+  "started_at",
+  "finished_at",
+  "section_result",
+  "sessions_total",
+  "sessions_placed",
+  "soft_issues",
+  "solver_status",
+  "unmet",
+  "error"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "TTR-.YYYY.-",
+   "default": "TTR-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "timetable",
+   "fieldtype": "Link",
+   "label": "Timetable",
+   "options": "Timetable",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Queued\nRunning\nCompleted\nCompleted with unmet constraints\nFailed\nCancelled",
+   "default": "Queued",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "time_limit",
+   "fieldtype": "Int",
+   "label": "Time Limit (seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finished_at",
+   "fieldtype": "Datetime",
+   "label": "Finished",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_result",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "sessions_total",
+   "fieldtype": "Int",
+   "label": "Classes to Place",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sessions_placed",
+   "fieldtype": "Int",
+   "label": "Classes Placed",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "soft_issues",
+   "fieldtype": "Int",
+   "label": "Soft-Constraint Issues",
+   "read_only": 1
+  },
+  {
+   "fieldname": "solver_status",
+   "fieldtype": "Data",
+   "label": "Solver",
+   "read_only": 1,
+   "description": "Backend and verdict, e.g. cpsat optimal / infeasible."
+  },
+  {
+   "fieldname": "unmet",
+   "fieldtype": "Long Text",
+   "label": "Unmet Constraints",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "autoname": "naming_series:",
+ "title_field": "timetable",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ]
+}

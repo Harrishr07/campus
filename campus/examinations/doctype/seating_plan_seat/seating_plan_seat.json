@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-08 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Seating Plan Seat",
+ "field_order": [
+  "room",
+  "seat_label",
+  "seat_row",
+  "seat_column",
+  "student",
+  "student_name",
+  "course",
+  "absent"
+ ],
+ "fields": [
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Exam Hall",
+   "options": "Room",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seat_label",
+   "fieldtype": "Data",
+   "label": "Seat",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seat_row",
+   "fieldtype": "Int",
+   "label": "Row",
+   "read_only": 1
+  },
+  {
+   "fieldname": "seat_column",
+   "fieldtype": "Int",
+   "label": "Column",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "absent",
+   "fieldtype": "Check",
+   "label": "Absent",
+   "in_list_view": 1,
+   "description": "Exam attendance: the student did not write the exam. The Result Run grades the course AB."
+  }
+ ],
+ "permissions": [],
+ "istable": 1
+}

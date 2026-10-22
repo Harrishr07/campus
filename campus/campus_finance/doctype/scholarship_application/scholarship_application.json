@@ -1,0 +1,246 @@
+{
+ "actions": [],
+ "creation": "2026-10-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "student",
+  "student_name",
+  "company",
+  "column_break_1",
+  "scheme",
+  "scheme_type",
+  "academic_year",
+  "application_type",
+  "previous_application",
+  "section_amount",
+  "base_fee",
+  "sanctioned_amount",
+  "column_break_2",
+  "status",
+  "disbursed_amount",
+  "remarks",
+  "section_disbursements",
+  "disbursements",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "SCH-.YYYY.-",
+   "default": "SCH-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "scheme",
+   "fieldtype": "Link",
+   "label": "Scheme",
+   "options": "Scholarship Scheme",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "scheme_type",
+   "fieldtype": "Select",
+   "label": "Scheme Type",
+   "options": "Government\nInstitutional",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "application_type",
+   "fieldtype": "Select",
+   "label": "Application Type",
+   "options": "New\nRenewal",
+   "default": "New",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "previous_application",
+   "fieldtype": "Link",
+   "label": "Previous Application",
+   "options": "Scholarship Application",
+   "depends_on": "eval:doc.application_type=='Renewal'",
+   "mandatory_depends_on": "eval:doc.application_type=='Renewal'",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "section_amount",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "base_fee",
+   "fieldtype": "Currency",
+   "label": "Fee Amount",
+   "description": "The fee a Percent of Fee scheme takes its percentage of."
+  },
+  {
+   "fieldname": "sanctioned_amount",
+   "fieldtype": "Currency",
+   "label": "Sanctioned Amount",
+   "in_list_view": 1,
+   "description": "Defaults to the scheme's amount; it may be lowered, not raised."
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Applied\nSanctioned\nDisbursed\nCancelled",
+   "default": "Applied",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "disbursed_amount",
+   "fieldtype": "Currency",
+   "label": "Disbursed Amount",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Live (not cancelled) disbursement vouchers."
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "section_disbursements",
+   "fieldtype": "Section Break",
+   "label": "Disbursements"
+  },
+  {
+   "fieldname": "disbursements",
+   "fieldtype": "Table",
+   "label": "Disbursements",
+   "options": "Scholarship Disbursement",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "Made with Disburse; each row links its Payment Entry or Journal Entry."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Scholarship Application",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Campus Finance",
+ "name": "Scholarship Application",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "delete": 1,
+   "amend": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "amend": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Student Affairs",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "title_field": "student_name"
+}

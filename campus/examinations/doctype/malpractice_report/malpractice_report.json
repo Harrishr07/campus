@@ -1,0 +1,251 @@
+{
+ "actions": [],
+ "creation": "2026-10-08 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-09 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "name": "Malpractice Report",
+ "field_order": [
+  "exam_session",
+  "student",
+  "student_name",
+  "exam_registration",
+  "company",
+  "column_break_1",
+  "course",
+  "exam_date",
+  "room",
+  "section_incident",
+  "category",
+  "description",
+  "evidence",
+  "section_decision",
+  "committee_decision",
+  "decision_remarks",
+  "decision_set_by",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "exam_session",
+   "fieldtype": "Link",
+   "label": "Exam Session",
+   "options": "Exam Session",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "exam_registration",
+   "fieldtype": "Link",
+   "label": "Exam Registration",
+   "options": "Exam Registration",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1
+  },
+  {
+   "fieldname": "exam_date",
+   "fieldtype": "Date",
+   "label": "Exam Date"
+  },
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Exam Hall",
+   "options": "Room"
+  },
+  {
+   "fieldname": "section_incident",
+   "fieldtype": "Section Break",
+   "label": "Incident"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "\nCopying\nPossession of unauthorised material\nImpersonation\nCommunication with others\nMisbehaviour\nOther",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Table",
+   "label": "Evidence",
+   "options": "Malpractice Evidence",
+   "description": "Private files only; they are attached to this report, so only those who may read the report may open them."
+  },
+  {
+   "fieldname": "section_decision",
+   "fieldtype": "Section Break",
+   "label": "Committee Decision"
+  },
+  {
+   "fieldname": "committee_decision",
+   "fieldtype": "Select",
+   "label": "Committee Decision",
+   "options": "\nNo Action\nWarning\nExam Cancelled\nDebarment",
+   "in_list_view": 1,
+   "description": "Recorded by the COE (during approval). Debarment debars the student's Exam Registration of this session once the report is approved.",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "decision_remarks",
+   "fieldtype": "Small Text",
+   "label": "Decision Remarks",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "decision_set_by",
+   "fieldtype": "Link",
+   "label": "Decision Recorded By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Malpractice Report",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "amend": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "print": 1,
+   "if_owner": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "permlevel": 1,
+   "write": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "permlevel": 1,
+   "write": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "permlevel": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "permlevel": 1
+  }
+ ],
+ "autoname": "MPR-.#####",
+ "naming_rule": "Expression (old style)",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "title_field": "student_name"
+}

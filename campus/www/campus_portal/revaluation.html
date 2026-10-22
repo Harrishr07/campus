@@ -1,0 +1,56 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Photocopy and revaluation") }}</h2>
+{% if revaluations.can_apply %}
+{% if not revaluations.options %}<p class="cp-empty">{{ _("No application window is open.") }}</p>{% endif %}
+{% for o in revaluations.options %}
+<form class="cp-card cp-form" data-method="campus.student_services.exam_portal.apply_revaluation" data-list="courses">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<input type="hidden" name="exam_session" value="{{ o.exam_session|e }}">
+	<strong>{{ o.exam_session|e }}</strong> ({{ o.academic_term|e }})
+	<p>{{ _("Applications close on {0}").format(frappe.utils.formatdate(o.closes_on))|e }}</p>
+	<label for="cp-rv-type-{{ loop.index }}">{{ _("Application") }}</label>
+	<select id="cp-rv-type-{{ loop.index }}" name="application_type" required>
+		{% for t in ("Photocopy", "Revaluation", "Review") %}<option value="{{ t }}">{{ _(t) }}</option>{% endfor %}
+	</select>
+	<fieldset><legend>{{ _("Courses") }}</legend>
+		{% for c in o.courses %}
+		<label><input type="checkbox" name="courses" value="{{ c.course|e }}"> {{ c.course|e }} ({{ c.grade|e }})</label>
+		{% endfor %}
+	</fieldset>
+	<button class="cp-btn" type="submit">{{ _("Apply") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% endfor %}
+{% endif %}
+<h2>{{ _("My applications") }}</h2>
+{% if not revaluations.applications %}<p class="cp-empty">{{ _("No applications yet.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for a in revaluations.applications %}
+	<li>
+		<strong>{{ a.name|e }}</strong> {{ _(a.application_type)|e }} <span class="cp-badge">{{ _(a.status)|e }}</span><br>
+		{{ a.exam_session|e }}
+		<ul>
+			{% for c in a.courses %}<li>{{ c.course|e }}{% if c.status %} <span class="cp-badge">{{ _(c.status)|e }}</span>{% endif %}</li>{% endfor %}
+		</ul>
+		{% if a.fee_amount %}{{ _("Fee") }} {{ frappe.utils.fmt_money(a.fee_amount, currency="INR") }}{% endif %}
+		{% set inv = a.invoice %}
+		{% if inv and inv.can_pay %}
+		<br><button class="cp-btn" data-pay="{{ inv.name|e }}" data-student="{{ student|e }}">{{ _("Pay online") }}</button>
+		<span class="cp-message" role="alert"></span>
+		{% elif inv and inv.outstanding_amount > 0 %}
+		<br><span class="cp-label">{{ _("Online payment is not available for this invoice. Please pay at the college office.") }}</span>
+		{% endif %}
+		{% if a.can_submit and revaluations.can_apply %}
+		<form class="cp-form" data-method="campus.student_services.exam_portal.submit_revaluation">
+			<input type="hidden" name="student" value="{{ student|e }}">
+			<input type="hidden" name="application" value="{{ a.name|e }}">
+			<button class="cp-btn" type="submit">{{ _("Submit") }}</button>
+			<p class="cp-message" role="alert"></p>
+		</form>
+		{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+<p>{{ _("A revised result appears under Results once the college ratifies it.") }}</p>
+{% endblock %}

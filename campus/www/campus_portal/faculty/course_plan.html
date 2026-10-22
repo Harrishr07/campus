@@ -1,0 +1,14 @@
+{% extends "campus/www/campus_portal/faculty/_base.html" %}
+{% block faculty_body %}
+<h2>{{ _("Course plan") }}</h2>
+{% if not plan %}<p class="cp-empty">{{ _("No offerings are allocated to you.") }}</p>{% endif %}
+{% for row in plan %}
+<section class="cp-card">
+	<h3>{{ row.course|e }} &middot; {{ row.offering|e }}</h3>
+	<p>{{ row.academic_term|e }}<br>
+		{% if row.weekly %}{{ _("A week: {0} lecture, {1} tutorial, {2} practical periods").format(row.weekly.lecture_periods or 0, row.weekly.tutorial_periods or 0, row.weekly.practical_periods or 0) }}<br>{% endif %}
+		{{ _("Held {0} of {1} scheduled periods").format(row.held, row.scheduled) }}</p>
+	{% if row.topics %}<ol>{% for t in row.topics %}<li>{{ t|e }}</li>{% endfor %}</ol>{% endif %}
+</section>
+{% endfor %}
+{% endblock %}
