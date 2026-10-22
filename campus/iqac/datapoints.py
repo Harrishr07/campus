@@ -36,6 +36,11 @@ grievance); `department` narrows by the application's program; see campus.examin
 
 Phase 2 (P2-T24): students_appeared, pass_percentage (AQAR 2.6.3) and days_exam_to_result (AQAR 2.5.1) read the latest,
 ratified results of the year's published sessions, as the COE reports do; see campus/examinations/coe_reports.py.
+
+Phase 3 (P3-T21): publications_published (NIRF), ugc_care_papers (AQAR 3.4.3), books_and_chapters (AQAR 3.4.4), publication_citations
+(AQAR 3.4.5), publication_h_index (AQAR 3.4.6) and patents_filed / patents_published / patents_granted (AQAR 3.3, NIRF IPR) count the
+year's publications (by publication date) and patents (by the date of the stage), each once for the institution; see
+campus/research/publications.py for the counting rules. `department` narrows to the department's teachers' work.
 """
 
 import frappe
@@ -46,6 +51,7 @@ from campus.campus_finance.api import scholarship_beneficiaries
 from campus.examinations import api as exams
 from campus.faculty import api as faculty
 from campus.iqac.registry import campus_metric
+from campus.research import api as research
 
 
 def refs(doctype, names):
@@ -278,3 +284,44 @@ def pass_percentage(company, academic_year, department=None):
 @campus_metric("days_exam_to_result", "Examinations", "Average days from the last exam to the publication of results (AQAR 2.5.1)")
 def days_exam_to_result(company, academic_year, department=None):
 	return exams.days_exam_to_result(company, academic_year, department_programs(department))
+
+
+# P3-T21 research output data points (AQAR 3.3, 3.4.3-3.4.6, NIRF IPR and publications), see campus.research.publications.
+@campus_metric("publications_published", "Research", "Distinct publications dated in the year (NIRF publications)")
+def publications_published(company, academic_year, department=None):
+	return research.publications_published(company, academic_year, department)
+
+
+@campus_metric("ugc_care_papers", "Research", "Journal articles of the year in UGC-CARE listed journals (AQAR 3.4.3)")
+def ugc_care_papers(company, academic_year, department=None):
+	return research.ugc_care_papers(company, academic_year, department)
+
+
+@campus_metric("books_and_chapters", "Research", "Books, book chapters and conference papers of the year (AQAR 3.4.4)")
+def books_and_chapters(company, academic_year, department=None):
+	return research.books_and_chapters(company, academic_year, department)
+
+
+@campus_metric("publication_citations", "Research", "Citations of the year's publications (AQAR 3.4.5)")
+def publication_citations(company, academic_year, department=None):
+	return research.publication_citations(company, academic_year, department)
+
+
+@campus_metric("publication_h_index", "Research", "h-index of the year's publications (AQAR 3.4.6)")
+def publication_h_index(company, academic_year, department=None):
+	return research.publication_h_index(company, academic_year, department)
+
+
+@campus_metric("patents_filed", "Research", "Patents filed in the year (AQAR 3.3, NIRF IPR)")
+def patents_filed(company, academic_year, department=None):
+	return research.patents_filed(company, academic_year, department)
+
+
+@campus_metric("patents_published", "Research", "Patents published in the year (NIRF IPR)")
+def patents_published(company, academic_year, department=None):
+	return research.patents_published(company, academic_year, department)
+
+
+@campus_metric("patents_granted", "Research", "Patents granted in the year (AQAR 3.3, NIRF IPR)")
+def patents_granted(company, academic_year, department=None):
+	return research.patents_granted(company, academic_year, department)

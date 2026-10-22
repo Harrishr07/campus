@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 12,
+   "link_count": 15,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -228,10 +228,43 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Invention Disclosure",
+   "link_count": 0,
+   "link_to": "Invention Disclosure",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Patent",
+   "link_count": 0,
+   "link_to": "Patent",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Publication",
+   "link_count": 0,
+   "link_to": "Publication",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 3,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -269,6 +302,39 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Publication Register",
+   "link_count": 0,
+   "link_to": "Publication Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Publications by Teacher",
+   "link_count": 0,
+   "link_to": "Publications by Teacher",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Patent Register",
+   "link_count": 0,
+   "link_to": "Patent Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
@@ -299,7 +365,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-10 12:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",

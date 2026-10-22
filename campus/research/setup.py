@@ -4,7 +4,7 @@ sanctioned under (P3-T14), the `oc_budget_head` custom fields on purchase, journ
 the Utilisation Certificate approval policy, PI -> Accounts -> Principal (P3-T17), and the PFMS vendor fields on
 Supplier with the placeholder PFMS EAT export layouts (P3-T18), and for project staff (P3-T19) the "Project Staff"
 Employment Type, the JRF / SRF / Project Assistant designations and the "Fellowship" salary component, with the
-progress report fields on Project Update.
+progress report fields on Project Update, and the IPR committee policy for Invention Disclosures (P3-T21).
 Existing (possibly edited) records are left alone."""
 
 import frappe
@@ -16,6 +16,7 @@ from campus.research.utilisation import UC_DOCTYPE, UC_POLICY
 
 REMINDER_EVENT = "research_proposal.deadline"
 REVIEW_POLICY = "Research Proposal Internal Review"
+DISCLOSURE_POLICY = "Invention Disclosure Committee"
 INSTITUTION_AGENCY = "Institution"
 PROJECT_STAFF = "Project Staff"
 PROJECT_STAFF_DESIGNATIONS = ("Junior Research Fellow", "Senior Research Fellow", "Project Assistant")
@@ -33,6 +34,7 @@ def seed_research():
 	"""The records only (no custom field DDL), so tests can call it."""
 	seed_reminder_template()
 	seed_review_policy()
+	seed_disclosure_policy()
 	seed_institution_agency()
 	seed_uc_policy()
 	seed_layouts()
@@ -69,6 +71,18 @@ def seed_review_policy():
 		{
 			"doctype": "Approval Policy", "policy_name": REVIEW_POLICY, "document_type": "Research Proposal",
 			"levels": [{"approver_type": "Role", "approver": "Principal", "limit_to_company": 1, "title": "Internal Review", "sla_hours": 72}],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
+
+
+def seed_disclosure_policy():
+	"""One level: the Principal of the disclosure's college acts as the IPR committee (P3-T21)."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Invention Disclosure"}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": DISCLOSURE_POLICY, "document_type": "Invention Disclosure",
+			"levels": [{"approver_type": "Role", "approver": "Principal", "limit_to_company": 1, "title": "IPR Committee", "sla_hours": 168}],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
 

@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "inventor_type",
+  "employee",
+  "student",
+  "inventor_name",
+  "share_percent"
+ ],
+ "fields": [
+  {
+   "fieldname": "inventor_type",
+   "fieldtype": "Select",
+   "label": "Inventor Type",
+   "options": "Employee\nStudent\nExternal",
+   "default": "Employee",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "ignore_user_permissions": 1,
+   "depends_on": "eval:doc.inventor_type=='Employee'",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "ignore_user_permissions": 1,
+   "depends_on": "eval:doc.inventor_type=='Student'"
+  },
+  {
+   "fieldname": "inventor_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "in_list_view": 1,
+   "read_only_depends_on": "eval:doc.inventor_type!='External'"
+  },
+  {
+   "fieldname": "share_percent",
+   "fieldtype": "Percent",
+   "label": "Revenue Share %",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "IPR Inventor",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "istable": 1,
+ "editable_grid": 1
+}

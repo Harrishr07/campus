@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "doi",
+  "title",
+  "company",
+  "column_break_1",
+  "publication_type",
+  "publication_date",
+  "publication_year",
+  "source_section",
+  "journal",
+  "container_title",
+  "publisher",
+  "citations_section",
+  "citations",
+  "citations_as_on",
+  "authors_section",
+  "authors"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PUB-.YYYY.-",
+   "default": "PUB-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "doi",
+   "fieldtype": "Data",
+   "label": "DOI",
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Enter the DOI to fill the title, journal, date and authors from Crossref."
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Small Text",
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "publication_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "\nJournal Article\nConference Paper\nBook\nBook Chapter",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "publication_date",
+   "fieldtype": "Date",
+   "label": "Publication Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "When only the year is known, use 1 January."
+  },
+  {
+   "fieldname": "publication_year",
+   "fieldtype": "Int",
+   "label": "Year",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "Journal, Proceedings or Book"
+  },
+  {
+   "fieldname": "journal",
+   "fieldtype": "Link",
+   "label": "Indexed Journal",
+   "options": "Indexed Journal",
+   "in_standard_filter": 1,
+   "description": "Its indexing (Scopus, Web of Science, UGC-CARE) is read from the journal. Matched from the Crossref ISSN when listed."
+  },
+  {
+   "fieldname": "container_title",
+   "fieldtype": "Data",
+   "label": "Journal / Proceedings / Book Title"
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Data",
+   "label": "Publisher"
+  },
+  {
+   "fieldname": "citations_section",
+   "fieldtype": "Section Break",
+   "label": "Citations"
+  },
+  {
+   "fieldname": "citations",
+   "fieldtype": "Int",
+   "label": "Citations"
+  },
+  {
+   "fieldname": "citations_as_on",
+   "fieldtype": "Date",
+   "label": "Citations As On"
+  },
+  {
+   "fieldname": "authors_section",
+   "fieldtype": "Section Break",
+   "label": "Authors"
+  },
+  {
+   "fieldname": "authors",
+   "fieldtype": "Table",
+   "label": "Authors",
+   "options": "Publication Author",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Publication",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "if_owner": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "track_changes": 1,
+ "search_fields": "doi,title"
+}
