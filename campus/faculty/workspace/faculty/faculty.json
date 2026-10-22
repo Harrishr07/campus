@@ -291,7 +291,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 18:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",
@@ -326,49 +326,49 @@
    "role": "Academics User"
   }
  ],
- "sequence_id": 49.0,
+ "sequence_id": 50.0,
  "shortcuts": [
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Employee",
    "link_to": "Employee",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Faculty Norm",
    "link_to": "Faculty Norm",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Course Allocation",
    "link_to": "Course Allocation",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
    "label": "Faculty vs Sanctioned Posts",
    "link_to": "Faculty vs Sanctioned Posts",
-   "type": "Report",
-   "report_ref_doctype": "Sanctioned Post"
+   "report_ref_doctype": "Sanctioned Post",
+   "type": "Report"
   },
   {
    "color": "Grey",
    "label": "Workload Balance",
    "link_to": "Workload Balance",
-   "type": "Report",
-   "report_ref_doctype": "Course Allocation"
+   "report_ref_doctype": "Course Allocation",
+   "type": "Report"
   },
   {
    "color": "Grey",
    "label": "Student-Teacher Ratio",
    "link_to": "Student-Teacher Ratio",
-   "type": "Report",
-   "report_ref_doctype": "Faculty Norm"
+   "report_ref_doctype": "Faculty Norm",
+   "type": "Report"
   }
  ],
  "title": "Faculty"

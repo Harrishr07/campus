@@ -396,14 +396,14 @@
   {
    "child": 1,
    "collapsible": 1,
+   "filters": "[[\"Hall Ticket\",\"status\",\"=\",\"Withheld\"]]",
    "indent": 0,
    "keep_closed": 0,
    "label": "Withheld Hall Tickets",
    "link_to": "Hall Ticket",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link",
-   "filters": "[[\"Hall Ticket\",\"status\",\"=\",\"Withheld\"]]"
+   "type": "Link"
   },
   {
    "child": 1,
@@ -736,7 +736,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 14:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

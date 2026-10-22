@@ -7,11 +7,11 @@
  "hidden": 0,
  "icon": "briefcase",
  "icon_type": "Link",
- "idx": 17,
+ "idx": 10,
  "label": "Placement",
  "link_to": "Placement",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-22 16:30:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "name": "Placement",
  "owner": "Administrator",
@@ -23,6 +23,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Principal"
   }
  ],
  "standard": 1

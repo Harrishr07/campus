@@ -243,6 +243,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "PFMS Export Release",
+   "link_to": "PFMS Export Release",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Invention Disclosure",
    "link_to": "Invention Disclosure",
    "link_type": "DocType",
@@ -415,7 +426,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 18:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",

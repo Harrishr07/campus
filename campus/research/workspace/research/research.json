@@ -91,7 +91,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 17,
+   "link_count": 18,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -223,6 +223,17 @@
    "label": "PFMS Export Batch",
    "link_count": 0,
    "link_to": "PFMS Export Batch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "PFMS Export Release",
+   "link_count": 0,
+   "link_to": "PFMS Export Release",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -398,7 +409,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 18:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",
@@ -421,7 +432,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 50.0,
+ "sequence_id": 46.0,
  "shortcuts": [
   {
    "color": "Blue",

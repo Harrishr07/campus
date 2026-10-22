@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 8,
+   "link_count": 11,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -324,7 +324,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 10:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "IQAC",
  "name": "IQAC",
@@ -344,7 +344,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 46.0,
+ "sequence_id": 45.0,
  "shortcuts": [
   {
    "color": "Grey",

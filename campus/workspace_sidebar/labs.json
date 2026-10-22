@@ -54,10 +54,10 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "file-text",
+   "icon": "clipboard-list",
    "indent": 1,
    "keep_closed": 0,
-   "label": "Records",
+   "label": "Transactions",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Section Break"
@@ -151,7 +151,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 07:48:15.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Labs",
  "name": "Labs",
