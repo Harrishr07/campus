@@ -94,3 +94,38 @@ The rest of Phase 5 keeps its order. P5-T09 DigiLocker/NAD/ABC now covers the AP
 2. L-02 changes the Phase 1 Admit flow (enrollment and invoice move to joining). Confirm.
 3. P4-T18: concession policy values from the pilot college.
 4. Pending values in `docs/rulings.md` (regulation seeds, quorums, TA/DA TDS, CIA rounding, honours credits, revaluation window).
+
+## Reorder for pilot readiness (22 October 2026, user decision)
+
+Goal: put the core path in front of one pilot college before adding more modules. New breadth stops once the work in flight lands. Deferred tasks keep their place in the waves above and resume when the pilot asks for them.
+
+### Finish in flight (no new scope)
+X-01 affiliated exam mode, L-02 joining gate, X-03 completion, X-04 certificate reissue, L-08 record corrections and student 360, P4-T08 labs. Open fix rounds: P3-T10 (fix 2), P3-T20, L-09 (fix 3), P4-T13.
+
+### Kept for the pilot (core path)
+- L-07 attendance start date and session states (attendance is core).
+- L-03 reporting deadlines, late joining, no-show (admission season).
+
+### Deferred until after the pilot
+- Lifecycle: L-05 lateral entry, L-06 discontinuation / readmission.
+- Exams: X-02 improvement exams, X-05 ABC/NAD export file.
+- Phase 3: P3-T11 course plan, P3-T22 research reports.
+- Phase 4: P4-T02 to T07 (hostel allotment, mess, outpass, hostel operations, transport, GPS), P4-T09 to T12 (consumables, experiments, facility booking, nursing), P4-T14 to T18 (offers, projects, confidential cases, activities, concession v2).
+- Phase 5: all, except T15 migration and T18 hardening, which move into Wave P.
+
+### Wave P - Pilot readiness
+
+| ID | Task | Done when |
+|---|---|---|
+| R-10 | Full suite on a quiet tree, triage, tag `p2-done` | Suite green except listed known issues |
+| PR-01 | Navigation sweep: every DocType and report has one home; one workspace per role | test_navigation green; each role sees only its areas |
+| PR-02 | Pilot setup kit: idempotent seed (trust and college companies, academic year and terms, programmes, regulations, fee structures, roles, users) and master-data import templates | A fresh site is configured for a college in one run, re-runnable |
+| PR-03 | Migration toolkit (from P5-T15): import existing students, enrollments, fee balances and past results, with a dry run and row outcomes | Sample college data imports cleanly; re-import changes nothing |
+| PR-04 | Core path end-to-end test on a fresh site: enquiry, admission, joining, fee payment, timetable and attendance, CIA, exam registration and hall ticket, valuation, result, certificate; then AQAR and AISHE exports from that data | One automated test passes from start to finish |
+| PR-05 | Production hardening (from P5-T18): role-permission matrix review, backup and restore drill, developer mode and telemetry off, scheduler, email and WhatsApp checks, Error Log watch | Checklist signed off on the staging site |
+| PR-06 | Role guides: short how-to per role (office, faculty, HOD, COE, accounts, student and guardian portal) in docs/usage | One page per role, matching the screens |
+| PR-07 | Pilot staging site set up with the kit and migrated sample data (needs the user's go-ahead on which site) | Staff can log in and run the core path |
+| PR-08 | UAT script and feedback capture for pilot users | Script per role; feedback reaches a tracked list |
+
+### Needed from the user
+Pilot college choice and its data, Razorpay sandbox test, mobile UAT, official regulator templates (AISHE, university exam formats), confirming the pending values in docs/rulings.md, go-ahead for the staging site.
