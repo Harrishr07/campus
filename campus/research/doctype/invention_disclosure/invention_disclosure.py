@@ -19,12 +19,12 @@ class InventionDisclosure(ApprovableDocument, Document):
 		super().validate()
 		if getdate(self.disclosure_date) > getdate(today()):
 			frappe.throw(_("The disclosure date can't be in the future."))
-		validate_contributors(self.inventors, "inventor_type", "inventor_name", _("inventor"))
+		validate_contributors(self.inventors, "inventor_type", "inventor_name", _("inventor"), self.company)
 		self.set_shares()
 
 	def before_submit(self):
 		super().before_submit()
-		if not is_approved(self):
+		if not is_approved(self):  # the engine lets a type with no policy through, a disclosure never submits unreviewed
 			frappe.throw(
 				_("{0} needs committee approval: set up an Approval Policy for Invention Disclosure and request approval.").format(
 					self.name
@@ -40,5 +40,8 @@ class InventionDisclosure(ApprovableDocument, Document):
 		if not any(flt(row.share_percent) for row in self.inventors):
 			for row, share in zip(self.inventors, default_shares(len(self.inventors)), strict=True):
 				row.share_percent = share
-		elif abs(sum(flt(row.share_percent) for row in self.inventors) - 100) > 0.005:
-			frappe.throw(_("The inventors' revenue shares must total 100%."))
+		else:
+			if any(flt(row.share_percent) < 0 for row in self.inventors):
+				frappe.throw(_("An inventor's revenue share can't be negative."))
+			if flt(sum(flt(row.share_percent) for row in self.inventors), 2) != 100:
+				frappe.throw(_("The inventors' revenue shares must total 100%."))

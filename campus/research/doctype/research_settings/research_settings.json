@@ -16,7 +16,9 @@
   "pfms_section",
   "pfms_unique_agency_code",
   "uc_section",
-  "uc_due_days"
+  "uc_due_days",
+  "research_output_section",
+  "publication_window_years"
  ],
  "fields": [
   {
@@ -106,11 +108,23 @@
    "label": "UC Due Days",
    "non_negative": 1,
    "description": "Days after each fiscal year's end (or the sanction's end) a Utilisation Certificate is due. Placeholder until the agency's terms are known (GFR 2017 allows up to 12 months)."
+  },
+  {
+   "fieldname": "research_output_section",
+   "fieldtype": "Section Break",
+   "label": "Research Output"
+  },
+  {
+   "fieldname": "publication_window_years",
+   "fieldtype": "Int",
+   "label": "Citation Window (Academic Years)",
+   "default": "5",
+   "description": "Citations and the h-index (AQAR 3.4.5, 3.4.6) count publications of this many academic years, ending with the one reported. Blank or 0 uses 5."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-10 09:00:00.000000",
+ "modified": "2026-10-22 05:58:29.351764",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research Settings",

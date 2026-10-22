@@ -126,14 +126,14 @@ def books_and_chapters(company, academic_year, department=None):
 
 
 def publication_citations(company, academic_year, department=None):
-	"""AQAR 3.4.5: citations of the year's publications."""
-	rows = publications.publications_in_year(company, academic_year, department)
+	"""AQAR 3.4.5: citations of the publications of the window of academic years ending with `academic_year`."""
+	rows = publications.publications_in_window(company, academic_year, department)
 	return {"value": sum(r.citations or 0 for r in rows), "records": _refs("Publication", rows)}
 
 
 def publication_h_index(company, academic_year, department=None):
-	"""AQAR 3.4.6: h-index of the year's publications."""
-	rows = publications.publications_in_year(company, academic_year, department)
+	"""AQAR 3.4.6: h-index of the publications of the window of academic years ending with `academic_year`."""
+	rows = publications.publications_in_window(company, academic_year, department)
 	return {"value": publications.hindex(r.citations for r in rows), "records": _refs("Publication", rows)}
 
 

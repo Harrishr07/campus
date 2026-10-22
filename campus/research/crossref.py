@@ -35,14 +35,17 @@ def fetch_work(doi):
 	"""The Crossref `message` of `doi`; throws a plain message when Crossref doesn't know it or can't be reached."""
 	doi = normalise_doi(doi)
 	try:
-		response = requests.get(API + quote(doi, safe=""), headers={"User-Agent": "OneBookCampus/1.0"}, timeout=TIMEOUT_SECONDS)
+		response = requests.get(API + quote(doi, safe=""), headers={"User-Agent": "OneBookCampus/1.0"}, timeout=TIMEOUT_SECONDS, allow_redirects=False)
 	except requests.RequestException:
 		frappe.throw(_("Crossref could not be reached. Enter the details by hand or try again later."))
 	if response.status_code == 404:
 		frappe.throw(_("Crossref has no record of the DOI {0}.").format(doi))
-	if not response.ok:
+	if response.status_code != 200:  # a redirect (3xx) is not followed and lands here
 		frappe.throw(_("Crossref could not give the details of {0} (HTTP {1}).").format(doi, response.status_code))
-	return response.json().get("message") or {}
+	try:
+		return response.json().get("message") or {}
+	except (ValueError, AttributeError):
+		frappe.throw(_("Crossref gave an answer for {0} that could not be read. Enter the details by hand.").format(doi))
 
 
 def parse_work(message):

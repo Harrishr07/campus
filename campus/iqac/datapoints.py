@@ -40,7 +40,8 @@ ratified results of the year's published sessions, as the COE reports do; see ca
 Phase 3 (P3-T21): publications_published (NIRF), ugc_care_papers (AQAR 3.4.3), books_and_chapters (AQAR 3.4.4), publication_citations
 (AQAR 3.4.5), publication_h_index (AQAR 3.4.6) and patents_filed / patents_published / patents_granted (AQAR 3.3, NIRF IPR) count the
 year's publications (by publication date) and patents (by the date of the stage), each once for the institution; see
-campus/research/publications.py for the counting rules. `department` narrows to the department's teachers' work.
+campus/research/publications.py for the counting rules. citations and the h-index cover a window of academic years ending with the one reported; `department` narrows to the department's
+teachers' work.
 """
 
 import frappe
@@ -302,12 +303,12 @@ def books_and_chapters(company, academic_year, department=None):
 	return research.books_and_chapters(company, academic_year, department)
 
 
-@campus_metric("publication_citations", "Research", "Citations of the year's publications (AQAR 3.4.5)")
+@campus_metric("publication_citations", "Research", "Citations of the publications of the last N academic years, N in Research Settings (AQAR 3.4.5)")
 def publication_citations(company, academic_year, department=None):
 	return research.publication_citations(company, academic_year, department)
 
 
-@campus_metric("publication_h_index", "Research", "h-index of the year's publications (AQAR 3.4.6)")
+@campus_metric("publication_h_index", "Research", "h-index of the publications of the last N academic years, N in Research Settings (AQAR 3.4.6)")
 def publication_h_index(company, academic_year, department=None):
 	return research.publication_h_index(company, academic_year, department)
 

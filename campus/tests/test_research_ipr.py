@@ -164,6 +164,15 @@ class IprFixtures(CampusTestCase):
 		self.ece_teacher = self.make_employee("Esha", self.ece)
 
 	# fixtures
+	def settings_values(self):
+		from campus.tests.finance_factories import make_account
+
+		return {
+			"grant_liability_parent": f"Current Liabilities - {ABBR}",
+			"grant_income_account": make_account(COLLEGE, ABBR, "IPR Grant Income", "Indirect Income"),
+			"deferred_capital_grant_account": make_account(COLLEGE, ABBR, "IPR Deferred Capital Grant", "Non-Current Liabilities"),
+		}
+
 	def make_year(self):
 		if not frappe.db.exists("Academic Year", YEAR):
 			frappe.get_doc(
@@ -283,6 +292,29 @@ class TestPublication(IprFixtures):
 				self.publication(doi="not a doi")
 		get.assert_not_called()
 
+	def test_a_non_json_answer_and_a_redirect_give_clear_errors(self):
+		doc = {"doctype": "Publication", "company": COLLEGE, "doi": "10.1234/odd.1"}
+		html = crossref_response()
+		html.json.side_effect = ValueError("not json")
+		with patch("campus.research.crossref.requests.get", return_value=html):
+			with self.assertRaisesRegex(frappe.ValidationError, "could not be read"):
+				frappe.get_doc(doc).insert()
+		with patch("campus.research.crossref.requests.get", return_value=crossref_response(status=302)) as get:
+			with self.assertRaisesRegex(frappe.ValidationError, "HTTP 302"):
+				frappe.get_doc(doc).insert()
+		self.assertIs(get.call_args.kwargs["allow_redirects"], False)
+
+	def test_a_duplicate_doi_that_slips_past_the_check_gets_the_same_friendly_refusal(self):
+		self.publication(doi="10.5555/race.1")
+		with patch("campus.research.doctype.publication.publication.Publication.check_unique_doi"):
+			with self.assertRaisesRegex(frappe.ValidationError, "already entered"):
+				self.publication(doi="10.5555/race.1")
+
+	def test_authors_must_belong_to_the_publications_college(self):
+		outsider = self.make_employee("Outside", None, company=OTHER)
+		with self.assertRaisesRegex(frappe.ValidationError, "does not belong"):
+			self.publication(authors=[{"author_type": "Employee", "employee": outsider}])
+
 	# authors
 	def test_authors_are_employees_students_or_external(self):
 		student = self.make_student("Ipra")
@@ -395,6 +427,18 @@ class TestCountingRules(IprFixtures):
 		self.assertEqual(self.point("publication_citations")["value"], 30)
 		self.assertEqual(len(self.point("publication_h_index")["records"]), 5)
 
+	def test_h_index_and_citations_cover_a_window_of_academic_years(self):
+		for date, citations in (("2025-09-15", 10), ("2025-10-15", 8), ("2022-09-15", 6), ("2021-09-15", 5), ("2019-09-15", 50)):
+			self.publication(publication_date=date, citations=citations)
+		frappe.get_doc({"doctype": "Research Settings", "company": COLLEGE, **self.settings_values()}).insert()
+		# the year alone: 10 and 8 -> h 2; five years back to 2021-06: 10, 8, 6, 5 -> h 4; the 2019 paper is outside
+		self.assertEqual(self.point("publication_h_index")["value"], 4)
+		self.assertEqual(self.point("publication_citations")["value"], 29)
+		self.assertEqual(self.point("publications_published")["value"], 2)
+		self.assertEqual(publications_by_teacher.execute({"company": COLLEGE, "academic_year": YEAR})[1][0]["h_index"], 2)
+		frappe.db.set_value("Research Settings", COLLEGE, "publication_window_years", 1)
+		self.assertEqual(self.point("publication_h_index")["value"], 2)
+
 	def test_reports_are_empty_without_their_filters(self):
 		self.publication()
 		self.assertEqual(publication_register.execute({"company": COLLEGE})[1], [])
@@ -475,6 +519,31 @@ class TestPatentLifecycle(IprFixtures):
 		frappe.set_user(user)
 		with self.assertRaises(frappe.PermissionError):
 			approve(request, None)
+
+	def test_submit_without_a_policy_is_refused(self):
+		frappe.db.delete("Approval Policy", {"document_type": "Invention Disclosure"})
+		with self.assertRaises(frappe.ValidationError):
+			self.disclosure().submit()
+
+	def test_negative_share_and_inventors_of_other_colleges_are_refused(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "can't be negative"):
+			self.disclosure(inventors=[
+				{"inventor_type": "Employee", "employee": self.teachers[0], "share_percent": 120},
+				{"inventor_type": "External", "inventor_name": "Dr X", "share_percent": -20}])
+		outsider = self.make_employee("Outside", None, company=OTHER)
+		with self.assertRaisesRegex(frappe.ValidationError, "does not belong"):
+			self.disclosure(inventors=[{"inventor_type": "Employee", "employee": outsider}])
+
+	def test_cancelling_the_disclosure_does_not_freeze_the_patent(self):
+		patent = self.patent()
+		frappe.db.set_value("Invention Disclosure", patent.invention_disclosure, "docstatus", 2)
+		patent = frappe.get_doc("Patent", patent.name)
+		patent.append("costs", {"cost_date": today(), "description": "Renewal", "amount": 100})
+		patent.save()
+		self.assertEqual(patent.total_cost, 100)
+		patent.update({"status": "Published", "published_date": add_days(today(), -100)})
+		with self.assertRaisesRegex(frappe.ValidationError, "must be approved"):
+			patent.save()
 
 	def test_inventor_shares_default_to_equal_and_must_total_100(self):
 		doc = self.disclosure(inventors=[{"inventor_type": "Employee", "employee": e} for e in self.teachers])

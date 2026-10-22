@@ -6,16 +6,20 @@ adds to neither teacher figure. The year of a publication is the academic year i
 department narrows to the publications that have an author Employee of that department, and to those Employees.
 Everything is read with the session user's permissions.
 
+Citations and the h-index (AQAR 3.4.5, 3.4.6) cover a window of academic years (Research Settings, 5 by default) ending with the
+reported one: an h-index can't be added up from yearly figures.
+
 Indexing is read live from the Indexed Journal, so a change in the UGC-CARE list shows in the next report. The h-index
 of a set is the largest h such that h publications have at least h citations each."""
 
 import frappe
+from frappe.utils import add_years
 
 from campus.research import crossref
-from campus.research.crossref import normalise_doi  # noqa: F401  (used by the Publication controller)
 
 JOURNAL_ARTICLE = "Journal Article"
 BOOK_TYPES = ("Book", "Book Chapter", "Conference Paper")  # AQAR 3.4.4: books, chapters and conference proceedings
+DEFAULT_WINDOW_YEARS = 5
 FIELDS = ["name", "title", "doi", "publication_type", "publication_date", "journal", "container_title", "citations"]
 
 
@@ -67,14 +71,15 @@ def employee_authors(publication_names):
 	)
 
 
-def employees(names, department=None):
-	"""{employee: row} of the Employees the user may read, in `department` when given."""
+def employees(names, company, department=None):
+	"""{employee: row} of the `company` Employees among `names`, in `department` when given. The caller has already been let
+	into the company's publications, so names and departments are read without the Employee list permission."""
 	if not names:
 		return {}
-	filters = {"name": ["in", list(names)]}
+	filters = {"name": ["in", list(names)], "company": company}
 	if department:
 		filters["department"] = department
-	rows = frappe.get_list("Employee", filters, ["name", "employee_name", "department"], limit_page_length=0)
+	rows = frappe.get_all("Employee", filters, ["name", "employee_name", "department"], limit_page_length=0)
 	return {row.name: row for row in rows}
 
 
@@ -89,9 +94,23 @@ def journal_flags(rows):
 	return rows
 
 
+def window_years(company):
+	"""How many academic years the citation figures cover (Research Settings, 5 when not set)."""
+	return frappe.db.get_value("Research Settings", company, "publication_window_years") or DEFAULT_WINDOW_YEARS
+
+
+def publications_in_window(company, academic_year, department=None):
+	"""The company's publications of the last `window_years` academic years ending with `academic_year`."""
+	start, end = year_bounds(academic_year)
+	return publications_between(company, add_years(start, 1 - window_years(company)), end, department)
+
+
 def publications_in_year(company, academic_year, department=None):
 	"""The company's publications dated in the academic year (with `ugc_care`), each once, newest first."""
-	start, end = year_bounds(academic_year)
+	return publications_between(company, *year_bounds(academic_year), department)
+
+
+def publications_between(company, start, end, department=None):
 	rows = frappe.get_list(
 		"Publication",
 		{"company": company, "publication_date": ["between", [start, end]]},
@@ -101,7 +120,7 @@ def publications_in_year(company, academic_year, department=None):
 	)
 	if department:
 		authored = employee_authors([r.name for r in rows])
-		in_department = employees({e for _p, e in authored}, department)
+		in_department = employees({e for _p, e in authored}, company, department)
 		wanted = {p for p, e in authored if e in in_department}
 		rows = [r for r in rows if r.name in wanted]
 	return journal_flags(rows)
@@ -116,7 +135,7 @@ def teacher_rows(company, academic_year, department=None):
 	publications, ugc_care_papers, books_chapters, citations, h_index of their own publications."""
 	pubs = {r.name: r for r in publications_in_year(company, academic_year, department)}
 	authored = employee_authors(list(pubs))
-	people = employees({e for _p, e in authored}, department)
+	people = employees({e for _p, e in authored}, company, department)
 	own = {}
 	for publication, employee in authored:
 		if employee in people:

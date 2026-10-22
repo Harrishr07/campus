@@ -27,12 +27,18 @@ class Patent(Document):
 		disclosure = frappe.db.get_value(
 			"Invention Disclosure", self.invention_disclosure, ["docstatus", "title", "company", "department", "ipr_type"], as_dict=True
 		)
-		if not disclosure or disclosure.docstatus != 1:
+		if not disclosure or (disclosure.docstatus != 1 and self.is_linking_or_advancing()):
 			frappe.throw(_("Invention Disclosure {0} must be approved and submitted before it is filed.").format(self.invention_disclosure))
 		for field in ("title", "company", "department", "ipr_type"):  # also what fetch_from fills, which runs after validate
 			self.set(field, disclosure[field])
 		if self.get_doc_before_save() and self.get_doc_before_save().invention_disclosure != self.invention_disclosure:
 			frappe.throw(_("The Invention Disclosure of a patent can't be changed."))
+
+	def is_linking_or_advancing(self):
+		"""A new patent, a new disclosure or a new stage needs an approved disclosure; a later cancel of the disclosure
+		doesn't stop the patent being updated (costs, revenue) without a change of stage."""
+		before = self.get_doc_before_save()
+		return not before or before.invention_disclosure != self.invention_disclosure or before.status != self.status
 
 	def check_share(self):
 		if not 0 <= flt(self.institution_share_percent) <= 100:

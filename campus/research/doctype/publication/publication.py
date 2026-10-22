@@ -9,13 +9,14 @@ from frappe import _
 from frappe.model.document import Document
 
 from campus.research import publications
+from campus.research.crossref import normalise_doi
 from campus.research.contributors import validate_contributors
 
 
 class Publication(Document):
 	def before_validate(self):
 		if self.doi:
-			self.doi = publications.normalise_doi(self.doi)
+			self.doi = normalise_doi(self.doi)
 			if not self.title:
 				self.fill_from_crossref()
 
@@ -23,8 +24,23 @@ class Publication(Document):
 		self.doi = self.doi or None  # NULL, so the unique index allows many publications without a DOI
 		self.check_unique_doi()
 		self.check_source()
-		validate_contributors(self.authors, "author_type", "author_name", _("author"))
+		validate_contributors(self.authors, "author_type", "author_name", _("author"), self.company)
 		self.publication_year = frappe.utils.getdate(self.publication_date).year
+
+	def db_insert(self, *args, **kwargs):
+		self.refuse_duplicate_doi_race(super().db_insert, *args, **kwargs)
+
+	def db_update(self, *args, **kwargs):
+		self.refuse_duplicate_doi_race(super().db_update, *args, **kwargs)
+
+	def refuse_duplicate_doi_race(self, write, *args, **kwargs):
+		"""Two saves of one DOI at once pass check_unique_doi; the unique index stops the second, with the same message."""
+		try:
+			write(*args, **kwargs)
+		except frappe.UniqueValidationError:
+			if not self.doi:
+				raise
+			frappe.throw(_("The DOI {0} is already entered.").format(self.doi))
 
 	def check_unique_doi(self):
 		if not self.doi:
