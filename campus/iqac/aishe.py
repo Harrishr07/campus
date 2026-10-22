@@ -63,7 +63,7 @@ def cover_rows(company, academic_year, layout):
 	rows = [
 		(_("Dataset"), "AISHE"), (_("Layout"), layout.name), (_("College"), company), (_("Academic Year"), academic_year),
 		(_("Exported By"), frappe.session.user), (_("Exported On"), str(now_datetime().replace(microsecond=0))),
-		(_("Notice"), _("Built from submitted enrolments, published results and sanctioned scholarships the exporting user may read.")),
+		(_("Notice"), _("Built from submitted enrolments, published results and sanctioned scholarships of the selected company.")),
 	]  # fmt: skip
 	if layout.is_placeholder:
 		rows.append((_("Notice"), _("Placeholder layout: the official AISHE template was not available. Replace the layout with the official one.")))
