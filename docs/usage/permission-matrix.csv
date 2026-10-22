@@ -53,8 +53,6 @@ DocType,Approval Delegation,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Approval Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Approval Request,,Desk User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Approval Request,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
-DocType,Approval Test Document,,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
-DocType,Approval Test Document,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
 DocType,Attainment Policy,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0

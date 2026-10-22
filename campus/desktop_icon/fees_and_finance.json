@@ -11,7 +11,7 @@
  "label": "Fees and Finance",
  "link_to": "Fees and Finance",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-22 19:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "name": "Fees and Finance",
  "owner": "Administrator",
@@ -29,6 +29,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Dean Student Affairs"
   }
  ],
  "standard": 1

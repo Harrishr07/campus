@@ -7,6 +7,7 @@ from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
 from campus.campus_platform.mandatory_approval import seed_mandatory_approval
 from campus.campus_platform.module_packs import seed_module_packs
+from campus.campus_platform.portal_roles import restrict_portal_roles
 from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
 from campus.campus_platform.verification import ensure_verification_role
@@ -59,6 +60,7 @@ def after_install():
 	setup_admissions()
 	seed_module_packs()
 	ensure_seed_positions()
+	restrict_portal_roles()
 	setup_examinations()
 	setup_question_papers()
 	setup_messaging()
@@ -93,6 +95,7 @@ def after_migrate():
 	setup_admissions()
 	seed_module_packs()
 	ensure_seed_positions()
+	restrict_portal_roles()
 	setup_examinations()
 	setup_question_papers()
 	setup_messaging()

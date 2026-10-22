@@ -1,7 +1,9 @@
 """M17-01 desk navigation: every area has a Workspace, a Workspace Sidebar and a Desktop Icon that agree, every
 link resolves, every campus DocType has exactly one home area, and icons follow the user's roles."""
 
+import glob
 import json
+import os
 from collections import Counter
 
 import frappe
@@ -9,12 +11,12 @@ from frappe.boot import get_bootinfo
 
 from campus.campus_platform.api import clear_pack_cache
 from campus.campus_platform.pack_visibility import hidden_workspaces
+from campus.setup.permission_matrix import TEST_ONLY_DOCTYPES
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
 
 APP_ICON = "OneBook Campus"
 COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
-TEST_ONLY_DOCTYPES = {"Approval Test Document"}
 RESEARCH_USER = "campus-nav-research@example.com"
 SECTIONS = ["Masters", "Transactions", "Reports", "Settings"]
 USERS = {
@@ -43,7 +45,9 @@ def campus_modules():
 class TestNavigation(CampusTestCase):
 	def test_areas_are_complete_and_agree(self):
 		sidebars = {s.name for s in campus_sidebars()}
-		self.assertEqual(len(sidebars), 15)  # 15 areas: Hostel, Labs, Placement, Faculty, Governance, Communication added since the test counted 12
+		icon_files = glob.glob(frappe.get_app_path("campus", "desktop_icon", "*.json"))
+		self.assertEqual(len(sidebars), len(icon_files) - 1)  # every icon file but the app tile is an area
+		self.assertGreaterEqual(len(sidebars), 12)
 		self.assertEqual(sidebars, {w.name for w in campus_workspaces()})
 		self.assertEqual(sidebars, set(frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name")))
 		self.assertTrue(frappe.db.exists("Desktop Icon", {"name": APP_ICON, "icon_type": "App", "app": "campus"}))
@@ -51,6 +55,18 @@ class TestNavigation(CampusTestCase):
 			icon = frappe.get_doc("Desktop Icon", name)
 			self.assertEqual((icon.parent_icon, icon.link_type, icon.link_to), (APP_ICON, "Workspace Sidebar", name))
 			self.assertTrue(icon.standard)
+
+	def test_no_area_is_open_to_every_desk_user(self):
+		for name in frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name"):
+			self.assertTrue(frappe.get_doc("Desktop Icon", name).roles, f"icon {name} has no roles")
+		for workspace in campus_workspaces():
+			self.assertTrue(workspace.roles, f"workspace {workspace.name} has no roles")
+			icon = frappe.get_doc("Desktop Icon", workspace.name)
+			self.assertEqual({r.role for r in icon.roles}, {r.role for r in workspace.roles}, workspace.name)
+
+	def test_students_and_guardians_have_no_desk_access(self):
+		for role in ("Student", "Guardian"):
+			self.assertEqual(frappe.db.get_value("Role", role, "desk_access"), 0, role)
 
 	def test_sidebar_sections_follow_the_standard_order(self):
 		for sidebar in campus_sidebars():

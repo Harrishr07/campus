@@ -11,7 +11,7 @@
  "label": "Student Services",
  "link_to": "Student Services",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-22 19:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "name": "Student Services",
  "owner": "Administrator",
@@ -38,6 +38,21 @@
   },
   {
    "role": "Student Counsellor"
+  },
+  {
+   "role": "Mentor"
+  },
+  {
+   "role": "Class Advisor"
+  },
+  {
+   "role": "Dean Student Affairs"
+  },
+  {
+   "role": "Grievance Committee"
+  },
+  {
+   "role": "COE"
   }
  ],
  "standard": 1

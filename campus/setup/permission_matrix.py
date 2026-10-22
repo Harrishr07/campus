@@ -24,9 +24,11 @@ FLAGS = (
 	"print", "email", "share", "if_owner",
 )  # fmt: skip
 OWNER = "System Manager"
-# Student and Guardian keep desk_access = 1 (education app), so they are named; any other role without desk access
-# (a future Applicant or Alumni role) is student-facing too.
+# Student and Guardian have desk_access = 0 (campus.campus_platform.portal_roles); they are still named so the matrix
+# does not depend on the flag. Any other role without desk access (a future Applicant or Alumni role) is student-facing too.
 STUDENT_FACING = ("Student", "Guardian", "Guest")
+# Test-fixture DocTypes: part of the app so tests can use them, but not a permission of the product.
+TEST_ONLY_DOCTYPES = ("Approval Test Document",)
 
 # Lifecycle, official documents, results, certificates and the financial / audit ledgers: kept as history.
 # Round Result (a placement round's shortlist) is deliberately not listed: the Placement Officer deletes a wrongly
@@ -102,7 +104,8 @@ def collect_rows():
 	modules = campus_modules()
 	portal_roles = {*STUDENT_FACING, *frappe.get_all("Role", {"desk_access": 0}, pluck="name")}
 	rows = []
-	for doctype in frappe.get_all("DocType", {"module": ["in", modules]}, pluck="name"):
+	doctypes = frappe.get_all("DocType", {"module": ["in", modules], "name": ["not in", TEST_ONLY_DOCTYPES]}, pluck="name")
+	for doctype in doctypes:
 		meta = frappe.get_meta(doctype)
 		rows += [doctype_row(meta, perm) for perm in meta.permissions]
 	for report in frappe.get_all("Report", filters={"module": ["in", modules]}, fields=["name", "ref_doctype"]):

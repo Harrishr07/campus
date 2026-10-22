@@ -82,7 +82,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 19:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Approvals",
@@ -91,7 +91,83 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "Principal"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "IQAC Criterion Owner"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Dean Student Affairs"
+  },
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "HR User"
+  },
+  {
+   "role": "HOD"
+  },
+  {
+   "role": "Dean Academics"
+  },
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "Instructor"
+  },
+  {
+   "role": "COE"
+  },
+  {
+   "role": "Student Counsellor"
+  },
+  {
+   "role": "Mentor"
+  },
+  {
+   "role": "Class Advisor"
+  },
+  {
+   "role": "Grievance Committee"
+  },
+  {
+   "role": "Admission Officer"
+  },
+  {
+   "role": "Placement Officer"
+  },
+  {
+   "role": "Lab In-charge"
+  },
+  {
+   "role": "Examiner"
+  },
+  {
+   "role": "Exam Confidential"
+  },
+  {
+   "role": "Warden"
+  },
+  {
+   "role": "Verification Manager"
+  }
+ ],
  "sequence_id": 53.0,
  "shortcuts": [
   {
