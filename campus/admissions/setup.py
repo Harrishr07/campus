@@ -173,7 +173,7 @@ def setup_admission_fields():
 	]  # fmt: skip
 	payment = [
 		field("oc_admission_cancellation", "Link", "Admission Cancellation", "reference_no", options="Admission Cancellation",
-			hidden=1, read_only=1, search_index=1,
+			hidden=1, read_only=1, set_only_once=1, search_index=1,
 			description="The cancellation before joining whose advance this payment refunds (M04-10): paid out once. Copied with the entry, so a copy is checked too."),
 	]  # fmt: skip
 	create_custom_fields(
