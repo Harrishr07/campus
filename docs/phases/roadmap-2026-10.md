@@ -134,4 +134,4 @@ X-01 affiliated exam mode, L-02 joining gate, X-03 completion, X-04 certificate 
 - PR #2 is marked ready for review once the work in flight and its fix rounds are approved and R-10 is green.
 
 ### Needed from the user
-Razorpay sandbox test, mobile UAT, official regulator templates (AISHE, university exam formats), confirming the pending values in docs/rulings.md, go-ahead for the staging site.
+Razorpay sandbox test, mobile UAT, official regulator templates (AISHE, university exam formats), confirming the pending values in docs/rulings.md, the presentation date with SXCCE.
