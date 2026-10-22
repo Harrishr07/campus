@@ -1,5 +1,5 @@
 # UAT: Placement Officer
-No demo login. Ask the coordinator for a user with the role Placement Officer and a Company permission for SXCCE. Guide: roles/placement-officer.md.
+Login `placement@sxcce.example.edu` (role Placement Officer, company SXCCE). Guide: roles/placement-officer.md.
 
 | # | Step | Expected |
 |---|---|---|

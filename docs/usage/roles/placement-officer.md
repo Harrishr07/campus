@@ -1,6 +1,6 @@
 # Placement Officer
 
-**Login:** no placement login is created by the demo kit (see note below).
+**Login (demo):** `placement@sxcce.example.edu`
 
 **What you do:** bring recruiters, run drives, track registrations and round results.
 
@@ -14,4 +14,3 @@
 5. **Round results:** Round Result.
 6. **Students see the drive** in the portal under Placement.
 
-Note: the demo has one drive with registrations, but the kit's logins list has no Placement Officer. Ask the coordinator to give a user the role Placement Officer, or test as `principal@`.

@@ -15,22 +15,18 @@ Staff go to `/app`; student and guardian go to `/campus-portal`. Use a separate 
 5. Scripts do not need developer tools; never use Administrator.
 
 ## Reporting
-Use the **UAT Feedback** list (proposal below). Until it exists, use one row per problem in the shared sheet with the same columns.
+Every tester login (on a demo site) holds the **UAT Tester** role. Open **Administration > Transactions > UAT Feedback** (or `/app/uat-feedback`) and click **Add UAT Feedback** for each problem.
+The student and guardian logins are portal-only and cannot open the desk: report their findings from a staff login, naming `student.md` / `guardian.md` as the script.
 
 | Field | Content |
 |---|---|
-| Role | login you used |
-| Script step | file and step, e.g. `faculty.md step 4` |
-| Expected / Actual | one line each |
+| Tester (login) | Filled in for you; the login you used |
+| Script, Step | The script file and step, e.g. `faculty`, step `4` (negative checks: `N1`) |
+| Expected / Actual | One line each |
 | Severity | Critical (data leak, wrong money or marks), High (path blocked), Medium (wrong but workaround), Low (wording, layout) |
-| Screenshot | attach; include the URL bar |
+| Screenshot | Attach; include the URL bar |
 
-## Feedback capture: recommendation (coordinator decides)
-No existing campus doctype fits: Student Grievance is for students and carries a committee workflow, Feedback Response is
-anonymous course feedback, and ERPNext Issue sits in Support, outside the campus areas and roles. Proposal, **docs only, no code written**:
+You see only your own rows and cannot change Status or Coordinator Notes. The coordinator (role **UAT Coordinator** or System Manager) sees every row, sets Status (New, Triaged, Fixed, Won't Fix) and writes notes.
 
-**UAT Feedback** DocType in `campus_platform`, module-less simple form, autoname `UAT-.####`.
-- Fields: `tester_role` (Data, default current user), `script` (Select: the 12 scripts), `step` (Data), `expected` (Small Text), `actual` (Small Text), `severity` (Select: Critical/High/Medium/Low), `screenshot` (Attach Image), `status` (Select: New/Triaged/Fixed/Won't Fix, default New), `coordinator_notes` (Small Text).
-- Permissions: a new role `UAT Tester` (create, read own via `if_owner`; no delete); `System Manager` and the coordinator read all and edit status.
-- Desk: list view with columns severity, script, step, status, owner; filter by status; shown through a link in Administration (or a standalone shortcut), and a tester user created per intern with roles of the role under test plus `UAT Tester`.
-- Remove the DocType and role before go-live.
+## Remove before go-live
+UAT Feedback and the UAT Tester / UAT Coordinator roles are for the UAT period. The kit grants the tester role only on demo or developer-mode sites. Before go-live delete the UAT Feedback DocType (after exporting the rows) and both roles.

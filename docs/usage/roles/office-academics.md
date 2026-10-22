@@ -12,6 +12,6 @@
 3. **Registration:** Academics > Transactions > Registration Window and Course Registration (semester course choices).
 4. **Timetable:** Faculty > Transactions > Timetable; Student Services > Transactions > Course Schedule.
 5. **Circular to students:** Communication > Transactions > Circular; students acknowledge in the portal. Delivery: Communication > Reports > Circular Acknowledgement Status.
-6. **Certificate requests:** Student Services > Transactions > Certificate Request; Reports > Certificates Issued.
+6. **Certificate requests:** Student Services > Transactions > Certificate Request. For a type that needs approval open the draft and click **Request Approval**; the Principal approves from the Approvals inbox and the final approval issues the certificate itself (there is no separate Issue button; the number and QR appear on the request). A type that needs no approval is issued with **Submit**. Reports > Certificates Issued.
 7. **Attendance shortage:** Student Services > Reports > Attendance Shortage; Condonation Request.
 8. **Pending approvals:** Approvals > Reports > My Pending Approvals.

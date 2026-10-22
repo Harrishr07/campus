@@ -1,6 +1,6 @@
 # Mentor / Class Advisor
 
-**Login (demo):** `class_advisor@sxcce.example.edu` (class advisor of the CSE 2025 class)
+**Login (demo):** `class_advisor@sxcce.example.edu` (class advisor and mentor of the CSE 2025 class; holds the Mentor role, so My students lists mentees and counselling notes can be added)
 
 **What you do:** look after one class or a group of mentees: attendance shortages, leave certificates, counselling notes, parent contact.
 

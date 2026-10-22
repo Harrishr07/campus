@@ -52,9 +52,10 @@ Password for every login: `Campus@Pilot2026` (the profile's test password; publi
 | Admission Officer | `admissions@sxcce.example.edu` |
 | Faculty | `faculty@sxcce.example.edu` |
 | HOD CSE (other departments: `hod-ece`, `hod-eee`, `hod-mech`, `hod-civil`, `hod-it`) | `hod@sxcce.example.edu` |
-| Class Advisor / Mentor | `class_advisor@sxcce.example.edu` |
+| Class Advisor / Mentor (also mentors the CSE 2025 class) | `class_advisor@sxcce.example.edu` |
 | Controller of Examinations | `coe@sxcce.example.edu` |
 | Accounts | `accounts@sxcce.example.edu` |
+| Placement Officer | `placement@sxcce.example.edu` |
 | Principal | `principal@sxcce.example.edu` |
 | IQAC Coordinator | `iqac@sxcce.example.edu` |
 | Student (CSE 2025 batch) | `student@sxcce.example.edu` |
