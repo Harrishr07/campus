@@ -37,7 +37,8 @@ def flag(ok, detail, bad=FAIL):
 
 
 def check_developer_mode():
-	return flag(not frappe.conf.developer_mode, "developer_mode is " + ("on" if frappe.conf.developer_mode else "off"))
+	on = frappe.conf.developer_mode
+	return flag(not on, "developer_mode is " + ("on" if on else "off"))
 
 
 def check_allow_tests():
@@ -65,13 +66,18 @@ def check_scheduler():
 
 def check_email_account():
 	accounts = frappe.get_all("Email Account", {"enable_outgoing": 1, "default_outgoing": 1}, pluck="name")
-	return flag(bool(accounts), f"default outgoing account: {accounts[0]}" if accounts else "no default outgoing Email Account")
+	detail = f"default outgoing account: {accounts[0]}" if accounts else "no default outgoing Email Account"
+	return flag(bool(accounts), detail)
 
 
 def check_whatsapp():
+	"""A college that does not use WhatsApp passes with a warning."""
+	if not frappe.db.exists("DocType", "WhatsApp Settings"):
+		return WARN, "frappe_whatsapp is not installed"
 	account = frappe.db.get_single_value("WhatsApp Settings", "default_outgoing_account")
 	active = bool(account) and frappe.db.get_value("WhatsApp Account", account, "status") == "Active"
-	return flag(active, f"default outgoing WhatsApp Account: {account}" if active else "no active default outgoing WhatsApp Account")
+	detail = f"default outgoing WhatsApp Account: {account}" if active else "no active default outgoing WhatsApp Account"
+	return flag(active, detail, bad=WARN)
 
 
 def check_backups():
@@ -101,8 +107,18 @@ def check_error_log():
 
 
 def check_mail_queue():
-	count = frappe.db.count("Email Queue", {"status": "Error", "modified": [">", add_to_date(now_datetime(), days=-1)]})
-	return flag(count == 0, f"{count} outgoing mails in Error in the last day")
+	failed = frappe.db.count(
+		"Email Queue", {"status": "Error", "modified": [">", add_to_date(now_datetime(), days=-1)]}
+	)
+	return flag(failed == 0, f"{failed} outgoing mails in Error in the last day")
+
+
+def check_mail_backlog():
+	"""Mail that never left: Not Sent for over an hour means the queue is not being flushed."""
+	stuck = frappe.db.count(
+		"Email Queue", {"status": "Not Sent", "creation": ["<", add_to_date(now_datetime(), hours=-1)]}
+	)
+	return flag(stuck == 0, f"{stuck} outgoing mails Not Sent for over an hour", bad=WARN)
 
 
 CHECKS = (
@@ -117,4 +133,5 @@ CHECKS = (
 	("backup_age", check_backup_age),
 	("error_log", check_error_log),
 	("mail_queue", check_mail_queue),
+	("mail_backlog", check_mail_backlog),
 )  # fmt: skip

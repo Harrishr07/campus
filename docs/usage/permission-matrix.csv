@@ -1,1014 +1,1014 @@
-kind,name,role,permlevel,read,write,create,delete,submit,cancel,export,print,share
-DocType,AISHE Layout,IQAC Coordinator,0,1,1,1,1,0,0,1,1,0
-DocType,AISHE Layout,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,API Score Rule,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,API Score Rule,HR Manager,0,1,1,1,1,0,0,1,0,0
-DocType,API Score Rule,HR User,0,1,0,0,0,0,0,1,0,0
-DocType,API Score Rule,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,API Score Rule,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,API Score Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Aadhaar Access Log,System Manager,0,1,0,0,0,0,0,0,0,0
-DocType,Academic Proposal,Academics User,0,1,1,1,0,0,0,1,0,0
-DocType,Academic Proposal,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Academic Proposal,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Academic Proposal,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Academic Proposal,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Academic Proposal,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Accreditation Cycle,IQAC Coordinator,0,1,1,1,0,1,0,1,0,0
-DocType,Accreditation Cycle,IQAC Criterion Owner,0,1,0,0,0,0,0,0,0,0
-DocType,Accreditation Cycle,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Accreditation Cycle,System Manager,0,1,1,1,1,1,0,1,0,0
-DocType,Accreditation Framework,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-DocType,Accreditation Framework,IQAC Criterion Owner,0,1,0,0,0,0,0,0,0,0
-DocType,Accreditation Framework,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Admission Cancellation,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Admission Cancellation,Admission Officer,0,1,1,1,0,1,0,1,0,0
-DocType,Admission Cancellation,System Manager,0,1,1,1,1,1,0,1,0,0
-DocType,Admission Document Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Admission Document Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Admission Quota,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Admission Quota,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Admission Settings,Admission Officer,0,1,0,0,0,0,0,0,0,0
-DocType,Admission Settings,System Manager,0,1,1,1,0,0,0,0,0,0
-DocType,Allotment Import,Academics User,0,1,1,1,0,0,0,1,0,0
-DocType,Allotment Import,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Allotment Import Row,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Allotment Import Row,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Answer Script Bundle,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Answer Script Bundle,Exam Confidential,0,1,1,1,0,0,0,1,0,0
-DocType,Answer Script Bundle,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Applicant Upload,Admission Officer,0,1,1,1,0,0,0,1,0,0
-DocType,Applicant Upload,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Applicant Upload Row,Admission Officer,0,1,0,0,0,0,0,1,0,0
-DocType,Applicant Upload Row,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Appraisal Review,Employee,0,1,0,0,0,0,0,0,0,0
-DocType,Appraisal Review,HOD,0,1,1,0,0,0,0,0,1,0
-DocType,Appraisal Review,HR Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Appraisal Review,HR User,0,1,1,1,0,0,0,1,1,0
-DocType,Appraisal Review,Instructor,0,1,0,0,0,0,0,0,0,0
-DocType,Appraisal Review,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Appraisal Review,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Approval Delegation,Desk User,0,1,1,1,1,0,0,0,0,0
-DocType,Approval Delegation,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Approval Policy,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Approval Request,Desk User,0,1,0,0,0,0,0,0,0,0
-DocType,Approval Request,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Approval Test Document,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Approval Test Document,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Attainment Policy,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Attainment Policy,Dean Academics,0,1,1,1,0,0,0,1,1,0
-DocType,Attainment Policy,HOD,0,1,0,0,0,0,0,1,1,0
-DocType,Attainment Policy,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,Attainment Policy,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Attendance Eligibility Run,Academics User,0,1,1,1,0,0,0,0,1,0
-DocType,Attendance Eligibility Run,Dean Academics,0,1,1,1,0,0,0,1,1,0
-DocType,Attendance Eligibility Run,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Attendance Eligibility Run,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Attendance Eligibility Run,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Attendance Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Attendance Rule,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Attendance Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Audience Rule,Academics User,0,1,1,1,0,0,0,0,0,0
-DocType,Audience Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Bank Collection Import,Accounts Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Bank Collection Import,Accounts User,0,1,1,1,0,0,0,0,0,0
-DocType,Bank Collection Import,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Bank Collection Row,Accounts Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Bank Collection Row,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Bank Collection Row,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Body,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Body,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Body,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Body,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Body,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Body,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Body Meeting,Academics User,0,1,1,1,0,0,0,1,0,0
-DocType,Body Meeting,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Body Meeting,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Body Meeting,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Body Meeting,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Body Meeting,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Body Type,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Body Type,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Body Type,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Body Type,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Body Type,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Body Type,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Break of Study,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Break of Study,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Break of Study,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Break of Study,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Break of Study,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Broadcast,Academics User,0,1,1,1,0,1,0,0,0,0
-DocType,Broadcast,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Bulk Run,System Manager,0,1,0,0,0,0,0,0,0,0
-DocType,CIA Component Template,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,CIA Component Template,COE,0,1,1,1,0,0,0,1,0,0
-DocType,CIA Component Template,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,CIA Component Template,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,CIA Component Template,Instructor,0,1,0,0,0,0,0,0,0,0
-DocType,CIA Component Template,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,CIA Schedule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,CIA Schedule,COE,0,1,1,1,0,0,0,1,0,0
-DocType,CIA Schedule,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,CIA Schedule,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,CIA Schedule,Instructor,0,1,1,0,0,0,0,0,0,0
-DocType,CIA Schedule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,CIA Unlock Request,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,CIA Unlock Request,COE,0,1,1,1,0,1,1,1,0,0
-DocType,CIA Unlock Request,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,CIA Unlock Request,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,CIA Unlock Request,Instructor,0,1,1,1,0,1,0,0,0,0
-DocType,CIA Unlock Request,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,CO Attainment Run,COE,0,1,0,0,0,0,0,1,1,0
-DocType,CO Attainment Run,Dean Academics,0,1,1,1,0,1,1,1,1,0
-DocType,CO Attainment Run,HOD,0,1,1,1,0,1,1,1,1,0
-DocType,CO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,CO Attainment Run,Instructor,0,1,0,0,0,0,0,1,1,0
-DocType,CO Attainment Run,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,CO Attainment Snapshot,COE,0,1,0,0,0,0,0,0,1,0
-DocType,CO Attainment Snapshot,Dean Academics,0,1,0,0,0,0,0,0,1,0
-DocType,CO Attainment Snapshot,System Manager,0,1,0,0,0,0,0,0,1,0
-DocType,CO-PO Matrix,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,CO-PO Matrix,Dean Academics,0,1,1,1,0,1,1,1,1,0
-DocType,CO-PO Matrix,HOD,0,1,1,1,0,1,1,1,1,0
-DocType,CO-PO Matrix,Instructor,0,1,1,1,0,1,0,1,1,0
-DocType,CO-PO Matrix,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Campus Settings,System Manager,0,1,1,1,0,0,0,0,1,0
-DocType,Candidate Duplicate Review,Admission Officer,0,1,0,0,0,0,0,1,0,0
-DocType,Candidate Duplicate Review,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Certificate Request,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Certificate Request,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Certificate Request,Guardian,0,1,0,0,0,0,0,0,1,0
-DocType,Certificate Request,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,Certificate Request,Student,0,1,0,0,0,0,0,0,1,0
-DocType,Certificate Request,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Certificate Type,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Certificate Type,Dean Academics,0,1,0,0,0,0,0,0,0,0
-DocType,Certificate Type,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Challan Format,Accounts Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Challan Format,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Challan Format,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Circular,Academics User,0,1,1,1,0,1,0,0,0,0
-DocType,Circular,Employee,0,1,0,0,0,0,0,0,0,0
-DocType,Circular,Guardian,0,1,0,0,0,0,0,0,0,0
-DocType,Circular,Student,0,1,0,0,0,0,0,0,0,0
-DocType,Circular,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Circular Acknowledgement,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Circular Acknowledgement,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Classification Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Classification Rule,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Classification Rule,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Classification Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Communication Consent,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Completion Check,COE,0,1,0,0,0,0,0,1,1,0
-DocType,Completion Check,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Completion Check,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Completion Check,System Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Completion Settings,COE,0,1,1,0,0,0,0,0,0,0
-DocType,Completion Settings,Dean Academics,0,1,1,0,0,0,0,0,0,0
-DocType,Completion Settings,System Manager,0,1,1,0,0,0,0,0,0,0
-DocType,Condonation Request,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Condonation Request,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Condonation Request,Guardian,0,1,1,1,0,0,0,0,0,0
-DocType,Condonation Request,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,Condonation Request,Student,0,1,1,1,0,0,0,0,0,0
-DocType,Condonation Request,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Consultancy Project,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Consultancy Project,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Consultancy Project,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0
-DocType,Consultancy Project,Principal,0,1,1,1,0,0,0,1,1,0
-DocType,Consultancy Project,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Consultancy Revenue Share,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Consultancy Revenue Share,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Consultancy Revenue Share,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Consultancy Revenue Share,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Convocation List,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Convocation List,COE,0,1,1,1,1,0,0,1,1,0
-DocType,Convocation List,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Convocation List,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Counselling Authority,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Counselling Authority,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Counselling Note,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Counselling Note,Mentor,0,1,1,1,0,0,0,0,1,0
-DocType,Counselling Note,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Counselling Note,Student Counsellor,0,1,1,1,0,0,0,0,1,0
-DocType,Course Allocation,Academics User,0,1,1,1,0,1,1,0,1,0
-DocType,Course Allocation,Dean Academics,0,1,1,1,0,1,1,0,1,0
-DocType,Course Allocation,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Course Allocation,HR Manager,0,1,0,0,0,0,0,0,1,0
-DocType,Course Allocation,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Course Allocation,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Course Category,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Course Category,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Course Category,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Course Outcome,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Course Outcome,Dean Academics,0,1,1,1,1,0,0,1,1,0
-DocType,Course Outcome,HOD,0,1,1,1,1,0,0,1,1,0
-DocType,Course Outcome,Instructor,0,1,1,1,0,0,0,1,1,0
-DocType,Course Outcome,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Course Registration,Academics User,0,1,1,1,0,1,0,0,0,0
-DocType,Course Registration,Class Advisor,0,1,1,0,0,0,0,0,0,0
-DocType,Course Registration,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Course Registration,HOD,0,1,1,0,0,0,0,0,0,0
-DocType,Course Registration,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Credit Recognition,Academics User,0,1,0,0,0,0,0,0,1,0
-DocType,Credit Recognition,COE,0,1,1,1,0,1,1,1,1,0
-DocType,Credit Recognition,Dean Academics,0,1,1,1,0,1,1,1,1,0
-DocType,Credit Recognition,System Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Curriculum,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Curriculum,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Curriculum,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Curriculum Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Curriculum Rule,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Curriculum Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Data Point,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-DocType,Data Point,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Degree Awarding Authority,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Degree Awarding Authority,COE,0,1,1,1,0,0,0,1,1,0
-DocType,Degree Awarding Authority,Dean Academics,0,1,1,1,0,0,0,1,1,0
-DocType,Degree Awarding Authority,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Degree Awarding Authority,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Department Mission,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Department Mission,Dean Academics,0,1,1,1,1,0,0,1,1,0
-DocType,Department Mission,HOD,0,1,1,1,0,0,0,1,1,0
-DocType,Department Mission,Instructor,0,1,0,0,0,0,0,1,1,0
-DocType,Department Mission,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Drive Registration,Placement Officer,0,1,1,1,1,0,0,1,1,1
-DocType,Drive Registration,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Drive Registration,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Dummy Number Map,Exam Confidential,0,1,0,0,0,0,0,1,0,0
-DocType,Elective Group,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Elective Group,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Elective Group,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Eligibility Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Eligibility Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Enquiry Follow-up Rule,Admission Officer,0,1,0,0,0,0,0,0,0,0
-DocType,Enquiry Follow-up Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Evidence,IQAC Coordinator,0,1,1,1,1,0,0,1,0,0
-DocType,Evidence,IQAC Criterion Owner,0,1,1,1,0,0,0,1,0,0
-DocType,Evidence,Principal,0,1,0,0,0,0,0,1,0,0
-DocType,Evidence,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Exam Fee Rate,Accounts Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Fee Rate,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Fee Rate,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Fee Rate,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Exam Registration,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Registration,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Registration,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Registration,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Exam Rule Set,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Rule Set,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Rule Set,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Rule Set,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Exam Session,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Exam Session,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Session,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Exam Session,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Exam Withdrawal Application,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Exam Withdrawal Application,COE,0,1,0,0,0,0,0,0,1,0
-DocType,Exam Withdrawal Application,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Exam Withdrawal Application,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Exam Withdrawal Application,Principal,0,1,1,1,0,0,0,0,1,0
-DocType,Exam Withdrawal Application,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Examiner Remuneration Claim,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Examiner Remuneration Claim,Accounts User,0,1,0,0,0,1,0,0,1,0
-DocType,Examiner Remuneration Claim,COE,0,1,1,1,0,1,0,0,1,0
-DocType,Examiner Remuneration Claim,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Export Template,IQAC Coordinator,0,1,1,1,1,0,0,0,0,0
-DocType,Export Template,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Export Template,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,External Member,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,External Member,Accounts Manager,0,1,1,1,0,0,0,1,0,0
-DocType,External Member,Accounts Manager,1,1,1,0,0,0,0,0,0,0
-DocType,External Member,Accounts User,0,1,0,0,0,0,0,1,0,0
-DocType,External Member,Accounts User,1,1,0,0,0,0,0,0,0,0
-DocType,External Member,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,External Member,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,External Member,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,External Member,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,External Member,Principal,1,1,0,0,0,0,0,0,0,0
-DocType,External Member,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,External Member,System Manager,1,1,1,0,0,0,0,0,0,0
-DocType,Faculty Achievement,Employee,0,1,1,1,0,0,0,0,0,0
-DocType,Faculty Achievement,Employee,1,1,0,0,0,0,0,0,0,0
-DocType,Faculty Achievement,HOD,0,1,0,0,0,0,0,1,1,0
-DocType,Faculty Achievement,HOD,1,1,0,0,0,0,0,0,0,0
-DocType,Faculty Achievement,HR Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Faculty Achievement,HR Manager,1,1,1,0,0,0,0,0,0,0
-DocType,Faculty Achievement,HR User,0,1,1,1,0,0,0,1,1,0
-DocType,Faculty Achievement,HR User,1,1,1,0,0,0,0,0,0,0
-DocType,Faculty Achievement,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Faculty Achievement,Instructor,0,1,1,1,0,0,0,0,0,0
-DocType,Faculty Achievement,Instructor,1,1,0,0,0,0,0,0,0,0
-DocType,Faculty Achievement,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Faculty Achievement,Principal,1,1,0,0,0,0,0,0,0,0
-DocType,Faculty Achievement,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Faculty Achievement,System Manager,1,1,1,0,0,0,0,0,0,0
-DocType,Faculty Norm,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Faculty Norm,HR Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Faculty Norm,HR User,0,1,0,0,0,0,0,1,0,0
-DocType,Faculty Norm,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Faculty Norm,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Faculty Norm,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Fee Concession,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Fee Concession,Accounts User,0,1,1,1,0,1,0,0,1,0
-DocType,Fee Concession,Dean Student Affairs,0,1,1,1,0,0,0,0,1,0
-DocType,Fee Concession,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Fee Concession,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Fee Refund,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Fee Refund,Accounts User,0,1,1,1,0,1,0,0,1,0
-DocType,Fee Refund,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Fee Refund,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Feedback Campaign,IQAC Coordinator,0,1,1,1,1,0,0,0,0,0
-DocType,Feedback Campaign,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Feedback Campaign,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Feedback Form,IQAC Coordinator,0,1,1,1,1,0,0,0,0,0
-DocType,Feedback Form,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Feedback Form,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Feedback Response,System Manager,0,1,0,0,1,0,0,0,0,0
-DocType,Feedback Response Token,System Manager,0,1,0,0,1,0,0,0,0,0
-DocType,Fine Applied,Accounts Manager,0,1,1,1,0,0,0,1,0,0
-DocType,Fine Applied,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Fine Applied,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Fine Rule,Accounts Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Fine Rule,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Fine Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Framework Node,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-DocType,Framework Node,IQAC Criterion Owner,0,1,0,0,0,0,0,0,0,0
-DocType,Framework Node,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Funding Agency,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Funding Agency,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Funding Agency,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Funding Scheme,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Funding Scheme,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Funding Scheme,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Governance Settings,Accounts Manager,0,1,1,0,0,0,0,0,0,0
-DocType,Governance Settings,Principal,0,1,1,0,0,0,0,0,0,0
-DocType,Governance Settings,System Manager,0,1,1,0,0,0,0,0,0,0
-DocType,Grading Scheme,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Grading Scheme,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Grading Scheme,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Grading Scheme,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Grant Budget Head,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Grant Budget Head,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Grant Budget Head,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Grant Income Recognition,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Income Recognition,Accounts User,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Income Recognition,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Grant Income Recognition,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Grant Interest,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Interest,Accounts User,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Interest,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Grant Interest,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Grant Receipt,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Receipt,Accounts User,0,1,1,1,0,1,1,1,1,0
-DocType,Grant Receipt,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Grant Receipt,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Hall Ticket,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Hall Ticket,COE,0,1,1,1,0,0,0,1,1,0
-DocType,Hall Ticket,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Hall Ticket,Guardian,0,1,0,0,0,0,0,0,1,0
-DocType,Hall Ticket,Student,0,1,0,0,0,0,0,0,1,0
-DocType,Hall Ticket,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Honorarium Claim,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Honorarium Claim,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Honorarium Claim,Accounts User,0,1,1,1,0,1,0,0,1,0
-DocType,Honorarium Claim,Principal,0,1,1,1,0,1,0,0,1,0
-DocType,Honorarium Claim,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Hostel,Accounts Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Hostel,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel,Warden,0,1,0,0,0,0,0,1,1,0
-DocType,Hostel Bed,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Bed,Warden,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Block,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Block,Warden,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Fee Rate,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Fee Rate,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Fee Rate,Warden,0,1,0,0,0,0,0,1,1,0
-DocType,Hostel Floor,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Floor,Warden,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Room,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Room,Warden,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Room Type,Accounts Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Hostel Room Type,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Room Type,Warden,0,1,0,0,0,0,0,1,1,0
-DocType,Hostel Settings,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Hostel Settings,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Hostel Settings,Warden,0,1,0,0,0,0,0,1,1,0
-DocType,IPR Type,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,IPR Type,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,IPR Type,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Indexed Journal,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Indexed Journal,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,Indexed Journal,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Institution Profile,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Institution Profile,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Institutional MoU,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Institutional MoU,IQAC Coordinator,0,1,1,1,1,0,0,1,1,0
-DocType,Institutional MoU,Principal,0,1,1,1,1,0,0,1,1,0
-DocType,Institutional MoU,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Invention Disclosure,Employee,0,1,1,1,0,1,0,0,1,0
-DocType,Invention Disclosure,IQAC Coordinator,0,1,1,1,0,1,1,1,1,0
-DocType,Invention Disclosure,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Invention Disclosure,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Invigilation Roster,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Invigilation Roster,COE,0,1,1,1,1,0,0,1,1,0
-DocType,Invigilation Roster,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Invigilation Roster,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Lab Incident,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,Lab Incident,Lab In-charge,0,1,1,1,0,0,0,1,1,0
-DocType,Lab Incident,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Lab Safety Inspection,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,Lab Safety Inspection,Lab In-charge,0,1,1,1,0,1,1,1,1,0
-DocType,Lab Safety Inspection,System Manager,0,1,1,1,1,1,1,1,1,1
-DocType,Laboratory,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,Laboratory,Lab In-charge,0,1,1,1,0,0,0,1,1,0
-DocType,Laboratory,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Laboratory Settings,System Manager,0,1,1,1,0,0,0,0,0,0
-DocType,Lifecycle Transition,Academics User,0,1,0,0,0,0,0,0,1,0
-DocType,Lifecycle Transition,Admission Officer,0,1,0,0,0,0,0,0,0,0
-DocType,Lifecycle Transition,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Lifecycle Transition,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,Lifecycle Transition,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Lifecycle Transition,System Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Lifecycle Transition Rule,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Lifecycle Transition Rule,Dean Academics,0,1,0,0,0,0,0,0,0,0
-DocType,Lifecycle Transition Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Malpractice Report,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Malpractice Report,COE,0,1,1,1,0,1,0,1,1,0
-DocType,Malpractice Report,COE,1,1,1,0,0,0,0,1,1,0
-DocType,Malpractice Report,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Malpractice Report,Dean Academics,1,1,0,0,0,0,0,1,1,0
-DocType,Malpractice Report,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Malpractice Report,Principal,1,1,0,0,0,0,0,1,1,0
-DocType,Malpractice Report,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Malpractice Report,System Manager,1,1,1,0,0,0,0,1,1,0
-DocType,Mark Moderation,COE,0,1,1,1,0,1,1,1,0,0
-DocType,Mark Moderation,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Mark Moderation,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Mark Moderation,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Mark Sheet Entry,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Mark Sheet Entry,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Mark Sheet Entry,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Mark Sheet Entry,HOD,0,1,0,0,0,0,0,0,0,0
-DocType,Mark Sheet Entry,Instructor,0,1,1,1,0,0,0,0,0,0
-DocType,Mark Sheet Entry,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Meeting Action Item,Academics User,0,1,1,1,0,0,0,1,0,0
-DocType,Meeting Action Item,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Meeting Action Item,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Meeting Action Item,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Meeting Action Item,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Meeting Action Item,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Message Log,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Message Template,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Message Template,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Messaging Settings,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Metric Override,IQAC Coordinator,0,1,1,1,0,1,1,1,0,0
-DocType,Metric Override,IQAC Criterion Owner,0,1,1,1,0,1,0,0,0,0
-DocType,Metric Override,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Metric Override,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Metric Value,IQAC Coordinator,0,1,1,1,0,0,0,1,0,0
-DocType,Metric Value,IQAC Criterion Owner,0,1,1,1,0,0,0,0,0,0
-DocType,Metric Value,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Metric Value,System Manager,0,1,1,1,0,0,0,1,0,0
-DocType,Module Pack,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Module Pack,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,No Dues Clearance,Academics User,0,1,1,0,0,0,0,0,0,0
-DocType,No Dues Clearance,Accounts Manager,0,1,1,1,0,1,1,1,0,0
-DocType,No Dues Clearance,Accounts User,0,1,1,1,0,1,0,0,0,0
-DocType,No Dues Clearance,Lab In-charge,0,1,1,0,0,0,0,0,0,0
-DocType,No Dues Clearance,Librarian,0,1,1,0,0,0,0,0,0,0
-DocType,No Dues Clearance,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,No Dues Clearance,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,No Dues Clearance,Warden,0,1,1,0,0,0,0,0,0,0
-DocType,Official Document,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,Official Document,Principal,0,1,1,1,0,0,0,1,1,0
-DocType,Official Document,System Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Official Document Setting,IQAC Coordinator,0,1,1,0,0,0,0,0,0,0
-DocType,Official Document Setting,System Manager,0,1,1,0,0,0,0,0,0,0
-DocType,PFMS Export Batch,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,PFMS Export Batch,Accounts User,0,1,1,1,0,1,0,1,1,0
-DocType,PFMS Export Batch,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,PFMS Export Layout,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,PFMS Export Layout,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,PFMS Export Layout,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,PFMS Export Release,Accounts Manager,0,1,0,0,0,0,0,1,1,0
-DocType,PFMS Export Release,System Manager,0,1,0,0,0,0,0,1,1,0
-DocType,PO Attainment Run,COE,0,1,0,0,0,0,0,1,1,0
-DocType,PO Attainment Run,Dean Academics,0,1,1,1,0,1,1,1,1,0
-DocType,PO Attainment Run,HOD,0,1,1,1,0,1,1,1,1,0
-DocType,PO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,PO Attainment Run,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Parent Interaction,Class Advisor,0,1,1,1,0,0,0,0,1,0
-DocType,Parent Interaction,Dean Student Affairs,0,1,1,1,0,0,0,0,1,0
-DocType,Parent Interaction,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Parent Interaction,Mentor,0,1,1,1,0,0,0,0,1,0
-DocType,Parent Interaction,Principal,0,1,1,1,0,0,0,0,1,0
-DocType,Parent Interaction,System Manager,0,1,1,1,0,0,0,0,1,0
-DocType,Patent,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Patent,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,Patent,Principal,0,1,1,1,0,0,0,1,1,0
-DocType,Patent,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Placement Drive,Placement Officer,0,1,1,1,1,0,0,1,1,1
-DocType,Placement Drive,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Placement Drive,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Placement Eligibility Template,Placement Officer,0,1,1,1,1,0,0,1,1,1
-DocType,Placement Eligibility Template,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Placement Eligibility Template,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Position,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Position,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Position Holder,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Position Holder,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Program Educational Objective,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Program Educational Objective,Dean Academics,0,1,1,1,1,0,0,1,1,0
-DocType,Program Educational Objective,HOD,0,1,1,1,0,0,0,1,1,0
-DocType,Program Educational Objective,Instructor,0,1,0,0,0,0,0,1,1,0
-DocType,Program Educational Objective,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Program Outcome,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Program Outcome,Dean Academics,0,1,1,1,1,0,0,1,1,0
-DocType,Program Outcome,HOD,0,1,1,1,0,0,0,1,1,0
-DocType,Program Outcome,Instructor,0,1,0,0,0,0,0,1,1,0
-DocType,Program Outcome,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Program Specific Outcome,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Program Specific Outcome,Dean Academics,0,1,1,1,1,0,0,1,1,0
-DocType,Program Specific Outcome,HOD,0,1,1,1,0,0,0,1,1,0
-DocType,Program Specific Outcome,Instructor,0,1,0,0,0,0,0,1,1,0
-DocType,Program Specific Outcome,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Progression Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Progression Rule,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Progression Rule,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Progression Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Progression Run,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Progression Run,COE,0,1,1,1,0,1,0,1,1,0
-DocType,Progression Run,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Progression Run,System Manager,0,1,1,1,1,1,0,1,1,0
-DocType,Project Closure,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Project Closure,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Project Closure,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Project Closure,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Project Staff Appointment,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Project Staff Appointment,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Project Staff Appointment,HR Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Project Staff Appointment,HR User,0,1,0,0,0,0,0,0,1,0
-DocType,Project Staff Appointment,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Project Staff Appointment,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Proposal Type,Academics User,0,1,1,1,0,0,0,1,0,0
-DocType,Proposal Type,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Proposal Type,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Proposal Type,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Proposal Type,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Proposal Type,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Publication,Employee,0,1,1,1,0,0,0,0,1,0
-DocType,Publication,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,Publication,Principal,0,1,1,1,0,0,0,1,1,0
-DocType,Publication,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,QP Access Log,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-DocType,QP Setter Nomination,Exam Confidential,0,1,1,1,1,0,0,0,0,0
-DocType,Question Bank Item,Exam Confidential,0,1,1,1,1,0,0,0,0,0
-DocType,Question Paper,Exam Confidential,0,1,1,1,1,1,1,0,1,0
-DocType,Question Paper Settings,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-DocType,Question Paper Settings,System Manager,0,1,1,0,0,0,0,0,0,0
-DocType,Re-appropriation Request,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Re-appropriation Request,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Re-appropriation Request,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Re-appropriation Request,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Recruiter,Placement Officer,0,1,1,1,1,0,0,1,1,1
-DocType,Recruiter,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Recruiter,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Refund Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Refund Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Registration Rule,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Registration Rule,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Registration Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Registration Window,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Registration Window,Dean Academics,0,1,1,1,1,0,0,1,0,0
-DocType,Registration Window,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Regulation,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Regulation,Dean Academics,0,1,1,1,0,0,0,1,0,0
-DocType,Regulation,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Regulator Submission,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Regulator Submission,IQAC Coordinator,0,1,1,1,1,0,0,1,1,0
-DocType,Regulator Submission,Principal,0,1,1,1,1,0,0,1,1,0
-DocType,Regulator Submission,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Regulator Submission Type,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Regulator Submission Type,IQAC Coordinator,0,1,1,1,1,0,0,1,1,0
-DocType,Regulator Submission Type,Principal,0,1,1,1,1,0,0,1,1,0
-DocType,Regulator Submission Type,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Rejoin Application,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Rejoin Application,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Rejoin Application,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Rejoin Application,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Rejoin Application,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Remuneration Rate,Accounts Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Remuneration Rate,Accounts User,0,1,0,0,0,0,0,0,0,0
-DocType,Remuneration Rate,COE,0,1,1,1,0,0,0,0,0,0
-DocType,Remuneration Rate,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Research Call,Accounts Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Research Call,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Research Call,Principal,0,1,1,1,1,0,0,1,1,0
-DocType,Research Call,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Research Centre,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Research Centre,IQAC Coordinator,0,1,1,1,0,0,0,1,1,0
-DocType,Research Centre,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Research Proposal,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Research Proposal,Employee,0,1,1,1,0,1,0,0,1,0
-DocType,Research Proposal,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Research Proposal,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Research Settings,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Research Settings,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Research Settings,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Result Ratification,COE,0,1,1,1,0,1,0,1,0,0
-DocType,Result Ratification,Dean Academics,0,1,0,0,0,0,0,0,0,0
-DocType,Result Ratification,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Result Ratification,System Manager,0,1,1,1,1,1,0,1,0,0
-DocType,Revaluation Application,COE,0,1,1,1,0,1,1,1,0,0
-DocType,Revaluation Application,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Revaluation Application,Instructor,0,1,0,0,0,0,0,0,0,0
-DocType,Revaluation Application,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Revaluation Outcome,COE,0,1,1,1,0,1,1,1,0,0
-DocType,Revaluation Outcome,Dean Academics,0,1,0,0,0,0,0,1,0,0
-DocType,Revaluation Outcome,System Manager,0,1,1,1,1,1,1,1,0,0
-DocType,Round Result,Placement Officer,0,1,1,1,1,0,0,1,1,1
-DocType,Round Result,Principal,0,1,0,0,0,0,0,1,1,0
-DocType,Round Result,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Safety Checklist Template,IQAC Coordinator,0,1,0,0,0,0,0,1,1,0
-DocType,Safety Checklist Template,Lab In-charge,0,1,1,1,0,0,0,1,1,0
-DocType,Safety Checklist Template,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Sanction,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Sanction,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Sanction,Principal,0,1,1,1,0,1,1,1,1,0
-DocType,Sanction,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Sanctioned Post,HOD,0,1,0,0,0,0,0,1,0,0
-DocType,Sanctioned Post,HR Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Sanctioned Post,HR User,0,1,0,0,0,0,0,1,0,0
-DocType,Sanctioned Post,IQAC Coordinator,0,1,0,0,0,0,0,1,0,0
-DocType,Sanctioned Post,Principal,0,1,1,1,0,0,0,1,0,0
-DocType,Sanctioned Post,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Scholarship Application,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Scholarship Application,Accounts User,0,1,1,1,0,0,0,0,1,0
-DocType,Scholarship Application,Dean Student Affairs,0,1,1,1,0,1,1,1,1,0
-DocType,Scholarship Application,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Scholarship Scheme,Accounts Manager,0,1,1,1,0,0,0,1,1,0
-DocType,Scholarship Scheme,Accounts User,0,1,0,0,0,0,0,0,1,0
-DocType,Scholarship Scheme,Dean Student Affairs,0,1,0,0,0,0,0,0,1,0
-DocType,Scholarship Scheme,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Seat Matrix,Academics User,0,1,0,0,0,0,0,1,0,0
-DocType,Seat Matrix,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Seat Override Log,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Seat Override Log,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Seating Plan,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Seating Plan,COE,0,1,1,1,1,0,0,1,1,0
-DocType,Seating Plan,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Seating Plan,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Shared Service Agreement,Academics User,0,1,0,0,0,0,0,0,0,0
-DocType,Shared Service Agreement,System Manager,0,1,1,1,1,0,0,1,1,1
-DocType,Student Correction Settings,System Manager,0,1,1,1,0,0,0,0,0,0
-DocType,Student Grievance,COE,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,Dean Student Affairs,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,Grievance Committee,0,1,1,1,0,1,1,1,1,0
-DocType,Student Grievance,Guardian,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,Student,0,1,0,0,0,0,0,0,1,0
-DocType,Student Grievance,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Student Onboarding,Academics User,0,1,1,1,0,0,0,0,0,0
-DocType,Student Onboarding,Dean Academics,0,1,1,1,0,0,0,0,0,0
-DocType,Student Onboarding,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Student Onboarding Template,Academics User,0,1,1,1,0,0,0,0,0,0
-DocType,Student Onboarding Template,Dean Academics,0,1,1,1,0,0,0,0,0,0
-DocType,Student Onboarding Template,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Student Record Correction,Academics User,0,1,1,1,0,1,0,0,1,0
-DocType,Student Record Correction,COE,0,1,0,0,0,0,0,0,1,0
-DocType,Student Record Correction,Dean Academics,0,1,0,0,0,0,0,0,1,0
-DocType,Student Record Correction,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Student Record Correction,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Student Record Correction,System Manager,0,1,1,1,1,1,0,1,1,0
-DocType,Student Result,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,Student Result,COE,0,1,0,0,0,0,0,1,1,0
-DocType,Student Result,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,Student Result,Guardian,0,1,0,0,0,0,0,0,1,0
-DocType,Student Result,Student,0,1,0,0,0,0,0,0,1,0
-DocType,Student Result,System Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Substitution,Academics User,0,1,1,1,0,0,0,0,1,0
-DocType,Substitution,Dean Academics,0,1,0,0,0,0,0,0,1,0
-DocType,Substitution,HOD,0,1,1,1,0,0,0,0,1,0
-DocType,Substitution,HR Manager,0,1,0,0,0,0,0,0,1,0
-DocType,Substitution,Instructor,0,1,0,0,0,0,0,0,1,0
-DocType,Substitution,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Substitution,System Manager,0,1,1,1,1,0,0,0,1,0
-DocType,Timetable,Academics User,0,1,1,1,0,0,0,0,1,0
-DocType,Timetable,Dean Academics,0,1,1,1,0,0,0,0,1,0
-DocType,Timetable,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,Timetable Generation Run,Academics User,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Generation Run,Dean Academics,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Generation Run,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Generation Run,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Generation Run,System Manager,0,1,1,1,0,0,0,0,1,0
-DocType,Timetable Slot Template,Academics User,0,1,1,1,0,0,0,0,1,0
-DocType,Timetable Slot Template,Dean Academics,0,1,1,1,0,0,0,0,1,0
-DocType,Timetable Slot Template,HOD,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Slot Template,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Timetable Slot Template,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,University Exam Format,Academics User,0,1,0,0,0,0,0,1,1,0
-DocType,University Exam Format,COE,0,1,1,1,1,0,0,1,1,0
-DocType,University Exam Format,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,University Exam Format,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,University Exam Registration Batch,COE,0,1,1,1,1,0,0,1,1,0
-DocType,University Exam Registration Batch,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,University Exam Registration Batch,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,University Result Import,COE,0,1,1,1,1,0,0,1,1,0
-DocType,University Result Import,Dean Academics,0,1,0,0,0,0,0,1,1,0
-DocType,University Result Import,System Manager,0,1,1,1,1,0,0,1,1,0
-DocType,University Result Import Row,COE,0,1,0,0,0,0,0,1,1,0
-DocType,University Result Import Row,System Manager,0,1,0,0,0,0,0,1,1,0
-DocType,Utilisation Certificate,Accounts Manager,0,1,1,1,0,1,1,1,1,0
-DocType,Utilisation Certificate,Accounts User,0,1,1,1,0,1,1,1,1,0
-DocType,Utilisation Certificate,Employee,0,1,0,0,0,0,0,0,1,0
-DocType,Utilisation Certificate,Principal,0,1,0,0,0,0,0,0,1,0
-DocType,Utilisation Certificate,System Manager,0,1,1,1,1,1,1,1,1,0
-DocType,Validation Rule,IQAC Coordinator,0,1,1,1,1,0,0,0,0,0
-DocType,Validation Rule,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Validation Rule,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Validation Run,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-DocType,Validation Run,Principal,0,1,0,0,0,0,0,0,0,0
-DocType,Validation Run,System Manager,0,1,0,0,1,0,0,1,0,0
-DocType,Valuation Allocation,COE,0,1,1,1,0,0,0,1,0,0
-DocType,Valuation Allocation,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-DocType,Valuation Allocation,Examiner,0,1,0,0,0,0,0,0,1,0
-DocType,Valuation Allocation,System Manager,0,1,1,1,1,0,0,1,0,0
-DocType,Valuation Entry,COE,0,1,0,0,0,0,0,0,0,0
-DocType,Valuation Entry,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-DocType,Valuation Entry,Examiner,0,1,1,1,0,1,0,0,1,0
-DocType,Valuation Entry,System Manager,0,1,0,0,0,0,0,0,0,0
-DocType,Verifiable Document,System Manager,0,1,0,0,0,0,0,1,0,0
-DocType,Verifiable Document,Verification Manager,0,1,0,0,0,0,0,1,0,0
-Report,Admissions by Quota and Category,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Admissions by Quota and Category,Admission Officer,0,1,0,0,0,0,0,0,0,0
-Report,Admissions by Quota and Category,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Arrear List,COE,0,1,0,0,0,0,0,0,0,0
-Report,Arrear List,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Arrear List,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Attainment Target Gap,COE,0,1,0,0,0,0,0,0,0,0
-Report,Attainment Target Gap,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Attainment Target Gap,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Attainment Target Gap,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Attainment Target Gap,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Attendance Shortage,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Attendance Shortage,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Attendance Shortage,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Attendance Shortage,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Body Composition Compliance,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,COE,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,HOD,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,Instructor,0,1,0,0,0,0,0,0,0,0
-Report,CIA Marks Audit Trail,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,COE,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,HOD,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,Instructor,0,1,0,0,0,0,0,0,0,0
-Report,CIA Status by Offering,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,COE,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,HOD,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,Instructor,0,1,0,0,0,0,0,0,0,0
-Report,CO Attainment by Course,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,CO-PO Coverage,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,CO-PO Coverage,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,CO-PO Coverage,HOD,0,1,0,0,0,0,0,0,0,0
-Report,CO-PO Coverage,Instructor,0,1,0,0,0,0,0,0,0,0
-Report,CO-PO Coverage,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Cadre Ratio,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Calibration and AMC Due,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Calibration and AMC Due,Lab In-charge,0,1,0,0,0,0,0,0,0,0
-Report,Calibration and AMC Due,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Calibration and AMC Due,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Certificates Issued,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Certificates Issued,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Certificates Issued,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Circular Acknowledgement Status,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Circular Acknowledgement Status,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Committee Compliance,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Committee Compliance,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Committee Compliance,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Completion Status,COE,0,1,0,0,0,0,0,0,0,0
-Report,Completion Status,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Completion Status,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Completion Status,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Concession Register,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Concession Register,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Concession Register,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0
-Report,Concession Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Concession Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Conference Financial Support,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Consent Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Consultancy Revenue,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Consultancy Revenue,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Consultancy Revenue,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Consultancy Revenue,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Consultancy Revenue,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Cycle Readiness,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Cycle Readiness,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Cycle Readiness,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Days Exam End to Result,COE,0,1,0,0,0,0,0,0,0,0
-Report,Days Exam End to Result,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Days Exam End to Result,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Delivery Summary,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Elective Enrolment,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Elective Enrolment,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Elective Enrolment,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Elective Enrolment,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Enquiry Funnel by Source,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Enquiry Funnel by Source,Admission Officer,0,1,0,0,0,0,0,0,0,0
-Report,Enquiry Funnel by Source,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Evaluation Grievances vs Appeared,COE,0,1,0,0,0,0,0,0,0,0
-Report,Evaluation Grievances vs Appeared,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Evaluation Grievances vs Appeared,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Exam Absentee List,COE,0,1,0,0,0,0,0,0,0,0
-Report,Exam Absentee List,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Exam Absentee List,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Exam Eligibility Withheld,COE,0,1,0,0,0,0,0,0,0,0
-Report,Exam Eligibility Withheld,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Exam Eligibility Withheld,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Exam Registration Summary,COE,0,1,0,0,0,0,0,0,0,0
-Report,Exam Registration Summary,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Exam Registration Summary,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,HOD,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,HR User,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,Principal,0,1,0,0,0,0,0,0,0,0
-Report,FDP Participation,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Faculty vs Sanctioned Posts,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Feedback Analysis,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Feedback Analysis,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Feedback Analysis,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Grace Mark Audit,COE,0,1,0,0,0,0,0,0,0,0
-Report,Grace Mark Audit,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Grace Mark Audit,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Grant Ledger by Head,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Grant Ledger by Head,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Grant Ledger by Head,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Grant Ledger by Head,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,COE,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,Grievance Committee,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Grievance SLA,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Action Taken Report,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Action Taken Report,Principal,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Action Taken Report,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Calendar,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Calendar,Principal,0,1,0,0,0,0,0,0,0,0
-Report,IQAC Calendar,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Import Check,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Lab Equipment Register,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Lab Equipment Register,Lab In-charge,0,1,0,0,0,0,0,0,0,0
-Report,Lab Equipment Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Lab Equipment Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Lab Incident Register,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Lab Incident Register,Lab In-charge,0,1,0,0,0,0,0,0,0,0
-Report,Lab Incident Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Lab Incident Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Live Seat Matrix,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Live Seat Matrix,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Malpractice Register,COE,0,1,0,0,0,0,0,0,0,0
-Report,Malpractice Register,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Malpractice Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Malpractice Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Mentoring Activity,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Mentoring Activity,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Mentoring Activity,Student Counsellor,0,1,0,0,0,0,0,0,0,0
-Report,Metric Drill-down,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Metric Drill-down,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,My Pending Approvals,Desk User,0,1,0,0,0,0,0,0,0,0
-Report,My Pending Approvals,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,PO Attainment by Program,COE,0,1,0,0,0,0,0,0,0,0
-Report,PO Attainment by Program,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,PO Attainment by Program,HOD,0,1,0,0,0,0,0,0,0,0
-Report,PO Attainment by Program,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,PO Attainment by Program,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Patent Register,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Patent Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Patent Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Pending Documents,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Pending Documents,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,HOD,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,HR User,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,Principal,0,1,0,0,0,0,0,0,0,0
-Report,PhD Faculty,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Programs without Seat Matrix,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Programs without Seat Matrix,Admission Officer,0,1,0,0,0,0,0,0,0,0
-Report,Programs without Seat Matrix,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Proposal Tracker,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Publication Register,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Publication Register,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Publication Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Publications by Teacher,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Publications by Teacher,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Publications by Teacher,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Question Paper Print Log,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-Report,Rank List,COE,0,1,0,0,0,0,0,0,0,0
-Report,Rank List,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Rank List,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Refund Register,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Refund Register,Admission Officer,0,1,0,0,0,0,0,0,0,0
-Report,Refund Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Remuneration Register,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Remuneration Register,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Remuneration Register,COE,0,1,0,0,0,0,0,0,0,0
-Report,Remuneration Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Research Proposal Pipeline,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Research Proposal Pipeline,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Research Proposal Pipeline,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Result Analysis,COE,0,1,0,0,0,0,0,0,0,0
-Report,Result Analysis,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Result Analysis,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Revaluation Change Stats,COE,0,1,0,0,0,0,0,0,0,0
-Report,Revaluation Change Stats,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Revaluation Change Stats,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Scholarship Beneficiaries,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Scholarship Beneficiaries,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Scholarship Beneficiaries,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0
-Report,Scholarship Beneficiaries,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Student Fee Ledger,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Student Fee Ledger,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Student Fee Ledger,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Student Fee Ledger,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Student Status Summary,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Student Status Summary,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Student Status Summary,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Student Status Summary,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Student-Teacher Ratio,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,TC Register,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,TC Register,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,TC Register,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Teaching Experience,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Timetable Clash Checker,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Utilisation Certificate Status,Accounts Manager,0,1,0,0,0,0,0,0,0,0
-Report,Utilisation Certificate Status,Accounts User,0,1,0,0,0,0,0,0,0,0
-Report,Utilisation Certificate Status,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Utilisation Certificate Status,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Difference,COE,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Difference,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Difference,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Progress,COE,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Progress,Exam Confidential,0,1,0,0,0,0,0,0,0,0
-Report,Valuation Progress,System Manager,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,Academics User,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,Dean Academics,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,HOD,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,HR Manager,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,HR User,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,Principal,0,1,0,0,0,0,0,0,0,0
-Report,Workload Balance,System Manager,0,1,0,0,0,0,0,0,0,0
+kind,name,ref_doctype,role,permlevel,read,write,create,delete,submit,cancel,amend,report,select,import,export,print,email,share,if_owner,submittable,portal
+DocType,AISHE Layout,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,AISHE Layout,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,API Score Rule,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,API Score Rule,,HR Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,API Score Rule,,HR User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,API Score Rule,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,API Score Rule,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,API Score Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Aadhaar Access Log,,System Manager,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Academic Proposal,,Academics User,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Academic Proposal,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Academic Proposal,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Academic Proposal,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Academic Proposal,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Academic Proposal,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Accreditation Cycle,,IQAC Coordinator,0,1,1,1,0,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Accreditation Cycle,,IQAC Criterion Owner,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Accreditation Cycle,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Accreditation Cycle,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Accreditation Framework,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Accreditation Framework,,IQAC Criterion Owner,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Accreditation Framework,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Cancellation,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Admission Cancellation,,Admission Officer,0,1,1,1,0,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Admission Cancellation,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Admission Document Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Document Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Quota,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Quota,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Settings,,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Admission Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Allotment Import,,Academics User,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Allotment Import,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Allotment Import Row,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Allotment Import Row,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Answer Script Bundle,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Answer Script Bundle,,Exam Confidential,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Answer Script Bundle,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Applicant Upload,,Admission Officer,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Applicant Upload,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Applicant Upload Row,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Applicant Upload Row,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Appraisal Review,,Employee,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+DocType,Appraisal Review,,HOD,0,1,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Appraisal Review,,HR Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Appraisal Review,,HR User,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Appraisal Review,,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+DocType,Appraisal Review,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Appraisal Review,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Approval Delegation,,Desk User,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0
+DocType,Approval Delegation,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Approval Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Approval Request,,Desk User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Approval Request,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Approval Test Document,,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,Approval Test Document,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Attainment Policy,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attainment Policy,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attainment Policy,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attainment Policy,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attainment Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attendance Eligibility Run,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Attendance Eligibility Run,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attendance Eligibility Run,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Attendance Eligibility Run,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Attendance Eligibility Run,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attendance Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Attendance Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Attendance Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Audience Rule,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Audience Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Bank Collection Import,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Bank Collection Import,,Accounts User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Bank Collection Import,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Bank Collection Row,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Bank Collection Row,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Bank Collection Row,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,Academics User,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Meeting,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Body Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Break of Study,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Break of Study,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Break of Study,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Break of Study,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Break of Study,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Broadcast,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Broadcast,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Bulk Run,,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,CIA Component Template,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Component Template,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Component Template,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Component Template,,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,CIA Component Template,,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,CIA Component Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Schedule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Schedule,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Schedule,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Schedule,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,CIA Schedule,,Instructor,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,CIA Schedule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,CIA Unlock Request,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,CIA Unlock Request,,COE,0,1,1,1,0,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,CIA Unlock Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,CIA Unlock Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,CIA Unlock Request,,Instructor,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,CIA Unlock Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,CO Attainment Run,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Run,,Dean Academics,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Run,,HOD,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Run,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Run,,Instructor,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Run,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,CO Attainment Snapshot,,COE,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,CO Attainment Snapshot,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,CO Attainment Snapshot,,System Manager,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,CO-PO Matrix,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,CO-PO Matrix,,Dean Academics,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,CO-PO Matrix,,HOD,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,CO-PO Matrix,,Instructor,0,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,CO-PO Matrix,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Campus Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0
+DocType,Candidate Duplicate Review,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Candidate Duplicate Review,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Certificate Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Certificate Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Certificate Request,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1
+DocType,Certificate Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Certificate Request,,Student,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1
+DocType,Certificate Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Certificate Type,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Certificate Type,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Certificate Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Challan Format,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Challan Format,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Challan Format,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Circular,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Circular,,Employee,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,Circular,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
+DocType,Circular,,Student,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
+DocType,Circular,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Circular Acknowledgement,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Circular Acknowledgement,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Classification Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Classification Rule,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Classification Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Classification Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Communication Consent,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Completion Check,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Completion Check,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Completion Check,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Completion Check,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Completion Settings,,COE,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Completion Settings,,Dean Academics,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Completion Settings,,System Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Condonation Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Condonation Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Condonation Request,,Guardian,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1
+DocType,Condonation Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Condonation Request,,Student,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1
+DocType,Condonation Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Consultancy Project,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Consultancy Project,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Consultancy Project,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Consultancy Project,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Consultancy Project,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Consultancy Revenue Share,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Consultancy Revenue Share,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Consultancy Revenue Share,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Consultancy Revenue Share,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Convocation List,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Convocation List,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Convocation List,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Convocation List,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Counselling Authority,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Counselling Authority,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Counselling Note,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Counselling Note,,Mentor,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Counselling Note,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Counselling Note,,Student Counsellor,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Course Allocation,,Academics User,0,1,1,1,0,1,1,1,1,0,0,0,1,0,0,0,1,0
+DocType,Course Allocation,,Dean Academics,0,1,1,1,0,1,1,1,1,0,0,0,1,0,0,0,1,0
+DocType,Course Allocation,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Course Allocation,,HR Manager,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Course Allocation,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Course Allocation,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Course Category,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Course Category,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Course Category,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Course Outcome,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Course Outcome,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Course Outcome,,HOD,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Course Outcome,,Instructor,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Course Outcome,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Course Registration,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Course Registration,,Class Advisor,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Course Registration,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Course Registration,,HOD,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Course Registration,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Credit Recognition,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Credit Recognition,,COE,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Credit Recognition,,Dean Academics,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Credit Recognition,,System Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Curriculum,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Curriculum,,Dean Academics,0,1,1,1,0,0,0,0,1,0,1,1,0,0,0,0,0,0
+DocType,Curriculum,,System Manager,0,1,1,1,1,0,0,0,1,0,1,1,0,0,0,0,0,0
+DocType,Curriculum Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Curriculum Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Curriculum Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Data Point,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Data Point,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Degree Awarding Authority,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Degree Awarding Authority,,COE,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Degree Awarding Authority,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Degree Awarding Authority,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Degree Awarding Authority,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Department Mission,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Department Mission,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Department Mission,,HOD,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Department Mission,,Instructor,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Department Mission,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Drive Registration,,Placement Officer,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Drive Registration,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Drive Registration,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Dummy Number Map,,Exam Confidential,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Elective Group,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Elective Group,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Elective Group,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Eligibility Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Eligibility Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Enquiry Follow-up Rule,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Enquiry Follow-up Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Evidence,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Evidence,,IQAC Criterion Owner,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Evidence,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Evidence,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Fee Rate,,Accounts Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Fee Rate,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Fee Rate,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Fee Rate,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Registration,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Registration,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Registration,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Registration,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Rule Set,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Rule Set,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Rule Set,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Rule Set,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Session,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Session,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Session,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Session,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Exam Withdrawal Application,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Exam Withdrawal Application,,COE,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Exam Withdrawal Application,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Exam Withdrawal Application,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Exam Withdrawal Application,,Principal,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Exam Withdrawal Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Examiner Remuneration Claim,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Examiner Remuneration Claim,,Accounts User,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Examiner Remuneration Claim,,COE,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Examiner Remuneration Claim,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Export Template,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Export Template,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Export Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Accounts Manager,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,External Member,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Accounts User,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,External Member,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,Principal,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,External Member,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,External Member,,System Manager,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,Employee,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+DocType,Faculty Achievement,,Employee,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Faculty Achievement,,HOD,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,HR Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Faculty Achievement,,HR Manager,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,HR User,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Faculty Achievement,,HR User,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Achievement,,Instructor,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0
+DocType,Faculty Achievement,,Instructor,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Faculty Achievement,,Principal,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Achievement,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Faculty Achievement,,System Manager,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Faculty Norm,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Norm,,HR Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Norm,,HR User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Norm,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Norm,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Faculty Norm,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Fee Concession,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Fee Concession,,Accounts User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Fee Concession,,Dean Student Affairs,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Fee Concession,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Fee Concession,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Fee Refund,,Accounts Manager,0,1,1,1,0,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Fee Refund,,Accounts User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Fee Refund,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Fee Refund,,System Manager,0,1,1,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Feedback Campaign,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Feedback Campaign,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Feedback Campaign,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Feedback Form,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Feedback Form,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Feedback Form,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Feedback Response,,System Manager,0,1,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Feedback Response Token,,System Manager,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Fine Applied,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Fine Applied,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Fine Applied,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Fine Rule,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Fine Rule,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Fine Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Framework Node,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Framework Node,,IQAC Criterion Owner,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Framework Node,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Funding Agency,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Funding Agency,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Funding Agency,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Funding Scheme,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Funding Scheme,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Funding Scheme,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Governance Settings,,Accounts Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Governance Settings,,Principal,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Governance Settings,,System Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Grading Scheme,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Grading Scheme,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Grading Scheme,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Grading Scheme,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Grant Budget Head,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Grant Budget Head,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Grant Budget Head,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Grant Income Recognition,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Income Recognition,,Accounts User,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Income Recognition,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Grant Income Recognition,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Interest,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Interest,,Accounts User,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Interest,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Grant Interest,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Receipt,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Receipt,,Accounts User,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Grant Receipt,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Grant Receipt,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Hall Ticket,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hall Ticket,,COE,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hall Ticket,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hall Ticket,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1
+DocType,Hall Ticket,,Student,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1
+DocType,Hall Ticket,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Honorarium Claim,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Honorarium Claim,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Honorarium Claim,,Accounts User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Honorarium Claim,,Principal,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Honorarium Claim,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Hostel,,Accounts Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel,,Warden,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Bed,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Bed,,Warden,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Block,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Block,,Warden,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Fee Rate,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Fee Rate,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Fee Rate,,Warden,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Floor,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Floor,,Warden,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Room,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Room,,Warden,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Room Type,,Accounts Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Room Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Room Type,,Warden,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Settings,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Hostel Settings,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Hostel Settings,,Warden,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,IPR Type,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,IPR Type,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,IPR Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Indexed Journal,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Indexed Journal,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Indexed Journal,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Institution Profile,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Institution Profile,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,1,1,0,0,0
+DocType,Institutional MoU,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Institutional MoU,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Institutional MoU,,Principal,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Institutional MoU,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Invention Disclosure,,Employee,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,0
+DocType,Invention Disclosure,,IQAC Coordinator,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Invention Disclosure,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Invention Disclosure,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Invigilation Roster,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Invigilation Roster,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Invigilation Roster,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Invigilation Roster,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Lab Incident,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Lab Incident,,Lab In-charge,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Lab Incident,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Lab Safety Inspection,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Lab Safety Inspection,,Lab In-charge,0,1,1,1,0,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Lab Safety Inspection,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,1,0,1,0
+DocType,Laboratory,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Laboratory,,Lab In-charge,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Laboratory,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Laboratory Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Lifecycle Transition,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Lifecycle Transition,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Lifecycle Transition Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition Rule,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Lifecycle Transition Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Malpractice Report,,Academics User,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,1,1,0
+DocType,Malpractice Report,,COE,0,1,1,1,0,1,0,1,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,COE,1,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,Dean Academics,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,Principal,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,System Manager,1,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Mark Moderation,,COE,0,1,1,1,0,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Mark Moderation,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Mark Moderation,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Mark Moderation,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Mark Sheet Entry,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Mark Sheet Entry,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Mark Sheet Entry,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Mark Sheet Entry,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Mark Sheet Entry,,Instructor,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Mark Sheet Entry,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,Academics User,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Meeting Action Item,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Message Log,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Message Template,,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Message Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Messaging Settings,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Metric Override,,IQAC Coordinator,0,1,1,1,0,1,1,0,1,0,0,1,0,0,0,0,1,0
+DocType,Metric Override,,IQAC Criterion Owner,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Metric Override,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Metric Override,,System Manager,0,1,1,1,1,1,1,0,1,0,0,1,0,0,0,0,1,0
+DocType,Metric Value,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Metric Value,,IQAC Criterion Owner,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Metric Value,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Metric Value,,System Manager,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Module Pack,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Module Pack,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,1,1,0,0,0
+DocType,No Dues Clearance,,Academics User,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,No Dues Clearance,,Accounts Manager,0,1,1,1,0,1,1,0,1,0,0,1,0,0,0,0,1,0
+DocType,No Dues Clearance,,Accounts User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,No Dues Clearance,,Lab In-charge,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,No Dues Clearance,,Librarian,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,No Dues Clearance,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,No Dues Clearance,,System Manager,0,1,1,1,1,1,1,0,1,0,0,1,0,0,0,0,1,0
+DocType,No Dues Clearance,,Warden,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,Official Document,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Official Document,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Official Document,,System Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Official Document Setting,,IQAC Coordinator,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Official Document Setting,,System Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,PFMS Export Batch,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,PFMS Export Batch,,Accounts User,0,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,PFMS Export Batch,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,PFMS Export Layout,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,PFMS Export Layout,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,PFMS Export Layout,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,PFMS Export Release,,Accounts Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,PFMS Export Release,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,PO Attainment Run,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,PO Attainment Run,,Dean Academics,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,PO Attainment Run,,HOD,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,PO Attainment Run,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,PO Attainment Run,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Parent Interaction,,Class Advisor,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Parent Interaction,,Dean Student Affairs,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Parent Interaction,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Parent Interaction,,Mentor,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Parent Interaction,,Principal,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Parent Interaction,,System Manager,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Patent,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Patent,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Patent,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Patent,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Placement Drive,,Placement Officer,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Placement Drive,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Placement Drive,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Placement Eligibility Template,,Placement Officer,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Placement Eligibility Template,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Placement Eligibility Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Position,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Position,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Position Holder,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Position Holder,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Program Educational Objective,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Educational Objective,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Educational Objective,,HOD,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Educational Objective,,Instructor,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Educational Objective,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Outcome,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Outcome,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Outcome,,HOD,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Outcome,,Instructor,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Outcome,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Specific Outcome,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Specific Outcome,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Specific Outcome,,HOD,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Specific Outcome,,Instructor,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Program Specific Outcome,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Progression Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Progression Rule,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Progression Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Progression Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Progression Run,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Progression Run,,COE,0,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Progression Run,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Progression Run,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Project Closure,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Closure,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Project Closure,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Closure,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Staff Appointment,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Staff Appointment,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Project Staff Appointment,,HR Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Staff Appointment,,HR User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Project Staff Appointment,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Project Staff Appointment,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Proposal Type,,Academics User,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Proposal Type,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Proposal Type,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Proposal Type,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Proposal Type,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Proposal Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Publication,,Employee,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0
+DocType,Publication,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Publication,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Publication,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,QP Access Log,,Exam Confidential,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,QP Setter Nomination,,Exam Confidential,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Question Bank Item,,Exam Confidential,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Question Paper,,Exam Confidential,0,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1,0
+DocType,Question Paper Settings,,Exam Confidential,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Question Paper Settings,,System Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Re-appropriation Request,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Re-appropriation Request,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Re-appropriation Request,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Re-appropriation Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Recruiter,,Placement Officer,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Recruiter,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Recruiter,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Refund Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Refund Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Registration Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Registration Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Registration Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Registration Window,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Registration Window,,Dean Academics,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Registration Window,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Regulation,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Regulation,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Regulation,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Regulator Submission,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Regulator Submission,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Regulator Submission,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Regulator Submission,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Regulator Submission Type,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Regulator Submission Type,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Regulator Submission Type,,Principal,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Regulator Submission Type,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Rejoin Application,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Rejoin Application,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Rejoin Application,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Rejoin Application,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Rejoin Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Remuneration Rate,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Remuneration Rate,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Remuneration Rate,,COE,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Remuneration Rate,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Research Call,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Research Call,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Research Call,,Principal,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Research Call,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Research Centre,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Research Centre,,IQAC Coordinator,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Research Centre,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Research Proposal,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Research Proposal,,Employee,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,0
+DocType,Research Proposal,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Research Proposal,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Research Settings,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Research Settings,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Research Settings,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Result Ratification,,COE,0,1,1,1,0,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Result Ratification,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Result Ratification,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Result Ratification,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Application,,COE,0,1,1,1,0,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Application,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Application,,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
+DocType,Revaluation Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Outcome,,COE,0,1,1,1,0,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Outcome,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0
+DocType,Revaluation Outcome,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
+DocType,Round Result,,Placement Officer,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Round Result,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Round Result,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Safety Checklist Template,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Safety Checklist Template,,Lab In-charge,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Safety Checklist Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Sanction,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Sanction,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Sanction,,Principal,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Sanction,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Sanctioned Post,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Sanctioned Post,,HR Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Sanctioned Post,,HR User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Sanctioned Post,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Sanctioned Post,,Principal,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Sanctioned Post,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Scholarship Application,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Scholarship Application,,Accounts User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Scholarship Application,,Dean Student Affairs,0,1,1,1,0,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Scholarship Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Scholarship Scheme,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Scholarship Scheme,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Scholarship Scheme,,Dean Student Affairs,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Scholarship Scheme,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
+DocType,Seat Matrix,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Seat Matrix,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Seat Override Log,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Seat Override Log,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Seating Plan,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Seating Plan,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Seating Plan,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Seating Plan,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Shared Service Agreement,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Shared Service Agreement,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,1,1,0,0,0
+DocType,Student Correction Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Student Grievance,,COE,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Grievance,,Dean Student Affairs,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Grievance,,Grievance Committee,0,1,1,1,0,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Student Grievance,,Guardian,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1
+DocType,Student Grievance,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Grievance,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Grievance,,Student,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1
+DocType,Student Grievance,,System Manager,0,1,1,1,1,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Student Onboarding,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Student Onboarding,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Student Onboarding,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Student Onboarding Template,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Student Onboarding Template,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Student Onboarding Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Student Record Correction,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Record Correction,,COE,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Record Correction,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Record Correction,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Record Correction,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Student Record Correction,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Student Result,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Student Result,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Student Result,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Student Result,,Guardian,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1
+DocType,Student Result,,Student,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1
+DocType,Student Result,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Substitution,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,HOD,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,HR Manager,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Substitution,,System Manager,0,1,1,1,1,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Timetable Generation Run,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Generation Run,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Generation Run,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Generation Run,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Generation Run,,System Manager,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Slot Template,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Slot Template,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Slot Template,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Slot Template,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Timetable Slot Template,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Format,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Format,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Format,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Format,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Registration Batch,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Registration Batch,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Exam Registration Batch,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Result Import,,COE,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Result Import,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Result Import,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Result Import Row,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,University Result Import Row,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Utilisation Certificate,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Utilisation Certificate,,Accounts User,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Utilisation Certificate,,Employee,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Utilisation Certificate,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Utilisation Certificate,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
+DocType,Validation Rule,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Validation Rule,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Validation Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Validation Run,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Validation Run,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Validation Run,,System Manager,0,1,0,0,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Valuation Allocation,,COE,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Valuation Allocation,,Exam Confidential,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Valuation Allocation,,Examiner,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0
+DocType,Valuation Allocation,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Valuation Entry,,COE,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Valuation Entry,,Exam Confidential,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Valuation Entry,,Examiner,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,0,1,0
+DocType,Valuation Entry,,System Manager,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Verifiable Document,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Verifiable Document,,Verification Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+Report,Admissions by Quota and Category,Program Enrollment,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Admissions by Quota and Category,Program Enrollment,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Admissions by Quota and Category,Program Enrollment,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Arrear List,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Arrear List,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Arrear List,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attainment Target Gap,CO Attainment Run,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attainment Target Gap,CO Attainment Run,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attainment Target Gap,CO Attainment Run,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attainment Target Gap,CO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attainment Target Gap,CO Attainment Run,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attendance Shortage,Student Attendance,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attendance Shortage,Student Attendance,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attendance Shortage,Student Attendance,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attendance Shortage,Student Attendance,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Body Composition Compliance,Body,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Marks Audit Trail,Mark Sheet Entry,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CIA Status by Offering,CIA Schedule,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO Attainment by Course,CO Attainment Run,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO-PO Coverage,CO-PO Matrix,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO-PO Coverage,CO-PO Matrix,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO-PO Coverage,CO-PO Matrix,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO-PO Coverage,CO-PO Matrix,Instructor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,CO-PO Coverage,CO-PO Matrix,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cadre Ratio,Faculty Norm,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Calibration and AMC Due,Laboratory,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Calibration and AMC Due,Laboratory,Lab In-charge,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Calibration and AMC Due,Laboratory,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Calibration and AMC Due,Laboratory,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Certificates Issued,Certificate Request,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Certificates Issued,Certificate Request,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Certificates Issued,Certificate Request,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Circular Acknowledgement Status,Circular Acknowledgement,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Circular Acknowledgement Status,Circular Acknowledgement,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Committee Compliance,Body,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Committee Compliance,Body,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Committee Compliance,Body,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Completion Status,Completion Check,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Completion Status,Completion Check,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Completion Status,Completion Check,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Completion Status,Completion Check,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Concession Register,Fee Concession,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Concession Register,Fee Concession,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Concession Register,Fee Concession,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Concession Register,Fee Concession,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Concession Register,Fee Concession,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Conference Financial Support,Faculty Achievement,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consent Register,Communication Consent,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consultancy Revenue,Consultancy Project,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consultancy Revenue,Consultancy Project,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consultancy Revenue,Consultancy Project,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consultancy Revenue,Consultancy Project,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Consultancy Revenue,Consultancy Project,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cycle Readiness,Accreditation Cycle,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cycle Readiness,Accreditation Cycle,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Cycle Readiness,Accreditation Cycle,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Days Exam End to Result,Exam Session,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Days Exam End to Result,Exam Session,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Days Exam End to Result,Exam Session,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Delivery Summary,Message Log,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Elective Enrolment,Course Registration,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Elective Enrolment,Course Registration,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Elective Enrolment,Course Registration,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Elective Enrolment,Course Registration,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Enquiry Funnel by Source,Lead,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Enquiry Funnel by Source,Lead,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Enquiry Funnel by Source,Lead,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Evaluation Grievances vs Appeared,Revaluation Application,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Evaluation Grievances vs Appeared,Revaluation Application,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Evaluation Grievances vs Appeared,Revaluation Application,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Absentee List,Seating Plan,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Absentee List,Seating Plan,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Absentee List,Seating Plan,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Eligibility Withheld,Hall Ticket,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Eligibility Withheld,Hall Ticket,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Eligibility Withheld,Hall Ticket,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Registration Summary,Exam Registration,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Registration Summary,Exam Registration,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Exam Registration Summary,Exam Registration,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,FDP Participation,Faculty Achievement,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Faculty vs Sanctioned Posts,Sanctioned Post,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Feedback Analysis,Feedback Campaign,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Feedback Analysis,Feedback Campaign,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Feedback Analysis,Feedback Campaign,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grace Mark Audit,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grace Mark Audit,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grace Mark Audit,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grant Ledger by Head,GL Entry,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grant Ledger by Head,GL Entry,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grant Ledger by Head,GL Entry,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grant Ledger by Head,GL Entry,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,Grievance Committee,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Grievance SLA,Student Grievance,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Action Taken Report,Meeting Action Item,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Action Taken Report,Meeting Action Item,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Action Taken Report,Meeting Action Item,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Calendar,Body Meeting,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Calendar,Body Meeting,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,IQAC Calendar,Body Meeting,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Import Check,Data Import,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Equipment Register,Laboratory,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Equipment Register,Laboratory,Lab In-charge,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Equipment Register,Laboratory,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Equipment Register,Laboratory,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Incident Register,Lab Incident,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Incident Register,Lab Incident,Lab In-charge,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Incident Register,Lab Incident,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Lab Incident Register,Lab Incident,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Live Seat Matrix,Seat Matrix,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Live Seat Matrix,Seat Matrix,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Malpractice Register,Malpractice Report,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Malpractice Register,Malpractice Report,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Malpractice Register,Malpractice Report,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Malpractice Register,Malpractice Report,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Mentoring Activity,Counselling Note,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Mentoring Activity,Counselling Note,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Mentoring Activity,Counselling Note,Student Counsellor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Metric Drill-down,Metric Value,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Metric Drill-down,Metric Value,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,My Pending Approvals,Approval Request,Desk User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,My Pending Approvals,Approval Request,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PO Attainment by Program,PO Attainment Run,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PO Attainment by Program,PO Attainment Run,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PO Attainment by Program,PO Attainment Run,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PO Attainment by Program,PO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PO Attainment by Program,PO Attainment Run,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Patent Register,Patent,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Patent Register,Patent,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Patent Register,Patent,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Pending Documents,Student Applicant,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Pending Documents,Student Applicant,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,PhD Faculty,Faculty Norm,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Programs without Seat Matrix,Seat Matrix,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Programs without Seat Matrix,Seat Matrix,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Programs without Seat Matrix,Seat Matrix,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Proposal Tracker,Academic Proposal,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publication Register,Publication,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publication Register,Publication,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publication Register,Publication,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publications by Teacher,Publication,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publications by Teacher,Publication,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Publications by Teacher,Publication,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Question Paper Print Log,QP Access Log,Exam Confidential,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Rank List,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Rank List,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Rank List,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Refund Register,Admission Cancellation,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Refund Register,Admission Cancellation,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Refund Register,Admission Cancellation,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Remuneration Register,Examiner Remuneration Claim,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Remuneration Register,Examiner Remuneration Claim,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Remuneration Register,Examiner Remuneration Claim,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Remuneration Register,Examiner Remuneration Claim,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Research Proposal Pipeline,Research Proposal,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Research Proposal Pipeline,Research Proposal,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Research Proposal Pipeline,Research Proposal,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Result Analysis,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Result Analysis,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Result Analysis,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Revaluation Change Stats,Revaluation Outcome,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Revaluation Change Stats,Revaluation Outcome,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Revaluation Change Stats,Revaluation Outcome,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Scholarship Beneficiaries,Scholarship Application,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Scholarship Beneficiaries,Scholarship Application,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Scholarship Beneficiaries,Scholarship Application,Dean Student Affairs,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Scholarship Beneficiaries,Scholarship Application,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Fee Ledger,Sales Invoice,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Fee Ledger,Sales Invoice,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Fee Ledger,Sales Invoice,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Fee Ledger,Sales Invoice,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Status Summary,Student,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Status Summary,Student,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Status Summary,Student,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student Status Summary,Student,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Student-Teacher Ratio,Faculty Norm,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,TC Register,Certificate Request,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,TC Register,Certificate Request,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,TC Register,Certificate Request,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Teaching Experience,Faculty Norm,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Timetable Clash Checker,Timetable,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Utilisation Certificate Status,Utilisation Certificate,Accounts Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Utilisation Certificate Status,Utilisation Certificate,Accounts User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Utilisation Certificate Status,Utilisation Certificate,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Utilisation Certificate Status,Utilisation Certificate,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Difference,Valuation Entry,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Difference,Valuation Entry,Exam Confidential,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Difference,Valuation Entry,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Progress,Valuation Allocation,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Progress,Valuation Allocation,Exam Confidential,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Valuation Progress,Valuation Allocation,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,HR User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Workload Balance,Course Allocation,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
