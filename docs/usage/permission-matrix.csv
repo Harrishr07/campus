@@ -140,7 +140,6 @@ DocType,CO-PO Matrix,,HOD,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,CO-PO Matrix,,Instructor,0,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,CO-PO Matrix,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Campus Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0
-DocType,Campus Test Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,1,1,0,0,0
 DocType,Candidate Duplicate Review,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Candidate Duplicate Review,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Certificate Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
