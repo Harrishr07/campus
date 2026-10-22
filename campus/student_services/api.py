@@ -276,14 +276,17 @@ def held_sessions(offering, window):
 		"Course Schedule",
 		filters={"student_group": offering, "schedule_date": ["between", window]},
 		fields=["name", "schedule_date", "oc_session_state"],
+		order_by="schedule_date, from_time, name",
 	)
 	if not schedules:
 		return None
 	replaced = set(
 		frappe.get_all(
-			"Course Schedule", {"student_group": offering, "oc_session_state": MAKEUP, "oc_makeup_for": ["is", "set"]}, pluck="oc_makeup_for"
+			"Course Schedule",
+			{"student_group": offering, "oc_session_state": MAKEUP, "oc_makeup_for": ["is", "set"], "schedule_date": ["<=", window[1]]},
+			pluck="oc_makeup_for",
 		)
-	)
+	)  # a Makeup replaces its session once it is held (dated in the window), not while it is still to come
 	return {s.name: s.schedule_date for s in schedules if session_counts(s.oc_session_state, s.name in replaced)}
 
 
@@ -297,8 +300,9 @@ def marked_dates(offering, window):
 
 
 def session_counts_of(student, offering, sessions, window, rule):
-	"""(attended, medical-leave) over the held `sessions` ({name: date}): per session the student's record of it
-	(or, for a record without a session, of its date) and any approved leave covering it."""
+	"""(attended, medical-leave) over the held `sessions` ({name: date}, in day and time order): per session the
+	student's record of it and any approved leave covering it. A record without a session stands for one period only:
+	the first held session of its date."""
 	by_session, by_date = {}, {}
 	for row in student_records(student, offering, window):
 		if row.course_schedule:
@@ -306,10 +310,13 @@ def session_counts_of(student, offering, sessions, window, rule):
 		else:
 			by_date.setdefault(getdate(row.date), (row.status, row.oc_leave_kind))
 	leaves = approved_leaves(student, window)
-	buckets = []
+	buckets, days_seen = [], set()
 	for name, date in sessions.items():
-		status, kind = by_session.get(name) or by_date.get(getdate(date)) or (None, None)
-		status, kind = session_mark(status, kind, covering_kind(leaves, name, date))
+		day = getdate(date)
+		status, kind = by_session.get(name) or (by_date.get(day) if day not in days_seen else None) or (None, None)
+		days_seen.add(day)
+		leave = covering_leave(leaves, name, offering, day)
+		status, kind = session_mark(status, kind, leave and leave.oc_leave_kind, bool(leave and leave.mark_as_present))
 		buckets.append(bucket(status, kind, rule))
 	return buckets.count(ATTENDED), buckets.count(MEDICAL_LEAVE)
 
@@ -319,17 +326,21 @@ def approved_leaves(student, window):
 	return frappe.get_all(
 		"Student Leave Application",
 		filters={"student": student, "docstatus": 1, "from_date": ["<=", window[1]], "to_date": [">=", window[0]]},
-		fields=["from_date", "to_date", "oc_leave_kind", "course_schedule"],
+		fields=["from_date", "to_date", "oc_leave_kind", "attendance_based_on", "student_group", "course_schedule", "mark_as_present"],
 	)
 
 
-def covering_kind(leaves, session, date):
-	"""Leave kind of the first leave covering the session: its dates hold the session's date and it names no other
-	session (a leave for one Course Schedule covers only that one)."""
-	date = getdate(date)
+def covering_leave(leaves, session, offering, date):
+	"""The first leave covering the session: its dates hold the session's date and its scope holds the session (a
+	leave for one Course Schedule covers only that one, a leave for one Student Group only that group's sessions)."""
 	for leave in leaves:
-		if getdate(leave.from_date) <= date <= getdate(leave.to_date) and leave.course_schedule in (None, "", session):
-			return leave.oc_leave_kind
+		if not getdate(leave.from_date) <= date <= getdate(leave.to_date):
+			continue
+		if leave.course_schedule not in (None, "", session):
+			continue
+		if leave.attendance_based_on == "Student Group" and leave.student_group not in (None, "", offering):
+			continue
+		return leave
 	return None
 
 

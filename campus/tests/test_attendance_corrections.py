@@ -40,6 +40,28 @@ class TestSessionMarkingAndCorrections(FacultyPortalFixture):
 	def request(self, user, student, status, reason="Marked by mistake"):
 		return self.as_user(user, attendance_corrections.request_correction, self.own.name, student, status, reason)
 
+	def approve(self, name):
+		correction = frappe.get_doc("Attendance Correction Request", name)
+		self.as_user(HOD, approve, latest_request(correction).name)
+		correction.reload()
+		return correction
+
+	def marked_hours_ago(self, hours):
+		"""Date the period's records back, as if it was first marked `hours` ago."""
+		frappe.db.set_value(
+			"Student Attendance", {"course_schedule": self.own.name}, "creation", add_to_date(now_datetime(), hours=-hours), update_modified=False
+		)
+
+	def record_of(self, student):
+		return frappe.db.get_value("Student Attendance", {"course_schedule": self.own.name, "student": student, "docstatus": 1})
+
+	def other_session(self):
+		"""Another (unmarked) session of the period's group."""
+		return frappe.get_all("Course Schedule", {"student_group": self.own.student_group, "name": ["!=", self.own.name]}, pluck="name", limit=1)[0]
+
+	def comments(self, session):
+		return frappe.get_all("Comment", {"reference_doctype": "Course Schedule", "reference_name": session, "comment_type": "Info"}, pluck="content")
+
 	def test_marking_makes_the_session_conducted_and_a_cancelled_one_cannot_be_marked(self):
 		frappe.db.set_value("Course Schedule", self.own.name, "oc_session_state", "Cancelled")
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot be marked"):
@@ -98,3 +120,115 @@ class TestSessionMarkingAndCorrections(FacultyPortalFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "No Approval Policy"):
 			self.request(TEACHER, self.students[0], "Absent")
 		self.assertEqual(self.attendance(self.own.name)[self.students[0]], "Present")
+
+	def test_within_the_cut_off_the_teacher_re_marks_and_the_status_changes(self):
+		first = self.students[0]
+		self.mark(TEACHER, self.own.name, [first])
+		self.assertEqual(self.attendance(self.own.name)[first], "Absent")
+		self.marked_hours_ago(attendance_corrections.cutoff_hours() - 1)
+		self.mark(TEACHER, self.own.name, [])
+		self.assertEqual(self.attendance(self.own.name)[first], "Present")
+
+	def test_re_marking_does_not_extend_the_cut_off(self):
+		first, second = self.students[:2]
+		self.mark(TEACHER, self.own.name, [])
+		self.marked_hours_ago(40)
+		self.mark(TEACHER, self.own.name, [first])  # hour 40: allowed, and writes a fresh record
+		later = add_to_date(now_datetime(), hours=9)  # hour 49 since the first marking, hour 9 since the re-mark
+		with mock.patch("campus.faculty.attendance_corrections.now_datetime", return_value=later):
+			with self.assertRaisesRegex(frappe.ValidationError, "Attendance Correction Request"):
+				self.mark(TEACHER, self.own.name, [first, second])
+		self.assertEqual(self.attendance(self.own.name)[second], "Present")
+
+	def test_after_the_cut_off_desk_cancel_amend_and_new_records_are_refused(self):
+		first, second = self.students[:2]
+		self.mark(TEACHER, self.own.name, [])
+		marked = frappe.get_doc("Student Attendance", self.record_of(first))
+		marked.cancel()  # within the cut-off the desk may cancel (and amend)
+		amended = frappe.copy_doc(marked)
+		amended.amended_from, amended.status, amended.docstatus = marked.name, "Absent", 0
+		with self.after_cutoff():
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				amended.insert()
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				frappe.get_doc("Student Attendance", self.record_of(second)).cancel()
+			fresh = frappe.copy_doc(marked)  # what Education's attendance tool writes
+			fresh.status, fresh.docstatus = "Absent", 0
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				fresh.insert()
+		self.assertEqual(self.attendance(self.own.name).get(second), "Present")
+		self.assertNotIn(first, self.attendance(self.own.name))
+
+	def test_after_the_cut_off_a_record_of_the_students_approved_leave_is_written(self):
+		self.mark(TEACHER, self.own.name, [])
+		first = self.students[0]
+		frappe.get_doc("Student Attendance", self.record_of(first)).cancel()
+		date = frappe.db.get_value("Course Schedule", self.own.name, "schedule_date")
+		leave = frappe.get_doc({"doctype": "Student Leave Application", "student": first, "from_date": date, "to_date": date})
+		leave.flags.ignore_validate = True
+		leave.insert(ignore_permissions=True)
+		record = {"doctype": "Student Attendance", "student": first, "course_schedule": self.own.name, "date": date, "status": "Leave"}
+		with self.after_cutoff():
+			attendance_corrections.guard_record(frappe.get_doc({**record, "leave_application": leave.name}))  # as Education's leave approval writes it
+			other = frappe.get_doc({**record, "student": self.students[1], "leave_application": leave.name})
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				attendance_corrections.guard_record(other)  # another student's leave does not back it
+
+	def test_after_the_cut_off_a_never_marked_student_is_marked_through_a_request(self):
+		self.mark(TEACHER, self.own.name, [])
+		late = frappe.get_all("Student", {"name": ["not in", self.students]}, pluck="name", limit=1, order_by="name")[0]
+		self.enrol(self.own.student_group, [late])
+		with self.after_cutoff():
+			with self.assertRaisesRegex(frappe.ValidationError, late):
+				self.mark(TEACHER, self.own.name, [])
+			correction = self.approve(self.request(TEACHER, late, "Leave"))
+		self.assertEqual(correction.docstatus, 1)
+		self.assertFalse(correction.current_status or correction.version)
+		self.assertEqual(self.attendance(self.own.name)[late], "Leave")
+
+	def test_an_approved_correction_is_refused_once_the_session_is_cancelled(self):
+		self.mark(TEACHER, self.own.name, [])
+		with self.after_cutoff():
+			name = self.request(TEACHER, self.students[0], "Absent")
+		frappe.db.set_value("Course Schedule", self.own.name, "oc_session_state", "Cancelled")
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be marked"):
+			self.approve(name)
+		self.assertEqual(self.attendance(self.own.name)[self.students[0]], "Present")
+
+	def test_a_desk_request_is_only_for_the_requesters_own_period(self):
+		request = frappe._dict(course_schedule=self.own.name)
+		self.as_user(TEACHER, attendance_corrections.check_requester, request)  # their own period
+		with self.assertRaises(frappe.PermissionError):
+			self.as_user(COLLEAGUE, attendance_corrections.check_requester, request)
+		attendance_corrections.check_requester(request)  # the academic office (System Manager) may raise any
+
+	def test_a_makeup_for_a_marked_session_needs_a_reason_and_is_logged_on_both(self):
+		self.mark(TEACHER, self.own.name, [])
+		makeup = frappe.get_doc("Course Schedule", self.other_session())
+		makeup.oc_session_state, makeup.oc_makeup_for = "Makeup", self.own.name
+		with self.assertRaisesRegex(frappe.ValidationError, "give the reason"):
+			makeup.save()
+		makeup.reload()
+		makeup.oc_session_state, makeup.oc_makeup_for, makeup.oc_state_reason = "Makeup", self.own.name, "Projector failed"
+		makeup.save()
+		self.assertTrue(any(f"to Makeup for {self.own.name}: Projector failed" in c for c in self.comments(makeup.name)))
+		self.assertTrue(any(f"{makeup.name} changed from" in c and "Projector failed" in c for c in self.comments(self.own.name)))
+		makeup.oc_makeup_for = self.own.name  # unchanged link, other edits: no new reason needed
+		makeup.save()
+
+	def test_re_pointing_a_makeup_away_from_a_marked_session_needs_a_reason(self):
+		self.mark(TEACHER, self.own.name, [])
+		other = self.other_session()
+		frappe.db.set_value("Course Schedule", other, {"oc_session_state": "Makeup", "oc_makeup_for": self.own.name, "oc_state_reason": "Old"})
+		makeup = frappe.get_doc("Course Schedule", other)
+		makeup.oc_session_state, makeup.oc_makeup_for = "Scheduled", None
+		with self.assertRaisesRegex(frappe.ValidationError, "give the reason"):
+			makeup.save()
+
+	def test_a_session_has_at_most_one_makeup(self):
+		sessions = frappe.get_all("Course Schedule", {"student_group": self.own.student_group, "name": ["!=", self.own.name]}, pluck="name", limit=2)
+		frappe.db.set_value("Course Schedule", sessions[0], {"oc_session_state": "Makeup", "oc_makeup_for": self.own.name})
+		second = frappe.get_doc("Course Schedule", sessions[1])
+		second.oc_session_state, second.oc_makeup_for = "Makeup", self.own.name
+		with self.assertRaisesRegex(frappe.ValidationError, "already has a Makeup"):
+			second.save()

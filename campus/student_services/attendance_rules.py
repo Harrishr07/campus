@@ -57,16 +57,17 @@ def session_counts(state, replaced):
 	return (state or SCHEDULED) in HELD_STATES and not replaced
 
 
-def session_mark(status, leave_kind, covering_kind):
+def session_mark(status, leave_kind, covering_kind, covering_present=False):
 	"""(status, leave kind) of one counted session for the student.
 
 	`status` / `leave_kind` come from the student's record (None when unmarked), `covering_kind` is the kind of a
-	submitted Student Leave Application covering the session, else None. Present, and a Leave record backed by its own
-	application, stand; otherwise a covering leave makes the session Leave of its kind.
+	submitted Student Leave Application covering the session, else None; `covering_present` says that application is
+	marked "mark as present". Present, and a Leave record backed by its own application, stand; otherwise a covering
+	leave makes the session Present (mark as present) or Leave of its kind.
 	"""
-	if status == PRESENT or (status == ON_LEAVE and leave_kind) or not covering_kind:
+	if status == PRESENT or (status == ON_LEAVE and leave_kind) or not (covering_kind or covering_present):
 		return status, leave_kind
-	return ON_LEAVE, covering_kind
+	return (PRESENT, None) if covering_present else (ON_LEAVE, covering_kind)
 
 
 def attendance_marks(bands, pct):

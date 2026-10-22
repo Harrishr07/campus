@@ -197,6 +197,10 @@ doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
 	"campus.faculty.session_states.validate_session",
 ]
 doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
+doc_events["Student Attendance"] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
+	"validate": "campus.faculty.attendance_corrections.guard_record",
+	"before_cancel": "campus.faculty.attendance_corrections.guard_cancel",
+}
 doc_events["Program Enrollment"]["on_submit"] = [
 	"campus.admissions.seat_matrix.refresh_cache_of",
 	"campus.admissions.joining.carry_joining_key",  # L-03: an amended joining enrollment keeps the joining

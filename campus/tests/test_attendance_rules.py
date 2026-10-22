@@ -125,3 +125,14 @@ class TestSessionStates(UnitTestCase):
 		for status, kind, covering, result in cases:
 			with self.subTest(status=status, kind=kind, covering=covering):
 				self.assertEqual(session_mark(status, kind, covering), result)
+
+	def test_a_covering_leave_marked_as_present_makes_the_session_present(self):
+		cases = [  # record status, record leave kind, covering leave kind, result
+			("Absent", None, "On Duty", ("Present", None)),
+			(None, None, None, ("Present", None)),
+			("Leave", "Medical", "On Duty", ("Leave", "Medical")),  # its own application stands
+			("Present", None, "Medical", ("Present", None)),
+		]
+		for status, kind, covering, result in cases:
+			with self.subTest(status=status, kind=kind, covering=covering):
+				self.assertEqual(session_mark(status, kind, covering, covering_present=True), result)

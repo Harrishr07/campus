@@ -6,7 +6,7 @@ portal's own-period check (campus.faculty.portal) both authorise first and then 
 The grant is the Confirmed Substitution itself: it names one Course Schedule and one user. The Student Attendance records
 are written by the server for exactly that schedule, for students of its Student Group; the substitute's roles never
 change, so nothing else is opened to them. Teachers who already hold the attendance role (Academics User) can mark
-attendance as before.
+attendance as before, within the correction cut-off (attendance_corrections.guard_record).
 
 M05-12: a Cancelled or Rescheduled session cannot be marked, marking makes a Scheduled one Conducted
 (campus.faculty.session_states), and after the correction cut-off a marked status changes only through an approved
@@ -63,9 +63,10 @@ def mark_period(course_schedule, present, absent):
 	return names
 
 
-def record(student, student_name, status, course_schedule, schedule):
+def record(student, student_name, status, course_schedule, schedule, correction=False):
 	"""Create the attendance, or correct an existing submitted one of this student and period: a different status
-	cancels it and writes a new record (same grant, same checks); the same status changes nothing."""
+	cancels it and writes a new record (same grant, same checks); the same status changes nothing. `correction`: an
+	approved Attendance Correction Request is applying it, past the cut-off (attendance_corrections.guard_record)."""
 	existing = frappe.db.get_value(
 		"Student Attendance", {"student": student, "course_schedule": course_schedule, "docstatus": 1}, ["name", "status"], as_dict=True, for_update=True
 	)  # a locking read: the period lock above is held
@@ -75,6 +76,7 @@ def record(student, student_name, status, course_schedule, schedule):
 		old = frappe.get_doc("Student Attendance", existing.name, for_update=True)
 		old.flags.ignore_permissions = True
 		old.ignore_linked_doctypes = ("Attendance Correction Request",)  # the request applying this change names it
+		old.flags.attendance_correction = correction
 		old.cancel()
 	doc = frappe.get_doc(
 		{
@@ -83,6 +85,7 @@ def record(student, student_name, status, course_schedule, schedule):
 		}
 	)  # fmt: skip
 	doc.flags.ignore_permissions = True  # the Confirmed Substitution is the permission, resolved above on the server
+	doc.flags.attendance_correction = correction
 	doc.insert()
 	doc.submit()
 	return doc.name

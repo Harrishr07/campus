@@ -78,10 +78,13 @@ def mark(student, session, status):
 	doc.submit()
 
 
-def approved_leave(student, day, kind):
+def approved_leave(student, day, kind, **scope):
 	doc = frappe.get_doc(
-		{"doctype": "Student Leave Application", "student": student, "from_date": add_days(FIRST_DAY, day), "to_date": add_days(FIRST_DAY, day), "oc_leave_kind": kind}
-	)
+		{
+			"doctype": "Student Leave Application", "student": student, "from_date": add_days(FIRST_DAY, day), "to_date": add_days(FIRST_DAY, day),
+			"oc_leave_kind": kind, **scope,
+		}
+	)  # fmt: skip
 	doc.flags.ignore_validate = True
 	doc.insert(ignore_permissions=True)
 	frappe.db.set_value("Student Leave Application", doc.name, "docstatus", 1)  # Education's on_submit needs a holiday list
@@ -212,3 +215,36 @@ class TestAttendanceSessions(CampusTestCase):
 		self.assertEqual(frappe.db.get_value("Attendance Eligibility Row", {"parent": run.name, "student": self.cond}, "overall_pct"), 87.5)
 		run.db_set("locked", 1)
 		self.assertEqual(attendance_snapshot(self.cond, self.term, COLLEGE), "Eligible")  # what exam registration and hall tickets read
+
+	def test_a_makeup_still_to_come_does_not_replace_its_session_yet(self):
+		group = self.offering(self.main)
+		missed, held, makeup = make_sessions(group, (12, 13, 200))  # day 200 is after the term's counted window
+		mark(self.main, held, "Present")
+		set_state(makeup, "Makeup", oc_makeup_for=missed)
+		self.assertEqual(self.row(self.main, group), (2, 1, 0))
+
+	def test_a_leave_for_another_student_group_does_not_cover_the_session(self):
+		group, other = self.offering(self.duty), self.offering(self.duty)
+		(session,) = make_sessions(group, (20,))
+		mark(self.duty, session, "Absent")
+		approved_leave(self.duty, 20, "On Duty", attendance_based_on="Student Group", student_group=other)
+		self.assertEqual(self.row(self.duty, group), (1, 0, 0))
+		approved_leave(self.duty, 20, "On Duty", attendance_based_on="Student Group", student_group=group)
+		self.assertEqual(self.row(self.duty, group), (1, 1, 0))
+
+	def test_a_leave_marked_as_present_makes_the_session_present(self):
+		group = self.offering(self.medic)
+		(session,) = make_sessions(group, (21,))
+		mark(self.medic, session, "Absent")
+		approved_leave(self.medic, 21, "Medical", mark_as_present=1)
+		self.assertEqual(self.row(self.medic, group), (1, 1, 0))  # Present, not medical leave
+
+	def test_a_record_without_a_session_counts_for_the_days_first_session_only(self):
+		group = self.offering(self.main)
+		make_sessions(group, (22, 22))
+		doc = frappe.get_doc(
+			{"doctype": "Student Attendance", "student": self.main, "student_group": group, "date": add_days(FIRST_DAY, 22), "status": "Present"}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert(ignore_permissions=True).submit()
+		self.assertEqual(self.row(self.main, group), (2, 1, 0))
