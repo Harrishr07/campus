@@ -12,7 +12,8 @@ from campus.admissions.api import grant_temporary_clearance
 from campus.admissions.report.admission_no_shows import admission_no_shows
 from campus.campus_platform import bulk
 from campus.campus_platform.approvals import approve, request_approval
-from campus.patches import repair_joining_keys
+from campus.patches import clear_legacy_attendance_start_dates, repair_joining_keys
+from campus.student_services.api import attendance_start, student_window
 from campus.tests.approval_fixtures import drop_policies
 from campus.tests.factories import make_user
 from campus.tests.test_admission_flow import (
@@ -409,3 +410,40 @@ class TestJoiningDateFloor(ReportingTestCase):
 			with patch.object(joining, "join_once", side_effect=[deadlock, deadlock]):
 				with self.assertRaisesRegex(frappe.ValidationError, "Please try confirming the joining of APP-9 again"):
 					joining.confirm_joining("APP-9")
+
+
+class TestAttendanceStart(ReportingTestCase):
+	"""L-07 review I-3: only the joining confirmation writes the attendance start date (it narrows the denominator)."""
+
+	def legacy_enrollment(self, student, enrollment_date):
+		enrollment = frappe.get_doc(
+			{"doctype": "Program Enrollment", "student": student, "program": PROGRAM, "academic_year": YEAR,
+			 "enrollment_date": enrollment_date, "student_category": OC, "oc_admission_quota": QUOTA}
+		)  # fmt: skip
+		enrollment.flags.legacy_import = True
+		return enrollment.insert().submit()
+
+	def test_a_legacy_enrollment_dated_mid_term_counts_attendance_from_the_term_start(self):
+		_applicant, student = self.admitted()
+		term = (add_days(today(), -30), add_days(today(), 60))
+		enrollment = self.legacy_enrollment(student, today())
+		self.assertIsNone(enrollment.oc_attendance_start_date)
+		self.assertIsNone(attendance_start(student))
+		self.assertEqual(student_window(student, term), term)
+
+	def test_the_patch_clears_start_dates_filled_before_the_joining_gate_and_keeps_the_joinings(self):
+		gate_ran = frappe.db.get_value("Patch Log", {"patch": "campus.patches.joining_gate"}, "creation")
+		if not gate_ran:
+			gate_ran = frappe.get_doc({"doctype": "Patch Log", "patch": "campus.patches.joining_gate"}).insert().creation
+		_applicant, legacy_student = self.admitted()
+		legacy = self.legacy_enrollment(legacy_student, today())
+		frappe.db.set_value(
+			"Program Enrollment", legacy.name, {"creation": add_days(gate_ran, -1), "oc_attendance_start_date": today()},
+			update_modified=False,
+		)  # what the first joining_gate fill left on an enrollment made before it
+		applicant = self.applicant()
+		joined = self.admit_and_join(applicant)["program_enrollment"]
+		for _run in range(2):  # idempotent
+			clear_legacy_attendance_start_dates.execute()
+		self.assertIsNone(frappe.db.get_value("Program Enrollment", legacy.name, "oc_attendance_start_date"))
+		self.assertEqual(str(frappe.db.get_value("Program Enrollment", joined, "oc_attendance_start_date")), today())

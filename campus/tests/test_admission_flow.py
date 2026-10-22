@@ -491,7 +491,7 @@ class TestJoining(AdmitTestCase):
 		legacy.flags.legacy_import = True
 		frappe.db.savepoint("legacy_enrollment")
 		legacy.insert()  # a legacy import may load it directly
-		self.assertEqual(str(legacy.oc_attendance_start_date), today())  # attendance starts on the enrollment date by default
+		self.assertIsNone(legacy.oc_attendance_start_date)  # only the joining confirmation sets it: the whole term counts
 		frappe.db.rollback(save_point="legacy_enrollment")
 		self.join_as_officer(applicant)
 		later = self.later_year()
@@ -594,13 +594,11 @@ class TestJoiningGatePatch(AdmitTestCase):
 		)  # fmt: skip
 		enrollment.flags.legacy_import = True  # made by the admission before the gate
 		enrollment.insert().submit()
-		frappe.db.set_value("Program Enrollment", enrollment.name, "oc_attendance_start_date", None)
 		for _run in range(2):  # idempotent
-			joining_gate.fill_attendance_start_dates()
 			joining_gate.key_joining_enrollments()
 			joining_gate.mark_admitted_students_joined()
 		row = frappe.db.get_value("Program Enrollment", enrollment.name, ["oc_joining_key", "oc_attendance_start_date"], as_dict=True)
-		self.assertEqual((row.oc_joining_key, str(row.oc_attendance_start_date)), (applicant, today()))
+		self.assertEqual((row.oc_joining_key, row.oc_attendance_start_date), (applicant, None))  # the gate fills no start date
 		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
 		changes = frappe.get_all(
 			"Lifecycle Transition", {"student": student, "kind": "Transition"}, ["to_status", "source_name", "effective_date"], order_by="creation, name"

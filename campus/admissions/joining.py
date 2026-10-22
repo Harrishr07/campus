@@ -225,14 +225,13 @@ def result(student, enrollment):
 
 
 def validate_enrollment(doc, method=None):
-	"""Attendance starts on the enrollment date unless set; a new enrollment that only the joining may make is refused.
+	"""A new enrollment that only the joining may make is refused. The attendance start date is not defaulted: only
+	the joining confirmation writes it (M05-12: it narrows the attendance denominator; blank, the whole term counts).
 
 	That is the first enrollment of an admitted student (lifecycle Admitted, or made from a Student Applicant with no
 	submitted enrollment yet) into a program of a college. A legacy import (Data Import, or `flags.legacy_import`)
 	may load enrollments directly; later enrollments of a joined student (promotion) and the amendment of a joining
 	enrollment are not affected."""
-	if not doc.get("oc_attendance_start_date"):
-		doc.oc_attendance_start_date = doc.enrollment_date
 	if doc.is_new() and needs_joining(doc):
 		frappe.throw(
 			_("{0} has not joined yet: the Program Enrollment is created by the joining confirmation, not by hand.").format(

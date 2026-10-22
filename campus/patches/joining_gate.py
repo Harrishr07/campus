@@ -1,12 +1,12 @@
 """M04-09 Joining gate on an existing site: students admitted before it count as joined on their enrollment date.
 
 - The joining fields exist (patches run before after_migrate creates custom fields).
-- Every enrollment without an attendance start date starts on its enrollment date.
 - The first submitted enrollment of a student made from an applicant becomes that applicant's joining enrollment
   (oc_joining_key), so a joining confirmation of the applicant returns it instead of enrolling them again.
 - A student still Admitted who has a submitted enrollment moves to Joined, then Active, from its enrollment date
   (never before their last lifecycle change). Admitted students without one join through the joining confirmation.
-Idempotent: keyed enrollments, set dates and joined students are left alone.
+Idempotent: keyed enrollments and joined students are left alone. Attendance start dates are not filled: only
+the joining confirmation writes them (clear_legacy_attendance_start_dates undoes an earlier fill).
 """
 
 import frappe
@@ -20,15 +20,8 @@ ENROLLMENT = "Program Enrollment"
 
 def execute():
 	setup_admission_fields()
-	fill_attendance_start_dates()
 	key_joining_enrollments()
 	mark_admitted_students_joined()
-
-
-def fill_attendance_start_dates():
-	frappe.db.sql(
-		"update `tabProgram Enrollment` set oc_attendance_start_date = enrollment_date where oc_attendance_start_date is null"
-	)
 
 
 def key_joining_enrollments():

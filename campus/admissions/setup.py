@@ -152,7 +152,7 @@ def setup_admission_fields():
 		field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
 			in_standard_filter=1, description="Counted against the Seat Matrix when submitted."),
 		field("oc_attendance_start_date", "Date", "Attendance Start Date", "enrollment_date",
-			description="Attendance counts from this date (the joining date for an admission; else the enrollment date)."),
+			description="Set only by the joining confirmation (the joining date): attendance counts from this date. Blank (e.g. a legacy or promotion enrollment): the whole term counts."),
 		field("oc_joining_key", "Data", "Joining Key", "oc_attendance_start_date", unique=1, hidden=1, read_only=1,
 			no_copy=1, description="The applicant whose joining confirmation made this enrollment: one per applicant."),
 	]  # fmt: skip
