@@ -174,3 +174,12 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 2 | Photocopy and justification before revaluation | R2022 only (cl. 16.4); AU-R2021 and R2026 go straight to revaluation |
 | 3 | Review window | the same window from the release, so a revaluation finished late leaves no time for a review |
 | 4 | Fees | none seeded: each college sets them on its Exam Fee Rate |
+
+## Roadmap rulings (2026-10-22, delegated by the user)
+- **Scope**: our BRD stays the scope; section 16 (v0.2) adds requirements taken from an external team's review. Plan: docs/phases/roadmap-2026-10.md (Waves 0-5 complete the project).
+- **L-02 joining gate**: adopted. Admission approval no longer creates Program Enrollment, tuition invoice or ID; Joining Confirmation does, and sets the attendance start date. Pre-joining money is an advance (Payment Entry against the applicant's customer), not an invoice. Existing admitted records are left as they are; a patch marks them joined on their enrollment date.
+- **P4-T18 concession model v2**: built configurable. Seeded default: one of each concession sub-type per admission, fee subhead and semester; combined cap 100% of the subhead; order = fixed-amount sub-types first, then percentages on the remainder. Pending confirmation by the pilot college.
+- **Pending values** in this file stay as seeded defaults and stay marked "Pending confirmation"; no new work waits for them.
+- **Test sites**: four lanes, campus-test, campus-test2, campus-test3 and the new campus-test4. campus-test is rebuilt from scratch (stale payroll seed and leaked fee structures). All test runs go through the shared test guard.
+- **L-01 lifecycle statuses** (accepted after review): Detained is no longer a status; it is the flag Student.oc_detained and the student stays Active. Long Absent migrates to Active. A TC moves the student to Withdrawn, only while on roll. Convocation List gives Study Completed then Award Eligible; the COE's Mark Graduated gives Graduated. One status per student, not per enrollment; each transition records its Program Enrollment.
+- **Test sites, update**: campus-test5 added (lane E) so the L-01 fix round does not wait for a lane.
