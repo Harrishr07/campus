@@ -512,9 +512,11 @@ permission_query_conditions["Utilisation Certificate"] = "campus.research.utilis
 has_permission["Utilisation Certificate"] = "campus.research.utilisation.has_permission"
 # P3-T19: a sanctioned project's Project Update is its progress report / mid-term review
 doc_events["Project Update"] = {"validate": "campus.research.progress.validate_project_update"}
-# P3-T09: CO tags of CIA questions and bank items are codes of the course's Course Outcomes once it has any
-for _dt in ("CIA Schedule", "Question Bank Item"):
-	doc_events.setdefault(_dt, {})["validate"] = "campus.curriculum.outcomes.validate_co_tags"
+# P3-T09 / P3-T10: CO tags of CIA questions, bank items and valuation question patterns are codes of the course's
+# Course Outcomes once it has any
+for _dt in ("CIA Schedule", "Question Bank Item", "Answer Script Bundle"):
+	_validate = doc_events.setdefault(_dt, {}).get("validate")
+	doc_events[_dt]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate or []), "campus.curriculum.outcomes.validate_co_tags"]
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.
@@ -525,6 +527,7 @@ jinja = {
 		"campus.campus_platform.verification.oc_qr_block",
 		"campus.curriculum.structure.curriculum_structure",
 		"campus.curriculum.outcomes.co_po_grid",
+		"campus.curriculum.attainment.course_attainment_sheet",
 		"campus.campus_finance.challan.challan_details",
 		"campus.faculty.cv.faculty_cv_sections",
 		"campus.examinations.exam_certificates.oc_graduate_record",
@@ -558,3 +561,14 @@ permission_query_conditions["Parent Interaction"] = f"{_mentoring}.interaction_p
 has_permission["Parent Interaction"] = f"{_mentoring}.interaction_has_permission"
 doc_events["DocShare"]["validate"].append(f"{_mentoring}.block_share")
 scheduler_events["daily"].append("campus.student_services.mentoring.send_follow_up_reminders")
+
+# L-09 fix: restricted records - DocTypes read only through their own permission hooks. Their Comments, attached Files
+# (always private) and Connections counts follow the same rule (campus.campus_platform.restricted_records).
+restricted_record_doctypes = ["Counselling Note", "Parent Interaction"]
+_restricted = "campus.campus_platform.restricted_records"
+permission_query_conditions["Comment"] = f"{_restricted}.comment_permission_query"
+has_permission["Comment"] = f"{_restricted}.comment_has_permission"
+permission_query_conditions["File"] = f"{_restricted}.file_permission_query"
+has_permission["File"] = [has_permission["File"], f"{_restricted}.file_has_permission"]
+extend_doctype_class["File"] = [f"{_restricted}.PrivateAttachmentMixin"]
+override_whitelisted_methods["frappe.desk.form.linked_with.get"] = f"{_restricted}.get_linked_docs"

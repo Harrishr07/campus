@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
-from campus.examinations.access import instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
+from campus.examinations.access import held_scopes, instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
 from campus.examinations.arrears import arrear_courses, has_passed  # noqa: F401  (public API)
 from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
@@ -241,3 +241,11 @@ def submit_revaluation(student, application):
 	from campus.examinations import student_revaluation
 
 	return student_revaluation.submit(student, application)
+
+
+def offering_assessment(offering):
+	"""M03-03 The offering's CO-attainment inputs: {exam_sessions, students, cia, ese} with question-wise rows
+	{student, question, max_marks, marks, course_outcome, absent}, from released, ratified results only (P3-T10)."""
+	from campus.examinations import attainment_marks
+
+	return attainment_marks.offering_assessment(offering)
