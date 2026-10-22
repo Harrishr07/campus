@@ -160,3 +160,12 @@ def approval_not_required(required=False):
 	"""Patch the Campus Settings mandatory approval list check, for fixtures that sanction documents (e.g. a
 	Scholarship Application) without setting up their approval; `required=True` forces it on."""
 	return patch("campus.campus_platform.mandatory_approval.approval_required", return_value=required)
+
+
+def drop_policies(doctype):
+	"""Delete every Approval Policy of `doctype` (e.g. the seeded Scholarship Sanction Approval) in the current
+	transaction, for fixtures that submit directly; the test's rollback restores them."""
+	policies = frappe.get_all("Approval Policy", filters={"document_type": doctype}, pluck="name")
+	if policies:
+		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", policies]})
+		frappe.db.delete("Approval Policy", {"name": ["in", policies]})

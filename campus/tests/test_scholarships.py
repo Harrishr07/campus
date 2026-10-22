@@ -12,10 +12,11 @@ from campus.campus_finance import concessions, invoices, scholarships
 from campus.campus_finance.fee_heads import category_for_type
 from campus.campus_finance.report.concession_register import concession_register
 from campus.campus_finance.report.scholarship_beneficiaries import scholarship_beneficiaries as beneficiaries_report
+from campus.campus_finance.setup import SCHOLARSHIP_POLICY, seed_scholarship_policy
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations.arrears import arrear_courses, outstanding_arrears
 from campus.iqac.registry import data_point
-from campus.tests.approval_fixtures import approval_not_required, level
+from campus.tests.approval_fixtures import approval_not_required, drop_policies, level
 from campus.tests.factories import make_user
 from campus.tests.finance_factories import (
 	make_account, make_enrolled_students, make_finance_company, make_year_and_program,
@@ -108,7 +109,8 @@ class ScholarshipFixture(CampusTestCase):
 	def setUp(self):
 		frappe.db.savepoint("scholarship_test")
 		self.addCleanup(frappe.db.rollback, save_point="scholarship_test")
-		mandatory = approval_not_required()  # these tests sanction by submitting; TestMandatoryApproval covers the list
+		drop_policies("Scholarship Application")  # these tests sanction by submitting; TestMandatoryApproval covers the list
+		mandatory = approval_not_required()
 		mandatory.start()
 		self.addCleanup(mandatory.stop)
 		self.addCleanup(frappe.set_user, "Administrator")
@@ -255,7 +257,7 @@ class TestDisbursement(ScholarshipFixture):
 
 class TestApplicationRules(ScholarshipFixture):
 	def test_a_listed_sanction_without_an_approval_policy_is_refused(self):
-		frappe.db.delete("Approval Policy", {"document_type": "Scholarship Application"})
+		self.addCleanup(frappe.db.after_rollback.reset)  # the refusal's flag never commits inside a test
 		doc = self.application(self.a, self.govt, submit=False)
 		with approval_not_required(required=True):
 			with self.assertRaisesRegex(frappe.ValidationError, "No approval policy is configured for Scholarship Application"):
@@ -578,6 +580,22 @@ class TestSetup(CampusTestCase):
 		self.assertTrue(frappe.get_meta("Fee Category").has_field("oc_concession_allowed"))
 		self.assertTrue(frappe.get_meta("Sales Invoice Item").has_field("oc_fee_concession"))
 		self.assertTrue(frappe.db.exists("Approval Policy", {"document_type": "Fee Concession"}))
+
+	def test_the_migrated_site_sanctions_scholarships_through_a_principal(self):
+		policy = frappe.get_doc("Approval Policy", {"document_type": "Scholarship Application", "enabled": 1})
+		self.assertEqual([(l.approver_type, l.approver, l.scope_field) for l in policy.levels], [("Position", "PRINCIPAL", "company")])
+
+	def test_the_sanction_policy_is_seeded_only_when_the_college_has_none(self):
+		drop_policies("Scholarship Application")
+		seed_scholarship_policy()
+		seed_scholarship_policy()
+		self.assertEqual(frappe.get_all("Approval Policy", {"document_type": "Scholarship Application"}, pluck="name"), [SCHOLARSHIP_POLICY])
+		drop_policies("Scholarship Application")
+		frappe.get_doc(
+			{"doctype": "Approval Policy", "policy_name": "SCH Test Own Policy", "document_type": "Scholarship Application", "enabled": 0, "levels": [level("User", "Administrator")]}
+		).insert()  # fmt: skip
+		seed_scholarship_policy()  # even a disabled policy is the college's choice
+		self.assertEqual(frappe.get_all("Approval Policy", {"document_type": "Scholarship Application"}, pluck="name"), ["SCH Test Own Policy"])
 
 
 class TestFixRound1(ScholarshipFixture):
