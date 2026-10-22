@@ -154,6 +154,8 @@ def check_once_only(doc, print_format, lock=False):
 		.where((table.superseded_by.isnull()) | (table.superseded_by == ""))  # a reissue replaces its original (M05-14)
 		.where(table.certificate_type.isin(types_of([print_format])))
 	)
+	if doc.get("supersedes"):
+		query = query.where(table.name != doc.supersedes)  # a reissue's original is still current until it is issued
 	issued = (query.for_update() if lock else query).run(pluck=True)
 	if issued:
 		frappe.throw(_("{0} already has a {1}: {2}. Cancel it to issue another.").format(frappe.bold(doc.student), _(print_format), issued[0]))

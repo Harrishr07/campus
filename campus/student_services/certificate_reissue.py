@@ -13,6 +13,8 @@ repoints the Student's leaving fields at the new certificate; cancelling it rest
 A duplicate (not a correction) of an examination certificate keeps the original's frozen record snapshot.
 """
 
+import posixpath
+
 import frappe
 from frappe import _
 from markupsafe import Markup, escape
@@ -68,8 +70,24 @@ def validate_reissue(doc):
 		frappe.throw(_("Attach the evidence for a {0} reissue.").format(_(doc.reissue_reason)))
 	if doc.reissue_reason == LOST and not (doc.reference_note or "").strip():
 		frappe.throw(_("Give the affidavit or FIR reference for a lost certificate."))
-	if doc.evidence and not doc.evidence.startswith("/private/"):
+	if doc.evidence and not is_private_path(doc.evidence):
 		frappe.throw(_("The evidence must be a private file."))
+
+
+def is_private_path(path):
+	"""True for a file under /private/files after normalising (no '..' or '//' tricks)."""
+	return posixpath.normpath(path).startswith("/private/files/")
+
+
+def refuse_without_policy(doc):
+	"""Before a reissue goes to approval: without a matching policy it could never be issued."""
+	from campus.campus_platform.approval_engine import find_policy
+
+	if not find_policy(doc):
+		frappe.throw(
+			_("No approval policy is configured for Certificate Reissue; ask the administrator to set one up."),
+			title=_("Approval Policy Missing"),
+		)
 
 
 def lock_original(doc):

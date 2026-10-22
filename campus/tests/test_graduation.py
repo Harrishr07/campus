@@ -720,3 +720,42 @@ class TestFixRound2(GraduationFixture):
 		frappe.db.set_value("Certificate Type", PROVISIONAL, "needs_approval", 1)  # the fix round 1 patch
 		with self.assertRaisesRegex(frappe.ValidationError, "approval"):
 			draft.submit()
+
+
+class TestExamCertificateReissue(GraduationFixture):
+	"""M05-14 on the once-only certificates: the original is still current while its reissue is validated and issued."""
+
+	def setUp(self):
+		super().setUp()
+		frappe.db.delete("Approval Level", {"parent": "Certificate Reissue"})
+		frappe.db.delete("Approval Policy", {"name": "Certificate Reissue"})
+
+	def reissue(self, original, reason, submit=True):
+		doc = frappe.get_doc(
+			{"doctype": "Certificate Request", "student": original.student, "certificate_type": original.certificate_type,
+			"purpose": "Higher studies", "supersedes": original.name, "reissue_reason": reason,
+			"evidence": "/private/files/proof.pdf"}
+		).insert()  # fmt: skip
+		return self.approve(doc) if submit else doc
+
+	def snapshot(self, doc):
+		return frappe.db.get_value("Certificate Request", doc.name, "record_snapshot")
+
+	def check_reissue_of(self, certificate_type):
+		original = self.request("dist", certificate_type)
+		frappe.db.set_value("Student", self.students["dist"], "student_name", "Grd Renamed")
+		duplicate = self.reissue(original, "Damaged")
+		self.assertEqual(self.snapshot(duplicate), self.snapshot(original))  # a duplicate prints what the original printed
+		self.assertNotIn("Grd Renamed", self.snapshot(duplicate))
+		correction = self.reissue(duplicate, "Correction of Particulars")
+		self.assertIn("Grd Renamed", self.snapshot(correction))  # a correction takes the record as it stands
+		self.assertEqual(frappe.db.get_value("Certificate Request", duplicate.name, "superseded_by"), correction.name)
+		with self.assertRaisesRegex(frappe.ValidationError, "already has"):
+			self.request("dist", certificate_type, submit=False)  # an independent third issue is still refused
+
+	def test_a_provisional_certificate_can_be_reissued(self):
+		self.check_reissue_of(PROVISIONAL)
+
+	def test_a_degree_certificate_can_be_reissued(self):
+		self.awarding("College")
+		self.check_reissue_of(DEGREE)

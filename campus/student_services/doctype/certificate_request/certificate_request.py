@@ -33,6 +33,10 @@ class CertificateRequest(ApprovableDocument, Document):
 			if self.is_transfer_certificate and not self.supersedes:
 				self.check_transfer()
 
+	def before_approval_request(self):
+		if self.supersedes:
+			certificate_reissue.refuse_without_policy(self)
+
 	def before_submit(self):
 		super().before_submit()
 		if self.needs_approval and not is_approved(self):

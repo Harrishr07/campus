@@ -3,12 +3,13 @@ print marking, fee."""
 
 import frappe
 from frappe.utils import today
+from frappe.website.serve import get_response
 
 from campus.campus_platform.approval_engine import find_policy
 from campus.campus_platform.verification import public_lookup, verify
 from campus.student_services import certificate_fee
 from campus.tests.test_certificates import BONAFIDE, COLLEGE, TRANSFER, CertificateFixture
-from campus.www import verify as verify_page
+from campus.tests.test_verification import request_as
 
 EVIDENCE = "/private/files/proof.pdf"
 CORRECTION, DAMAGED, LOST = "Correction of Particulars", "Damaged", "Lost"
@@ -56,6 +57,17 @@ class TestReissueApproval(ReissueFixture):
 		self.assertEqual(self.approve_request(draft).docstatus, 1)
 
 
+class TestNoPolicy(ReissueFixture):
+	def test_a_reissue_with_no_matching_policy_says_so(self):
+		from campus.campus_platform.approvals import request_approval
+
+		original = self.issue()
+		draft = self.reissue_draft(original)
+		frappe.db.set_value("Approval Policy", {"document_type": "Certificate Request"}, "enabled", 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "No approval policy is configured for Certificate Reissue"):
+			request_approval("Certificate Request", draft.name)
+
+
 class TestSeededPolicy(ReissueFixture):
 	drop_seeded_policy = False
 
@@ -87,8 +99,9 @@ class TestReissueRules(ReissueFixture):
 			self.reissue_draft(original, CORRECTION, evidence=None)
 		with self.assertRaisesRegex(frappe.ValidationError, "FIR|Evidence|evidence"):
 			self.reissue_draft(original, LOST, reference_note=" ")
-		with self.assertRaisesRegex(frappe.ValidationError, "private"):
-			self.reissue_draft(original, LOST, evidence="/files/proof.pdf")
+		for path in ("/files/proof.pdf", "/private/../files/proof.pdf", "/private//../files/proof.pdf", "/private/"):
+			with self.assertRaisesRegex(frappe.ValidationError, "private"):
+				self.reissue_draft(original, LOST, evidence=path)
 		self.assertTrue(self.reissue_draft(original, LOST).name)
 
 	def test_the_chain_keeps_every_certificate_and_only_the_last_is_current(self):
@@ -137,15 +150,15 @@ class TestReissueVerification(ReissueFixture):
 	def test_the_public_page_renders_the_superseded_state_and_the_link(self):
 		first = self.issue()
 		second = self.reissue(first)
-		frappe.form_dict.code = first.verification_code
-		self.addCleanup(frappe.form_dict.pop, "code", None)
-		context = frappe._dict()
-		verify_page.get_context(context)
-		self.assertEqual(context.record.status, "Superseded")
-		html = frappe.render_template("campus/www/verify.html", context) if False else open(frappe.get_app_path("campus", "www", "verify.html")).read()
+		self.addCleanup(setattr, frappe.local, "form_dict", frappe.local.form_dict)
+		frappe.set_user("Guest")
+		self.addCleanup(frappe.set_user, "Administrator")
+		request_as("10.0.0.23", f"/verify/{first.verification_code}")
+		frappe.local.form_dict = frappe._dict()
+		frappe.local.response = frappe._dict()
+		html = get_response(f"verify/{first.verification_code}").get_data(as_text=True)
 		self.assertIn("Superseded", html)
-		self.assertIn("/verify/{{ record.superseded_by_code", html)
-		self.assertEqual(context.record.superseded_by_code, second.verification_code)
+		self.assertIn(f"/verify/{second.verification_code}", html)
 
 
 class TestReissuedTransferCertificate(ReissueFixture):
