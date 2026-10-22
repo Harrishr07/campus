@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "University Result Import Row",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "university_result_import",
+   "fieldtype": "Link",
+   "label": "University Result Import",
+   "options": "University Result Import",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "row_no",
+   "fieldtype": "Int",
+   "label": "Row No",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "university_register_no",
+   "fieldtype": "Data",
+   "label": "University Register No",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "grade",
+   "fieldtype": "Data",
+   "label": "Grade",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Data",
+   "label": "Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cia",
+   "fieldtype": "Float",
+   "label": "CIA",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ese",
+   "fieldtype": "Float",
+   "label": "ESE",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Float",
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Valid\nCorrection\nUnchanged\nRejected\nImported\nError",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_result",
+   "fieldtype": "Link",
+   "label": "Student Result",
+   "options": "Student Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "values_json",
+   "fieldtype": "Long Text",
+   "label": "File Values",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "field_order": [
+  "university_result_import",
+  "company",
+  "row_no",
+  "university_register_no",
+  "student",
+  "course",
+  "grade",
+  "result",
+  "cia",
+  "ese",
+  "total",
+  "status",
+  "message",
+  "student_result",
+  "values_json"
+ ],
+ "autoname": "hash",
+ "title_field": "university_register_no"
+}

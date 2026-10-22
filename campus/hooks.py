@@ -428,6 +428,7 @@ scheduler_events = {
 		"campus.admissions.allotment_import.reconcile_finished_imports",
 		"campus.admissions.applicant_upload.reconcile_finished_uploads",
 		"campus.examinations.cia.lock_due_schedules",
+		"campus.examinations.university_import.reconcile_finished_imports",  # M06-10
 	],
 	"weekly": [
 		"campus.academic_governance.actions.notify_overdue",

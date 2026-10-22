@@ -10,6 +10,7 @@
   "status_effective_from",
   "autonomy_conferred_on",
   "affiliating_university",
+  "examination_mode",
   "column_break_ids",
   "aishe_code",
   "aicte_permanent_id",
@@ -70,6 +71,14 @@
    "fieldname": "affiliating_university",
    "fieldtype": "Data",
    "label": "Affiliating University"
+  },
+  {
+   "fieldname": "examination_mode",
+   "fieldtype": "Select",
+   "label": "Examination Mode",
+   "options": "Autonomous\nAffiliated",
+   "default": "Autonomous",
+   "description": "Who runs the end-semester examinations of this college's regulations: the college (Autonomous) or the affiliating university (Affiliated). A regulation's Exam Rule Set may say otherwise."
   },
   {
    "fieldname": "column_break_ids",
@@ -161,7 +170,7 @@
  "issingle": 0,
  "istable": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Institution Profile",

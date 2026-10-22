@@ -1,0 +1,152 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "University Exam Format",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "format_name",
+   "fieldtype": "Data",
+   "label": "Format Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "university",
+   "fieldtype": "Data",
+   "label": "University",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "label": "Direction",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "options": "Export\nImport",
+   "description": "Export: our exam registrations and CIA to the university. Import: the university's results to us."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "file_type",
+   "fieldtype": "Select",
+   "label": "File Type",
+   "reqd": 1,
+   "options": "CSV\nXLSX",
+   "default": "CSV"
+  },
+  {
+   "fieldname": "header_row",
+   "fieldtype": "Check",
+   "label": "Header Row",
+   "default": "1",
+   "description": "The file's first row holds the headings. Without it the columns are read and written in the order below."
+  },
+  {
+   "fieldname": "date_format",
+   "fieldtype": "Select",
+   "label": "Date Format",
+   "options": "dd-mm-yyyy\nyyyy-mm-dd\ndd/mm/yyyy\nmm/dd/yyyy",
+   "default": "dd-mm-yyyy"
+  },
+  {
+   "fieldname": "columns_section",
+   "fieldtype": "Section Break",
+   "label": "Columns"
+  },
+  {
+   "fieldname": "columns",
+   "fieldtype": "Table",
+   "label": "Columns",
+   "options": "University Exam Format Column",
+   "reqd": 1,
+   "description": "In file order. Export needs University Register No and Course Code; Import needs University Register No, Course Code and Grade."
+  },
+  {
+   "fieldname": "codes_section",
+   "fieldtype": "Section Break",
+   "label": "Code Mappings"
+  },
+  {
+   "fieldname": "codes",
+   "fieldtype": "Table",
+   "label": "Code Mappings",
+   "options": "University Exam Format Code",
+   "description": "A code type with no rows passes codes through unchanged; once a type has a row, every code of that type must be mapped."
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "field_order": [
+  "format_name",
+  "university",
+  "direction",
+  "column_break_1",
+  "file_type",
+  "header_row",
+  "date_format",
+  "columns_section",
+  "columns",
+  "codes_section",
+  "codes",
+  "notes"
+ ],
+ "autoname": "field:format_name",
+ "title_field": "format_name"
+}

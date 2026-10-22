@@ -6,6 +6,7 @@
  "field_order": [
   "company",
   "academic_term",
+  "examination_mode",
   "is_final_year",
   "status",
   "publish_at",
@@ -43,6 +44,18 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "set_only_once": 1
+  },
+  {
+   "fieldname": "examination_mode",
+   "fieldtype": "Select",
+   "label": "Examination Mode",
+   "options": "Autonomous\nAffiliated",
+   "default": "Autonomous",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Affiliated: the university conducts this session's examinations. Registrations and CIA are exported to it and its results imported; the Result Run and Publish Results are not used. Only students whose regulation is in the same mode are registered."
   },
   {
    "fieldname": "is_final_year",
@@ -146,7 +159,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Session",

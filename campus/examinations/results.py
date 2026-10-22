@@ -29,6 +29,9 @@ Versioned: before publication a re-run replaces the latest version in place. Aft
 pending version with a change log, graded on the relative bands frozen at publication; the published version stays
 the latest (and the only one students and staff see) until a Result Ratification publishes the pending one.
 
+M06-10: an Affiliated session is never run (the university grades it), and Affiliated students are left out of the
+run of an Autonomous session (campus.examinations.affiliation).
+
 M06-12 pre-validation: a run starts only when every course offered to its students in the session's term has a
 course type (blank is never read as Internal Only or Theory) that each student's Exam Rule Set covers; otherwise it
 is refused listing the incomplete courses. Internal Only is the explicit exam type of a course with no ESE.
@@ -44,6 +47,7 @@ from frappe.utils import cint, escape_html, flt, getdate
 
 from campus.campus_platform.api import get_regulation, get_rule
 from campus.examinations import result_rules, rules, seating
+from campus.examinations.affiliation import AFFILIATED, examination_mode, examination_modes, refuse_affiliated_session
 from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import outstanding_arrears
 from campus.examinations.courses import COURSE_FIELDS, course_type, offering_course, student_limits
@@ -74,15 +78,23 @@ def start_run(exam_session, program):
 	frappe.only_for((COE_ROLE, "System Manager"))
 	session = frappe.get_doc("Exam Session", exam_session)
 	session.check_permission("write")
+	refuse_affiliated_session(exam_session, _("the Result Run"))
 	if frappe.db.get_value("Program", program, "oc_company") != session.company:
 		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
 	students = program_students(session, program)
+	if not students:
+		frappe.throw(
+			_("No student of {0} writes the college's examinations in {1}: their results come from the university (Affiliated mode) or they are on a break.").format(
+				frappe.bold(program), frappe.bold(exam_session)
+			)
+		)
 	check_configuration(session, students)
 	return run_bulk(RUN_TYPE, students, HANDLER, parameters={"exam_session": exam_session, "program": program})
 
 
 def program_students(session, program):
-	"""Students enrolled in the program in the session's year, less those on a break of study (P2-T21)."""
+	"""Students enrolled in the program in the session's year, less those on a break of study (P2-T21) and those
+	whose examinations the university runs (Affiliated mode, M06-10)."""
 	year = frappe.db.get_value("Academic Term", session.academic_term, "academic_year")
 	students = frappe.get_all(
 		"Program Enrollment",
@@ -90,7 +102,9 @@ def program_students(session, program):
 		pluck="student",
 		distinct=True,
 	)
-	return sorted(set(students) - students_on_break(students))
+	students = set(students) - students_on_break(students)
+	modes = examination_modes(student_regulations(students))
+	return sorted(s for s in students if modes[s] != AFFILIATED)
 
 
 def check_configuration(session, students):
@@ -193,6 +207,9 @@ def compute_student_result(student, exam_session, cohorts=None):
 	session = frappe.db.get_value(
 		"Exam Session", exam_session, ["name", "company", "academic_term", "status", "is_final_year"], as_dict=True, for_update=True
 	)
+	refuse_affiliated_session(exam_session, _("the Result Run"))
+	if examination_mode(student) == AFFILIATED:
+		frappe.throw(_("The university grades {0} (Affiliated mode); import the university's results.").format(frappe.bold(student)))
 	run = StudentRun(student, session, cohorts or new_cohorts(exam_session))
 	return save_version(student, session, run.values())
 

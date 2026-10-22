@@ -5,6 +5,7 @@
  "engine": "InnoDB",
  "field_order": [
   "regulation",
+  "examination_mode",
   "types",
   "attempts_section",
   "cia_carry_forward",
@@ -37,6 +38,13 @@
    "reqd": 1,
    "unique": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "examination_mode",
+   "fieldtype": "Select",
+   "label": "Examination Mode",
+   "options": "\nAutonomous\nAffiliated",
+   "description": "Leave blank to follow the college's Examination Mode (Institution Profile). Affiliated: the university runs the end-semester examinations of this regulation's students."
   },
   {
    "fieldname": "types",
@@ -178,7 +186,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 20:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Exam Rule Set",

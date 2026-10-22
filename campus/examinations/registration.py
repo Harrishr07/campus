@@ -9,7 +9,8 @@ Courses of a student in a session (registrable_courses):
 - an offered course that is a bridge course still owed after an approved Rejoin Application
   (student_services.api.pending_bridge_courses) has kind Bridge; an unoffered one is not registered (it stays
   pending on the student's record).
-A student on a break of study is not registered (student_services.api.on_break).
+A student on a break of study is not registered (student_services.api.on_break), nor a student whose examination
+mode (Autonomous / Affiliated, campus.examinations.affiliation) is not the session's (M06-10).
 Attendance comes from the locked Attendance Eligibility Run (student_services.api.attendance_snapshot). A
 student with courses of the term but no snapshot row fails (the bulk run records the error) instead of passing.
 
@@ -26,6 +27,7 @@ from campus.campus_platform.api import latest_enrollment
 from campus.campus_platform.bulk import live_run, run_bulk
 from campus.examinations import exam_fee, hall_tickets
 from campus.examinations.access import COE_ROLE
+from campus.examinations.affiliation import AUTONOMOUS, examination_mode
 from campus.examinations.arrears import REAPPEAR, reappearance_courses
 from campus.examinations.courses import offering_course
 from campus.examinations.doctype.exam_registration.exam_registration import registration_name
@@ -94,11 +96,13 @@ def register_student(student, run):
 def register(student, exam_session):
 	"""Create the student's Exam Registration in the session, or add its missing courses; returns its name or None."""
 	session = frappe.db.get_value(
-		SESSION, exam_session, ["company", "academic_term", "status"], as_dict=True, for_update=True
+		SESSION, exam_session, ["company", "academic_term", "status", "examination_mode"], as_dict=True, for_update=True
 	)
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session takes no registrations."))
 	if on_break(student):
+		return None
+	if examination_mode(student) != (session.examination_mode or AUTONOMOUS):  # M06-10: the other mode's session
 		return None
 	courses = registrable_courses(student, session.academic_term)
 	if not courses:

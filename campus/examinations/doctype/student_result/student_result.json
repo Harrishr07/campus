@@ -25,7 +25,9 @@
   "pending_ratification",
   "ratification",
   "column_break_version",
-  "change_log"
+  "change_log",
+  "source",
+  "university_result_import"
  ],
  "fields": [
   {
@@ -191,11 +193,27 @@
    "fieldtype": "Small Text",
    "label": "Changes from the Previous Version",
    "read_only": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "Result Run\nUniversity",
+   "default": "Result Run",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "university_result_import",
+   "fieldtype": "Link",
+   "label": "University Result Import",
+   "options": "University Result Import",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Student Result",
