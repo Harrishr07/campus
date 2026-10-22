@@ -5,26 +5,42 @@ and arrears seen at registration are kept as evidence; eligibility itself is alw
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.permissions import has_user_permission
 from frappe.utils import now_datetime
 
 from campus.placement import eligibility
+from campus.placement.api import deadline_passed
+
+SNAPSHOT = ("cgpa", "standing_arrears", "had_arrears", "registered_on")
 
 
 class DriveRegistration(Document):
 	def validate(self):
-		self.company = frappe.db.get_value("Placement Drive", self.drive, "company")
+		drive = frappe.get_doc("Placement Drive", self.drive)
+		if not has_user_permission(drive):  # Company User Permissions
+			frappe.throw(_("You have no access to {0} placement drives").format(drive.company), frappe.PermissionError)
+		self.company = drive.company
 		if self.status == "Registered" and (self.is_new() or self.has_value_changed("status")):
-			self.check_open()
+			self.check_open(drive)
 			self.take_snapshot()
-		elif self.status == "Withdrawn":
-			self.check_not_shortlisted()
+		else:
+			self.keep_snapshot()
+			if self.status == "Withdrawn":
+				self.check_not_shortlisted()
 
-	def check_open(self):
-		status, deadline = frappe.db.get_value("Placement Drive", self.drive, ["status", "registration_deadline"])
-		if status != "Open":
+	def keep_snapshot(self):
+		"""The standing seen at registration is evidence: never taken from the request."""
+		for field in SNAPSHOT:
+			self.set(field, None if self.is_new() else self.get_db_value(field))
+
+	def on_trash(self):
+		self.check_not_shortlisted()
+
+	def check_open(self, drive):
+		if drive.status != "Open":
 			frappe.throw(_("{0} is not open for registration").format(self.drive))
-		if deadline and frappe.utils.get_datetime(deadline) < now_datetime():
-			frappe.throw(_("Registration for {0} closed on {1}").format(self.drive, frappe.format(deadline, {"fieldtype": "Datetime"})))
+		if deadline_passed(drive.registration_deadline):
+			frappe.throw(_("Registration for {0} closed on {1}").format(self.drive, frappe.format(drive.registration_deadline, {"fieldtype": "Datetime"})))
 
 	def take_snapshot(self):
 		result = eligibility.evaluate(self.drive, self.student)

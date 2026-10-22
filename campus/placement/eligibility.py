@@ -39,12 +39,12 @@ def student_standing(student):
 	}  # fmt: skip
 
 
-def evaluate(drive, student):
+def evaluate(drive, student, standing=None):
 	"""{eligible, reasons, cgpa, standing_arrears, had_arrears} of `student` for the Placement Drive `drive` now.
 
 	A student who is not on the roll of the drive's college is never eligible."""
 	doc = frappe.get_doc("Placement Drive", drive) if isinstance(drive, str) else drive
-	standing = student_standing(student)
+	standing = standing or student_standing(student)
 	found = rules.reasons(criteria_of(doc), standing)
 	if standing["company"] != doc.company:
 		found.insert(0, _("{0} does not belong to {1}").format(student, doc.company))
@@ -54,6 +54,13 @@ def evaluate(drive, student):
 		"eligible": not found, "reasons": found, "cgpa": standing["cgpa"],
 		"standing_arrears": standing["standing_arrears"], "had_arrears": standing["had_arrears"],
 	}  # fmt: skip
+
+
+@frappe.whitelist()
+def template_criteria(template):
+	"""Criteria of a Placement Eligibility Template for the drive form to copy when the template is chosen."""
+	frappe.has_permission("Placement Eligibility Template", "read", template, throw=True)
+	return template_values(template)
 
 
 def template_values(template):

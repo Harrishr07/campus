@@ -21,12 +21,20 @@ class PlacementDrive(Document):
 			self.check_ready()
 
 	def apply_template(self):
-		if not self.eligibility_template or not (self.is_new() or self.has_value_changed("eligibility_template")):
+		"""A new drive that names a template and sets no criteria of its own takes the template's; criteria typed or sent
+		with the drive are kept (the form copies a template's criteria when it is chosen)."""
+		if not self.eligibility_template:
 			return
 		company = frappe.db.get_value("Placement Eligibility Template", self.eligibility_template, "company")
 		if company != self.company:
 			frappe.throw(_("Template {0} belongs to {1}, not {2}").format(self.eligibility_template, company, self.company))
-		self.update(template_values(self.eligibility_template))
+		if self.is_new() and self.criteria_untouched():
+			self.update(template_values(self.eligibility_template))
+
+	def criteria_untouched(self):
+		return not (
+			self.min_cgpa or self.any_standing_arrears or self.max_standing_arrears or self.gender or self.programs or self.batches
+		)
 
 	def check_recruiter(self):
 		company, disabled, mou = frappe.db.get_value("Recruiter", self.recruiter, ["company", "disabled", "mou"])

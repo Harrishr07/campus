@@ -17,6 +17,7 @@ def open_drives(student):
 	"""Open Placement Drives of the student's college with their live eligibility and registration state."""
 	company = frappe.db.get_value("Student", student, "oc_company")
 	rows = []
+	standing = eligibility.student_standing(student)
 	for drive in frappe.get_all(
 		"Placement Drive", {"company": company, "status": "Open"}, pluck="name", order_by="drive_date"
 	):
@@ -24,12 +25,13 @@ def open_drives(student):
 		registration = frappe.db.get_value("Drive Registration", {"drive": drive, "student": student}, "status")
 		rows.append(
 			{
-				"drive": doc, "registration": registration, "closed": registration_closed(doc),
-				**eligibility.evaluate(doc, student),
+				"drive": doc, "registration": registration, "closed": deadline_passed(doc.registration_deadline),
+				**eligibility.evaluate(doc, student, standing),
 			}
 		)  # fmt: skip
 	return rows
 
 
-def registration_closed(drive):
-	return bool(drive.registration_deadline and frappe.utils.get_datetime(drive.registration_deadline) < frappe.utils.now_datetime())
+def deadline_passed(deadline):
+	"""Whether a drive's registration deadline (blank: none) is behind us."""
+	return bool(deadline and frappe.utils.get_datetime(deadline) < frappe.utils.now_datetime())

@@ -68,7 +68,8 @@ def had_arrears(student):
 	history = {}
 	for row in published_attempts(student):
 		history.setdefault(row.course, []).append(row.result)
-	return not rules.passed_at_first_appearance(history)
+	appeared = {course: found for course, found in history.items() if any(r not in rules.NOT_SAT for r in found)}
+	return not rules.passed_at_first_appearance(appeared)  # a course only ever withdrawn from was never sat
 
 
 def required_credits(regulation):

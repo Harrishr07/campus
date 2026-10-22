@@ -31,14 +31,15 @@ def load_results(round_result):
 
 def file_problems(rows, registered):
 	"""Messages for rows whose student is not registered, whose result is unknown or whose student repeats."""
+	allowed = export.results()
 	problems, seen = [], set()
 	for number, student, result, _remarks in rows:
 		if student not in registered:
 			problems.append(_("Row {0}: {1} is not registered for the drive").format(number, frappe.utils.escape_html(student)))
 		elif student in seen:
 			problems.append(_("Row {0}: {1} is listed twice").format(number, student))
-		if result not in export.RESULTS:
-			problems.append(_("Row {0}: result {1} is not one of {2}").format(number, frappe.utils.escape_html(result), ", ".join(export.RESULTS)))
+		if result not in allowed:
+			problems.append(_("Row {0}: result {1} is not one of {2}").format(number, frappe.utils.escape_html(result), ", ".join(allowed)))
 		seen.add(student)
 	return problems
 

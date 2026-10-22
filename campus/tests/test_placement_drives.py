@@ -210,10 +210,24 @@ class TestLiveEligibility(PlacementFixture):
 			{"doctype": "Placement Eligibility Template", "template_name": "Tier 1", "company": COLLEGE, "min_cgpa": 8.5,
 			"allow_arrear_history": 0, "programs": [{"program": PROGRAM}]}
 		).insert()  # fmt: skip
-		drive = self.make_drive(eligibility_template=template.name, min_cgpa=0, allow_arrear_history=1, programs=[])
+		drive = self.make_drive(eligibility_template=template.name, min_cgpa=0, allow_arrear_history=1, rounds=[], roles=[], status="Draft")
 		self.assertEqual(drive.min_cgpa, 8.5)
 		self.assertEqual(drive.allow_arrear_history, 0)
 		self.assertEqual([row.program for row in drive.programs], [PROGRAM])
+		self.assertEqual(eligibility.template_criteria(template.name)["min_cgpa"], 8.5)
+
+	def test_criteria_sent_with_a_drive_are_not_overwritten_by_its_template(self):
+		template = frappe.get_doc(
+			{"doctype": "Placement Eligibility Template", "template_name": "Tier 2", "company": COLLEGE, "min_cgpa": 8.5}
+		).insert()  # fmt: skip
+		drive = self.make_drive(eligibility_template=template.name, min_cgpa=6)
+		self.assertEqual(drive.min_cgpa, 6)
+
+	def test_a_course_only_withdrawn_from_is_not_history(self):
+		student = self.students["ace"]
+		self.publish(self.s2)
+		self.make_result(student, COLLEGE, self.s2, [("PLC1", 0, "WD")])
+		self.assertFalse(eligibility.student_standing(student)["had_arrears"])
 
 	def test_other_college_template_is_refused(self):
 		template = frappe.get_doc({"doctype": "Placement Eligibility Template", "template_name": "Other T", "company": OTHER}).insert()
@@ -270,6 +284,29 @@ class TestRegistrationGate(PlacementFixture):
 		registration.status = "Registered"
 		registration.save()
 		self.assertEqual(api.registered_students(drive.name), [self.students["ace"]])
+
+	def test_snapshot_and_trash(self):
+		drive = self.make_drive()
+		registration = self.register(drive, "ace")
+		registration.cgpa = 10
+		registration.save()
+		self.assertEqual(registration.reload().cgpa, 9)
+		frappe.get_doc({"doctype": "Round Result", "drive": drive.name, "round_no": 1, "results": [{"student": self.students["ace"]}]}).insert()
+		with self.assertRaises(frappe.ValidationError):
+			registration.delete()
+
+	def test_company_scoped_officer_cannot_register_or_list_for_another_college(self):
+		drive = self.make_drive(min_cgpa=0)
+		email = "pl-officer@placement-test.example.com"
+		if not frappe.db.exists("User", email):
+			frappe.get_doc({"doctype": "User", "email": email, "first_name": "PlOfficer", "send_welcome_email": 0, "roles": [{"role": "Placement Officer"}]}).insert()
+		frappe.get_doc({"doctype": "User Permission", "user": email, "allow": "Company", "for_value": OTHER}).insert()
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(email)
+		with self.assertRaises(frappe.PermissionError):
+			self.register(drive, "ace")
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc({"doctype": "Round Result", "drive": drive.name, "round_no": 1}).insert()
 
 	def test_open_drives_show_live_state_per_student(self):
 		drive = self.make_drive()
@@ -402,6 +439,25 @@ class TestRoundResults(PlacementFixture):
 		self.assertIn("Row 4", message)
 		self.assertEqual(frappe.db.count("Round Result Student", {"parent": doc.name}), 0)
 
+	def test_xlsx_and_cp1252_files_are_read(self):
+		from openpyxl import Workbook
+
+		book = Workbook()
+		book.active.append(["Student", "Result", "Remarks"])
+		book.active.append([self.students["ace"], "Selected", "ok"])
+		out = io.BytesIO()
+		book.save(out)
+		doc = self.result().insert()
+		file = frappe.get_doc({"doctype": "File", "file_name": "r.xlsx", "content": out.getvalue(), "is_private": 1}).insert(ignore_permissions=True)
+		self.assertEqual(export.read_rows(file.file_url), [(2, self.students["ace"], "Selected", "ok")])
+		self.assertEqual(export.decode("caf\xe9".encode("cp1252")), "caf\xe9")
+		self.assertEqual(doc.round_no, 1)
+
+	def test_row_cap(self):
+		with self.assertRaises(frappe.ValidationError):
+			export.parse_table([["Student", "Result"], *[["S", "Absent"]] * (export.MAX_ROWS + 1)])
+		self.assertEqual(len(export.parse_table([["Student", "Result"], *[["S", "Absent"]] * export.MAX_ROWS])), export.MAX_ROWS)
+
 	def test_bulk_upload_needs_the_columns(self):
 		with self.assertRaises(frappe.ValidationError):
 			export.parse_table([["Name", "Marks"], ["x", "1"]])
@@ -456,6 +512,33 @@ class TestPortalOptIn(PlacementFixture):
 		self.assertTrue(portal.my_drives()["drives"])
 		with self.assertRaises(frappe.PermissionError):
 			portal.register(drive.name)
+
+	def test_registration_after_the_deadline_is_refused(self):
+		drive = self.make_drive(registration_deadline=add_days(now_datetime(), 1))
+		self.as_student("ace")
+		self.assertTrue(portal.my_drives()["drives"][0]["can_register"])
+		frappe.db.set_value("Placement Drive", drive.name, "registration_deadline", add_days(now_datetime(), -1))
+		row = portal.my_drives()["drives"][0]
+		self.assertTrue(row["closed"])
+		self.assertFalse(row["can_register"])
+		with self.assertRaises(frappe.ValidationError):
+			portal.register(drive.name)
+
+	def test_student_of_another_college_cannot_register_through_the_portal(self):
+		drive = self.make_drive(min_cgpa=0)
+		self.as_student("outsider")
+		self.assertEqual(portal.my_drives()["drives"], [])
+		with self.assertRaises(frappe.ValidationError):
+			portal.register(drive.name)
+
+	def test_portal_page_context(self):
+		self.make_drive()
+		self.as_student("ace")
+		context = frappe._dict()
+		frappe.get_attr("campus.www.campus_portal.placement.get_context")(context)
+		self.assertEqual(context.active, "placement")
+		self.assertEqual(len(context.placement["drives"]), 1)
+		self.assertEqual(context.placement["drives"][0]["drive_title"], "Acme Campus Drive")
 
 	def test_notice_prints_criteria(self):
 		drive = self.make_drive(min_cgpa=7.5, programs=[{"program": PROGRAM}])

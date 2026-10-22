@@ -15,7 +15,11 @@ MAX_CELL = 32000
 MAX_BYTES = 2 * 1024 * 1024
 MAX_ROWS = 5000
 HEADER = ["Student", "Student Name", "Result", "Remarks"]
-RESULTS = ("Shortlisted", "Not Shortlisted", "Absent", "Selected")
+
+
+def results():
+	"""The result values a round row may hold: the options of Round Result Student.result."""
+	return [o for o in frappe.get_meta("Round Result Student").get_field("result").options.split("\n") if o]
 
 
 def safe_cell(value):
@@ -58,8 +62,16 @@ def read_rows(file_url):
 
 		table = [[cstr(c).strip() for c in row] for row in read_xlsx_file_from_attached_file(fcontent=content)]
 	else:
-		table = [[cstr(c).strip() for c in row] for row in csv.reader(io.StringIO(content.decode("utf-8-sig")))]
+		table = [[cstr(c).strip() for c in row] for row in csv.reader(io.StringIO(decode(content)))]
 	return parse_table(table)
+
+
+def decode(content):
+	"""Text of a CSV: UTF-8 (with or without BOM), else Windows-1252 as Excel saves it."""
+	try:
+		return content.decode("utf-8-sig")
+	except UnicodeDecodeError:
+		return content.decode("cp1252", errors="replace")
 
 
 def parse_table(table):

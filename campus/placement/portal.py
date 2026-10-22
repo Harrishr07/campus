@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 
 from campus.placement import api
-from campus.student_services.portal import is_the_student, resolve_student
+from campus.student_services.api import is_the_student, resolve_student
 
 REGISTRATION = "Drive Registration"
 

@@ -280,3 +280,17 @@ def issue_id_card(student):
 	record = verification.issue(frappe.get_doc("Student", student), ID_CARD_FORMAT)
 	mark_item_done(student, "ID-CARD")
 	return {"code": record.code, "url": verification.verification_url(record.code)}
+
+
+def resolve_student(student=None):
+	"""The student the session user may act on (own student, or a guardian's ward); see portal.resolve_student."""
+	from campus.student_services import portal
+
+	return portal.resolve_student(student)
+
+
+def is_the_student(student):
+	"""Whether the session user is the student themself (a guardian may view, only the student acts)."""
+	from campus.student_services import portal
+
+	return portal.is_the_student(student)
