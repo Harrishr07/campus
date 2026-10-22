@@ -1,4 +1,4 @@
-// M06-07 Convocation List: fill the eligible graduates and download the export.
+// M06-07 Convocation List: fill the eligible graduates, mark them graduated (M05-09) and download the export.
 frappe.ui.form.on("Convocation List", {
 	refresh(frm) {
 		if (frm.is_new()) return;
@@ -14,6 +14,17 @@ frappe.ui.form.on("Convocation List", {
 					frm.reload_doc();
 				})
 		);
+		if (frm.doc.convocation_date && frm.doc.convocation_date <= frappe.datetime.get_today()) {
+			frm.add_custom_button(__("Mark Graduated"), () =>
+				frappe
+					.call({
+						method: "campus.examinations.api.graduate_convocation_list",
+						args: { convocation_list: frm.doc.name },
+						freeze: true,
+					})
+					.then((r) => frappe.show_alert(__("{0} graduates recorded", [r.message])))
+			);
+		}
 		frm.add_custom_button(__("Download"), () =>
 			window.open(
 				"/api/method/campus.examinations.api.download_convocation_list?convocation_list=" +

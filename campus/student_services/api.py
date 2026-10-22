@@ -17,6 +17,18 @@ from campus.student_services.attendance_rules import (
 )
 from campus.student_services.attendance_rules import attendance_marks as marks_for_pct
 from campus.student_services import mentors as allocation
+from campus.student_services.lifecycle import current_status as lifecycle_status  # noqa: F401  (public API)
+from campus.student_services.lifecycle import revert as revert_transition  # noqa: F401  (public API)
+from campus.student_services.lifecycle import transition  # noqa: F401  (public API)
+from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API: lifecycle statuses)
+	ACTIVE,
+	ADMITTED,
+	AWARD_ELIGIBLE,
+	CANCELLED,
+	GRADUATED,
+	JOINED,
+	STUDY_COMPLETED,
+)
 from campus.student_services.onboarding import create_for_student as create_onboarding  # noqa: F401  (public API)
 from campus.student_services.onboarding import mark_item_done
 from campus.student_services.student_records import (  # noqa: F401  (public API)

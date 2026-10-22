@@ -2,7 +2,8 @@
 
 Everything happens in one transaction behind a savepoint: Student (+ Customer, via Education's own
 Student hooks), Program Enrollment (submitted, regulation assigned by the campus hook), register and roll
-numbers, the fee Sales Invoice, and the applicant's Admitted status. Any failure rolls back to the savepoint
+numbers, the fee Sales Invoice, the applicant's Admitted status and the student's lifecycle (Admitted, then Joined
+and Active on the enrollment; M05-09). Any failure rolls back to the savepoint
 and re-raises, so nothing half-created remains. The one exception is the Aadhaar "admission copy" log row,
 which is committed on its own connection by design (an audit row for a number that was read).
 """
@@ -18,7 +19,7 @@ from campus.admissions.aadhaar import copy_aadhaar
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
 from campus.campus_platform.company_scope import permitted_companies
-from campus.student_services.api import create_onboarding
+from campus.student_services.api import ACTIVE, ADMITTED, JOINED, create_onboarding, transition
 
 SAVEPOINT = "campus_admit"
 
@@ -87,6 +88,7 @@ def create_admission(applicant, state):
 	source = frappe.get_doc("Student Applicant", applicant)
 	student = create_student(source, state, year)
 	enrollment = create_enrollment(student, source, state, year)
+	record_joining(student, enrollment)
 	invoice = create_fee_invoice(student, enrollment, state, year)
 	create_onboarding(student.name)
 	frappe.db.set_value("Student Applicant", applicant, "application_status", "Admitted")
@@ -105,6 +107,7 @@ def create_student(source, state, year):
 	)  # fmt: skip
 	settings = frappe.get_doc("Admission Settings")
 	student.oc_company = state.oc_company
+	student.oc_academic_status = ADMITTED
 	student.joining_date = today()
 	student.oc_admission_quota = state.oc_admission_quota
 	student.oc_lateral_entry = int(source.oc_admission_type == "Lateral")
@@ -125,6 +128,12 @@ def create_enrollment(student, source, state, year):
 	)  # fmt: skip
 	enrollment.insert(ignore_permissions=True)
 	return enrollment.submit()
+
+
+def record_joining(student, enrollment):
+	"""Lifecycle (M05-09): admitted with the Student record, joined and active with the enrollment."""
+	for status in (JOINED, ACTIVE):
+		transition(student.name, status, enrollment.enrollment_date, _("Enrolled on admission"), enrollment, program_enrollment=enrollment.name)
 
 
 def create_fee_invoice(student, enrollment, state, year):

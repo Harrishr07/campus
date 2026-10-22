@@ -7,6 +7,7 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission
 
 from campus.examinations.access import COMMITTEE_ROLE, MENTOR_ROLE
+from campus.student_services import lifecycle_rules
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
 from campus.student_services.onboarding import ensure_default_templates
 from campus.student_services.student_records_setup import setup_student_records
@@ -14,9 +15,6 @@ from campus.student_services.student_records_setup import setup_student_records
 MODULE = "Student Services"
 LEAVE_KINDS = ["Leave", MEDICAL, ON_DUTY]
 EVIDENCE_KINDS = (MEDICAL, ON_DUTY)
-
-
-ACADEMIC_STATUSES = ["Active", "Detained", "Discontinued", "Completed", "Long Absent", "Break of Study"]
 
 # name, print format, number prefix, needs approval, transfer certificate
 CERTIFICATE_TYPES = [
@@ -39,6 +37,18 @@ def setup_student_services():
 	setup_leave_fields()
 	setup_grievances()
 	setup_student_records()
+	seed_lifecycle_rules()
+
+
+def seed_lifecycle_rules():
+	"""The default lifecycle transition table (M05-09), only while the table is empty: the rules a college
+	disables, deletes or adds are left as they are."""
+	if frappe.db.count("Lifecycle Transition Rule"):
+		return
+	for from_status, to_status in lifecycle_rules.DEFAULT_TRANSITIONS:
+		frappe.get_doc({"doctype": "Lifecycle Transition Rule", "from_status": from_status, "to_status": to_status}).insert(
+			ignore_permissions=True
+		)
 
 
 GRIEVANCE_POLICY = "Student Grievance Escalation"
@@ -108,9 +118,12 @@ def student_fields():
 			in_standard_filter=1),
 		field("oc_current_semester", "Int", "Current Semester", "oc_admission_quota", in_standard_filter=1),
 		field("oc_section", "Data", "Section", "oc_current_semester"),
-		field("oc_academic_status", "Select", "Academic Status", "oc_section",
-			options="\n".join(ACADEMIC_STATUSES), default="Active", in_standard_filter=1),
-		field("oc_abc_id", "Data", "ABC ID", "oc_academic_status", description="Academic Bank of Credits id."),
+		field("oc_academic_status", "Select", "Lifecycle Status", "oc_section",
+			options="\n".join(lifecycle_rules.STATUSES), default=lifecycle_rules.ACTIVE, in_standard_filter=1, read_only=1,
+			no_copy=1, description="Changed only through lifecycle transitions (Lifecycle Transition, M05-09)."),
+		field("oc_detained", "Check", "Detained", "oc_academic_status", read_only=1, no_copy=1,
+			description="Set by the Progression Run: the student repeats the semester."),
+		field("oc_abc_id", "Data", "ABC ID", "oc_detained", description="Academic Bank of Credits id."),
 		field("oc_profile_column", "Column Break", None, "oc_abc_id"),
 		field("oc_mentor", "Link", "Mentor", "oc_profile_column", options="Employee", in_standard_filter=1,
 			description="Set by the mentor allocation tool."),

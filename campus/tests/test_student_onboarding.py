@@ -6,7 +6,7 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform.verification import verify
-from campus.student_services import api, onboarding
+from campus.student_services import api, lifecycle_rules, onboarding
 from campus.student_services.doctype.student_onboarding.student_onboarding import completion_percent
 from campus.tests.test_admission_flow import COLLEGE, OC, OTHER_COLLEGE, PROGRAM, QUOTA, YEAR, AdmitTestCase
 
@@ -73,10 +73,7 @@ class TestStudentFields(AdmitTestCase):
 			"oc_lateral_entry", "oc_onboarding_completion",
 		):
 			self.assertTrue(meta.has_field(fieldname), fieldname)
-		self.assertEqual(
-			meta.get_field("oc_academic_status").options.split("\n"),
-			["Active", "Detained", "Discontinued", "Completed", "Long Absent", "Break of Study"],
-		)
+		self.assertEqual(meta.get_field("oc_academic_status").options.split("\n"), lifecycle_rules.STATUSES)  # L-01
 
 	def test_admit_sets_quota_and_lateral_entry(self):
 		self.matrix([(QUOTA, OC, 2)])

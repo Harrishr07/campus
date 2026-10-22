@@ -205,7 +205,12 @@ class TestTransferCertificate(CertificateFixture):
 		self.assertEqual(student.leaving_certificate_number, doc.certificate_number)
 		self.assertEqual(student.date_of_leaving, getdate(add_days(today(), 3)))
 		self.assertEqual(student.reason_for_leaving, "Migrating to another city")
-		self.assertEqual(student.oc_academic_status, "Discontinued")
+		self.assertEqual(student.oc_academic_status, "Withdrawn")
+		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
+		self.assertEqual(
+			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.reason),
+			("Active", "Withdrawn", getdate(add_days(today(), 3)), "Certificate Request", doc.name, "Migrating to another city"),
+		)
 		self.assertIn("Date of leaving", frappe.get_print("Certificate Request", doc.name, "Transfer Certificate"))
 
 	def test_a_second_tc_is_refused_and_cancelling_the_first_restores_the_student(self):
@@ -217,6 +222,16 @@ class TestTransferCertificate(CertificateFixture):
 		self.assertFalse(student.leaving_certificate_number)
 		self.assertFalse(student.date_of_leaving)
 		self.assertEqual(student.oc_academic_status, "Active")
+		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
+		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Reversal", "Withdrawn", "Active", doc.name))
+
+	def test_a_tc_to_a_student_who_completed_the_programme_keeps_the_status(self):
+		frappe.db.set_value("Student", self.a, "oc_academic_status", "Graduated")
+		doc = self.approve_request(self.tc())
+		self.assertEqual(frappe.db.get_value("Student", self.a, "oc_academic_status"), "Graduated")
+		self.assertFalse(frappe.db.exists("Lifecycle Transition", {"source_name": doc.name}))
+		doc.cancel()
+		self.assertEqual(frappe.db.get_value("Student", self.a, "oc_academic_status"), "Graduated")
 
 	def test_a_reason_is_required(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "reason"):

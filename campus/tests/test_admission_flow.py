@@ -472,6 +472,7 @@ class TestCancellation(AdmitTestCase):
 		self.pay_in_full(admission.invoice)
 		earlier = add_days(today(), -2)
 		frappe.db.set_value("Program Enrollment", admission.program_enrollment, "enrollment_date", add_days(today(), -5))
+		frappe.db.set_value("Lifecycle Transition", {"student": admission.student}, "effective_date", add_days(today(), -5))  # admitted then
 		doc = self.cancel_on(admission, earlier)
 		self.assertEqual(str(frappe.db.get_value("Sales Invoice", doc.credit_note, "posting_date")), today())
 		self.assertEqual(str(frappe.db.get_value("Payment Entry", doc.payment_entry, "posting_date")), today())

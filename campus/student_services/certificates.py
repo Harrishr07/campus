@@ -1,4 +1,4 @@
-"""M05-04 Certificate rules: numbering, the transfer certificate's dues gate and its effect on the Student.
+"""M05-04, M05-09 Certificate rules: numbering, the transfer certificate's dues gate and its effect on the Student.
 
 Numbers run per Certificate Type prefix, so per type, company and year: the prefix renders to
 e.g. `BON/GEC/2026/`, whose Frappe naming series counter is row-locked, so concurrent issues never repeat
@@ -13,9 +13,7 @@ from frappe import _
 from frappe.utils import fmt_money, getdate, nowdate
 
 from campus.campus_finance.api import has_dues, next_number, validate_number_prefix
-
-DISCONTINUED = "Discontinued"
-ACTIVE = "Active"
+from campus.student_services import lifecycle, lifecycle_rules
 
 
 def next_certificate_number(certificate_type, company):
@@ -54,22 +52,26 @@ def check_transfer_allowed(student):
 
 
 def apply_leaving(request):
-	"""Write the TC onto the Student: leaving date, certificate number, reason and academic status."""
+	"""Write the TC onto the Student: leaving date, certificate number and reason. A student still on roll is
+	Withdrawn from the leaving date (M05-09); a TC to a student who completed or left keeps their status."""
+	leaving_date = getdate(request.leaving_date or nowdate())
 	frappe.db.set_value(
 		"Student", request.student,
 		{
-			"date_of_leaving": getdate(request.leaving_date or nowdate()),
+			"date_of_leaving": leaving_date,
 			"leaving_certificate_number": request.certificate_number,
 			"reason_for_leaving": request.reason_for_leaving,
-			"oc_academic_status": DISCONTINUED,
 		},
 	)  # fmt: skip
+	if lifecycle.current_status(request.student) in lifecycle_rules.ON_ROLL:
+		lifecycle.transition(request.student, lifecycle_rules.WITHDRAWN, leaving_date, request.reason_for_leaving, request)
 
 
 def undo_leaving(request):
-	"""A cancelled TC takes back what it wrote (only if it is still the student's current TC)."""
+	"""A cancelled TC takes back what it wrote (only if it is still the student's current TC), reversing its
+	Withdrawn transition."""
 	if frappe.db.get_value("Student", request.student, "leaving_certificate_number") == request.certificate_number:
 		frappe.db.set_value(
-			"Student", request.student,
-			{"date_of_leaving": None, "leaving_certificate_number": None, "reason_for_leaving": None, "oc_academic_status": ACTIVE},
-		)  # fmt: skip
+			"Student", request.student, {"date_of_leaving": None, "leaving_certificate_number": None, "reason_for_leaving": None}
+		)
+		lifecycle.revert(request, _("Transfer certificate {0} cancelled").format(request.certificate_number))

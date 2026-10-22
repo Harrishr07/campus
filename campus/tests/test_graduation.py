@@ -11,7 +11,7 @@ year) and an unreleased session (publish_at ahead). CGPA values are hand-compute
 from unittest.mock import patch
 
 import frappe
-from frappe.utils import add_days, now_datetime
+from frappe.utils import add_days, getdate, now_datetime, today
 
 from campus.campus_platform import bulk
 from campus.campus_platform.approvals import approve, request_approval
@@ -372,6 +372,44 @@ class TestConvocation(GraduationFixture):
 		rows = convocation.export_rows(self.make_list().name)
 		self.assertIn("'=HYPERLINK(1)", [cell for row in rows for cell in row])
 
+	def lifecycle(self, key):
+		return [
+			(row.from_status, row.to_status, row.source_doctype, row.effective_date)
+			for row in frappe.get_all(
+				"Lifecycle Transition", {"student": self.students[key], "kind": "Transition"},
+				["from_status", "to_status", "source_doctype", "effective_date"], order_by="creation asc, name asc",
+			)
+		]  # fmt: skip
+
+	def test_listing_records_study_completed_and_award_eligible(self):
+		doc = self.make_list()
+		convocation.fill_graduates(doc.name)  # a refill changes nothing twice
+		self.assertEqual(
+			self.lifecycle("dist"),
+			[("Active", "Study Completed", "Convocation List", getdate(today())), ("Study Completed", "Award Eligible", "Convocation List", getdate(today()))],
+		)
+		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], "oc_academic_status"), "Active")  # not listed
+
+	def test_graduates_are_recorded_on_the_convocation_date(self):
+		doc = self.make_list()
+		with self.assertRaisesRegex(frappe.ValidationError, "convocation date"):
+			convocation.graduate(doc.name)
+		doc.db_set("convocation_date", add_days(today(), 1))
+		with self.assertRaisesRegex(frappe.ValidationError, "convocation date"):
+			convocation.graduate(doc.name)
+		doc.db_set("convocation_date", add_days(today(), 0))
+		self.assertEqual(convocation.graduate(doc.name), 5)
+		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Graduated")
+		self.assertEqual(self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", getdate(today())))
+		self.assertEqual(convocation.graduate(doc.name), 0)  # once
+
+	def test_only_the_coe_records_graduates(self):
+		doc = self.make_list()
+		doc.db_set("convocation_date", today())
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.PermissionError):
+			api.graduate_convocation_list(doc.name)
+
 	def test_a_graduate_is_listed_once(self):
 		self.make_list()
 		self.assertEqual(self.make_list().graduates, [])
@@ -415,10 +453,10 @@ class TestProgressionRun(GraduationFixture):
 		self.assertEqual(rows[self.students["dist"]].outcome, "Promote")
 		self.assertEqual(rows[self.students["arrear"]].outcome, "Detain")
 		self.assertEqual(rows[self.students["weak26"]].outcome, "Probation")  # 6.25 < 6.5
-		student = lambda key: frappe.db.get_value("Student", self.students[key], ["oc_current_semester", "oc_academic_status"])  # noqa: E731
-		self.assertEqual(student("dist"), (3, "Active"))
-		self.assertEqual(student("arrear"), (2, "Detained"))
-		self.assertEqual(student("weak26"), (3, "Active"))
+		student = lambda key: frappe.db.get_value("Student", self.students[key], ["oc_current_semester", "oc_detained", "oc_academic_status"])  # noqa: E731
+		self.assertEqual(student("dist"), (3, 0, "Active"))
+		self.assertEqual(student("arrear"), (2, 1, "Active"))  # detention is not a lifecycle status (L-01)
+		self.assertEqual(student("weak26"), (3, 0, "Active"))
 
 	def test_a_rerun_is_idempotent(self):
 		doc = self.start()
@@ -521,12 +559,14 @@ class TestFixRound1(GraduationFixture):
 		doc.reload()
 		run = frappe.get_doc("Bulk Run", doc.bulk_run)
 		progression.progress_student(self.students["arrear"], run)
-		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], "oc_academic_status"), "Detained")
+		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_detained"]), ("Active", 1))
 		# a revaluation clears the arrear; the re-run takes the detained student again and promotes
 		frappe.db.set_value("Student Result Course", {"parent": self.s2_result("arrear"), "course": "GRD C4"}, {"result": "Pass", "grade_point": 7})
 		self.assertIn(self.students["arrear"], progression.active_students(doc))
 		self.assertEqual(progression.progress_student(self.students["arrear"], run), "Promote")
-		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_current_semester"]), ("Active", 3))
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_detained", "oc_current_semester"]), ("Active", 0, 3)
+		)
 
 
 class TestFixRound2(GraduationFixture):

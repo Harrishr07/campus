@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "description": "A permitted change of a student's lifecycle status. Only enabled rules are permitted.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "from_status",
+  "to_status",
+  "enabled",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "from_status",
+   "fieldtype": "Select",
+   "label": "From Status",
+   "options": "\nAdmitted\nJoined\nActive\nOn Break\nDiscontinued\nWithdrawn\nCancelled\nReadmitted\nStudy Completed\nAward Eligible\nGraduated\nAlumni",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1,
+   "description": "Blank: the first status of a new Student record."
+  },
+  {
+   "fieldname": "to_status",
+   "fieldtype": "Select",
+   "label": "To Status",
+   "options": "Admitted\nJoined\nActive\nOn Break\nDiscontinued\nWithdrawn\nCancelled\nReadmitted\nStudy Completed\nAward Eligible\nGraduated\nAlumni",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Lifecycle Transition Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 0,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 0
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

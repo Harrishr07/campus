@@ -7,6 +7,7 @@ import frappe
 from campus.examinations import registration, results
 from campus.examinations.seed import seed_regulation
 from campus.student_services.api import pending_bridge_courses
+from campus.student_services.lifecycle import LOG
 from campus.tests.test_regulation import make_regulation, year_name
 from campus.tests.test_results import COLLEGE, PROGRAM, enter_marks, make_course, make_curriculum, make_offering
 from campus.tests.test_student_records import CLERK, REJOIN, StudentRecordsFixture
@@ -113,17 +114,39 @@ class TestRejoin(StudentRecordsFixture):
 			self.rejoin(draft)
 
 	def test_a_rejoin_on_the_same_regulation_keeps_it_and_restores_the_status(self):
-		frappe.db.set_value("Student", self.s26.name, "oc_academic_status", "Long Absent")
 		before = len(frappe.get_doc("Student", self.s26.name).oc_regulation_history)
 		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))
 		doc = self.approve_fully(self.rejoin(study_break, year="2027", rejoin_date="2027-06-15", bridge=()))
 		self.assertEqual(doc.from_regulation, doc.to_regulation)
 		student = frappe.get_doc("Student", self.s26.name)
 		self.assertEqual(len(student.oc_regulation_history), before)
-		self.assertEqual(student.oc_academic_status, "Long Absent")  # the status before the break
+		self.assertEqual(student.oc_academic_status, "Active")  # the status before the break
+		log = frappe.get_last_doc(LOG, {"student": self.s26.name}, order_by="creation desc, name desc")
+		self.assertEqual(
+			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.kind),
+			("On Break", "Active", frappe.utils.getdate("2027-06-15"), REJOIN, doc.name, "Transition"),
+		)
+
+	def test_a_break_with_a_rejoin_cannot_be_cancelled(self):
+		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))
+		self.approve_fully(self.rejoin(study_break, year="2027", rejoin_date="2027-06-15", bridge=()))
+		with self.assertRaisesRegex(frappe.ValidationError, "has changed since"):
+			frappe.get_doc("Break of Study", study_break.name).cancel()
+		self.assertEqual(frappe.db.get_value("Student", self.s26.name, "oc_academic_status"), "Active")
+
+	def test_a_break_before_admission_is_refused(self):
+		# batch 2026: the lifecycle refuses a break dated before the student's record starts (L-01)
+		study_break = self.study_break(self.s26, "2025-06-01", "2026-05-31")
+		with self.assertRaisesRegex(frappe.ValidationError, "before the last status change"):
+			self.approve_fully(study_break)
+		self.assertEqual(frappe.db.get_value("Student", self.s26.name, "oc_academic_status"), "Active")
+		self.assertFalse(frappe.db.exists(LOG, {"student": self.s26.name, "to_status": "On Break"}))
 
 	def test_a_break_before_admission_has_no_cohort(self):
-		study_break = self.approve_fully(self.study_break(self.s26, "2025-06-01", "2026-05-31"))  # batch 2026
+		# a break recorded before L-01 (no lifecycle date check) is still refused a rejoin
+		study_break = self.study_break(self.s26, "2025-06-01", "2026-05-31")
+		frappe.db.delete(LOG, {"student": self.s26.name})
+		study_break = self.approve_fully(study_break)
 		with self.assertRaisesRegex(frappe.ValidationError, "admission"):
 			self.rejoin(study_break)
 

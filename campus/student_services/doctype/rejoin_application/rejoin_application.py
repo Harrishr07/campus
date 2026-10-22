@@ -10,8 +10,9 @@ Bridge courses listed here are registered, kind Bridge, once offered in a term; 
 (student_services.api.pending_bridge_courses). One rejoin per break. Approval runs through the approval engine
 (seeded policy: HOD recommendation, then Principal approval); with no policy it is never submitted (fail
 closed). Final approval submits it, which changes the regulation when it differs from the student's current one
-and restores the academic status from before the break. A rejoin is not cancelled: the Dean Academics corrects a
-regulation with Change Regulation.
+and moves the student back to the lifecycle status from before the break, from the rejoin date (M05-09). A rejoin
+after a break is not a readmission (Readmitted follows a discontinuation or withdrawal). A rejoin is not
+cancelled: the Dean Academics corrects a regulation with Change Regulation.
 """
 
 import frappe
@@ -21,7 +22,8 @@ from frappe.permissions import has_user_permission
 from frappe.utils import getdate
 
 from campus.campus_platform.api import ApprovableDocument, apply_regulation_change, get_regulation, resolve_regulation
-from campus.student_services import student_records, withdrawal_rules
+from campus.student_services import lifecycle, student_records, withdrawal_rules
+from campus.student_services.lifecycle_rules import ACTIVE
 
 DOCTYPE, BREAK = "Rejoin Application", "Break of Study"
 PLACEMENT_FIELDS = ("from_regulation", "to_regulation", "from_batch", "to_batch")
@@ -61,8 +63,10 @@ class RejoinApplication(ApprovableDocument, Document):
 				_("Rejoin {0} after break of study {1}").format(self.name, self.break_of_study),
 				", ".join(row.course for row in self.bridge_courses) or None,
 			)
-		status = frappe.db.get_value(BREAK, self.break_of_study, "previous_status") or "Active"
-		frappe.db.set_value("Student", self.student, {"oc_batch": self.to_batch, "oc_academic_status": status})
+		frappe.db.set_value("Student", self.student, "oc_batch", self.to_batch)
+		status = frappe.db.get_value(BREAK, self.break_of_study, "previous_status") or ACTIVE
+		reason = _("Rejoined after break of study {0}").format(self.break_of_study)
+		lifecycle.transition(self.student, status, self.rejoin_date, reason, self)
 
 	def before_cancel(self):
 		frappe.throw(_("A rejoin cannot be cancelled; the Dean Academics corrects the regulation with Change Regulation."))

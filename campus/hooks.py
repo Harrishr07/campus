@@ -214,6 +214,8 @@ doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.
 doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
+doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
+doc_events["Student"]["after_insert"] = "campus.student_services.lifecycle.log_initial_status"
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {

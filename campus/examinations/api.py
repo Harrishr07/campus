@@ -55,6 +55,14 @@ def download_convocation_list(convocation_list):
 
 
 @frappe.whitelist(methods=["POST"])
+def graduate_convocation_list(convocation_list):
+	"""Record the list's Award Eligible graduates as Graduated from its convocation date (COE); returns how many (L-01)."""
+	from campus.examinations import convocation
+
+	return convocation.graduate(convocation_list)
+
+
+@frappe.whitelist(methods=["POST"])
 def rerun_progression(progression_run):
 	"""Queue a submitted Progression Run again (COE only, idempotent); returns the Bulk Run name."""
 	from campus.examinations import progression

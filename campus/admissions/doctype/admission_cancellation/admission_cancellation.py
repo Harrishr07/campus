@@ -19,6 +19,7 @@ from frappe.utils import getdate, today
 from campus.admissions import refund
 from campus.admissions.admit import check_company_access
 from campus.campus_finance import api as finance
+from campus.student_services.api import CANCELLED, transition
 
 
 class AdmissionCancellation(Document):
@@ -129,10 +130,15 @@ def cancel_enrollment(program_enrollment):
 
 
 def close_records(cancellation):
-	"""Student leaves; applicant is closed. Plain writes: Student.validate would put the applicant back to Admitted."""
+	"""Student leaves (lifecycle Cancelled from the cancellation date, M05-09); applicant is closed. Plain writes:
+	Student.validate would put the applicant back to Admitted."""
 	frappe.db.set_value(
 		"Student", cancellation.student,
 		{"enabled": 0, "date_of_leaving": cancellation.cancellation_date, "reason_for_leaving": cancellation.reason},
+	)  # fmt: skip
+	transition(
+		cancellation.student, CANCELLED, cancellation.cancellation_date, cancellation.reason, cancellation,
+		program_enrollment=cancellation.program_enrollment,
 	)  # fmt: skip
 	if cancellation.applicant:
 		frappe.db.set_value("Student Applicant", cancellation.applicant, "application_status", "Rejected")

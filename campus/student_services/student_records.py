@@ -9,10 +9,10 @@ import frappe
 from frappe import _
 
 from campus.campus_platform.api import find_policy, get_rule, resolve_position
-from campus.student_services import withdrawal_rules
+from campus.student_services import lifecycle_rules, withdrawal_rules
 
 RULE_SET = "Exam Rule Set"
-ON_BREAK = "Break of Study"  # the academic status an approved Break of Study sets
+ON_BREAK = lifecycle_rules.ON_BREAK  # the lifecycle status an approved Break of Study sets
 
 
 def rule_values(student):
@@ -151,7 +151,7 @@ def cohort_academic_year(batch, batch_start, cohort_year):
 
 
 def on_break(student):
-	"""True when the student's academic status is Break of Study (exam registration skips them)."""
+	"""True when the student's lifecycle status is On Break (exam registration skips them)."""
 	return frappe.db.get_value("Student", student, "oc_academic_status") == ON_BREAK
 
 

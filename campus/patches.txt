@@ -31,3 +31,4 @@ campus.patches.bind_course_registrations_to_enrollment
 campus.patches.seed_mandatory_approval_doctypes
 campus.patches.enable_strict_seat_matrix
 campus.patches.report_blank_exam_types
+campus.patches.student_lifecycle_status
