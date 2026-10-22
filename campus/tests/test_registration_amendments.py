@@ -6,9 +6,9 @@ from frappe.utils import add_days, today
 
 from campus.tests.test_registration import COLLEGE, PROGRAM, RegistrationTestCase
 from campus.tests.factories import make_user
-from campus.tests.test_regulation import enroll, make_year
+from campus.tests.test_regulation import enroll, make_year, year_name
 
-RE_ENROLMENT_YEARS = iter(("2020", "2021", "2023", "2026"))  # years make_year knows; the first enrolment is 2022
+RE_ENROLMENT_YEARS = ("2020", "2021", "2023", "2026")  # years make_year knows; the first enrolment is 2022
 
 
 class TestEnrollmentBinding(RegistrationTestCase):
@@ -26,7 +26,8 @@ class TestEnrollmentBinding(RegistrationTestCase):
 
 	def re_enroll(self, student):
 		"""Enroll the student again, in a year not used before."""
-		year = next(RE_ENROLMENT_YEARS)
+		taken = frappe.get_all("Program Enrollment", {"student": self.students[student].name}, pluck="academic_year")
+		year = next(y for y in RE_ENROLMENT_YEARS if year_name(y) not in taken)
 		make_year(year)
 		return enroll(self.students[student], PROGRAM, year).name
 
@@ -92,6 +93,12 @@ class TestCumulativeCredits(RegistrationTestCase):
 	def test_excluded_types_stay_excluded_cumulatively(self):
 		self.registration([("REG A", "Regular"), ("REG B", "Regular")], student=3).submit()
 		self.assertEqual(self.registration([("REG E", "Arrear")], student=3).total_credits, 0)
+
+	def test_a_submitted_drop_does_not_free_the_credits_it_drops(self):
+		self.regular("REG C", student=3).submit()  # 3
+		self.registration([("REG C", "Dropped")], student=3).submit()  # counts 0, frees nothing
+		with self.assertRaisesRegex(frappe.ValidationError, "39 credits registered"):
+			self.regular("REG A", "REG B", student=3)  # 3 + 36
 
 	def test_other_students_credits_do_not_count(self):
 		self.regular("REG A", "REG B", student=2).submit()
@@ -167,7 +174,23 @@ class TestLateRegistration(RegistrationTestCase):
 
 	def test_late_registration_without_a_reason_is_refused(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "not open"):
-			self.late()
+			self.late(late_reason=None)
+
+	def test_backdating_into_an_open_past_window_needs_the_late_authorisation(self):
+		self.window.db_set({"opens_on": "2022-06-01", "closes_on": "2022-06-20"})
+		self.window.reload()
+		with self.assertRaisesRegex(frappe.ValidationError, "not open"):
+			self.registration([("REG C", "Regular")], date="2022-06-10", late_reason=None)
+		self.assertEqual(self.regular("REG C", date="2022-06-10", late_reason="Backdated").late_approved_by, "Administrator")
+
+	def test_adding_a_course_to_a_late_draft_needs_the_late_role_again(self):
+		doc = self.late(late_reason="Medical leave in the window")
+		make_user("reg-late-clerk@example.com", [COLLEGE])
+		frappe.set_user("reg-late-clerk@example.com")
+		doc = frappe.get_doc("Course Registration", doc.name)
+		doc.append("items", {"course": "REG D", "registration_type": "Regular"})
+		with self.assertRaisesRegex(frappe.ValidationError, "not open"):
+			doc.save()
 
 	def test_authorised_late_registration_keeps_approver_and_reason(self):
 		doc = self.late(late_reason="Medical leave in the window")

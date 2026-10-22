@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
@@ -167,11 +167,16 @@ class RegistrationTestCase(CampusTestCase):
 		).insert()  # fmt: skip
 
 	def registration(self, rows, student=0, semester=5, date=IN_WINDOW, term=None, **extra):
-		"""Insert (not submit) a Course Registration; `rows` are (course, type) pairs."""
+		"""Insert (not submit) a Course Registration; `rows` are (course, type) pairs.
+
+		The window is checked on today as well (M03-08), so a registration dated in the 2022 test window is
+		backdated and carries a late reason unless the test passes `late_reason` itself (None: no reason).
+		"""
+		backdated = {} if str(date) == today() else {"late_reason": "Backdated into the test window"}
 		return frappe.get_doc(
 			{
 				"doctype": "Course Registration", "student": self.students[student].name, "semester": semester,
-				"academic_term": term or self.odd, "registration_date": date,
+				"academic_term": term or self.odd, "registration_date": date, **backdated,
 				"items": [{"course": c, "registration_type": t} for c, t in rows], **extra,
 			}
 		).insert()  # fmt: skip
@@ -280,11 +285,11 @@ class TestRegistrationRules(RegistrationTestCase):
 		self.assert_rejected([("REG A", "Regular"), ("REG C", "Regular")], r"the maximum is 20")
 
 	def test_registration_outside_the_window_is_rejected(self):
-		self.assert_rejected([("REG C", "Regular")], "not open", date="2022-06-21")
+		self.assert_rejected([("REG C", "Regular")], "not open", date="2022-06-21", late_reason=None)
 
 	def test_registration_without_a_window_is_rejected(self):
 		self.window.delete()
-		self.assert_rejected([("REG C", "Regular")], "not open")
+		self.assert_rejected([("REG C", "Regular")], "not open", late_reason=None)
 
 	def test_duplicate_course_in_one_registration_is_rejected(self):
 		self.assert_rejected([("REG C", "Regular"), ("REG C", "Regular")], "listed twice")
@@ -410,7 +415,8 @@ class TestPermissions(RegistrationTestCase):
 			frappe.get_doc("Course Registration", doc.name).submit()
 
 	def test_user_of_the_same_company_can_register(self):
-		frappe.set_user(self.user("reg-insider@example.com", [COLLEGE], "Academics User"))
+		# Dean Academics may authorise the backdated test registration
+		frappe.set_user(self.user("reg-insider@example.com", [COLLEGE], "Dean Academics"))
 		self.assertEqual(self.regular("REG C").docstatus, 0)
 
 	def test_offering_of_another_company_is_rejected(self):

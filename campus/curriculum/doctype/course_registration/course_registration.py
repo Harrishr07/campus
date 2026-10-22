@@ -195,17 +195,15 @@ class CourseRegistration(ApprovableDocument, Document):
 		return windows[0] if windows else None
 
 	def check_window(self, window):
-		"""Registering courses needs an open window on the registration date, and again on the day of every
-		later save of the draft (amendments, re-saves). Drops are governed by the drop deadline.
+		"""Registering courses needs an open window on the registration date and on the day of the save, so
+		backdating, re-saving and amending a draft all meet the deadline. Drops are governed by the drop deadline.
 
 		Submitting is not checked: approval may complete after the window closes. A closed window is
 		overridden only by a late registration: a reason and Dean Academics' authorisation.
 		"""
 		if self.docstatus != 0 or all(i.registration_type == "Dropped" for i in self.items):
 			return
-		dates = [getdate(self.registration_date)]
-		if not self.is_new() or self.amended_from:
-			dates.append(getdate())
+		dates = [getdate(self.registration_date), getdate()]
 		closed = [d for d in dates if not window or not getdate(window.opens_on) <= d <= getdate(window.closes_on)]
 		if closed:
 			return self.authorise_late(closed[0])
@@ -213,8 +211,14 @@ class CourseRegistration(ApprovableDocument, Document):
 			self.late_approved_by = None
 
 	def authorise_late(self, date):
-		"""Keep the stored authorisation of a saved draft, else take the session user if they may authorise."""
-		kept = bool(self.late_approved_by) and not self.is_new() and not self.has_value_changed("late_approved_by")
+		"""Keep the stored authorisation of a saved draft whose courses are unchanged, else take the session user
+		if they may authorise."""
+		kept = (
+			bool(self.late_approved_by)
+			and not self.is_new()
+			and not self.has_value_changed("late_approved_by")
+			and not self.courses_changed()
+		)
 		if self.late_reason and (kept or LATE_ROLES & set(frappe.get_roles())):
 			self.late_approved_by = self.late_approved_by if kept else frappe.session.user
 			return
@@ -223,6 +227,11 @@ class CourseRegistration(ApprovableDocument, Document):
 				"Registration for {0} is not open on {1}. A late registration needs a reason and the authorisation of Dean Academics."
 			).format(frappe.bold(self.academic_term), date)
 		)
+
+	def courses_changed(self):
+		before = self.get_doc_before_save()
+		courses = lambda doc: [(i.course, i.registration_type) for i in doc.items]  # noqa: E731
+		return not before or courses(before) != courses(self)
 
 	def rule_problems(self, window):
 		rule = self.rule
@@ -252,7 +261,9 @@ class CourseRegistration(ApprovableDocument, Document):
 		return rules.honours_problems(kinds, cgpa(self.student, courses), arrear_courses(self.student), self.rule, prefix)
 
 	def credit_problems(self, window, lock):
-		"""The credit cap over the student's other submitted registrations of the term plus this one.
+		"""The credit cap over the student's other submitted registrations of the term plus this one. Every
+		submitted row counts, so a submitted drop does not free the credits of the registration it drops
+		(conservative; a drop row itself counts 0 only where the rule excludes Dropped).
 		With `lock` the Student row is locked and the others are read with locking reads, so two registrations
 		submitted at once cannot both pass."""
 		rule = self.rule

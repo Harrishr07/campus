@@ -300,7 +300,7 @@ def register_courses(students, term):
 		frappe.get_doc(
 			{
 				"doctype": "Course Registration", "student": student, "academic_term": term, "semester": SEMESTER,
-				"registration_date": registration_date,
+				"registration_date": registration_date, "late_reason": "Demo data is seeded after the window closed",
 				"items": [{"course": course, "registration_type": "Regular"} for course, *_rest in COURSES],
 			}
 		).insert(ignore_permissions=True).submit()
