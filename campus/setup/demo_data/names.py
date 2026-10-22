@@ -1,6 +1,6 @@
 """PR-03 Synthetic people: names, birth dates and numbers drawn from a seeded generator, so a seed always gives the same
 people and nobody real is ever described. Phone numbers start with 0 (never a dialable Indian mobile; the enquiry
-acknowledgement also skips them); e-mail addresses use the profile's reserved example domain."""
+acknowledgement also skips them); e-mail addresses use the profile's example domain (example.edu is not an IANA-reserved name; nothing is ever sent to it)."""
 
 import hashlib
 import random
@@ -43,9 +43,12 @@ class People:
 
 	def __init__(self, seed, domain):
 		self.seed, self.domain = seed, domain
-		self.taken, self.mobiles = set(), set()
+		self.taken, self.mobiles, self.made = set(), set(), {}
 
 	def make(self, key, youngest_year, oldest_year):
+		"""The person of `key`; asking again for a key returns the same person."""
+		if key in self.made:
+			return self.made[key]
 		person = Person(self.seed, key, youngest_year, oldest_year, self.domain)
 		attempt = 0
 		while (person.full_name, person.date_of_birth) in self.taken or person.mobile in self.mobiles:
@@ -54,4 +57,5 @@ class People:
 			person.key, person.email = key, f"{key}@{self.domain}"
 		self.taken.add((person.full_name, person.date_of_birth))
 		self.mobiles.add(person.mobile)
+		self.made[key] = person
 		return person

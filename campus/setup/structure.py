@@ -12,6 +12,17 @@ from campus.setup.records import same_value, upsert
 DEFAULT_CURRENCY = "INR"
 
 
+def ensure_erpnext_fixtures(out):
+	"""A site made without the setup wizard lacks the masters a Company needs (the Transit warehouse type, UOMs, customer and
+	item groups, modes of payment): install ERPNext's own wizard fixtures, which skip whatever exists."""
+	if frappe.db.exists("Warehouse Type", "Transit"):
+		return
+	from erpnext.setup.setup_wizard.operations.install_fixtures import install
+
+	install("India")
+	out.created["ERPNext fixtures"] += 1
+
+
 def ensure_companies(profile, out):
 	"""(trust, college) company names; the trust is None when the profile has none."""
 	trust = profile.get("trust")
@@ -51,6 +62,30 @@ def ensure_calendar(profile, out):
 				out, "Academic Term", {"academic_year": year["name"], "term_name": term["name"]},
 				{"term_start_date": term["start"], "term_end_date": term["end"]},
 			)
+
+
+def ensure_holiday_list(profile, companies, out):
+	"""A Holiday List over the profile's academic years (Sundays off), the default of every company of the kit. Education's
+	attendance and leave validation read the default company's list, which is the trust when the site has one."""
+	years = profile.get("academic_years") or []
+	if not years:
+		return
+	abbr = frappe.db.get_value("Company", companies[-1], "abbr")
+	name = f"{abbr} Holidays"
+	if not frappe.db.exists("Holiday List", name):
+		holidays = frappe.get_doc(
+			{
+				"doctype": "Holiday List", "holiday_list_name": name, "weekly_off": "Sunday",
+				"from_date": min(y["start"] for y in years), "to_date": max(y["end"] for y in years),
+			}
+		)
+		holidays.get_weekly_off_dates()
+		holidays.insert(ignore_permissions=True)
+		out.created["Holiday List"] += 1
+	for company in companies:
+		if not frappe.db.get_value("Company", company, "default_holiday_list"):
+			frappe.db.set_value("Company", company, "default_holiday_list", name)
+			out.updated["Company"] += 1
 
 
 def department_name(department, company):

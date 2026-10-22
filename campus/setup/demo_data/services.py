@@ -9,15 +9,15 @@ from campus.campus_platform.approvals import request_approval
 from campus.iqac import compute
 from campus.iqac.setup import FRAMEWORK, seed_framework
 from campus.setup import people
-from campus.setup.demo_data.batch import BATCH_YEAR, Cohort
+from campus.setup.demo_data.batch import BATCH_YEAR, class_group_name
 from campus.setup.records import upsert
 from campus.student_services.api import allocate_mentors
 
 
 def load(ctx):
-	cohort = Cohort(ctx)
+	cohort = ctx.cohort
 	cse = next(p for p in ctx.profile["programmes"] if p["abbr"] == "CSE")
-	group = f"{frappe.db.get_value('Company', ctx.college, 'abbr')} {cse['name']} {BATCH_YEAR} A"
+	group = class_group_name(ctx, cse)
 	students = [s for s in cohort.students(ctx, cse) if s]
 	positions(ctx, group)
 	mentoring(ctx, group, students)
@@ -53,9 +53,9 @@ def mentoring(ctx, group, students):
 	if not frappe.db.exists("Counselling Note", {"student": student}):
 		frappe.get_doc(
 			{
-				"doctype": "Counselling Note", "student": student, "note_date": "2026-09-10", "category": "Academic", "mentor": mentor,
+				"doctype": "Counselling Note", "student": student, "note_date": add_days(getdate(), -40), "category": "Academic", "mentor": mentor,
 				"author": user, "notes": "Discussed the semester 3 timetable and study plan. Student is regular and confident.",
-				"is_confidential": 0, "follow_up_date": "2026-11-05",
+				"is_confidential": 0, "follow_up_date": add_days(getdate(), 14),
 			}
 		).insert(ignore_permissions=True)
 		ctx.out.created["Counselling Note"] += 1
@@ -63,7 +63,7 @@ def mentoring(ctx, group, students):
 	if guardian and not frappe.db.exists("Parent Interaction", {"student": student}):
 		frappe.get_doc(
 			{
-				"doctype": "Parent Interaction", "student": student, "guardian": guardian, "interaction_date": "2026-09-18",
+				"doctype": "Parent Interaction", "student": student, "guardian": guardian, "interaction_date": add_days(getdate(), -30),
 				"mode": "Phone", "recorded_by": user, "outcome": "Informed the parent about the CIA schedule and attendance so far.",
 			}
 		).insert(ignore_permissions=True)
@@ -71,9 +71,8 @@ def mentoring(ctx, group, students):
 
 
 def scholarship(ctx, student):
-	"""An institutional merit scholarship, sent to the Principal for sanction through the approval engine (pending).
-
-	The Principal role cannot read a Scholarship Application, so the sanction is not made here: see the report notes."""
+	"""An institutional merit scholarship, sent to the Principal for sanction through the approval engine (left pending: the
+	presenter sanctions it from the approval inbox)."""
 	abbr = frappe.db.get_value("Company", ctx.college, "abbr")
 	account = f"Scholarship Expense - {abbr}"
 	if not frappe.db.exists("Account", account):
@@ -130,8 +129,8 @@ def placement(ctx, cohort):
 		drive = frappe.get_doc(
 			{
 				"doctype": "Placement Drive", "drive_title": title, "company": ctx.college, "academic_year": "2026-27",
-				"recruiter": recruiter, "drive_date": add_days(getdate(), 30), "status": "Open", "venue": "Seminar Hall",
-				"registration_deadline": add_days(now_datetime(), 20), "min_cgpa": 6.5, "max_standing_arrears": 1,
+				"recruiter": recruiter, "drive_date": add_days(getdate(), 60), "status": "Open", "venue": "Seminar Hall",
+				"registration_deadline": add_days(now_datetime(), 45), "min_cgpa": 6.5, "max_standing_arrears": 1,
 				"allow_arrear_history": 1, "roles": [{"role_title": "Software Engineer", "openings": 10, "ctc": 450000}],
 				"programs": [{"program": "B.E. CSE"}, {"program": "B.Tech IT"}], "batches": [{"batch": BATCH_YEAR}],
 				"rounds": [{"round_no": 1, "round_name": "Aptitude"}, {"round_no": 2, "round_name": "Interview"}],

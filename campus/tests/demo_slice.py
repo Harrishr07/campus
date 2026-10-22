@@ -26,9 +26,9 @@ from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.verification import issue
 from campus.curriculum.offerings import generate_offerings
 from campus.curriculum.rule_seed import CREDIT_PER_PERIOD, REGISTRATION
-from campus.examinations import results
 from campus.iqac import compute
 from campus.iqac.setup import FRAMEWORK, seed_framework
+from campus.setup.demo_data.shortcuts import publish_results  # the demo's one skipped control, owned there
 from campus.tests import demo
 from campus.tests.finance_factories import make_fee_structure, make_finance_company
 
@@ -415,20 +415,6 @@ def enter_marks(session, students, offerings):
 		frappe.get_doc(
 			{"doctype": "Mark Sheet Entry", "exam_session": session, "course_offering": offering, "marks": rows}
 		).insert(ignore_permissions=True)
-
-
-def publish_results(session, students):
-	"""Run the results for the five students (as the queued Result Run would), then publish with publish_at in the past."""
-	doc = frappe.get_doc("Exam Session", session)
-	if doc.status == "Published":
-		return
-	for student in students:
-		results.compute_student_result(student, session)
-	doc.status = "Published"
-	doc.publish_at = add_days(now_datetime(), -1)
-	doc.exam_end = doc.exam_end or getdate(add_days(now_datetime(), -21))  # results 20 days after the last exam (AQAR 2.5.1)
-	doc.flags.passing_board_approval = True  # the thin-slice demo has no Passing Board meeting (P2-T19 publish_results)
-	doc.save(ignore_permissions=True)
 
 
 def issue_grade_sheet(session, student):

@@ -4,21 +4,25 @@ from them (`get_payment_entry`), so the receivable, the student's fee ledger and
 import frappe
 from frappe.utils import flt, getdate
 
-PAID_IN_FULL, PAID_IN_PART = 0.6, 0.1  # of the invoices, by position; the rest stays outstanding
+from campus.setup.demo_data import intake
+
+PAID_IN_FULL, PAID_IN_PART = (1, 2, 3, 4), (5,)  # applicant ordinals (see intake.ORDINALS); joiners 6 and 7 stay outstanding
 
 
 def load(ctx):
-	"""Pay the open admission invoices of the college: the first 60 percent in full, the next 10 percent half, the rest not at all."""
+	"""Pay the open admission invoices of the college by the applicant's ordinal in the programme, so adding joiners later changes
+	nobody's payment: ordinals 1-4 in full, 5 half, the rest not at all."""
+	ordinals = {a.person.email: a.ordinal for a in intake.plan(ctx)}
 	invoices = frappe.get_all(
 		"Sales Invoice",
 		{"company": ctx.college, "docstatus": 1, "is_return": 0, "oc_program_enrollment": ["is", "set"]},
 		["name", "student", "grand_total", "outstanding_amount"], order_by="creation, name", limit=0,
 	)  # fmt: skip
-	for position, invoice in enumerate(invoices):
-		share = position / len(invoices)
-		if share < PAID_IN_FULL:
+	for invoice in invoices:
+		ordinal = ordinals.get(frappe.db.get_value("Student", invoice.student, "student_email_id"))
+		if ordinal in PAID_IN_FULL:
 			pay(ctx, invoice, invoice.grand_total)
-		elif share < PAID_IN_FULL + PAID_IN_PART:
+		elif ordinal in PAID_IN_PART:
 			pay(ctx, invoice, round(invoice.grand_total / 2))
 
 

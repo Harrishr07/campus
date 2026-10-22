@@ -201,6 +201,6 @@ def process(ctx, applicant, name):
 	if status == "Approved":
 		admit(name)
 		ctx.out.created["Student"] += 1
-	if applicant.end == "Joined" and frappe.db.get_value("Student", {"student_applicant": name}, "oc_academic_status") in ("Admitted", "Joined"):
+	if applicant.end == "Joined" and frappe.db.get_value("Student", {"student_applicant": name}, "oc_academic_status") == "Admitted":
 		confirm_joining(name)
 		ctx.out.created["Program Enrollment"] += 1

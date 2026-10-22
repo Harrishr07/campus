@@ -35,31 +35,77 @@ class Context:
 		self.out = Outcome()
 		self.people = People(seed, profile["user_domain"])
 		self.timings = {}
+		self._cohort = None
+
+	@property
+	def cohort(self):
+		"""The 2025 batch, built once per load (its people are drawn from the shared generator)."""
+		if self._cohort is None:
+			from campus.setup.demo_data.batch import Cohort
+
+			self._cohort = Cohort(self)
+		return self._cohort
+
+
+def check_allowed():
+	if not pilot_people.test_passwords_allowed():
+		frappe.throw(_("The demo data is for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config."))
 
 
 def load(profile="sxcce", seed=2026, steps=None):
 	"""Load the dataset of `profile` for `seed`; returns {created, updated, notes, seconds}. `steps` limits the run to some of STEPS."""
-	if not pilot_people.test_passwords_allowed():
-		frappe.throw(_("The demo data is for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config."))
+	check_allowed()
 	ctx = Context(load_profile(profile), int(seed))
-	if not frappe.db.exists("Company", ctx.college):
-		frappe.throw(_("Run the pilot setup kit first: company {0} does not exist (campus.setup.pilot.setup_college).").format(ctx.college))
+	check_kit(ctx)
 	run_steps(ctx, steps or STEPS)
 	return {**ctx.out.as_dict(), "seconds": ctx.timings}
+
+
+def check_kit(ctx):
+	"""What the pilot setup kit must have provided, named in one message before anything is written."""
+	missing = []
+	company = frappe.db.get_value(
+		"Company", ctx.college,
+		["default_receivable_account", "default_income_account", "default_cash_account", "default_bank_account", "default_holiday_list"],
+		as_dict=True,
+	)
+	if not company:
+		frappe.throw(_("Run the pilot setup kit first: company {0} does not exist (campus.setup.pilot.setup_college).").format(ctx.college))
+	for field in ("default_receivable_account", "default_income_account", "default_holiday_list"):
+		if not company[field]:
+			missing.append(f"{ctx.college}: {field}")
+	if not (company.default_cash_account or company.default_bank_account):
+		missing.append(f"{ctx.college}: a default cash or bank account")
+	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
+		missing.append("Selling Settings: selling price list")
+	if not frappe.db.exists("Fee Structure", {"company": ctx.college, "docstatus": 1}):
+		missing.append(f"{ctx.college}: submitted Fee Structures")
+	for year in ctx.profile["academic_years"]:
+		for term in year.get("terms", []):
+			if not frappe.db.exists("Academic Term", {"academic_year": year["name"], "term_name": term["name"]}):
+				missing.append(f"Academic Term {year['name']} {term['name']}")
+	if missing:
+		frappe.throw(_("Run the pilot setup kit (campus.setup.pilot.setup_college) first; the site lacks: {0}.").format("; ".join(missing)))
 
 
 def run_steps(ctx, steps):
 	from campus.setup.demo_data import batch, curriculum, fees, intake, services, staff, term
 
+	check_allowed()
 	modules = {
 		"staff": staff, "intake": intake, "fees": fees, "curriculum": curriculum, "batch": batch, "term": term, "services": services,
 	}
+	unknown = [step for step in steps if step not in modules]
+	if unknown:
+		frappe.throw(_("Unknown steps {0}; the steps are {1}.").format(", ".join(unknown), ", ".join(STEPS)))
 	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode would skip DocType defaults
+	user = frappe.session.user
 	frappe.set_user("Administrator")
 	try:
-		for step in steps:
+		for step in (s for s in STEPS if s in steps):  # always in dependency order
 			started = time.time()
 			modules[step].load(ctx)
 			ctx.timings[step] = round(time.time() - started)
 	finally:
 		frappe.flags.in_import = was_importing
+		frappe.set_user(user)

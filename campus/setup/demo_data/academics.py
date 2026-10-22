@@ -5,13 +5,12 @@ finds its record first, so a term is built once however often the dataset is loa
 import random
 
 import frappe
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days
 
 from campus.curriculum.offerings import generate_offerings
-from campus.examinations import results
 from campus.examinations.courses import offering_course, student_limits
+from campus.setup.demo_data import shortcuts
 from campus.setup.demo_data.curriculum import semester_courses
-from campus.tests import demo_slice
 
 LATE_REASON = "Demo data is loaded after the registration window closed"
 
@@ -21,7 +20,10 @@ def term_of(year, term_name):
 
 
 def curriculum_of(ctx, programme):
-	return frappe.db.get_value("Curriculum", {"program": programme["name"], "status": "Effective"})
+	name = frappe.db.get_value("Curriculum", {"program": programme["name"], "status": "Effective"})
+	if not name:
+		frappe.throw(f"{programme['name']} has no Effective curriculum: load the 'curriculum' step before the steps that need it.")
+	return name
 
 
 def make_offerings(ctx, programme, term, semester):
@@ -101,14 +103,11 @@ def ability_of(ctx, student):
 
 
 def publish_term(ctx, session, students, exam_end):
-	"""Run the results of `students` and publish the session (the thin-slice demo's route: no Passing Board meeting), dated like a
-	real term: results fifteen days after the last examination, and no release notice sent for a past term."""
+	"""Run the results of `students` and publish the session without a Passing Board meeting (`shortcuts.publish_results`, the
+	demo's one skipped control), dated like a real term."""
 	if frappe.db.get_value("Exam Session", session, "status") == "Published":
 		return
 	frappe.db.set_value("Exam Session", session, "exam_end", exam_end)
-	demo_slice.publish_results(session, students)
-	frappe.db.set_value(
-		"Exam Session", session,
-		{"publish_at": f"{add_days(getdate(exam_end), 15)} 10:00:00", "results_notified_on": frappe.utils.now_datetime()},
-	)
+	shortcuts.publish_results(session, students)
+	shortcuts.date_publication(session, exam_end)
 	ctx.out.created["Student Result"] += len(students)

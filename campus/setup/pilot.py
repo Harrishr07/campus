@@ -2,7 +2,7 @@
 
     bench --site <site> execute campus.setup.pilot.setup_college --kwargs '{"profile": "sxcce"}'
 
-Builds, in order: trust and college companies, academic calendar, departments, programmes, the regulation with its
+Builds, in order: ERPNext's wizard fixtures if the site has none, trust and college companies, academic calendar, a holiday list, departments, programmes, the regulation with its
 rule records (exam rules from `campus.examinations.seed`), student categories, quotas and seat matrices, fee
 structures, the selling price list, approval policies, the shared service agreements, and one user per role with its company permission.
 Re-running changes nothing: records are found by natural key and only differing values are updated (locked records
@@ -34,8 +34,10 @@ def setup_college(profile="sxcce", test_passwords=None):
 	out = Outcome()
 	result = {"reset_links": {}}
 	ensure_seed_positions()
+	structure.ensure_erpnext_fixtures(out)
 	trust, college = structure.ensure_companies(profile, out)
 	structure.ensure_calendar(profile, out)
+	structure.ensure_holiday_list(profile, [c for c in (trust, college) if c], out)
 	structure.ensure_departments(profile, college, out)
 	structure.ensure_programmes(profile, college, out)
 	structure.ensure_regulation(profile, college, out)

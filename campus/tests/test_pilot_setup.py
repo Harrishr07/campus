@@ -64,7 +64,7 @@ class TestPilotSetup(IntegrationTestCase):
 		self.assertEqual(counts(), self.after_first)
 
 	def test_first_run_built_the_structure(self):
-		self.assertTrue(self.first["created"]["Company"] >= 1)
+		self.assertTrue(frappe.db.exists("Company", self.college))
 		self.assertEqual(frappe.db.get_value("Company", self.college, "parent_company"), SXCCE["trust"]["name"])
 		self.assertEqual(frappe.db.count("Program", {"oc_company": self.college}), 6)
 		self.assertEqual(frappe.db.get_value("Program", "B.Tech IT", "program_abbreviation"), "IT")
@@ -117,6 +117,18 @@ class TestPilotSetup(IntegrationTestCase):
 		with patch.object(frappe.db, "set_single_value") as write:
 			fees.ensure_selling_defaults()
 		write.assert_not_called()
+
+	def test_every_company_of_the_kit_has_a_holiday_list_with_sundays_off(self):
+		trust, college = frappe.db.get_value("Company", self.college, "parent_company"), self.college
+		lists = {frappe.db.get_value("Company", company, "default_holiday_list") for company in (trust, college)}
+		self.assertEqual(len(lists), 1)
+		holiday_list = lists.pop()
+		self.assertTrue(holiday_list)
+		self.assertTrue(frappe.db.exists("Holiday List", {"name": holiday_list, "weekly_off": "Sunday"}))
+		self.assertTrue(frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": "2026-07-05"}))  # a Sunday
+
+	def test_wizard_fixtures_the_company_needs_are_installed(self):
+		self.assertTrue(frappe.db.exists("Warehouse Type", "Transit"))
 
 	def test_trust_provides_hostel_and_transport(self):
 		for service in ("Hostel", "Transport"):

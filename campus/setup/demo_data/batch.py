@@ -49,7 +49,7 @@ def pilot_email(ctx):
 
 
 def load(ctx):
-	cohort = Cohort(ctx)
+	cohort = ctx.cohort
 	regulation = regulation_name(ctx.profile["regulation"]["code"], ctx.college)
 	for programme, number, person in cohort.entries:
 		student = student_of(ctx, programme, number, person)
@@ -121,9 +121,12 @@ def ensure_enrollment(ctx, student, programme, number, year, date):
 	ctx.out.created["Program Enrollment"] += 1
 
 
+def class_group_name(ctx, programme):
+	return f"{frappe.db.get_value('Company', ctx.college, 'abbr')} {programme['name']} {BATCH_YEAR} A"
+
+
 def ensure_class_group(ctx, programme, students):
-	abbr = frappe.db.get_value("Company", ctx.college, "abbr")
-	name = f"{abbr} {programme['name']} {BATCH_YEAR} A"
+	name = class_group_name(ctx, programme)
 	if frappe.db.exists("Student Group", {"student_group_name": name}):
 		return name
 	frappe.get_doc(
