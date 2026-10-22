@@ -60,6 +60,11 @@ DocType,Attainment Policy,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,HOD,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
+DocType,Attendance Correction Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Attendance Correction Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Attendance Correction Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Attendance Correction Request,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Attendance Correction Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Attendance Eligibility Run,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
 DocType,Attendance Eligibility Run,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attendance Eligibility Run,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
@@ -135,12 +140,14 @@ DocType,CO-PO Matrix,,HOD,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,CO-PO Matrix,,Instructor,0,1,1,1,0,1,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,CO-PO Matrix,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Campus Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0
+DocType,Campus Test Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,1,1,0,0,0
 DocType,Candidate Duplicate Review,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Candidate Duplicate Review,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Certificate Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Certificate Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Certificate Request,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1
 DocType,Certificate Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+DocType,Certificate Request,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Certificate Request,,Student,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1
 DocType,Certificate Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Certificate Type,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
@@ -274,6 +281,7 @@ DocType,Exam Withdrawal Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,
 DocType,Examiner Remuneration Claim,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Examiner Remuneration Claim,,Accounts User,0,1,0,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Examiner Remuneration Claim,,COE,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Examiner Remuneration Claim,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Examiner Remuneration Claim,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Export Template,,IQAC Coordinator,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Export Template,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
@@ -426,6 +434,9 @@ DocType,Laboratory,,IQAC Coordinator,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Laboratory,,Lab In-charge,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Laboratory,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
 DocType,Laboratory Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Late Joining Request,,Admission Officer,0,1,1,1,0,1,1,1,1,0,0,0,1,0,0,0,1,0
+DocType,Late Joining Request,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Late Joining Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Lifecycle Transition,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
 DocType,Lifecycle Transition,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Lifecycle Transition,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
@@ -648,6 +659,7 @@ DocType,Sanctioned Post,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Scholarship Application,,Accounts Manager,0,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Scholarship Application,,Accounts User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Scholarship Application,,Dean Student Affairs,0,1,1,1,0,1,1,0,1,0,0,1,1,0,0,0,1,0
+DocType,Scholarship Application,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Scholarship Application,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Scholarship Scheme,,Accounts Manager,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Scholarship Scheme,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
@@ -745,6 +757,8 @@ DocType,Valuation Entry,,Examiner,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,0,1,0
 DocType,Valuation Entry,,System Manager,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
 DocType,Verifiable Document,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Verifiable Document,,Verification Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+Report,Admission No-Shows,Student,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Admission No-Shows,Student,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Admissions by Quota and Category,Program Enrollment,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Admissions by Quota and Category,Program Enrollment,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Admissions by Quota and Category,Program Enrollment,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

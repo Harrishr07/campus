@@ -295,7 +295,7 @@ def dry_run(fields):
 		doc._set_defaults()
 		doc.set_docstatus()
 		doc.check_if_latest()
-		doc.set_new_name()  # the checklist rows built by validate need a parent; the name goes back with the rollback
+		doc.name = "preview"  # the checklist rows built by validate need a parent; no naming series is touched
 		doc.set_parent_in_children()
 		doc._validate_links()
 		doc.run_before_save_methods()

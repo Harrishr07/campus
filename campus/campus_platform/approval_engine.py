@@ -100,21 +100,23 @@ def start_level(request, policy, doc, level_no):
 		level.approver_type, level.approver, doc, level.scope_field, level.limit_to_company
 	)
 	users = [u for u in users if u not in excluded]
-	unable = [u for u in users if not frappe.has_permission(doc.doctype, "read", user=u)]
-	if unable:
-		frappe.throw(
-			_("Approvers {0} cannot open {1} {2}; give their role read access to {1}.").format(
-				", ".join(unable), _(doc.doctype), doc.name
-			)
-		)
+	readable = [u for u in users if can_open_as_approver(doc, u)]
 	needed = max(level.min_approvals or 1, 1)
-	if len(users) < needed:
+	if len(readable) < needed:
+		unable = [u for u in users if u not in readable]
+		if unable:
+			frappe.throw(
+				_("Approvers {0} cannot open {1} {2}; give their role read access to {1}.").format(
+					", ".join(unable), _(doc.doctype), doc.name
+				)
+			)
 		frappe.throw(
 			_(
 				"Level {0} of approval policy {1} needs {2} approver(s) but {3} were found"
 				" (the requester and document owner cannot approve)."
-			).format(level_no, policy.name, needed, len(users))
+			).format(level_no, policy.name, needed, len(readable))
 		)
+	users = readable
 	request.current_level = level_no
 	request.level_started_at = now_datetime()
 	request.due_at = rules.due_at(request.level_started_at, level.sla_hours)
@@ -125,6 +127,16 @@ def start_level(request, policy, doc, level_no):
 		)
 	subject = _("Approval needed: {0} {1}").format(_(doc.doctype), doc.name)
 	notify(users, subject, _("Level {0}: {1}").format(level_no, level.title or level.approver_type), doc)
+
+
+def can_open_as_approver(doc, user):
+	"""Read access of `user` to `doc`, company scoping and permission hooks included, counting them as its approver
+	(`flags.approval_candidate`: a hook that shows a document to its handlers must show it to the one being appointed)."""
+	frappe.flags.approval_candidate = user
+	try:
+		return frappe.has_permission(doc.doctype, "read", doc=doc, user=user)
+	finally:
+		frappe.flags.approval_candidate = None
 
 
 def run_final_action(policy, doc, request):

@@ -208,6 +208,8 @@ def may_see_confidential(doc, user):
 		return False
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return True
+	if frappe.flags.approval_candidate == user:  # being appointed its approver right now: the same as having handled it
+		return True
 	handled = frappe.db.sql(f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}")
 	department = doc.get("department")
 	return bool(handled) or bool(department and department in held_scopes(user, HANDLER_POSITION))

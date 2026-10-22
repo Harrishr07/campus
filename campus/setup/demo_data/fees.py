@@ -1,5 +1,7 @@
-"""PR-03 Fees of the 2026 intake: the admission invoices paid in full, in part or not at all. The invoices themselves were raised by Confirm Joining; payments are ordinary Payment Entries made
-from them (`get_payment_entry`), so the receivable, the student's fee ledger and the dues check all read real vouchers."""
+"""PR-03 Fees of the 2026 intake: the admission invoices paid in full, in part or not at all.
+
+The invoices themselves were raised by Confirm Joining; payments are ordinary Payment Entries made from them
+(`get_payment_entry`), so the receivable, the student's fee ledger and the dues check all read real vouchers."""
 
 import frappe
 from frappe.utils import flt, getdate

@@ -318,6 +318,28 @@ class TestInternalPayment(RemunerationFixture):
 		slip = self.slip(self.internal, today())
 		self.assertEqual({r.salary_component: r.amount for r in slip.earnings}, {"Basic": 20000, COMPONENT: 2150})
 
+	def test_the_principal_alone_can_open_and_approve_a_claim_under_the_pilot_policy(self):
+		principal = "exr-principal@example.com"
+		make_user(principal, [COLLEGE])
+		user = frappe.get_doc("User", principal)
+		user.remove_roles("Academics User")
+		frappe.get_doc(
+			{"doctype": "Position Holder", "position": "PRINCIPAL", "scope_value": COLLEGE, "user": principal, "from_date": add_days(today(), -30)}
+		).insert()  # fmt: skip
+		self.assertEqual(
+			sorted(r for r in frappe.get_roles(principal) if r in ("Principal", "Academics User", "Accounts Manager")), ["Principal"]
+		)
+		policy = frappe.get_doc(
+			{
+				"doctype": "Approval Policy", "policy_name": "EXR Principal Policy", "document_type": CLAIM, "priority": 99,
+				"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "limit_to_company": 1, "title": "Principal"}],
+			}
+		).insert()  # fmt: skip
+		self.addCleanup(policy.db_set, "enabled", 0)
+		self.salary_structure(self.internal)
+		claim = self.approved(self.claim(), approver=principal)
+		self.assertEqual(claim.docstatus, 1)
+
 	def test_after_a_processed_slip_it_goes_to_the_following_month(self):
 		self.salary_structure(self.internal)
 		self.slip(self.internal, today()).submit()
