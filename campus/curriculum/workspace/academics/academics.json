@@ -335,7 +335,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 14:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Academics",
@@ -364,7 +364,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 41.0,
+ "sequence_id": 42.0,
  "shortcuts": [
   {
    "color": "Grey",

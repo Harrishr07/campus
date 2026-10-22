@@ -82,7 +82,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Approvals",
@@ -92,7 +92,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 48.0,
+ "sequence_id": 53.0,
  "shortcuts": [
   {
    "color": "Grey",

@@ -137,7 +137,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-22 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Administration",
@@ -157,7 +157,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 47.0,
+ "sequence_id": 54.0,
  "shortcuts": [
   {
    "color": "Grey",
