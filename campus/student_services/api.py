@@ -278,6 +278,8 @@ def issue_id_card(student):
 	from campus.campus_platform import verification
 
 	frappe.has_permission("Student", "write", student, throw=True)
+	if lifecycle_status(student) == ADMITTED:  # M04-09: the ID follows the joining confirmation
+		frappe.throw(_("{0} has not joined yet: the ID card is issued after the joining confirmation.").format(frappe.bold(student)))
 	record = verification.issue(frappe.get_doc("Student", student), ID_CARD_FORMAT)
 	mark_item_done(student, "ID-CARD")
 	return {"code": record.code, "url": verification.verification_url(record.code)}

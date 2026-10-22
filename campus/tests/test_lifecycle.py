@@ -308,10 +308,12 @@ class TestStatusSummary(LifecycleFixture):
 
 
 class TestAdmissionLifecycle(AdmitTestCase):
-	def test_admit_records_admitted_joined_and_active(self):
+	def test_admit_records_admitted_and_the_joining_records_joined_and_active(self):
 		applicant = self.applicant()
-		result = self.admit_as_officer(applicant)
-		student = result["student"]
+		student = self.admit_as_officer(applicant)["student"]
+		self.assertEqual(status(student), rules.ADMITTED)  # M04-09: approval alone is not joining
+		self.assertEqual(transitions(student), [("", rules.ADMITTED, lifecycle.INITIAL, "Student Applicant")])
+		result = self.join_as_officer(applicant)
 		self.assertEqual(status(student), rules.ACTIVE)
 		self.assertEqual(
 			transitions(student),
@@ -325,7 +327,7 @@ class TestAdmissionLifecycle(AdmitTestCase):
 		self.assertEqual((joined.program_enrollment, joined.approved_by), (result["program_enrollment"], OFFICER))
 
 	def test_an_admission_cancellation_records_cancelled(self):
-		result = self.admit_as_officer(self.applicant())
+		result = self.admit_and_join(self.applicant())
 		admission = SimpleNamespace(**result)
 		doc = frappe.get_doc(
 			{

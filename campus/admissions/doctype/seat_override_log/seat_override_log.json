@@ -15,7 +15,8 @@
   "overridden_on",
   "reason",
   "sanctioned",
-  "filled"
+  "filled",
+  "justification"
  ],
  "fields": [
   {
@@ -100,11 +101,17 @@
    "fieldname": "filled",
    "fieldtype": "Int",
    "label": "Filled Before"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Small Text",
+   "label": "Justification",
+   "description": "Typed by the officer who used the override."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Seat Override Log",

@@ -2,7 +2,7 @@
 
 import frappe
 
-from campus.admissions import admit as admission, documents, eligibility
+from campus.admissions import admit as admission, documents, eligibility, joining
 from campus.admissions import enquiry, seat_matrix as seats
 from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
@@ -14,7 +14,7 @@ def evaluate_eligibility(applicant: str):
 	return eligibility.evaluate(applicant)
 
 
-def check_seat_available(program, academic_year, quota, category, applicant=None):
+def check_seat_available(program, academic_year, quota, category, applicant=None, justification=None):
 	"""Block admission into a full quota/category row unless the user holds "Admission Override" (then log it).
 
 	Call it in the same transaction that creates and submits the Program Enrollment: it locks the Seat Matrix
@@ -22,9 +22,10 @@ def check_seat_available(program, academic_year, quota, category, applicant=None
 	are allowed without a check. When the program and year have no Seat Matrix, or the matrix has no row for the
 	quota and category: in strict mode (M04-08, Admission Settings `strict_seat_matrix`) the same override rule
 	applies; otherwise it is allowed without a check. Returns True when a seat is free (or no check applies),
-	"override" when an override holder was let through (logged with its reason; the matrix is never changed).
+	"override" when an override holder was let through (logged with its reason and the `justification` they typed,
+	which an override cannot do without; the matrix is never changed).
 	"""
-	return seats.check_seat_available(program, academic_year, quota, category, applicant)
+	return seats.check_seat_available(program, academic_year, quota, category, applicant, justification)
 
 
 def documents_complete(applicant):
@@ -45,12 +46,25 @@ def set_document_status(applicant: str, document_type: str, status: str, remarks
 
 @frappe.whitelist(methods=["POST"])
 def admit(applicant: str):
-	"""Admit an Approved, Eligible applicant with complete documents and a free seat (role Admission Officer).
+	"""Admission approval of an Approved, Eligible applicant with complete documents (role Admission Officer).
 
-	One transaction: Student (+ Customer), submitted Program Enrollment, register/roll number, fee Sales Invoice,
-	applicant status Admitted. Returns {student, program_enrollment, invoice, register_no}.
+	One transaction: Student (+ Customer) in lifecycle status Admitted, applicant status Admitted. Nothing billable
+	and no ID: those follow `confirm_joining` (M04-09). Returns {student}.
 	"""
 	return admission.admit(applicant)
+
+
+@frappe.whitelist(methods=["POST"])
+def confirm_joining(applicant: str, joining_date: str | None = None, override_justification: str | None = None):
+	"""Joining confirmation of an admitted applicant (role Admission Officer, M04-09).
+
+	One transaction: seat check (strict mode; an override needs `override_justification`), submitted Program
+	Enrollment from `joining_date` (default today, never in the future; also its attendance start), register/roll
+	number, lifecycle Joined then Active, fee Sales Invoice with the student's pre-joining advances allocated,
+	onboarding checklist. Idempotent per applicant: a retry returns the earlier result. Returns {student,
+	program_enrollment, invoice, register_no, roll_no}.
+	"""
+	return joining.confirm_joining(applicant, joining_date, override_justification)
 
 
 @frappe.whitelist(methods=["POST"])

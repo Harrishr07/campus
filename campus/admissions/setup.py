@@ -10,8 +10,9 @@ ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 OVERRIDE_ROLE = "Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
 SEAT_COUNT_INDEX = "oc_seat_count_index"
 CANDIDATE_INDEX = "oc_candidate_index"
+APPLICANT_INDEX = "oc_student_applicant_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
-OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
+OFFICER_ROLE = "Admission Officer"  # may admit approved applicants, confirm their joining and cancel admissions
 
 
 def setup_admissions():
@@ -134,10 +135,14 @@ def setup_admission_fields():
 	enrollment = [
 		field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
 			in_standard_filter=1, description="Counted against the Seat Matrix when submitted."),
+		field("oc_attendance_start_date", "Date", "Attendance Start Date", "enrollment_date",
+			description="Attendance counts from this date (the joining date for an admission; else the enrollment date)."),
+		field("oc_joining_key", "Data", "Joining Key", "oc_attendance_start_date", unique=1, hidden=1, read_only=1,
+			no_copy=1, description="The applicant whose joining confirmation made this enrollment: one per applicant."),
 	]  # fmt: skip
 	student += [
 		field("oc_register_no", "Data", "Register No", "student_applicant", unique=1, read_only=1, no_copy=1,
-			in_standard_filter=1, description="Assigned at admission from the Admission Settings pattern."),
+			in_standard_filter=1, description="Assigned at the joining confirmation from the Admission Settings pattern."),
 		field("oc_roll_no", "Data", "Roll No", "oc_register_no", read_only=1, no_copy=1),
 	]  # fmt: skip
 	category = [
@@ -146,7 +151,7 @@ def setup_admission_fields():
 	]  # fmt: skip
 	invoice = [
 		field("oc_program_enrollment", "Link", "Admission Enrollment", "student", options="Program Enrollment",
-			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at admission."),
+			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at the joining confirmation."),
 	]  # fmt: skip
 	create_custom_fields(
 		{
@@ -161,6 +166,8 @@ def setup_admission_fields():
 	# the duplicate candidate check locks these ranges (M04-07)
 	for doctype in ("Student Applicant", "Student"):
 		frappe.db.add_index(doctype, ["oc_company", "date_of_birth"], CANDIDATE_INDEX)
+	# the joining confirmation locks the applicant's Student by this column (M04-09): without it, every row
+	frappe.db.add_index("Student", ["student_applicant"], APPLICANT_INDEX)
 
 
 # Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item

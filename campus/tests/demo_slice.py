@@ -1,6 +1,6 @@
 """S5 Demo builder: the whole thin-slice path on top of the "small" demo data (`make_demo("slice")`).
 
-    admit -> fees (4 of 5 paid) -> Effective R2026 curriculum -> offerings -> course registration
+    admit, join -> fees (4 of 5 paid) -> Effective R2026 curriculum -> offerings -> course registration
     -> 8 weeks of schedules and attendance -> CIA + ESE marks -> Result Run -> publish -> Grade Sheet
     -> portal users -> AQAR cycle computed.
 
@@ -21,7 +21,7 @@ from frappe.utils import add_days, getdate, now_datetime
 from frappe.utils.password import update_password
 
 from campus.admissions import eligibility
-from campus.admissions.api import admit
+from campus.admissions.api import admit, confirm_joining
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.verification import issue
 from campus.curriculum.offerings import generate_offerings
@@ -188,7 +188,7 @@ def make_fee_structures():
 
 
 def admit_applicants():
-	"""Create the five Approved, Eligible applicants and admit them; returns the Student names in order.
+	"""Create the five Approved, Eligible applicants, admit them and confirm their joining; returns the Student names in order.
 
 	A sixth applicant is created Approved and Eligible but not admitted, so the demo can show the Admit button."""
 	live = LIVE_APPLICANT
@@ -200,6 +200,8 @@ def admit_applicants():
 			applicant = make_applicant(slug, first, last, category, quota)
 		if applicant.application_status != "Admitted":
 			admit(applicant.name)
+		if frappe.db.get_value("Student", {"student_applicant": applicant.name}, "oc_academic_status") in ("Admitted", "Joined"):
+			confirm_joining(applicant.name)
 	return slice_students()
 
 

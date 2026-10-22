@@ -1,4 +1,5 @@
-// M04-01 Admit button: the server (campus.admissions.api.admit) checks role, eligibility, documents and seat.
+// M04-01 Admit button (the admission approval): the server (campus.admissions.api.admit) checks role, eligibility and
+// documents and creates the admitted Student. The joining is confirmed on the Student form (M04-09).
 const ADMIT = "campus.admissions.api.admit";
 
 frappe.ui.form.on("Student Applicant", {
@@ -8,7 +9,7 @@ frappe.ui.form.on("Student Applicant", {
 		frm.add_custom_button(__("Admit"), () =>
 			frappe.confirm(__("Admit {0}?", [frm.doc.name]), () =>
 				frappe.call({ method: ADMIT, type: "POST", args: { applicant: frm.doc.name }, freeze: true }).then((r) => {
-					frappe.show_alert({ message: __("Admitted as {0}", [r.message.student]), indicator: "green" });
+					frappe.show_alert({ message: __("Admitted as {0}; confirm the joining on the Student", [r.message.student]), indicator: "green" });
 					frm.reload_doc();
 					frappe.set_route("Form", "Student", r.message.student);
 				})

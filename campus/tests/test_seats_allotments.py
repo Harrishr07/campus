@@ -334,7 +334,7 @@ class TestSeatOverride(SeatTestCase):
 		self.full_matrix()
 		applicant = make_applicant()
 		frappe.set_user(OVERRIDER)
-		self.assertEqual(check_seat_available(PROGRAM, year(), GOVT, OC, applicant.name), "override")
+		self.assertEqual(check_seat_available(PROGRAM, year(), GOVT, OC, applicant.name, "Court order"), "override")
 		frappe.set_user("Administrator")
 		log = frappe.get_all("Seat Override Log", fields=["*"])
 		self.assertEqual(len(log), 1)
@@ -342,6 +342,16 @@ class TestSeatOverride(SeatTestCase):
 			(log[0].user, log[0].company, log[0].program, log[0].quota, log[0].category, log[0].applicant, log[0].sanctioned, log[0].filled),
 			(OVERRIDER, COLLEGE, PROGRAM, GOVT, OC, applicant.name, 1, 1),
 		)
+		self.assertEqual(log[0].justification, "Court order")
+
+	def test_an_override_without_a_justification_is_refused_and_not_logged(self):
+		self.full_matrix()
+		frappe.set_user(OVERRIDER)
+		for blank in (None, "", "   "):
+			with self.assertRaisesRegex(frappe.ValidationError, "justification"):
+				check_seat_available(PROGRAM, year(), GOVT, OC, None, blank)
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.count("Seat Override Log"), 0)
 
 	def test_over_admission_by_override_shows_negative_vacancy(self):
 		matrix = self.full_matrix()
@@ -405,7 +415,7 @@ class TestStrictSeatMatrix(SeatTestCase):
 	def overridden(self, program, quota, category):
 		applicant = make_applicant()
 		frappe.set_user(OVERRIDER)
-		self.assertEqual(check_seat_available(program, year(), quota, category, applicant.name), "override")
+		self.assertEqual(check_seat_available(program, year(), quota, category, applicant.name, "Sanction pending"), "override")
 		frappe.set_user("Administrator")
 		return applicant.name
 
@@ -481,6 +491,26 @@ class TestStrictSeatMatrix(SeatTestCase):
 		self.assertIn(("Seat Matrix", True), calls)
 		self.assertIn(("Seat Matrix Row", True), calls)
 		self.assertNotIn(("Seat Matrix Row", False), calls)
+
+
+class TestProgramsWithoutSeatMatrix(SeatTestCase):
+	"""M04-08 rollout check: the college's programs with no Seat Matrix for the year, with applicants still to join."""
+
+	def test_lists_only_the_permitted_colleges_programs_without_a_matrix(self):
+		from campus.admissions.report.programs_without_seat_matrix import programs_without_seat_matrix as report
+		from campus.tests.test_regulation import make_program
+
+		bare = "Seat Test BE ECE"
+		make_program(bare, COLLEGE)
+		self.matrix([(GOVT, OC, 5)])
+		for status in ("Approved", "Admitted", "Applied", "Rejected"):
+			make_applicant(program=bare, application_status=status)
+		filters = {"company": COLLEGE, "academic_year": year()}
+		rows = report.execute(filters)[1]
+		self.assertEqual([(r["program"], r["applicants"]) for r in rows], [(bare, 2)])  # Approved and Admitted wait to join
+		self.assertEqual(report.execute({"company": COLLEGE})[1], [])  # the year is required
+		frappe.set_user(OUTSIDER)
+		self.assertEqual(report.execute(filters)[1], [])
 
 
 def csv_bytes(rows):
@@ -1044,6 +1074,24 @@ class TestAdmitDeadlockRetry(SeatTestCase):
 					admit_module.admit("APP-1")
 			self.assertEqual((once.call_count, rollback.call_count), (2, 2))
 			self.assertIn("busy", str(ctx.exception))
+
+	def test_a_joining_deadlock_is_retried_and_not_masked_by_the_savepoint_rollback(self):
+		from campus.admissions import joining
+
+		deadlock = frappe.QueryDeadlockError("deadlock found")
+		with patch.object(frappe, "only_for"), patch.object(frappe.db, "rollback") as rollback:
+			with patch.object(joining, "join_once", side_effect=[deadlock, {"student": "S"}]) as once:
+				self.assertEqual(joining.confirm_joining("APP-1"), {"student": "S"})
+			self.assertEqual((once.call_count, rollback.call_count), (2, 1))
+		with (
+			patch.object(joining, "lock_applicant", return_value=frappe._dict()), patch.object(joining, "check_company_access"),
+			patch.object(joining, "lock_student", return_value=frappe._dict(oc_academic_status="Admitted")),
+			patch.object(joining, "check_joinable"), patch.object(joining, "join", side_effect=deadlock),
+			patch.object(frappe.db, "rollback", side_effect=RuntimeError("SAVEPOINT campus_joining does not exist")),
+			patch.object(frappe.db, "savepoint"),
+		):
+			with self.assertRaises(frappe.QueryDeadlockError):
+				joining.join_once("APP-1", None, None)
 
 	def test_a_deadlock_inside_the_admission_is_not_masked_by_the_savepoint_rollback(self):
 		from campus.admissions import admit as admit_module

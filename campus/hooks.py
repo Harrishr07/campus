@@ -184,6 +184,7 @@ doc_events["Student Applicant"]["validate"] = [doc_events["Student Applicant"]["
 doc_events["Program Enrollment"]["validate"] = [
 	doc_events["Program Enrollment"]["validate"],
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
+	"campus.admissions.joining.validate_enrollment",  # L-02: the first enrollment follows the joining confirmation
 ]
 
 doc_events["Student Applicant"]["validate"] += [
