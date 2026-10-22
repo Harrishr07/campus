@@ -3,7 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import request_approval
-from campus.iqac import compute, evidence, feedback, feedback_invites, metric_values, validation
+from campus.iqac import aishe, compute, evidence, feedback, feedback_invites, metric_values, validation
 from campus.iqac import export as exporter
 from campus.iqac.access import OWNER_ROLE, ROLES
 from campus.iqac.feedback import MINIMUM_GROUP_DEFAULT, MINIMUM_GROUP_FLOOR  # noqa: F401  (public API: Campus Settings)
@@ -107,6 +107,13 @@ def evidence_slot_status(cycle, node=None):
 def export_cycle(cycle, template):
 	"""Download the cycle as the Excel / PDF of an Export Template (IQAC staff and the Principal, within their company)."""
 	filename, content = exporter.export(cycle, template)
+	frappe.response.update({"filename": filename, "filecontent": content, "type": "download"})
+
+
+@frappe.whitelist(methods=["POST"])
+def export_aishe(company, academic_year, layout=None):
+	"""M01-09 Download the AISHE dataset of the company and year in an AISHE Layout (IQAC staff and the Principal, within their company)."""
+	filename, content = aishe.export_dataset(company, academic_year, layout)
 	frappe.response.update({"filename": filename, "filecontent": content, "type": "download"})
 
 

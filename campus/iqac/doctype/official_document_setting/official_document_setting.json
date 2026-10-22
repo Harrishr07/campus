@@ -1,0 +1,42 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Official Document Setting",
+ "issingle": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "alert_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "alert_days",
+   "fieldtype": "Data",
+   "label": "Alert Days",
+   "reqd": 1,
+   "default": "90, 30, 7",
+   "description": "Days before the last valid day on which the Principal and the IQAC Coordinator are told, separated by commas."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1
+  }
+ ]
+}

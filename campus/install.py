@@ -18,6 +18,7 @@ from campus.examinations.setup import ensure_coe_role, setup_examinations
 from campus.faculty.setup import seed_course_allocation_policy, setup_faculty
 from campus.iqac.export_seed import seed_export_templates
 from campus.iqac.feedback_seed import setup_feedback
+from campus.iqac.official_seed import seed_official_register
 from campus.iqac.regulator_seed import seed_regulator_templates
 from campus.iqac.setup import (
 	ensure_iqac_role,
@@ -74,6 +75,7 @@ def after_install():
 	seed_iqac_policies()
 	setup_feedback()
 	seed_regulator_templates()
+	seed_official_register()
 	seed_evidence_sources()
 	setup_research()
 	seed_mandatory_approval()  # once; a patch seeds existing sites, so the college's edits to the list stand
@@ -106,5 +108,6 @@ def after_migrate():
 	seed_iqac_policies()
 	setup_feedback()
 	seed_regulator_templates()
+	seed_official_register()
 	seed_evidence_sources()
 	setup_research()

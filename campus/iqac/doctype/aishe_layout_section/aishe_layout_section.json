@@ -1,0 +1,49 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "IQAC",
+ "owner": "Administrator",
+ "states": [],
+ "name": "AISHE Layout Section",
+ "istable": 1,
+ "editable_grid": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "section",
+  "sheet",
+  "first_cell"
+ ],
+ "fields": [
+  {
+   "fieldname": "section",
+   "fieldtype": "Select",
+   "label": "Section",
+   "options": "Institution\nProgrammes\nEnrolment\nFaculty\nExamination Results\nScholarships",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sheet",
+   "fieldtype": "Data",
+   "label": "Sheet",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "first_cell",
+   "fieldtype": "Data",
+   "label": "First Cell",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The cell of the first header, e.g. A3; the rows follow below it."
+  }
+ ],
+ "permissions": []
+}

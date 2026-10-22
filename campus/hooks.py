@@ -409,6 +409,7 @@ scheduler_events = {
 		"campus.research.proposals.send_deadline_reminders",
 		"campus.iqac.feedback_invites.send_reminders",
 		"campus.iqac.regulator.send_reminders",
+		"campus.iqac.official_documents.send_expiry_alerts",
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
