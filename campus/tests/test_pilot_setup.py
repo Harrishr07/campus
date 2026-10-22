@@ -6,14 +6,16 @@ import json
 from unittest.mock import patch
 
 import frappe
+from frappe.cache_manager import clear_defaults_cache
 from frappe.tests import IntegrationTestCase
 from frappe.utils.password import check_password
 
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
-from campus.setup import fees, people
+from campus.setup import fees, people, structure
 from campus.setup.admission import largest_remainder
 from campus.setup.pilot import setup_college
 from campus.setup.profile import PROFILE_DIR, load_profile, profile_errors
+from campus.setup.records import Outcome
 
 SXCCE = json.loads((PROFILE_DIR / "sxcce.json").read_text())
 COUNTED = (
@@ -170,6 +172,54 @@ class TestPilotSetup(IntegrationTestCase):
 			self.assertEqual(result["created"], {})
 		finally:
 			setup_college("sxcce", test_passwords=True)  # the class shares its data: put the profile's values back
+
+
+class TestDefaultCompany(IntegrationTestCase):
+	"""The college becomes the site's default company only when neither store has one."""
+
+	@classmethod
+	def setUpClass(cls):
+		cls.addClassCleanup(clear_defaults_cache)  # runs after the rollback: drops the test's defaults from the cache
+		super().setUpClass()
+
+	def setUp(self):
+		self.addCleanup(clear_defaults_cache)
+		self.out = Outcome()
+		self.set_defaults(single=None, row=None)
+
+	def set_defaults(self, single, row):
+		frappe.db.set_single_value("Global Defaults", "default_company", single)
+		frappe.db.delete("DefaultValue", {"parent": "__default", "defkey": "company"})
+		if row:
+			frappe.db.set_default("company", row)
+		clear_defaults_cache()
+
+	def stores(self):
+		return (frappe.db.get_single_value("Global Defaults", "default_company") or None), frappe.db.get_default("company")
+
+	def test_sets_both_stores_to_the_college_when_there_is_no_default(self):
+		structure.ensure_default_company("College A", self.out)
+		self.assertEqual(self.stores(), ("College A", "College A"))
+		self.assertEqual(self.out.updated["Global Defaults"], 1)
+
+	def test_a_default_in_the_defaults_table_is_left_alone(self):
+		self.set_defaults(single=None, row="Existing Co")
+		structure.ensure_default_company("College A", self.out)
+		self.assertEqual(self.stores(), (None, "Existing Co"))
+		self.assertFalse(self.out.updated)
+
+	def test_a_default_in_global_defaults_alone_is_left_alone(self):
+		self.set_defaults(single="Existing Co", row=None)
+		structure.ensure_default_company("College A", self.out)
+		self.assertEqual(self.stores(), ("Existing Co", None))
+		self.assertFalse(self.out.updated)
+
+	def test_a_second_call_changes_nothing(self):
+		structure.ensure_default_company("College A", self.out)
+		again = Outcome()
+		structure.ensure_default_company("College B", again)
+		self.assertEqual(self.stores(), ("College A", "College A"))
+		self.assertFalse(again.updated)
 
 
 class TestPilotProfile(IntegrationTestCase):

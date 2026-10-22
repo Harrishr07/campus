@@ -18,6 +18,7 @@ import frappe
 from frappe import _
 
 from campus.setup import people as pilot_people
+from campus.setup import structure
 from campus.setup.demo_data.names import People
 from campus.setup.profile import load_profile
 from campus.setup.records import Outcome
@@ -76,7 +77,7 @@ def check_kit(ctx):
 			missing.append(f"{ctx.college}: {field}")
 	if not (company.default_cash_account or company.default_bank_account):
 		missing.append(f"{ctx.college}: a default cash or bank account")
-	if not frappe.db.get_default("company"):
+	if not structure.site_default_company():
 		missing.append("Global Defaults: default company (Education's attendance reads its Holiday List)")
 	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
 		missing.append("Selling Settings: selling price list")

@@ -117,10 +117,13 @@ class TestDemoGuard(IntegrationTestCase):
 class TestDemoShape(IntegrationTestCase):
 	"""Pieces of the loader that do not need the 10-minute load: run on the loaded site inside the test transaction."""
 
-	# TestDemoData rolls its run back, so these need a site where the kit (and the load) ran and were committed (bench execute)
-	def require_kit(self):
-		if not frappe.db.exists("Company", COLLEGE):
-			self.skipTest("the SXCCE pilot kit has not run on this site (campus.setup.pilot.setup_college)")
+	@classmethod
+	def setUpClass(cls):
+		cls.addClassCleanup(clear_defaults_cache)  # runs after the rollback: drops the kit's default company from the cache
+		super().setUpClass()
+		setup_college("sxcce", test_passwords=True)  # idempotent and rolled back with the class: the kit is always there
+
+	# TestDemoData rolls its 10-minute load back, so the tests that need the loaded people skip unless it was committed (bench execute)
 
 	def require_loaded_demo(self):
 		if not frappe.db.exists("Student", {"oc_company": COLLEGE}):
@@ -141,7 +144,6 @@ class TestDemoShape(IntegrationTestCase):
 		self.assertEqual(people.make("student-2", 2007, 2006).email, "student-2@x.example.edu")
 
 	def test_the_session_dates_are_the_last_three_weeks_before_the_load_date(self):
-		self.require_kit()
 		term_name = academics.term_of(term.YEAR, term.TERM_NAME)
 		with patch.object(term, "today", return_value="2026-10-22"):
 			dates = term.session_dates(term_name)
@@ -151,7 +153,6 @@ class TestDemoShape(IntegrationTestCase):
 		self.assertEqual(str(dates[0]), "2026-10-02")
 
 	def test_the_session_dates_stay_inside_the_term(self):
-		self.require_kit()
 		term_name = academics.term_of(term.YEAR, term.TERM_NAME)
 		with patch.object(term, "today", return_value="2027-02-01"):
 			self.assertEqual(str(term.session_dates(term_name)[-1]), "2026-11-30")
@@ -170,11 +171,24 @@ class TestDemoShape(IntegrationTestCase):
 		self.assertEqual(frappe.session.user, "guest@example.com")
 
 	def test_the_kit_is_checked_before_anything_is_written(self):
-		self.require_kit()
 		ctx = Context(PROFILE, 2026)
 		with patch.object(frappe.db, "get_single_value", return_value=None):
 			with self.assertRaisesRegex(frappe.ValidationError, "selling price list"):
 				check_kit(ctx)
+
+	def test_the_kit_check_names_a_missing_default_company_and_accepts_either_store(self):
+		ctx = Context(PROFILE, 2026)
+		self.addCleanup(clear_defaults_cache)
+		frappe.db.set_single_value("Global Defaults", "default_company", None)
+		frappe.db.delete("DefaultValue", {"parent": "__default", "defkey": "company"})
+		clear_defaults_cache()
+		with self.assertRaisesRegex(frappe.ValidationError, "default company"):
+			check_kit(ctx)
+		frappe.db.set_single_value("Global Defaults", "default_company", COLLEGE)
+		try:
+			check_kit(ctx)
+		except frappe.ValidationError as error:
+			self.assertNotIn("default company", str(error))
 
 	def test_attendance_and_leave_go_through_the_real_documents(self):
 		self.require_loaded_demo()

@@ -38,7 +38,7 @@ def setup_college(profile="sxcce", test_passwords=None):
 	trust, college = structure.ensure_companies(profile, out)
 	structure.ensure_calendar(profile, out)
 	structure.ensure_holiday_list(profile, [c for c in (trust, college) if c], out)
-	structure.ensure_default_company(trust or college, out)
+	structure.ensure_default_company(college, out)
 	structure.ensure_departments(profile, college, out)
 	structure.ensure_programmes(profile, college, out)
 	structure.ensure_regulation(profile, college, out)
