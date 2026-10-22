@@ -63,8 +63,8 @@ def load(ctx):
 	prepare_eligibility(ctx)
 	applicants = plan(ctx)
 	make_enquiries(ctx, applicants)
-	upload_missing(ctx, [a for a in applicants if a.path == "upload"])
 	upsert(ctx.out, "Admission Document Rule", {"document_type": "Transfer Certificate"}, {"mandatory": 1, "verification_needed": 0})
+	upload_missing(ctx, [a for a in applicants if a.path == "upload"])
 	for applicant in applicants:
 		name = applicant_of(applicant.person.email) or make_applicant(ctx, applicant)
 		complete(ctx, applicant, name)

@@ -134,6 +134,15 @@ class TestUploadPreview(UploadTestCase):
 		self.assertEqual((summary["Valid"], summary["Invalid"], summary["Possible Duplicate"]), (1, 4, 1))
 		self.assertEqual(frappe.db.get_value("Applicant Upload", name, "status"), "Validated")
 
+	def test_preview_and_import_work_with_an_admission_document_rule(self):
+		frappe.get_doc({"doctype": "Admission Document Rule", "document_type": "Transfer Certificate", "mandatory": 1}).insert()
+		name = self.upload([file_row("Ravi", "Menon")])
+		self.preview(name)
+		self.assertEqual({r.status for r in self.rows(name).values()}, {"Valid"})
+		self.run_import(name)
+		created = frappe.get_doc("Student Applicant", self.rows(name)[2].applicant)
+		self.assertEqual([r.document_type for r in created.oc_documents], ["Transfer Certificate"])
+
 	def test_rows_repeated_in_the_file_are_flagged(self):
 		name = self.upload([file_row("Ravi", "Menon"), file_row("Ravi", "Menon"), file_row("Menon", "Ravi", regno="OTHER")])
 		self.preview(name)
