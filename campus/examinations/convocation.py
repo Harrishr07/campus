@@ -31,6 +31,7 @@ from campus.student_services.api import (
 
 DOCTYPE = "Convocation List"
 ROW = "Convocation List Graduate"
+SAVEPOINT = "campus_graduate"
 # Placeholder export format (heading, source); see the module docstring.
 DEFAULT_COLUMNS = [
 	("Register Number", "Register Number"), ("Student Name", "Student Name"), ("Date of Birth", "Date of Birth"),
@@ -91,7 +92,8 @@ def undo_award_eligible(student, doc):
 
 def graduate(convocation_list):
 	"""Record the list's Award Eligible graduates as Graduated from the convocation date. Returns {graduated,
-	refused: [{student, reason}]}: a graduate the lifecycle refuses (e.g. a later change) does not stop the rest."""
+	refused: [{student, reason}]} (plain text): a graduate the lifecycle refuses (e.g. a later change) writes
+	nothing (savepoint) and does not stop the rest."""
 	frappe.only_for((COE_ROLE, "System Manager"))
 	doc = frappe.get_doc(DOCTYPE, convocation_list)
 	doc.check_permission("write")
@@ -102,12 +104,14 @@ def graduate(convocation_list):
 		if lifecycle_status(row.student) != AWARD_ELIGIBLE:
 			continue
 		messages = len(frappe.local.message_log)
+		frappe.db.savepoint(SAVEPOINT)
 		try:
 			transition(row.student, GRADUATED, doc.convocation_date, _("Degree conferred at convocation {0}").format(doc.name), doc)
 			graduated += 1
-		except frappe.ValidationError as error:  # refused before anything is written
+		except frappe.ValidationError as error:  # the refused student writes nothing
+			frappe.db.rollback(save_point=SAVEPOINT)
 			del frappe.local.message_log[messages:]
-			refused.append({"student": row.student, "reason": strip_html(str(error))})
+			refused.append({"student": row.student, "reason": strip_html(str(error))})  # plain text: the form escapes it
 	return {"graduated": graduated, "refused": refused}
 
 

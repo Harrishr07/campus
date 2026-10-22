@@ -59,6 +59,8 @@ def migrated_status(old_status, cancelled=False, left=False, open_break=False, c
 	(`open_break`), a place on a Convocation List (`convocation`)."""
 	if cancelled:
 		return CANCELLED
+	if old_status in (GRADUATED, ALUMNI):
+		return old_status  # past the convocation list already
 	if convocation:
 		return AWARD_ELIGIBLE  # a TC to a graduate does not make them withdrawn
 	if old_status == LEGACY_COMPLETED:

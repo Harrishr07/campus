@@ -452,6 +452,36 @@ class TestConvocation(GraduationFixture):
 			[("Transition", "Study Completed"), ("Transition", "Award Eligible"), ("Reversal", "Study Completed"), ("Reversal", "Active")],
 		)
 
+	def test_a_refill_of_a_pre_l01_list_dropping_a_migrated_student_does_not_abort(self):
+		doc = self.make_list()
+		student = self.students["dist"]
+		frappe.db.delete("Lifecycle Transition", {"student": student})  # as recorded before L-01, then migrated
+		frappe.db.set_value("Student", student, "oc_academic_status", "Active")
+		self.assertEqual(lifecycle.migrate_student(student), "Award Eligible")
+		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": student})
+		frappe.get_doc({"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 15, "max_total_credits": 200}).insert()
+		convocation.fill_graduates(doc.name)  # drops dist; must not throw
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
+		log = frappe.get_last_doc("Lifecycle Transition", {"student": student}, order_by="creation desc, name desc")
+		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "Award Eligible", "Active", migrated.name))
+
+	def test_a_refused_graduate_writes_nothing(self):
+		doc = self.make_list()
+		doc.db_set("convocation_date", today())
+		real = convocation.transition
+
+		def half_written(student, *args, **kwargs):
+			if student == self.students["dist"]:
+				frappe.db.set_value("Student", student, "student_name", "Half Written")
+				frappe.throw("Refused after a write")
+			return real(student, *args, **kwargs)
+
+		with patch.object(convocation, "transition", side_effect=half_written):
+			result = convocation.graduate(doc.name)
+		self.assertEqual((result["graduated"], [r["student"] for r in result["refused"]]), (4, [self.students["dist"]]))
+		self.assertNotEqual(frappe.db.get_value("Student", self.students["dist"], "student_name"), "Half Written")
+		self.assertEqual(frappe.db.get_value("Student", self.students["cleared"], "oc_academic_status"), "Graduated")
+
 	def test_only_the_coe_records_graduates(self):
 		doc = self.make_list()
 		doc.db_set("convocation_date", today())

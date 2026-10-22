@@ -66,6 +66,10 @@ class TestMigratedStatus(UnitTestCase):
 	def test_a_cancelled_admission_wins(self):
 		self.assertEqual(rules.migrated_status("Active", cancelled=True, left=True, convocation=True), rules.CANCELLED)
 
+	def test_a_graduate_or_alumnus_on_a_list_keeps_the_status(self):
+		self.assertEqual(rules.migrated_status(rules.GRADUATED, convocation=True), rules.GRADUATED)
+		self.assertEqual(rules.migrated_status(rules.ALUMNI, convocation=True, left=True), rules.ALUMNI)
+
 	def test_a_listed_graduate_is_award_eligible_even_with_a_tc(self):
 		self.assertEqual(rules.migrated_status("Discontinued", left=True, convocation=True), rules.AWARD_ELIGIBLE)
 

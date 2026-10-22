@@ -54,9 +54,12 @@ def revert(source, reason, student=None, legacy_status=None, statuses=None):
 	Reversal name, or None when the source has no live change of the student.
 
 	`student` defaults to the one student the source changed. A Migrated record (the patch's, naming the source
-	as its evidence) goes back to `legacy_status`, since its From is a pre-L-01 academic status; without one it
-	is not undone. With `statuses`, only a change to one of them is undone and a source whose change is no longer
-	the latest is left alone (None); otherwise that throws. An Initial record is never undone."""
+	as its evidence) goes back to `legacy_status`, since its From is a pre-L-01 academic status. With `statuses`
+	(a tidy-up such as a Convocation List refill, which must never abort): only a change to one of them is undone,
+	a source whose change is no longer the latest is left alone (None), and a Migrated record with no
+	`legacy_status` goes back to its From mapped onto the lifecycle statuses (lifecycle_rules.migrated_status), or
+	is left alone when that is its current status. Otherwise a change that is no longer the latest, or a Migrated
+	record with no `legacy_status`, throws. An Initial record is never undone."""
 	source_doctype, source_name = source_ref(source)
 	student = student or frappe.db.get_value(LOG, {"source_doctype": source_doctype, "source_name": source_name}, "student")
 	if not student:
@@ -77,6 +80,10 @@ def revert(source, reason, student=None, legacy_status=None, statuses=None):
 		)
 	if statuses and latest.to_status not in statuses:
 		return None
+	if statuses and latest.kind == MIGRATED and not legacy_status:
+		legacy_status = rules.migrated_status(latest.from_status)
+		if legacy_status == current.status:
+			return None
 	to_status = restored_status(latest, legacy_status)
 	return write(
 		student, current, to_status, latest.effective_date, REVERSAL, reason, (source_doctype, source_name),
@@ -252,9 +259,14 @@ def migrate_students():
 
 def migrate_break_statuses():
 	"""Map the pre-L-01 academic statuses kept on Break of Study (previous_status) onto lifecycle statuses, so a
-	rejoin restores a valid one (Long Absent and Detained: Active; migrate_student keeps the detention)."""
-	breaks = frappe.get_all("Break of Study", {"previous_status": ["not in", [*rules.STATUSES, ""]]}, ["name", "previous_status"])
+	rejoin restores a valid one (Long Absent and Detained: Active). A student detained before a break still open
+	keeps the detention (oc_detained). Idempotent: mapped values are left alone."""
+	breaks = frappe.get_all(
+		"Break of Study", {"previous_status": ["not in", [*rules.STATUSES, ""]]}, ["name", "student", "docstatus", "previous_status"]
+	)
 	for row in breaks:
+		if row.previous_status == rules.LEGACY_DETAINED and row.docstatus == 1 and open_break(row.student):
+			frappe.db.set_value("Student", row.student, DETAINED, 1, update_modified=False)  # detained before the break
 		frappe.db.set_value("Break of Study", row.name, "previous_status", rules.migrated_status(row.previous_status), update_modified=False)
 
 

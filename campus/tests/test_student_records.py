@@ -292,6 +292,15 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		frappe.get_doc(BREAK, doc.name).cancel()
 		self.assertEqual(self.status(self.s22), "Active")
 
+	def test_the_follow_up_mapping_fixes_a_site_migrated_by_the_first_patch_body(self):
+		doc = self.pre_l01_break("Long Absent")  # migrated already (has a record), old value left on the break
+		frappe.db.set_value(BREAK, doc.name, "previous_status", "Detained")
+		frappe.db.set_value("Student", self.s22.name, "oc_detained", 0)
+		lifecycle.migrate_break_statuses()
+		lifecycle.migrate_break_statuses()  # idempotent
+		self.assertEqual(frappe.db.get_value(BREAK, doc.name, "previous_status"), "Active")
+		self.assertEqual(frappe.db.get_value("Student", self.s22.name, "oc_detained"), 1)
+
 	def test_a_break_cannot_start_unless_the_table_permits_it(self):
 		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Withdrawn")
 		doc = self.study_break(self.s22, "2025-06-01", "2025-12-31")
