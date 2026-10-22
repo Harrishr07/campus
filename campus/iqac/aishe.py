@@ -10,8 +10,8 @@ employment type fills the category column of the faculty table.
 
 Where each section goes in the file is an AISHE Layout record. The official AISHE template was not available, so the seeded
 layout is labelled a placeholder and the cover sheet says so. Cells are written with the Export Template helpers
-(campus.iqac.export), so no cell can run as a spreadsheet formula. Faculty and examination figures count the records the exporting user may read (HR User / COE style read
-rights), as the reports they come from do.
+(campus.iqac.export), so no cell can run as a spreadsheet formula. Once the role and company are checked, every source is read system-wide for that company (frappe.get_all), so the
+figures do not depend on the exporter's other roles.
 """
 
 import io
@@ -71,7 +71,7 @@ def cover_rows(company, academic_year, layout):
 
 
 def write_sections(book, layout, sections):
-	sheets = {}
+	sheets, written = {}, set()
 	for row in layout.sections:
 		if row.sheet.lower() not in sheets:
 			sheets[row.sheet.lower()] = book.create_sheet(unique_sheet_name(book, sheet_name(row.sheet)))
@@ -79,6 +79,10 @@ def write_sections(book, layout, sections):
 		table = sections[row.section]
 		for offset, values in enumerate([table["header"], *table["rows"]]):
 			for shift, value in enumerate(values):
+				cell = (row.sheet.lower(), column + shift, first_row + offset)
+				if cell in written:
+					frappe.throw(_("The {0} section overlaps another section on {1}; move one in the AISHE Layout.").format(frappe.bold(row.section), frappe.bold(row.sheet)))
+				written.add(cell)
 				put(sheets[row.sheet.lower()], f"{get_column_letter(column + shift)}{first_row + offset}", value)
 
 
@@ -141,20 +145,26 @@ def enrolment(company, academic_year):
 
 
 def faculty(company, academic_year):
-	from campus.faculty import api as faculty_api
+	from campus.faculty import staffing
 
-	names = [record["name"] for record in faculty_api.full_time_teachers(company, academic_year)["records"]]
-	people = frappe.get_list("Employee", {"name": ["in", names or [""]]}, ["designation", "employment_type", "gender"], limit_page_length=0)
+	start, end = staffing.year_bounds(academic_year)
+	fields = ["designation", "employment_type", "gender", "status", "relieving_date"]
+	people = [p for p in frappe.get_all("Employee", staffing.teaching_filters(company, end), fields, limit=0) if staffing.on_roll(p, start)]
 	counts = Counter((p.designation or NOT_RECORDED, p.employment_type or NOT_RECORDED, p.gender or NOT_RECORDED) for p in people)
-	return ["Designation", "Employment Type", "Gender", "Teachers"], [[*key, n] for key, n in sorted(counts.items())]
+	return ["Designation", "Employment Type (category)", "Gender", "Teachers"], [[*key, n] for key, n in sorted(counts.items())]
 
 
 def examination_results(company, academic_year):
-	from campus.examinations.report.result_analysis import result_analysis
+	from campus.examinations import coe_report_rules as rules
+	from campus.examinations import coe_reports
 
-	filters = {"company": company, "academic_year": academic_year, "final_year_only": 1}
-	rows = result_analysis.execute(filters)[1]
-	return ["Programme", "Appeared", "Passed", "Pass %"], [[r["group"] or NOT_RECORDED, r["appeared"], r["passed"], r["pass_pct"]] for r in rows]
+	outcomes = coe_reports.year_outcomes(company, academic_year, final_year=True)
+	tally = rules.tally(outcomes, lambda r: r["program"], lambda r: r["result"])
+	rows = [[program or NOT_RECORDED, c["appeared"], c["passed"], rules.percent(c["passed"], c["appeared"])] for program, c in sorted(tally.items(), key=lambda item: item[0] or "")]
+	if rows:
+		appeared, passed = sum(r[1] for r in rows), sum(r[2] for r in rows)
+		rows.append([_("Total"), appeared, passed, rules.percent(passed, appeared)])
+	return ["Programme", "Appeared", "Passed", "Pass %"], rows
 
 
 def scholarships(company, academic_year):

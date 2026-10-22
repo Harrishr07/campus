@@ -2,6 +2,8 @@
 reference, validity and file. The status follows the dates and the link to the document that replaced it; expiry alerts run
 from campus.iqac.official_documents."""
 
+import posixpath
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -24,5 +26,5 @@ class OfficialDocument(Document):
 			frappe.throw(_("{0} is not a program of {1}.").format(frappe.bold(self.program), frappe.bold(self.company)))
 
 	def check_file(self):
-		if self.file and not self.file.startswith("/private/"):
+		if self.file and not posixpath.normpath(self.file).startswith("/private/files/"):
 			frappe.throw(_("The file must be private. Attach it as a private file."))

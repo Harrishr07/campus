@@ -4,7 +4,6 @@ the layout is a placeholder mapping record, cells are formula-safe, and the expo
 import io
 
 import frappe
-from frappe.tests import UnitTestCase
 from openpyxl import load_workbook
 
 from campus.campus_finance.report.scholarship_beneficiaries import scholarship_beneficiaries as beneficiaries_report
@@ -45,6 +44,10 @@ class TestLayoutRecord(CampusTestCase):
 		self.assertTrue(layout.is_placeholder)
 		self.assertEqual({row.section for row in layout.sections}, set(aishe.SECTIONS))
 
+	def test_the_section_choices_are_the_sections_the_export_builds(self):
+		options = frappe.get_meta("AISHE Layout Section").get_field("section").options.split("\n")
+		self.assertEqual(options, aishe.SECTIONS)
+
 	def test_a_bad_sheet_name_or_cell_is_refused(self):
 		for row in ({"section": "Institution", "sheet": "A/B", "first_cell": "A1"}, {"section": "Institution", "sheet": "Basic", "first_cell": "ZZZZ9"}):
 			with self.subTest(row=row), self.assertRaises(frappe.ValidationError):
@@ -64,7 +67,7 @@ class AisheCase(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		for user, roles, companies in ((COORDINATOR, ["IQAC Coordinator", "HR User"], [demo.ENGINEERING]), (OUTSIDER, ["IQAC Coordinator"], [demo.ARTS]), (PLAIN, [], [demo.ENGINEERING])):
+		for user, roles, companies in ((COORDINATOR, ["IQAC Coordinator"], [demo.ENGINEERING]), (OUTSIDER, ["IQAC Coordinator"], [demo.ARTS]), (PLAIN, [], [demo.ENGINEERING])):
 			make_user(user, companies)
 			frappe.get_doc("User", user).add_roles(*roles)
 
@@ -157,10 +160,22 @@ class TestWorkbook(AisheCase):
 		self.assertTrue(any(isinstance(c.value, str) and c.value.startswith("'=HYPERLINK") for c in cells))
 
 
+class TestOverlap(AisheCase):
+	def test_two_sections_whose_tables_overlap_are_refused_at_export(self):
+		layout = frappe.get_doc(
+			{"doctype": "AISHE Layout", "layout_name": "Overlap Layout", "sections": [
+				{"section": "Institution", "sheet": "One", "first_cell": "A1"}, {"section": "Programmes", "sheet": "One", "first_cell": "A2"}]}
+		).insert()
+		with self.assertRaises(frappe.ValidationError):
+			self.workbook(layout.name)
+
+
 class TestScope(AisheCase):
 	def test_the_export_is_for_iqac_staff_of_the_company_only(self):
 		frappe.set_user(COORDINATOR)
-		self.assertTrue(aishe.export_dataset(demo.ENGINEERING, YEAR)[1])
+		_name, content = aishe.export_dataset(demo.ENGINEERING, YEAR)  # a coordinator without HR User still gets every teacher
+		sheet = load_workbook(io.BytesIO(content))["Faculty"]
+		self.assertEqual(sum(row[3].value for row in sheet.iter_rows(min_row=4) if isinstance(row[3].value, int)), 4)
 		frappe.set_user(OUTSIDER)  # an IQAC Coordinator of another college
 		with self.assertRaises(frappe.PermissionError):
 			aishe.export_dataset(demo.ENGINEERING, YEAR)

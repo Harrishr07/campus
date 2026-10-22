@@ -100,16 +100,19 @@ def send_expiry_alerts(on_date=None):
 
 
 def alert(document, kind, days):
+	"""Tell the people, then (for an expiry) mark the document Expired, so a failed send is retried by the next run."""
+	valid_to = str(document.valid_to)  # a renewal moves it, so the next expiry is alerted afresh
 	if kind == "expired":
-		document.db_set("status", "Expired")
-		event, context = EXPIRED_EVENT, {"days": days, "dedupe_token": "expired"}
+		event, context = EXPIRED_EVENT, {"days": days, "dedupe_token": f"expired-{valid_to}"}
 	else:
-		event, context = EXPIRING_EVENT, {"days": days, "dedupe_token": f"{days}d"}
+		event, context = EXPIRING_EVENT, {"days": days, "dedupe_token": f"{days}d-{valid_to}"}
 	people = recipients(document.company)
-	if not people:  # nobody to tell: say so, the run goes on
+	if people:
+		send(event, document, [f"Employee:{employee}" for employee in people], context=context)
+	else:  # nobody to tell: say so, the run goes on
 		frappe.logger("campus").warning(f"Official Document {document.name}: {event}, but {document.company} has no Principal or IQAC Coordinator on its Institution Profile")
-		return
-	send(event, document, [f"Employee:{employee}" for employee in people], context=context)
+	if kind == "expired":
+		document.db_set("status", "Expired", update_modified=False)
 
 
 def recipients(company):

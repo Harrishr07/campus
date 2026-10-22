@@ -115,6 +115,10 @@ class TestRegister(OfficialDocumentCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.make_document(file=PUBLIC_FILE)
 
+	def test_a_private_looking_path_that_climbs_out_of_private_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.make_document(file="/private/../files/aicte-approval.pdf")
+
 	def test_a_program_of_another_company_is_refused(self):
 		program = frappe.get_doc({"doctype": "Program", "program_name": "Official Doc Other BE", "oc_company": OTHER_COLLEGE}).insert()
 		with self.assertRaises(frappe.ValidationError):
@@ -215,6 +219,23 @@ class TestExpiryAlerts(OfficialDocumentCase):
 			self.assertEqual(register.send_expiry_alerts(today()), 1)
 		logger.return_value.warning.assert_called_once()
 
+	def test_a_renewal_that_moves_valid_to_is_alerted_again_on_the_same_mark(self):
+		document = self.make_document(30)
+		register.send_expiry_alerts(today())
+		frappe.db.set_value("Official Document", document.name, "valid_to", add_days(today(), 31))
+		register.send_expiry_alerts(add_days(today(), 1))  # renewed to a date 30 days after the next run
+		self.assertEqual(len(self.logs(document, EXPIRING)), 4)
+
+	def test_a_failed_send_leaves_the_document_active_so_the_next_run_retries(self):
+		document = self.make_document(1)
+		frappe.db.set_value("Official Document", document.name, "valid_to", add_days(today(), -1))
+		with patch("campus.iqac.official_documents.send", side_effect=RuntimeError("down")):
+			register.send_expiry_alerts(today())
+		self.assertEqual(frappe.db.get_value("Official Document", document.name, "status"), "Active")
+		self.assertEqual(register.send_expiry_alerts(today()), 1)
+		self.assertEqual(frappe.db.get_value("Official Document", document.name, "status"), "Expired")
+		self.assertEqual(len(self.logs(document, EXPIRED)), 2)
+
 	def test_an_active_document_past_its_last_day_becomes_expired_once_and_is_kept(self):
 		document = self.make_document(1)
 		frappe.db.set_value("Official Document", document.name, "valid_to", add_days(today(), -1))  # time passed since the save
@@ -249,3 +270,18 @@ class TestCompanyScope(OfficialDocumentCase):
 		make_user(user, [COLLEGE])
 		frappe.set_user(user)
 		self.assertFalse(frappe.has_permission("Official Document", "read", document.name))
+
+
+class TestPermissions(OfficialDocumentCase):
+	def test_nobody_may_delete_a_document_and_a_principal_works_within_their_company(self):
+		meta = frappe.get_meta("Official Document")
+		self.assertFalse([p.role for p in meta.permissions if p.delete])
+		principal = "official-doc-principal@example.com"
+		make_user(principal, [COLLEGE])
+		frappe.get_doc("User", principal).add_roles("Principal")
+		mine, theirs = self.make_document(), self.make_document(company=OTHER_COLLEGE)
+		frappe.set_user(principal)
+		self.assertEqual(frappe.get_list("Official Document", pluck="name"), [mine.name])
+		self.assertTrue(frappe.has_permission("Official Document", "write", mine.name))
+		self.assertFalse(frappe.has_permission("Official Document", "read", theirs.name))
+		self.assertFalse(frappe.has_permission("Official Document", "delete", mine.name))
