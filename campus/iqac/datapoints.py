@@ -329,16 +329,21 @@ def patents_granted(company, academic_year, department=None):
 
 
 # P3-T20 consultancy data points (AQAR 3.5.1, NIRF consultancy), see campus.research.consultancy.
-@campus_metric("consultancy_revenue", "Research", "Consultancy revenue of the year before GST, net of credit notes (AQAR 3.5.1, NIRF)")
+@campus_metric("consultancy_revenue", "Research", "Consultancy revenue invoiced in the academic year before GST, net of credit notes (AQAR 3.5.1)")
 def consultancy_revenue(company, academic_year, department=None):
 	return research.consultancy_revenue(company, academic_year, department)
 
 
-@campus_metric("consultancy_projects", "Research", "Consultancy projects with revenue in the year (NIRF consultancy)")
+@campus_metric("consultancy_received", "Research", "Consultancy amount received before GST in the financial year holding the academic year's start (NIRF consultancy)")
+def consultancy_received(company, academic_year, department=None):
+	return research.consultancy_received(company, academic_year, department)
+
+
+@campus_metric("consultancy_projects", "Research", "Consultancy projects with revenue in the academic year (NIRF counts them per financial year)")
 def consultancy_projects(company, academic_year, department=None):
 	return research.consultancy_projects(company, academic_year, department)
 
 
-@campus_metric("consultancy_clients", "Research", "Client organisations with consultancy revenue in the year (NIRF consultancy)")
+@campus_metric("consultancy_clients", "Research", "Client organisations with consultancy revenue in the academic year (NIRF counts them per financial year)")
 def consultancy_clients(company, academic_year, department=None):
 	return research.consultancy_clients(company, academic_year, department)

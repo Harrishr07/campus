@@ -5,7 +5,8 @@ the Utilisation Certificate approval policy, PI -> Accounts -> Principal (P3-T17
 Supplier with the placeholder PFMS EAT export layouts (P3-T18), and for project staff (P3-T19) the "Project Staff"
 Employment Type, the JRF / SRF / Project Assistant designations and the "Fellowship" salary component, with the
 progress report fields on Project Update, the IPR committee policy for Invention Disclosures (P3-T21), and for
-consultancy (P3-T20) the `oc_consultancy_project` field on Sales Invoice and the "Consultancy Share" salary component.
+consultancy (P3-T20) the `oc_consultancy_project` field on Sales Invoice, the "Consultancy Share" salary component and
+the revenue share approval policy (Accounts, then the Principal).
 Existing (possibly edited) records are left alone."""
 
 import frappe
@@ -19,6 +20,7 @@ from campus.research.utilisation import UC_DOCTYPE, UC_POLICY
 REMINDER_EVENT = "research_proposal.deadline"
 REVIEW_POLICY = "Research Proposal Internal Review"
 DISCLOSURE_POLICY = "Invention Disclosure Committee"
+SHARE_POLICY = "Consultancy Revenue Share Approval"
 INSTITUTION_AGENCY = "Institution"
 PROJECT_STAFF = "Project Staff"
 PROJECT_STAFF_DESIGNATIONS = ("Junior Research Fellow", "Senior Research Fellow", "Project Assistant")
@@ -43,6 +45,7 @@ def seed_research():
 	seed_layouts()
 	seed_project_staff()
 	seed_salary_component()
+	seed_share_policy()
 
 
 def seed_reminder_template():
@@ -87,6 +90,21 @@ def seed_disclosure_policy():
 		{
 			"doctype": "Approval Policy", "policy_name": DISCLOSURE_POLICY, "document_type": "Invention Disclosure",
 			"levels": [{"approver_type": "Role", "approver": "Principal", "limit_to_company": 1, "title": "IPR Committee", "sla_hours": 168}],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
+
+
+def seed_share_policy():
+	"""Accounts checks the receipt and split, then the Principal of the share's college approves the payout (P3-T20)."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Consultancy Revenue Share"}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": SHARE_POLICY, "document_type": "Consultancy Revenue Share",
+			"levels": [
+				{"title": "Accounts", "approver_type": "Role", "approver": "Accounts Manager", "limit_to_company": 1, "sla_hours": 72},
+				{"title": "Principal", "approver_type": "Role", "approver": "Principal", "limit_to_company": 1, "sla_hours": 72},
+			],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
 

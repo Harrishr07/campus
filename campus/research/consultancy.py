@@ -7,18 +7,26 @@ IGST across states); Accounts reviews and submits it. A consultancy invoice is s
 and college, while the project is Agreed or Completed, and the project's invoices (net of credit notes, before GST) never
 exceed the agreement value.
 
-Revenue share. A submitted invoice is shared once, and only when it is fully paid by Payment Entry or Journal Entry
-(outstanding nil, no credit note against it): a Consultancy Revenue Share splits its taxable value by the project's
-rule and pays each team member through an HRMS Additional Salary on the Campus-owned "Consultancy Share" component. A
-shared invoice can't be cancelled or credited and its payments can't be cancelled until the share is cancelled.
+Revenue share. A submitted invoice is shared once, and only when it is received in full: outstanding nil, settled only
+by Payment Entries and by Journal Entries with a Bank or Cash row (TDS the client deducts in a Payment Entry counts as
+received: it is a tax credit), with no credit note (returned against it or reconciled to it), no write-off on the invoice
+and no other voucher allocated to it. A Consultancy Revenue Share (approved through the approval engine) splits its
+taxable value by the project's rule and pays each team member, an Active Employee of the college, through an HRMS
+Additional Salary on the Campus-owned "Consultancy Share" component. A shared invoice can't be cancelled or credited and
+its payments can't be cancelled or unreconciled until the share is cancelled. Every check of a share takes the Sales
+Invoice row lock first and then reads the shares with locking reads, so a share submit and a cancel queue.
 
-Revenue for AQAR 3.5.1 / NIRF is the taxable value of the college's consultancy invoices posted in the academic year,
-net of credit notes; amounts received are payment ledger allocations from Payment Entries and Journal Entries."""
+Amounts are in the college's currency: a client billed in another currency is refused.
+
+Figures. AQAR 3.5.1 revenue is the taxable value of the college's consultancy invoices posted in the academic year, net
+of credit notes (corporate training, also in 3.5.1, is not modelled). NIRF asks for the amount received per financial
+year: consultancy_received sums the receipts above dated in the financial year that holds the academic year's start,
+less their GST share (pro rata to the invoice's taxable value over its total)."""
 
 import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import add_days, flt, fmt_money, getdate, today
+from frappe.utils import flt, fmt_money, today
 
 from campus.research.publications import year_bounds
 
@@ -28,7 +36,7 @@ SALARY_COMPONENT = "Consultancy Share"
 INVOICEABLE = ("Agreed", "Completed")
 PAYMENT_VOUCHERS = ("Payment Entry", "Journal Entry")
 INVOICE_FIELDS = ["name", "oc_consultancy_project", "customer", "posting_date", "is_return", "base_net_total",
-	"base_total_taxes_and_charges", "base_grand_total"]  # fmt: skip
+	"base_total_taxes_and_charges", "base_grand_total", "outstanding_amount"]  # fmt: skip
 
 
 # ---- invoicing ----------------------------------------------------------------------------------------------------
@@ -64,6 +72,8 @@ def draft_sales_invoice(project, amount, description=None):
 	)  # fmt: skip
 	invoice.flags.ignore_permissions = True
 	invoice.set_missing_values()  # party details: india_compliance's place of supply and GST template, with its taxes
+	if invoice.currency != project.currency:
+		frappe.throw(_("Client {0} is billed in {1}: consultancy invoices are in {2}.").format(project.client, invoice.currency, project.currency))
 	invoice.insert()
 	return invoice
 
@@ -88,9 +98,9 @@ def check_invoice(invoice, method=None):
 	if not project or (invoice.company, invoice.customer) != (project.company, project.client):
 		frappe.throw(_("Sales Invoice {0} must bill Consultancy Project {1}'s client for its college.").format(invoice.name, invoice.oc_consultancy_project))
 	if invoice.is_return:
-		share = submitted_share(invoice.return_against, for_update=True)
+		share = invoice.return_against and locked_shares([invoice.return_against])
 		if share:
-			frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share before crediting it.").format(invoice.return_against, share))
+			frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share before crediting it.").format(invoice.return_against, share[0].name))
 		return
 	if project.status not in INVOICEABLE:
 		frappe.throw(_("Consultancy Project {0} is {1}: it can't be invoiced.").format(project.name, _(project.status)))
@@ -105,9 +115,9 @@ def check_invoice(invoice, method=None):
 
 def refuse_invoice_cancel(invoice, method=None):
 	"""Sales Invoice before_cancel: a shared invoice stays until its revenue share is cancelled."""
-	share = invoice.oc_consultancy_project and submitted_share(invoice.name, for_update=True)
+	share = invoice.oc_consultancy_project and locked_shares([invoice.name])
 	if share:
-		frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share first.").format(invoice.name, share))
+		frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share first.").format(invoice.name, share[0].name))
 
 
 def refuse_payment_cancel(voucher, method=None):
@@ -117,15 +127,33 @@ def refuse_payment_cancel(voucher, method=None):
 		invoices = {r.reference_name for r in voucher.references if r.reference_doctype == "Sales Invoice"}
 	else:
 		invoices = {r.reference_name for r in voucher.accounts if r.reference_type == "Sales Invoice"}
-	if not invoices:
-		return
-	shared = frappe.get_all(SHARE, {"sales_invoice": ["in", sorted(invoices)], "docstatus": 1}, ["name", "sales_invoice"])
+	refuse_if_shared(invoices, _("{0} {1}").format(_(voucher.doctype), voucher.name))
+
+
+def refuse_unreconcile(unreconcile, method=None):
+	"""Unreconcile Payment before_submit: a payment is not taken off a shared consultancy invoice."""
+	invoices = {r.reference_name for r in unreconcile.allocations if r.reference_doctype == "Sales Invoice"}
+	refuse_if_shared(invoices, _("Unreconciling {0} {1}").format(_(unreconcile.voucher_type), unreconcile.voucher_no))
+
+
+def refuse_if_shared(invoices, what):
+	shared = invoices and locked_shares(invoices)
 	if shared:
 		frappe.throw(
-			_("{0} {1} pays a shared consultancy invoice ({2}): cancel the revenue share first.").format(
-				_(voucher.doctype), voucher.name, ", ".join(f"{r.sales_invoice} / {r.name}" for r in shared)
+			_("{0} pays a shared consultancy invoice ({1}): cancel the revenue share first.").format(
+				what, ", ".join(f"{r.sales_invoice} / {r.name}" for r in shared)
 			)
 		)
+
+
+def locked_shares(invoices):
+	"""Submitted shares of `invoices`, read after locking the invoice rows (in name order): the lock order of every share
+	check, so a share submit and a cancel, credit note or unreconcile of its invoice queue instead of racing."""
+	invoices = sorted(set(invoices))
+	frappe.db.get_values("Sales Invoice", {"name": ["in", invoices]}, "name", order_by="name", for_update=True)
+	return frappe.db.get_values(
+		SHARE, {"sales_invoice": ["in", invoices], "docstatus": 1}, ["name", "sales_invoice"], order_by="name", as_dict=True, for_update=True
+	)
 
 
 # ---- revenue share ------------------------------------------------------------------------------------------------
@@ -140,11 +168,12 @@ def submitted_share(invoice, exclude=None, for_update=False):
 
 
 def shareable_invoice(invoice, project, share=None, for_update=False):
-	"""The invoice's figures; throws unless it is a submitted invoice of `project` (not a credit note), fully paid, not
-	credited and not shared by another submitted share. `for_update` locks the invoice row first and reads with locks."""
+	"""The invoice's figures; throws unless it is a submitted invoice of `project` (not a credit note), received in full
+	(see the module docstring) and not shared by another submitted share. `for_update` locks the invoice row first and
+	reads with locks."""
 	row = frappe.db.get_value(
 		"Sales Invoice", invoice, ["name", "docstatus", "is_return", "outstanding_amount", "oc_consultancy_project", "base_net_total",
-		"company", "customer", "currency"], as_dict=True, for_update=for_update,
+		"base_write_off_amount", "company", "customer", "currency"], as_dict=True, for_update=for_update,
 	)  # fmt: skip
 	if not row or row.oc_consultancy_project != project or row.docstatus != 1 or row.is_return:
 		frappe.throw(_("Sales Invoice {0} is not a submitted invoice of Consultancy Project {1}.").format(invoice, project))
@@ -159,15 +188,65 @@ def shareable_invoice(invoice, project, share=None, for_update=False):
 				invoice, fmt_money(row.outstanding_amount, currency=row.currency)
 			)
 		)
+	if flt(row.base_write_off_amount):
+		frappe.throw(_("Sales Invoice {0} has a write-off: only revenue received is shared.").format(invoice))
+	not_received = [f"{v.voucher_type} {v.voucher_no}" for v in settling_vouchers(invoice, for_update) if not v.received]
+	if not_received:
+		frappe.throw(
+			_("Sales Invoice {0} is settled by {1}, not a receipt: only revenue received is shared.").format(invoice, ", ".join(not_received))
+		)
 	other = submitted_share(invoice, exclude=share, for_update=for_update)
 	if other:
 		frappe.throw(_("Sales Invoice {0} is already shared by {1}.").format(invoice, other))
 	return row
 
 
+def settling_vouchers(invoice, for_update=False):
+	"""[{voucher_type, voucher_no, received}] of every other voucher allocated to the invoice (payment ledger, not
+	delinked). A receipt is a Payment Entry, or a Journal Entry with a Bank or Cash row."""
+	rows = frappe.db.get_values(
+		"Payment Ledger Entry",
+		{"against_voucher_type": "Sales Invoice", "against_voucher_no": invoice, "voucher_no": ["!=", invoice], "delinked": 0},
+		["voucher_type", "voucher_no"], order_by="voucher_no", as_dict=True, for_update=for_update,
+	)  # fmt: skip
+	vouchers = {(r.voucher_type, r.voucher_no) for r in rows}
+	bank_journals = cash_journals([no for kind, no in vouchers if kind == "Journal Entry"])
+	return [
+		frappe._dict(voucher_type=kind, voucher_no=no, received=kind == "Payment Entry" or no in bank_journals)
+		for kind, no in sorted(vouchers)
+	]
+
+
+def cash_journals(journals):
+	"""The Journal Entries of `journals` with a Bank or Cash account row."""
+	if not journals:
+		return set()
+	row, account = frappe.qb.DocType("Journal Entry Account"), frappe.qb.DocType("Account")
+	found = (
+		frappe.qb.from_(row).join(account).on(account.name == row.account)
+		.select(row.parent).distinct()
+		.where(row.parent.isin(list(journals)) & account.account_type.isin(("Bank", "Cash")))
+	).run(pluck=True)  # fmt: skip
+	return set(found)
+
+
+def check_members(share):
+	"""Throw unless every member is an Active Employee of the share's college (an Employee Transfer can move one)."""
+	employees = [m.employee for m in share.members]
+	rows = frappe.get_all("Employee", {"name": ["in", employees or [""]]}, ["name", "company", "status"])
+	valid = {r.name for r in rows if r.company == share.company and r.status == "Active"}
+	others = [m.employee_name or m.employee for m in share.members if m.employee not in valid]
+	if others:
+		frappe.throw(
+			_("{0} are not Active Employees of {1}: update the project's team before sharing.").format(", ".join(others), share.company)
+		)
+
+
 def post_additional_salaries(share):
-	"""A submitted Additional Salary per member with an amount, on the member's next payroll. Runs as the Accounts user
+	"""A submitted Additional Salary per member with an amount, on the member's next payroll. Runs as the final approver
 	submitting the share: every input comes from the server-computed share."""
+	from campus.examinations.api import next_payroll_date
+
 	for member in share.members:
 		if flt(member.amount) <= 0:
 			continue
@@ -194,24 +273,21 @@ def cancel_additional_salaries(share):
 			additional.cancel()
 
 
-def next_payroll_date(employee, company, posting_date):
-	"""The share's date, or the day after the employee's last processed slip if that is later."""
-	last_end = frappe.db.get_value("Salary Slip", {"employee": employee, "company": company, "docstatus": 1}, "end_date", order_by="end_date desc")
-	if last_end and getdate(add_days(last_end, 1)) > getdate(posting_date):
-		return getdate(add_days(last_end, 1))
-	return getdate(posting_date)
-
-
 # ---- revenue figures (Consultancy Revenue report, AQAR 3.5.1 / NIRF data points) ----------------------------------
+
+
+def college_projects(company, department=None):
+	"""The college's projects the user can read."""
+	filters = {"company": company}
+	if department:
+		filters["department"] = department
+	return frappe.get_list(PROJECT, filters, pluck="name", limit_page_length=0)
 
 
 def invoices_in_year(company, academic_year=None, department=None):
 	"""The submitted consultancy invoices (and credit notes) of the college's projects the user can read, posted in the
 	academic year (all years when none)."""
-	filters = {"company": company}
-	if department:
-		filters["department"] = department
-	projects = frappe.get_list(PROJECT, filters, pluck="name", limit_page_length=0)
+	projects = college_projects(company, department)
 	if not projects:
 		return []
 	invoice_filters = {"oc_consultancy_project": ["in", projects], "docstatus": 1, "company": company}
@@ -220,21 +296,62 @@ def invoices_in_year(company, academic_year=None, department=None):
 	return frappe.get_all("Sales Invoice", invoice_filters, INVOICE_FIELDS, order_by="posting_date, name")
 
 
-def received_by_invoice(invoices):
-	"""{invoice: amount received by Payment Entry / Journal Entry allocations}."""
+def receipts(invoices, start=None, end=None):
+	"""[{invoice, voucher_no, posting_date, amount}] received against `invoices` (Payment Entries, and Journal Entries
+	with a Bank or Cash row), optionally dated between `start` and `end`."""
 	if not invoices:
-		return {}
+		return []
 	ledger = frappe.qb.DocType("Payment Ledger Entry")
-	rows = (
+	query = (
 		frappe.qb.from_(ledger)
-		.select(ledger.against_voucher_no, frappe.query_builder.functions.Sum(ledger.amount))
+		.select(ledger.against_voucher_no.as_("invoice"), ledger.voucher_type, ledger.voucher_no, ledger.posting_date, ledger.amount)
 		.where(
 			(ledger.against_voucher_type == "Sales Invoice") & ledger.against_voucher_no.isin(list(invoices))
 			& ledger.voucher_type.isin(PAYMENT_VOUCHERS) & (ledger.delinked == 0)
 		)
-		.groupby(ledger.against_voucher_no)
-	).run()  # fmt: skip
-	return {invoice: -flt(amount) for invoice, amount in rows}
+	)  # fmt: skip
+	if start and end:
+		query = query.where(ledger.posting_date.between(start, end))
+	rows = query.run(as_dict=True)
+	journals = cash_journals({r.voucher_no for r in rows if r.voucher_type == "Journal Entry"})
+	return [
+		frappe._dict(invoice=r.invoice, voucher_no=r.voucher_no, posting_date=r.posting_date, amount=-flt(r.amount))
+		for r in rows
+		if r.voucher_type == "Payment Entry" or r.voucher_no in journals
+	]
+
+
+def received_by_invoice(invoices):
+	"""{invoice: amount received to date}."""
+	totals = {}
+	for row in receipts(invoices):
+		totals[row.invoice] = totals.get(row.invoice, 0) + row.amount
+	return totals
+
+
+def consultancy_received(company, academic_year, department=None):
+	"""(amount received before GST, invoices) in the financial year holding the academic year's start (NIRF)."""
+	from erpnext.accounts.utils import get_fiscal_year
+
+	start = year_bounds(academic_year)[0]
+	_name, fy_start, fy_end = get_fiscal_year(start, company=company)[:3]
+	projects = college_projects(company, department)
+	invoices = frappe.get_all(
+		"Sales Invoice", {"oc_consultancy_project": ["in", projects or [""]], "docstatus": 1, "company": company, "is_return": 0},
+		["name", "base_net_total", "base_grand_total"],
+	)  # fmt: skip
+	taxable_share = {r.name: flt(r.base_net_total) / flt(r.base_grand_total) if flt(r.base_grand_total) else 1 for r in invoices}
+	rows = receipts(list(taxable_share), fy_start, fy_end)
+	value = flt(sum(r.amount * taxable_share[r.invoice] for r in rows), 2)
+	return value, sorted({r.invoice for r in rows})
+
+
+def net_positive(invoices, key):
+	"""Distinct `key` values whose invoices net above zero, in first-invoice order."""
+	totals = {}
+	for row in invoices:
+		totals[row[key]] = totals.get(row[key], 0) + flt(row.base_net_total)
+	return [name for name, total in totals.items() if total > 0]
 
 
 def shares_by_invoice(invoices):
@@ -255,20 +372,24 @@ def consultancy_revenue(company, academic_year, department=None):
 
 
 def revenue_by_project(company, academic_year=None, department=None):
-	"""Consultancy Revenue report rows: per project, the year's taxable value, GST, total, received and shares."""
+	"""Consultancy Revenue report rows: per project, the year's taxable value, GST and total, the amount received to date on
+	those invoices, the shares and the paid invoices not yet shared."""
 	invoices = invoices_in_year(company, academic_year, department)
 	names = [r.name for r in invoices]
 	received, shares = received_by_invoice(names), shares_by_invoice(names)
 	projects = {}
 	for inv in invoices:
 		row = projects.setdefault(inv.oc_consultancy_project, frappe._dict(consultancy_project=inv.oc_consultancy_project, invoices=0,
-			taxable_value=0, gst=0, invoice_total=0, received=0, institution_share=0, faculty_share=0, staff_share=0))  # fmt: skip
+			taxable_value=0, gst=0, invoice_total=0, received=0, institution_share=0, faculty_share=0, staff_share=0,
+			paid_not_shared=0))  # fmt: skip
 		row.invoices += 0 if inv.is_return else 1
 		row.taxable_value += flt(inv.base_net_total)
 		row.gst += flt(inv.base_total_taxes_and_charges)
 		row.invoice_total += flt(inv.base_grand_total)
 		row.received += received.get(inv.name, 0)
 		share = shares.get(inv.name)
+		if not share and not inv.is_return and flt(received.get(inv.name, 0), 2) >= flt(inv.base_grand_total, 2):
+			row.paid_not_shared += 1
 		if share:
 			row.institution_share += flt(share.institution_amount)
 			row.faculty_share += flt(share.faculty_amount)

@@ -154,29 +154,27 @@ def patents_granted(company, academic_year, department=None):
 
 
 def consultancy_revenue(company, academic_year, department=None):
-	"""AQAR 3.5.1 / NIRF consultancy: taxable value (before GST) of consultancy invoices posted in the year, net of credit notes."""
+	"""AQAR 3.5.1: taxable value (before GST) of consultancy invoices posted in the academic year, net of credit notes."""
 	value, rows = consultancy.consultancy_revenue(company, academic_year, department)
 	return {"value": value, "records": _refs("Sales Invoice", rows)}
 
 
+def consultancy_received(company, academic_year, department=None):
+	"""NIRF consultancy: amount received (before GST) in the financial year holding the academic year's start."""
+	value, invoices = consultancy.consultancy_received(company, academic_year, department)
+	return {"value": value, "records": [{"doctype": "Sales Invoice", "name": name} for name in invoices]}
+
+
 def consultancy_projects(company, academic_year, department=None):
-	"""NIRF consultancy: projects with consultancy revenue (net of credit notes) in the year."""
-	projects = _net_by(consultancy.invoices_in_year(company, academic_year, department), "oc_consultancy_project")
+	"""Projects with consultancy revenue (net of credit notes) in the academic year."""
+	projects = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "oc_consultancy_project")
 	return {"value": len(projects), "records": [{"doctype": consultancy.PROJECT, "name": name} for name in projects]}
 
 
 def consultancy_clients(company, academic_year, department=None):
-	"""NIRF consultancy: distinct client organisations with consultancy revenue (net of credit notes) in the year."""
-	clients = _net_by(consultancy.invoices_in_year(company, academic_year, department), "customer")
+	"""Distinct client organisations with consultancy revenue (net of credit notes) in the academic year."""
+	clients = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "customer")
 	return {"value": len(clients), "records": [{"doctype": "Customer", "name": name} for name in clients]}
-
-
-def _net_by(invoices, key):
-	"""Distinct `key` values whose invoices of the year net above zero, in first-invoice order."""
-	totals = {}
-	for row in invoices:
-		totals[row[key]] = totals.get(row[key], 0) + (row.base_net_total or 0)
-	return [name for name, total in totals.items() if total > 0]
 
 
 def faculty_research_profile(employee):

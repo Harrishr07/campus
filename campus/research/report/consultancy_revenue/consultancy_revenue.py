@@ -1,6 +1,7 @@
-"""M08-10 Consultancy Revenue (AQAR 3.5.1, NIRF consultancy): per consultancy project of the college, the taxable value
-invoiced in the academic year (all years when none) net of credit notes, its GST, the amount received by payments and
-the revenue shared to the institution, faculty and staff. Projects are read with the user's permissions."""
+"""M08-10 Consultancy Revenue (AQAR 3.5.1): per consultancy project of the college, the taxable value
+invoiced in the academic year (all years when none) net of credit notes, its GST, the amount received to date on those
+invoices by payments, the revenue shared to the institution, faculty and staff, and the invoices received in full but not
+yet shared. Projects are read with the user's permissions."""
 
 from frappe import _
 
@@ -30,9 +31,10 @@ def columns():
 		col("taxable_value", "Taxable Value"),
 		col("gst", "GST"),
 		col("invoice_total", "Invoice Total"),
-		col("received", "Received"),
+		col("received", "Received to Date"),
 		col("institution_share", "Institution Share"),
 		col("faculty_share", "Faculty Share"),
 		col("staff_share", "Staff Share"),
+		col("paid_not_shared", "Paid, Not Shared", "Int", 110, None),
 		col("currency", "Currency", "Link", 70, "Currency"),
 	]

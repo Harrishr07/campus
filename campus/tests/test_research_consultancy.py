@@ -14,6 +14,8 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_retu
 from frappe.tests import UnitTestCase
 from frappe.utils import get_first_day, get_last_day, today
 
+from campus.campus_platform.approvals import approve, request_approval
+from campus.campus_platform.mandatory_approval import seed_mandatory_approval
 from campus.iqac import registry
 from campus.research import consultancy, consultancy_rules
 from campus.research.report.consultancy_revenue import consultancy_revenue
@@ -30,6 +32,8 @@ SAC = "998311"
 ITEM = "CON-TEST-SERVICE"
 STRUCTURE = "CON Test Structure"
 ACCOUNTS = "con-accounts@example.com"
+PRINCIPAL = "con-principal@example.com"
+ACCOUNTS2 = "con-accounts2@example.com"
 SHARE = consultancy.SHARE
 
 
@@ -85,11 +89,16 @@ class ConsultancyFixture(CampusTestCase):
 			frappe.get_doc({"doctype": "Gender", "gender": "Male"}).insert()
 		make_user(ACCOUNTS, [COLLEGE])
 		frappe.get_doc("User", ACCOUNTS).add_roles("Accounts Manager", "Accounts User")
+		make_user(ACCOUNTS2, [COLLEGE])
+		frappe.get_doc("User", ACCOUNTS2).add_roles("Accounts Manager", "Accounts User")
+		make_user(PRINCIPAL, [COLLEGE])
+		frappe.get_doc("User", PRINCIPAL).add_roles("Principal")
 
 	def setUp(self):
 		frappe.db.savepoint("consultancy_test")
 		self.addCleanup(frappe.db.rollback, save_point="consultancy_test")
 		seed_research()
+		seed_mandatory_approval()
 		if not frappe.db.exists("GST HSN Code", SAC):
 			frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": SAC, "description": "Management consulting"}).insert()
 		if not frappe.db.exists("Item", ITEM):
@@ -181,10 +190,29 @@ class ConsultancyFixture(CampusTestCase):
 		return entry
 
 	def share(self, project, invoice, submit=True):
+		"""A share; submitted means approved by Accounts, then the Principal."""
 		share = frappe.get_doc({"doctype": SHARE, "consultancy_project": project.name, "sales_invoice": invoice.name}).insert()
 		if submit:
-			share.submit()
+			request = request_approval(SHARE, share.name)
+			for approver in (ACCOUNTS, PRINCIPAL):
+				self.act_as(approver, approve, request)
+			share = frappe.get_doc(SHARE, share.name)
 		return share
+
+	@staticmethod
+	def act_as(user, method, *args):
+		frappe.set_user(user)
+		try:
+			return method(*args)
+		finally:
+			frappe.set_user("Administrator")
+
+	def paid_share(self, **values):
+		"""A project with a paid invoice of 10,000 and its draft share."""
+		project = self.project(**values)
+		invoice = self.invoice(project)
+		payment = self.pay(invoice)
+		return project, invoice, payment
 
 	@staticmethod
 	def taxes(invoice):
@@ -306,14 +334,16 @@ class TestRevenueShare(ConsultancyFixture):
 			self.share(project, invoice)
 		self.assertIn("already shared", str(caught.exception))
 
-	def test_the_submit_check_rereads_the_invoice_under_lock(self):
-		project = self.project()
-		invoice = self.invoice(project)
-		self.pay(invoice)
+	def test_the_payment_state_is_checked_again_at_submit(self):
+		self.salary_structures()
+		project, invoice, _payment = self.paid_share()
 		share = self.share(project, invoice, submit=False)
-		frappe.db.set_value("Sales Invoice", invoice.name, "outstanding_amount", 100)  # as a payment cancelled meanwhile
+		request = request_approval(SHARE, share.name)
+		self.act_as(ACCOUNTS, approve, request)
+		frappe.db.set_value("Sales Invoice", invoice.name, "outstanding_amount", 100)  # as a payment taken off meanwhile
 		with self.assertRaises(frappe.ValidationError):
-			share.submit()
+			self.act_as(PRINCIPAL, approve, request)
+		self.assertEqual(frappe.db.get_value(SHARE, share.name, "docstatus"), 0)
 
 	def test_another_projects_invoice_cant_be_shared(self):
 		project, other = self.project(), self.project()
@@ -360,18 +390,118 @@ class TestRevenueShare(ConsultancyFixture):
 		with self.assertRaises(frappe.ValidationError):
 			self.project(team=[{"employee": self.employee("Out", OTHER), "category": "Faculty"}, {"employee": self.staff, "category": "Staff"}])
 
-	def test_accounts_submits_the_share(self):
+	def test_the_share_is_approved_by_accounts_then_the_principal(self):
+		self.salary_structures()
+		project, invoice, _payment = self.paid_share()
+		share = self.share(project, invoice, submit=False)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			share.submit()
+		self.assertIn("needs approval", str(caught.exception))
+		request = request_approval(SHARE, share.name)
+		self.act_as(ACCOUNTS, approve, request)
+		self.assertEqual(frappe.db.get_value(SHARE, share.name, "docstatus"), 0)
+		self.act_as(PRINCIPAL, approve, request)
+		share = frappe.get_doc(SHARE, share.name)
+		self.assertEqual(share.docstatus, 1)
+		self.assertTrue(all(m.additional_salary for m in share.members))
+
+	def test_a_share_never_submits_without_a_policy(self):
+		project, invoice, _payment = self.paid_share()
+		share = self.share(project, invoice, submit=False)
+		frappe.db.set_value("Approval Policy", {"document_type": SHARE}, "enabled", 0)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			request_approval(SHARE, share.name)
+		self.assertIn("No approval policy", str(caught.exception))
+
+	def test_a_team_member_does_not_approve_their_own_share(self):
+		self.salary_structures()
+		frappe.db.set_value("Employee", self.faculty2, "user_id", ACCOUNTS)
+		project, invoice, _payment = self.paid_share()
+		share = self.share(project, invoice, submit=False)
+		request = request_approval(SHARE, share.name)
+		with self.assertRaises(frappe.PermissionError):
+			self.act_as(ACCOUNTS, approve, request)
+		self.act_as(ACCOUNTS2, approve, request)
+		self.act_as(PRINCIPAL, approve, request)
+		self.assertEqual(frappe.db.get_value(SHARE, share.name, "docstatus"), 1)
+
+	def test_members_are_active_employees_of_the_college_at_share_time(self):
+		project, invoice, _payment = self.paid_share()
+		frappe.db.set_value("Employee", self.faculty2, "company", OTHER)  # as an Employee Transfer
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.share(project, invoice, submit=False)
+		self.assertIn("not Active Employees", str(caught.exception))
+		frappe.db.set_value("Employee", self.faculty2, {"company": COLLEGE, "status": "Left"})
+		with self.assertRaises(frappe.ValidationError):
+			self.share(project, invoice, submit=False)
+
+	def test_members_are_checked_again_at_submit(self):
+		project, invoice, _payment = self.paid_share()
+		share = self.share(project, invoice, submit=False)
+		request = request_approval(SHARE, share.name)
+		self.act_as(ACCOUNTS, approve, request)
+		frappe.db.set_value("Employee", self.staff, "company", OTHER)
+		with self.assertRaises(frappe.ValidationError):
+			self.act_as(PRINCIPAL, approve, request)
+
+	def test_a_payment_of_a_shared_invoice_cant_be_unreconciled(self):
+		self.salary_structures()
+		project, invoice, payment = self.paid_share()
+		self.share(project, invoice)
+		unreconcile = frappe.new_doc("Unreconcile Payment")
+		unreconcile.update({"company": COLLEGE, "voucher_type": "Payment Entry", "voucher_no": payment.name})
+		unreconcile.add_references()
+		unreconcile.insert()
+		with self.assertRaises(frappe.ValidationError) as caught:
+			unreconcile.submit()
+		self.assertIn("shared consultancy invoice", str(caught.exception))
+		self.assertEqual(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount"), 0)
+
+	def test_a_journal_receipt_of_a_shared_invoice_cant_be_cancelled(self):
 		self.salary_structures()
 		project = self.project()
 		invoice = self.invoice(project)
-		self.pay(invoice)
-		frappe.set_user(ACCOUNTS)
-		try:
-			share = self.share(project, invoice)
-		finally:
-			frappe.set_user("Administrator")
-		self.assertEqual(share.docstatus, 1)
-		self.assertTrue(all(m.additional_salary for m in frappe.get_doc(SHARE, share.name).members))
+		receipt = self.journal(invoice, f"Cash - {ABBR}")
+		self.share(project, invoice)
+		with self.assertRaises(frappe.ValidationError):
+			frappe.get_doc("Journal Entry", receipt.name).cancel()
+
+	def test_a_journal_without_bank_or_cash_is_not_a_receipt(self):
+		project = self.project()
+		invoice = self.invoice(project)
+		write_off = self.journal(invoice, frappe.db.get_value("Company", COLLEGE, "write_off_account"))
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.share(project, invoice, submit=False)
+		self.assertIn(write_off.name, str(caught.exception))
+
+	def test_a_written_off_invoice_is_not_shared(self):
+		project = self.project()
+		invoice = self.invoice(project)
+		frappe.db.set_value(  # as a POS invoice written off at the counter
+			"Sales Invoice", invoice.name, {"write_off_amount": invoice.grand_total, "base_write_off_amount": invoice.grand_total, "outstanding_amount": 0}
+		)  # fmt: skip
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self.share(project, invoice, submit=False)
+		self.assertIn("write-off", str(caught.exception))
+
+	def journal(self, invoice, account):
+		"""A submitted Journal Entry settling the invoice's total against `account`."""
+		if not frappe.db.exists("Party Type", "Customer"):  # bare test site: no ERPNext setup data
+			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+		frappe.db.set_value("Party Type", "Customer", "account_type", "Receivable")
+		entry = frappe.get_doc(
+			{
+				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(), "cheque_no": "CON-JE", "cheque_date": today(),
+				"accounts": [
+					{"account": invoice.debit_to, "party_type": "Customer", "party": invoice.customer, "credit_in_account_currency": invoice.grand_total,
+						"reference_type": "Sales Invoice", "reference_name": invoice.name},
+					{"account": account, "debit_in_account_currency": invoice.grand_total,
+						"cost_center": frappe.db.get_value("Company", COLLEGE, "cost_center")},
+				],
+			}
+		).insert()  # fmt: skip
+		entry.submit()
+		return entry
 
 
 class TestConsultancyRevenue(ConsultancyFixture):
@@ -402,6 +532,12 @@ class TestConsultancyRevenue(ConsultancyFixture):
 
 	def test_another_college_has_none(self):
 		self.assertEqual(registry.data_point("consultancy_revenue", OTHER, YEAR)["value"], 0)
+		self.assertEqual(registry.data_point("consultancy_received", OTHER, YEAR)["value"], 0)
+
+	def test_received_is_the_years_receipts_before_gst(self):
+		point = registry.data_point("consultancy_received", COLLEGE, YEAR)
+		self.assertEqual(point["value"], 10000)  # 11,800 received on a 10,000 + GST invoice; the unpaid ones add nothing
+		self.assertEqual(len(point["records"]), 1)
 
 	def test_report_shows_gst_received_and_shares_by_project(self):
 		_columns, rows = consultancy_revenue.execute({"company": COLLEGE, "academic_year": YEAR})
@@ -411,5 +547,9 @@ class TestConsultancyRevenue(ConsultancyFixture):
 			(first.invoices, first.taxable_value, first.gst, first.received, first.institution_share, first.faculty_share, first.staff_share),
 			(2, 10000, 1800, 11800, 5000, 4000, 1000),
 		)
+		self.assertEqual(first.paid_not_shared, 0)  # the credited invoice has outstanding nil but was never received
+		self.pay(frappe.get_doc("Sales Invoice", {"oc_consultancy_project": self.second.name, "docstatus": 1}))
+		rows = consultancy_revenue.execute({"company": COLLEGE, "academic_year": YEAR})[1]
+		self.assertEqual(next(r for r in rows if r.consultancy_project == self.second.name).paid_not_shared, 1)
 		self.assertEqual((second.taxable_value, second.gst, second.received, second.faculty_share), (20000, 3600, 0, 0))
 		self.assertEqual(consultancy_revenue.execute({"company": OTHER})[1], [])

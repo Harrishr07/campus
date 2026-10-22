@@ -201,6 +201,7 @@ class TestSeedList(ApprovalTestCase):
 		expected = [
 			"Result Ratification", "Fee Refund", "Fee Concession", "Scholarship Application", "Rejoin Application",
 			"Examiner Remuneration Claim", "Utilisation Certificate", "Credit Recognition",
+			"Consultancy Revenue Share",
 		]  # fmt: skip
 		self.assertEqual(list(mandatory_approval.MANDATORY_APPROVAL_DOCTYPES), expected)
 		self.assertEqual(mandatory_approval.missing_doctypes(set()), expected)

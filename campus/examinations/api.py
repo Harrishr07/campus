@@ -256,3 +256,12 @@ def offering_assessment(offering):
 	from campus.examinations import attainment_marks
 
 	return attainment_marks.offering_assessment(offering)
+
+
+def next_payroll_date(employee, company, posting_date):
+	"""The payroll date of a one-off earning posted on `posting_date`: that date, or the day after the employee's last
+	submitted Salary Slip of `company` if later (as examiner remuneration). A drafted slip of the month picks the earning
+	up only when it is recalculated. Used by consultancy revenue shares (P3-T20)."""
+	from campus.examinations import remuneration_payment, remuneration_rules
+
+	return remuneration_rules.next_payroll_date(posting_date, remuneration_payment.last_processed_slip_end(employee, company))

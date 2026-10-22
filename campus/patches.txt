@@ -34,4 +34,5 @@ campus.patches.report_blank_exam_types
 campus.patches.student_lifecycle_status
 campus.patches.map_break_previous_statuses
 campus.patches.move_attainment_snapshots
+campus.patches.require_consultancy_share_approval
 campus.patches.require_credit_recognition_approval

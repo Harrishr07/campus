@@ -30,6 +30,7 @@ MANDATORY_APPROVAL_DOCTYPES = (
 	"Examiner Remuneration Claim",
 	"Utilisation Certificate",
 	"Credit Recognition",  # X-03: clears a degree requirement (M03-09 / M05-15)
+	"Consultancy Revenue Share",  # P3-T20: pays faculty and staff from consultancy revenue
 )
 
 
