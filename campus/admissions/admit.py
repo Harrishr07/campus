@@ -129,4 +129,5 @@ def create_student(source, state):
 	copy_aadhaar(source, student)
 	student.insert(ignore_permissions=True)
 	frappe.db.set_value("Student", student.name, "joining_date", None)
+	student.joining_date = None
 	return student

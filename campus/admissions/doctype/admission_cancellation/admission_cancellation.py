@@ -15,13 +15,15 @@ Their cancellation names no enrollment: on submit the advance they paid (unalloc
 customer, less refunds already paid) gets a draft refund Payment Entry in full (no fee was charged, so no slab
 deduction applies), and the student moves Admitted -> Cancelled. Nothing else is released: nothing was held. Submit
 takes the applicant's and the Student's row locks (the joining's lock order), re-reads the status under them and
-reads the advance with locking reads; one cancellation per student.
+reads the advance with locking reads; one cancellation per student. The draft refund names its cancellation
+(`oc_admission_cancellation`, copied with the entry), and its submit is refused when another submitted entry
+already refunds that cancellation or the advance left (locking reads) is less than the refund: it is paid once.
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, today
+from frappe.utils import flt, getdate, today
 
 from campus.admissions import refund
 from campus.admissions.admit import check_company_access
@@ -180,7 +182,38 @@ def make_advance_refund(cancellation):
 		cancellation.name, cancellation.cancellation_date, cancellation.reason
 	)
 	customer = frappe.db.get_value("Student", cancellation.student, "customer")
-	return finance.make_advance_refund(customer, cancellation.company, cancellation.cash_refund, cancellation.name, remarks)
+	return finance.make_advance_refund(
+		customer, cancellation.company, cancellation.cash_refund, cancellation.name, remarks,
+		oc_admission_cancellation=cancellation.name,
+	)  # fmt: skip
+
+
+def check_advance_refund(doc, method=None):
+	"""Payment Entry before_submit: an advance refund of a cancellation before joining is paid once, and never more
+	than the advance left. The cancellation's row lock serialises its refunds; the facts are re-read FOR UPDATE."""
+	cancellation = doc.get("oc_admission_cancellation")
+	if not cancellation:
+		return
+	student, company = frappe.db.get_value("Admission Cancellation", cancellation, ["student", "company"], for_update=True)
+	customer = frappe.db.get_value("Student", student, "customer")
+	if (doc.party_type, doc.party, doc.company) != ("Customer", customer, company):
+		frappe.throw(_("{0} refunds the advance of {1}: it must be paid to their customer {2} of {3}.").format(
+			doc.name, cancellation, customer, company
+		))  # fmt: skip
+	paid = frappe.db.sql(
+		"select name from `tabPayment Entry` where oc_admission_cancellation = %s and docstatus = 1 and name != %s for update",
+		(cancellation, doc.name),
+	)
+	if paid:
+		frappe.throw(_("{0} already refunds the advance of {1}.").format(paid[0][0], cancellation), title=_("Already Refunded"))
+	left = finance.unallocated_advance(customer, company, locking=True)
+	if flt(doc.paid_amount) > left:
+		frappe.throw(
+			_("{0} refunds {1}, but only {2} of the advance is left unrefunded.").format(
+				doc.name, frappe.format(doc.paid_amount, "Currency"), frappe.format(left, "Currency")
+			),
+			title=_("Already Refunded"),
+		)
 
 
 def cancel_enrollment(program_enrollment):

@@ -40,3 +40,4 @@ campus.patches.joining_gate
 campus.patches.coe_pack_for_affiliated
 campus.patches.repair_joining_keys
 campus.patches.clear_legacy_attendance_start_dates
+campus.patches.document_reminder_due_date

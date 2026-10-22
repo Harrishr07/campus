@@ -30,7 +30,7 @@ from frappe.utils import add_days, getdate, today
 from campus.admissions import numbers
 from campus.admissions import seat_matrix as seats
 from campus.admissions.admit import admission_year, check_cleared, check_company_access, lock_applicant, retry_on_deadlock
-from campus.admissions.reporting import check_late_joining, student_deadline
+from campus.admissions.reporting import check_late_joining, student_deadline, withdraw_referrals
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
 from campus.student_services.api import ACTIVE, ADMITTED, CANCELLED, JOINED, create_onboarding, last_change_date, transition
@@ -119,6 +119,7 @@ def join(applicant, state, student, date, justification):
 	enrollment = (resuming and joining_enrollment(applicant)) or create_enrollment(applicant, student, state, year, date, justification)
 	if student.oc_academic_status == ADMITTED:
 		transition(student.name, JOINED, date, _("Joining confirmed"), ("Program Enrollment", enrollment), program_enrollment=enrollment)
+		withdraw_referrals(student.name)
 	if not admission_invoice(enrollment):
 		create_fee_invoice(student.name, enrollment, state, year)
 	create_onboarding(student.name)  # Education's enrollment submit already set the student's joining date

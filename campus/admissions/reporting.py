@@ -7,9 +7,10 @@
 - Late joining: a joining dated after the student's deadline needs an approved (submitted) Late Joining Request of
   the applicant, for that effective joining date (approval engine; seeded Principal approval).
 - No-show: once the deadline plus the grace days (Admission Settings) has passed, an Admitted student who has not
-  joined is a no-show. The daily job refers each one for cancellation with a draft Admission Cancellation (one bulk
+  joined is a no-show, unless their approved Late Joining Request lets them join on or after that day. The daily job refers each one for cancellation with a draft Admission Cancellation (one bulk
   run). Nothing is cancelled automatically: an Admission Officer reviews the draft and submits it, which moves the
-  student to Cancelled and drafts the refund of any advance they paid.
+  student to Cancelled and drafts the refund of any advance they paid. A referred student who joins after all has
+  their draft (enrollment-less) cancellation withdrawn, so it cannot later cancel the joined student.
 """
 
 import frappe
@@ -74,8 +75,13 @@ def no_shows(as_of=None, company=None):
 	)
 	applicants = [s.student_applicant for s in students if s.student_applicant]
 	programs = dict(frappe.get_all("Student Applicant", {"name": ("in", applicants or [""])}, ["name", "program"], as_list=True))
+	late = set(
+		frappe.get_all(LATE_REQUEST, {"applicant": ("in", applicants or [""]), "docstatus": 1, "joining_date": (">=", day)}, pluck="applicant")
+	)
 	rows = []
 	for student in students:
+		if student.student_applicant in late:
+			continue
 		program = programs.get(student.student_applicant)
 		deadline = student_deadline(student.oc_reporting_deadline, program)
 		if deadline and day > add_days(deadline, grace):
@@ -92,6 +98,11 @@ def no_shows(as_of=None, company=None):
 def open_cancellation(student):
 	"""The student's draft or submitted Admission Cancellation, or None."""
 	return frappe.db.get_value(CANCELLATION, {"student": student, "docstatus": ("<", 2)}, "name")
+
+
+def withdraw_referrals(student):
+	"""A referred no-show joined after all: their draft cancellations without an enrollment are deleted."""
+	frappe.db.delete(CANCELLATION, {"student": student, "docstatus": 0, "program_enrollment": ("is", "not set")})
 
 
 def refer_no_shows(as_of=None):

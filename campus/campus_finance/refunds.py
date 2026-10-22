@@ -152,9 +152,9 @@ def unallocated_advance(customer, company, locking=False):
 	return flt(max(totals.get("Receive", 0) - totals.get("Pay", 0), 0), 2)
 
 
-def make_advance_refund(customer, company, amount, reference_no, remarks):
+def make_advance_refund(customer, company, amount, reference_no, remarks, **fields):
 	"""Draft Payment Entry (Pay) of `amount` to `customer`, against no invoice: the refund of an advance, for accounts
-	to review and submit (and reconcile with the advance). Dated today (GL date)."""
+	to review and submit (and reconcile with the advance). Dated today (GL date); `fields` are set on it as well."""
 	from erpnext.accounts.party import get_party_account
 
 	bank = frappe.db.get_value("Company", company, "default_bank_account")
@@ -165,7 +165,7 @@ def make_advance_refund(customer, company, amount, reference_no, remarks):
 			"doctype": "Payment Entry", "payment_type": "Pay", "company": company, "posting_date": today(),
 			"party_type": "Customer", "party": customer, "paid_from": bank,
 			"paid_to": get_party_account("Customer", customer, company), "paid_amount": amount, "received_amount": amount,
-			"reference_no": reference_no, "reference_date": today(), "remarks": remarks,
+			"reference_no": reference_no, "reference_date": today(), "remarks": remarks, **fields,
 		}
 	)  # fmt: skip
 	payment.flags.ignore_permissions = True

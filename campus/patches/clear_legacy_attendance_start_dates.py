@@ -12,7 +12,7 @@ import frappe
 
 
 def execute():
-	gate_ran = frappe.db.get_value("Patch Log", {"patch": "campus.patches.joining_gate"}, "creation")
+	gate_ran = frappe.db.get_value("Patch Log", {"patch": "campus.patches.joining_gate"}, "creation", order_by="creation asc")
 	if not gate_ran or not frappe.db.has_column("Program Enrollment", "oc_attendance_start_date"):
 		return
 	frappe.db.sql(

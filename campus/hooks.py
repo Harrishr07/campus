@@ -253,6 +253,10 @@ doc_events["Payment Entry"] = {
 	],
 }
 doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
+doc_events["Payment Entry"]["before_submit"] = [  # L-03: a no-show's advance refund is paid once
+	doc_events["Payment Entry"]["before_submit"],
+	"campus.admissions.doctype.admission_cancellation.admission_cancellation.check_advance_refund",
+]
 doc_events["Journal Entry"] = {
 	"validate": "campus.campus_finance.scholarships.block_amend",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",

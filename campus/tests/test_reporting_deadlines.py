@@ -12,7 +12,8 @@ from campus.admissions.api import grant_temporary_clearance
 from campus.admissions.report.admission_no_shows import admission_no_shows
 from campus.campus_platform import bulk
 from campus.campus_platform.approvals import approve, request_approval
-from campus.patches import clear_legacy_attendance_start_dates, repair_joining_keys
+from campus.campus_messaging.setup import DOCUMENT_PENDING_EN
+from campus.patches import clear_legacy_attendance_start_dates, document_reminder_due_date, repair_joining_keys
 from campus.student_services.api import attendance_start, student_window
 from campus.tests.approval_fixtures import drop_policies
 from campus.tests.factories import make_user
@@ -142,6 +143,20 @@ class TestLateJoining(ReportingTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "already has a Late Joining Request"):
 			self.request(add_days(today(), -1))
 
+	def test_a_pending_request_cannot_be_submitted_directly(self):
+		doc = self.request(today())
+		self.as_officer(request_approval, LATE, doc.name)
+		with self.assertRaisesRegex(frappe.ValidationError, "awaiting approval"):
+			self.as_officer(frappe.get_doc(LATE, doc.name).submit)
+		self.assertEqual(frappe.db.get_value(LATE, doc.name, "docstatus"), 0)
+
+	def test_an_approved_late_joining_is_not_a_no_show(self):
+		listed = lambda: self.student in [row.student for row in reporting.no_shows(company=COLLEGE)]  # noqa: E731
+		self.assertTrue(listed())  # deadline -10, no grace
+		self.approve_fully(self.request(today()))
+		self.assertFalse(listed())
+		self.assertTrue(self.student in [row.student for row in reporting.no_shows(as_of=add_days(today(), 1), company=COLLEGE)])
+
 	def test_without_a_policy_a_request_is_never_submitted(self):
 		doc = self.request(today())
 		drop_policies(LATE)
@@ -181,6 +196,19 @@ class TestTemporaryClearance(ReportingTestCase):
 		self.assertEqual(send.call_args.kwargs["context"], {"documents": TC, "dedupe_token": today(), "due_date": due})
 		frappe.db.set_value("Applicant Document", {"parent": applicant}, "status", "Verified")
 		self.assertFalse([i for i in documents.reminder_items() if i["applicant"] == applicant])
+
+	def test_the_reminder_prints_the_due_date_and_the_patch_updates_the_seeded_text(self):
+		body = lambda language: frappe.db.get_value(  # noqa: E731
+			"Message Template Body", {"parent": documents.REMINDER_EVENT, "language": language}, "body"
+		)
+		old = document_reminder_due_date.FIRST_SEED["en"][0]
+		frappe.db.set_value("Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "en"}, "body", old)
+		frappe.db.set_value("Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "ta"}, "body", "Edited")
+		document_reminder_due_date.execute()
+		self.assertEqual((body("en"), body("ta")), (DOCUMENT_PENDING_EN, "Edited"))  # an edited body is kept
+		render = lambda context: frappe.render_template(DOCUMENT_PENDING_EN, {"context": context})  # noqa: E731
+		self.assertIn("Due by 2026-11-06.", render({"documents": TC, "due_date": "2026-11-06"}))
+		self.assertNotIn("Due by", render({"documents": TC}))
 
 	def test_an_expired_clearance_no_longer_clears(self):
 		applicant = self.applicant()
@@ -250,6 +278,14 @@ class TestNoShows(ReportingTestCase):
 		row = next(r for r in rows if r.student == late)
 		self.assertEqual((row.cancellation, str(row.referral_date)), (drafts[0].name, add_days(today(), -1)))
 
+	def test_a_referred_no_show_who_joins_loses_the_draft_cancellation(self):
+		applicant, student = self.admitted()
+		self.refer()
+		self.assertTrue(frappe.db.exists("Admission Cancellation", {"student": student, "docstatus": 0}))
+		frappe.db.set_value("Student", student, "oc_reporting_deadline", today())  # e.g. the deadline was extended
+		self.join_as_officer(applicant)
+		self.assertFalse(frappe.db.exists("Admission Cancellation", {"student": student}))
+
 	def test_the_daily_job_is_scheduled(self):
 		self.assertIn("campus.admissions.reporting.refer_no_shows", frappe.get_hooks("scheduler_events")["daily"])
 
@@ -287,6 +323,8 @@ class TestCancellationBeforeJoining(ReportingTestCase):
 		self.assertEqual((state.oc_academic_status, state.enabled), ("Cancelled", 0))
 		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Rejected")
 		self.assertEqual(self.counts(), counts)  # no enrollment, invoice or customer made or released
+		payment.submit()  # Accounts pays the refund once
+		self.assertEqual(frappe.db.get_value("Payment Entry", payment.name, "docstatus"), 1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Cancelled"):
 			self.cancel(student)  # once
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot join"):
@@ -307,6 +345,53 @@ class TestCancellationBeforeJoining(ReportingTestCase):
 		)  # fmt: skip
 		refund.insert().submit()
 		self.assertEqual(flt(self.cancel(student, submit=False).cash_refund), 2500)
+
+	def refund_entry(self, student, amount):
+		customer = frappe.db.get_value("Student", student, "customer")
+		return frappe.get_doc(
+			{
+				"doctype": "Payment Entry", "payment_type": "Pay", "company": COLLEGE, "posting_date": today(),
+				"party_type": "Customer", "party": customer, "paid_from": self.accounts["bank"],
+				"paid_to": self.structure.receivable_account, "paid_amount": amount, "received_amount": amount,
+				"reference_no": "REF-UTR", "reference_date": today(),
+			}
+		)  # fmt: skip
+
+	def test_the_advance_refund_is_paid_once_and_a_copy_is_refused(self):
+		_applicant, student = self.admitted()
+		self.advance(student, 6000)
+		doc = self.cancel(student)
+		draft = frappe.get_doc("Payment Entry", doc.payment_entry)
+		self.assertEqual(draft.oc_admission_cancellation, doc.name)
+		copy = frappe.copy_doc(draft).insert()
+		self.assertEqual(copy.oc_admission_cancellation, doc.name)  # the link travels with a copy
+		draft.submit()
+		self.assertEqual(frappe.db.get_value("Payment Entry", draft.name, "docstatus"), 1)
+		with self.assertRaisesRegex(frappe.ValidationError, f"{draft.name} already refunds the advance of {doc.name}"):
+			copy.reload().submit()
+		self.assertEqual(frappe.db.get_value("Payment Entry", copy.name, "docstatus"), 0)
+
+	def test_the_draft_refund_is_refused_after_a_manual_refund(self):
+		_applicant, student = self.admitted()
+		self.advance(student, 4000)
+		doc = self.cancel(student)
+		self.refund_entry(student, 1500).insert().submit()  # Accounts refunded part of it another way
+		draft = frappe.get_doc("Payment Entry", doc.payment_entry)
+		with self.assertRaisesRegex(frappe.ValidationError, "of the advance is left unrefunded"):
+			draft.submit()
+		self.assertEqual(frappe.db.get_value("Payment Entry", draft.name, "docstatus"), 0)
+
+	def test_a_scholarship_disbursement_is_not_refunded_as_advance(self):
+		_applicant, student = self.admitted()
+		self.advance(student, 3000)
+		disbursed = self.advance(student, 7000)
+		frappe.get_doc(
+			{
+				"doctype": "Scholarship Disbursement", "parent": "SCH-TEST", "parenttype": "Scholarship Application",
+				"parentfield": "disbursements", "voucher_type": "Payment Entry", "voucher": disbursed, "amount": 7000,
+			}
+		).db_insert()  # fmt: skip
+		self.assertEqual(flt(self.cancel(student, submit=False).cash_refund), 3000)
 
 	def test_no_advance_means_no_payment_entry(self):
 		_applicant, student = self.admitted()
