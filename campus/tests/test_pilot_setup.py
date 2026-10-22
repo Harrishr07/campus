@@ -152,6 +152,12 @@ class TestPilotSetup(IntegrationTestCase):
 			expected = {self.college if t == "college" else SXCCE["trust"]["name"] for t in spec["companies"]}
 			self.assertEqual(companies, expected, user)
 
+	def test_desk_users_get_the_uat_tester_role_on_a_demo_site_but_portal_users_do_not(self):
+		for spec in SXCCE["users"]:
+			user = f"{spec['key']}@{SXCCE['user_domain']}"
+			portal_only = set(spec["roles"]) <= {"Student", "Guardian"}
+			self.assertEqual("UAT Tester" in frappe.get_roles(user), not portal_only, user)
+
 	def test_position_holders_and_pilot_student(self):
 		domain = SXCCE["user_domain"]
 		hod_department = f"Computer Science and Engineering - {SXCCE['college']['abbr']}"
@@ -311,6 +317,7 @@ class TestPilotPasswords(IntegrationTestCase):
 			result = setup_college(other_college())
 		self.assertEqual(sorted(result["reset_links"]), sorted(f"{k}@other.example.edu" for k in ("office", "principal", "student", "guardian")))
 		user = "office@other.example.edu"
+		self.assertNotIn("UAT Tester", frappe.get_roles(user))
 		self.assertTrue(result["reset_links"][user].startswith("http"))
 		with self.assertRaises(frappe.AuthenticationError):
 			check_password(user, SXCCE["test_password"])

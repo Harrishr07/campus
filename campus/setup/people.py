@@ -3,13 +3,14 @@ behind the staff users, their Position Holders, the class group, and a pilot stu
 
 Passwords: on a developer-mode or demo site (`campus_demo_site`) a new user gets the profile's fixed TEST password. On any
 other site no password is stored: each new user gets a one-time reset link in the run's `reset_links`, so the first login
-sets their own password. The generated people are synthetic; no real personal data is used.
+sets their own password. On a demo site every desk user also gets the UAT Tester role (campus.campus_platform.uat). The generated people are synthetic; no real personal data is used.
 """
 
 import frappe
 from frappe import _
 from frappe.utils.password import update_password
 
+from campus.campus_platform.uat import tester_roles_for
 from campus.setup.records import upsert
 from campus.setup.structure import department_name
 
@@ -41,7 +42,7 @@ def ensure_people(profile, companies, out, test_passwords, result):
 			employees[spec["key"]] = ensure_employee(profile, spec, user, companies["college"], out)
 		if spec.get("position"):
 			ensure_position(profile, spec, user, companies["college"], group, employees.get(spec["key"]), out)
-		grant_roles(user, spec["roles"])
+		grant_roles(user, spec["roles"] + (tester_roles_for(spec["roles"]) if test_passwords_allowed() else []))
 	ensure_pilot_student(profile, companies["college"], out)
 	return employees
 

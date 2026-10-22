@@ -10,6 +10,7 @@ from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.portal_roles import restrict_portal_roles
 from campus.campus_platform.positions import ensure_seed_positions
 from campus.campus_platform.regulation_setup import ensure_dean_role, setup_regulation_fields
+from campus.campus_platform.uat import ensure_uat_roles
 from campus.campus_platform.verification import ensure_verification_role
 from campus.curriculum.outcomes import seed_co_po_matrix_policy
 from campus.curriculum.setup import setup_curriculum
@@ -42,6 +43,7 @@ def before_install():
 	ensure_iqac_role()  # iqac doctypes likewise
 	ensure_grievance_role()  # student_grievance.json likewise
 	ensure_mentoring_roles()  # counselling_note.json and parent_interaction.json likewise
+	ensure_uat_roles()  # uat_feedback.json likewise
 
 
 def before_migrate():
@@ -49,6 +51,7 @@ def before_migrate():
 	ensure_iqac_role()
 	ensure_grievance_role()
 	ensure_mentoring_roles()
+	ensure_uat_roles()
 
 
 def after_install():

@@ -80,7 +80,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -113,6 +113,17 @@
    "label": "Bulk Run",
    "link_count": 0,
    "link_to": "Bulk Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "UAT Feedback",
+   "link_count": 0,
+   "link_to": "UAT Feedback",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -155,6 +166,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "UAT Coordinator"
+  },
+  {
+   "role": "UAT Tester"
   },
   {
    "role": "Verification Manager"

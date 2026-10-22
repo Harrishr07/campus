@@ -28,6 +28,12 @@
    "role": "System Manager"
   },
   {
+   "role": "UAT Coordinator"
+  },
+  {
+   "role": "UAT Tester"
+  },
+  {
    "role": "Verification Manager"
   }
  ],
