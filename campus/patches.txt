@@ -33,3 +33,4 @@ campus.patches.enable_strict_seat_matrix
 campus.patches.report_blank_exam_types
 campus.patches.student_lifecycle_status
 campus.patches.map_break_previous_statuses
+campus.patches.move_attainment_snapshots

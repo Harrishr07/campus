@@ -47,7 +47,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "CO Attainment by Course",
@@ -70,7 +70,7 @@
    "role": "IQAC Coordinator"
   },
   {
-   "role": "Academics User"
+   "role": "COE"
   },
   {
    "role": "Instructor"

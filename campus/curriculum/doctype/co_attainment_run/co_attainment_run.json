@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "CO Attainment Run",
@@ -77,21 +77,6 @@
    "report": 1,
    "export": 1,
    "print": 1
-  },
-  {
-   "role": "System Manager",
-   "permlevel": 1,
-   "read": 1
-  },
-  {
-   "role": "COE",
-   "permlevel": 1,
-   "read": 1
-  },
-  {
-   "role": "Dean Academics",
-   "permlevel": 1,
-   "read": 1
   }
  ],
  "fields": [
@@ -343,15 +328,6 @@
    "read_only": 1,
    "no_copy": 1,
    "description": "The released sessions, the questions per CO and tool, the batches and the policy values (no student marks)."
-  },
-  {
-   "fieldname": "input_snapshot",
-   "fieldtype": "JSON",
-   "label": "Input Snapshot",
-   "read_only": 1,
-   "no_copy": 1,
-   "description": "Per-student marks per CO and tool (System Manager, COE and Dean Academics only), the sessions, batches and policy values.",
-   "permlevel": 1
   }
  ],
  "field_order": [
@@ -389,8 +365,7 @@
   "target_level",
   "survey_scale",
   "section_snapshot",
-  "questions_used",
-  "input_snapshot"
+  "questions_used"
  ],
  "is_submittable": 1,
  "autoname": "COAR-.#####",

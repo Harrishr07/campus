@@ -12,9 +12,10 @@ at the policy's PO indirect weight. The maths is campus.curriculum.attainment_ru
 Both runs are computed by the bulk runner (one item per run; a failure marks the run Failed with the error) and copy
 the policy values they used, so a submitted run never moves when a policy changes, and a regulation's policy reaches
 only its own curriculum's offerings and batches. A policy a submitted run used is locked: disable it and create a new
-one for the regulation. The CO run's input snapshot (per-student marks) is at permlevel 1, read by System Manager,
-COE and Dean Academics only; `questions_used` (no students) is what the print and everyone else see. Who reads and
-manages a run: campus.curriculum.attainment_access.
+one for the regulation. The per-student marks of a CO run (its input snapshot) are kept apart in a CO Attainment
+Snapshot, read by System Manager, COE and Dean Academics only, so no response about the run itself carries them;
+the run keeps `questions_used` (no students), which the print reads. Who reads and manages a run:
+campus.curriculum.attainment_access.
 
 ESE figures are the raw valuation question marks (before moderation, grace and revaluation). A run whose ESE marks
 carry no CO tag at all cannot be submitted (tag the bundle's questions); a paper whose question maxima exceed the ESE
@@ -34,6 +35,7 @@ from campus.curriculum import attainment_rules as rules
 from campus.curriculum.outcomes import CELL, MATRIX, code_order, course_outcomes, matrix_for, normalise_code, programme_outcomes
 
 POLICY, CO_RUN, PO_RUN = "Attainment Policy", "CO Attainment Run", "PO Attainment Run"
+SNAPSHOT = "CO Attainment Snapshot"
 CO_RESULT, PO_RESULT = "CO Attainment Result", "PO Attainment Result"
 CO_HANDLER = "campus.curriculum.attainment.compute_co_item"
 PO_HANDLER = "campus.curriculum.attainment.compute_po_item"
@@ -159,24 +161,28 @@ def queue_co_runs(names):
 @frappe.whitelist(methods=["POST"])
 def start_term_runs(company, academic_term):
 	"""A draft CO Attainment Run (existing or new) for every offering of the term whose course has an approved CO-PO
-	Matrix and whose regulation has a policy, computed in one bulk run; returns the Bulk Run."""
+	Matrix and whose regulation has an active policy, computed in one bulk run; returns the Bulk Run. The offerings left
+	out for want of a matrix or an active policy are listed in a message."""
 	frappe.has_permission(CO_RUN, "create", throw=True)
 	check_company(company)
-	names = []
+	names, skipped = [], []
 	filters = {"group_based_on": "Course", "academic_term": academic_term, "oc_company": company, "oc_curriculum": ["is", "set"]}
 	managed = attainment_access.managed_programs(frappe.session.user)
 	if managed is not None:  # an HOD: their department's programmes only
 		filters["program"] = ["in", managed or [""]]
 	for offering in frappe.get_all("Student Group", filters, ["name", "course", "oc_curriculum"], order_by="name"):
 		regulation = frappe.db.get_value("Curriculum", offering.oc_curriculum, "regulation")
-		if not matrix_for(offering.course, offering.oc_curriculum) or not frappe.db.exists(POLICY, {"regulation": regulation}):
+		if not matrix_for(offering.course, offering.oc_curriculum) or not frappe.db.exists(POLICY, {"regulation": regulation, "disabled": 0}):
+			skipped.append(offering.name)
 			continue
 		if frappe.db.exists(CO_RUN, {"course_offering": offering.name, "docstatus": 1}):
 			continue
 		draft = frappe.db.get_value(CO_RUN, {"course_offering": offering.name, "docstatus": 0})
 		names.append(draft or frappe.get_doc({"doctype": CO_RUN, "course_offering": offering.name}).insert().name)
 	if not names:
-		frappe.throw(_("No offering of {0} needs a run: each needs an approved CO-PO Matrix and an Attainment Policy.").format(academic_term))
+		frappe.throw(_("No offering of {0} needs a run: each needs an approved CO-PO Matrix and an active Attainment Policy.").format(academic_term))
+	if skipped:
+		frappe.msgprint(_("Left out, no approved CO-PO Matrix or no active Attainment Policy: {0}").format(", ".join(skipped)))
 	return queue_co_runs(names)
 
 
@@ -246,7 +252,7 @@ def compute_co_run(name):
 		result = rules.co_result(tools["cia"].attainment, tools["ese"].attainment, average, values)
 		doc.append("results", {**result_fields(result), "course_outcome": co.name, "co_code": co.co_code,
 			"indirect_responses": score["responses"] if score else None, "indirect_suppressed": score["suppressed"] if score else 0})  # fmt: skip
-		snapshot[co.co_code] = {**{tool: tools[tool].snapshot for tool in TOOLS}, "indirect": score}
+		snapshot[co.co_code] = {**{tool: tools[tool].snapshot for tool in TOOLS}, "indirect": survey_entry(score, values.survey_scale)}
 	batches = batch_counts(data.students)
 	shared = {"exam_sessions": data.exam_sessions, "batches": batches, "ese_basis": ESE_BASIS, "policy": policy_snapshot(policy)}
 	doc.update({f: policy.get(f) for f in ("direct_weight", "indirect_weight", "cia_weight", "ese_weight", "student_threshold", "target_level", "survey_scale")})
@@ -255,12 +261,37 @@ def compute_co_run(name):
 			"students": len(data.students), "batch": majority_batch(batches), "matrix": matrix_for(doc.course, doc.curriculum),
 			"ese_untagged": int(bool(data.ese) and not any(r["course_outcome"] for r in data.ese)),
 			"ese_choice_paper": int(bool(data.choice_paper)), "status": "Computed", "computed_on": now_datetime(), "error": None,
-			"input_snapshot": json.dumps({**shared, "students": data.students, "cos": snapshot}),
 			"questions_used": json.dumps({**shared, "cos": {code: {tool: [q["question"] for q in entry[tool]["questions"]] for tool in TOOLS} for code, entry in snapshot.items()}}),
 		}
 	)  # fmt: skip
-	doc.save(ignore_permissions=True)  # write permission checked in draft(); the snapshot is at permlevel 1
+	doc.save(ignore_permissions=True)  # write permission checked in draft()
+	save_input_snapshot(doc, {**shared, "students": data.students, "cos": snapshot})
 	return doc
+
+
+def survey_entry(score, scale):
+	"""The survey score as recorded, its percent on the policy's rating scale."""
+	if not score:
+		return score
+	return {**score, "percent": rules.survey_percent(score["average"], scale) if not score["suppressed"] else None}
+
+
+def save_input_snapshot(run, snapshot):
+	"""Write the run's per-student snapshot (CO Attainment Snapshot, readable by System Manager, COE and Dean only)."""
+	values = {"course_offering": run.course_offering, "company": run.company, "snapshot": json.dumps(snapshot)}
+	if frappe.db.exists(SNAPSHOT, run.name):
+		frappe.db.set_value(SNAPSHOT, run.name, values)
+	else:
+		frappe.get_doc({"doctype": SNAPSHOT, "co_attainment_run": run.name, **values}).insert(ignore_permissions=True)
+
+
+def input_snapshot(run):
+	"""The per-student snapshot of a CO run as a dict ({} when not computed). Internal: callers check their own rights."""
+	return frappe.parse_json(frappe.db.get_value(SNAPSHOT, run, "snapshot") or "{}") or {}
+
+
+def delete_input_snapshot(run):
+	frappe.db.delete(SNAPSHOT, {"co_attainment_run": run})
 
 
 def tool_inputs(rows, threshold):
@@ -347,6 +378,10 @@ def co_cells(doc):
 		(r.parent, r.course_outcome): r
 		for r in frappe.get_all(CO_RESULT, {"parenttype": CO_RUN, "parent": ["in", [r.name for r in runs] or [""]]}, ["parent", "course_outcome", "co_code", "final_level", "assessed"])
 	}  # fmt: skip
+	approved = set(frappe.get_all(MATRIX, {"name": ["in", [r.matrix for r in runs if r.matrix] or [""]], "docstatus": 1}, pluck="name"))
+	for run in runs:
+		if run.matrix not in approved:  # cancelled since: the run counts nowhere and is listed in the warnings
+			run.matrix = None
 	matrix_cells = {}
 	for cell in frappe.get_all(
 		CELL, {"parenttype": MATRIX, "parent": ["in", [r.matrix for r in runs if r.matrix] or [""]], "correlation": [">", 0]},
