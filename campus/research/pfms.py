@@ -15,10 +15,13 @@ database) and is left out; so re-exporting a period gives only what PFMS has not
 
 ERPNext can rewrite a payment after it was exported: an advance reconciled to an invoice gets a new reference row, a
 reference may point back to an advance (advance_voucher_no), and a cancelled voucher is amended under a new name. So
-exports are also counted per payment (`payment_key`: the voucher, or the advance it allocates, followed back through
-amended_from to the first version): a payment with live exported rows exports nothing more, and one whose lines now
-add up to more than was exported is excluded for review. A voucher with live exported rows can't be cancelled
-(`refuse_exported_cancel`) until PFMS reports them failed or their batch is cancelled."""
+exports are also tracked per payment (`payment_key`: the voucher, or the advance it allocates, followed back through
+amended_from to the first version). Once a payment has a live exported row in any sanction's batch, only a line
+exported as such, for the same amount, counts as exported; any other line of it (changed, new, moved to another
+sanction, or left after a line was removed) is excluded for review, never exported automatically. One exception: a
+line of a sanction none of whose batches has the payment, while every exported line of it elsewhere is unchanged, is
+exported (a payment of two sanctions' invoices goes once in each). A voucher with live exported rows can't be
+cancelled (`refuse_exported_cancel`) until PFMS reports them failed or their batch is cancelled."""
 
 import frappe
 from frappe import _
@@ -55,22 +58,14 @@ class PaymentSelection:
 
 	def run(self):
 		payments = self.payments()
-		live = self.live_keys([p.export_key for p in payments])
-		cover = self.exported_amounts({p.payment_key for p in payments})
-		for payment in payments:  # every export type: a line exported as such covers itself, not the others
-			if payment.export_key in live and payment.payment_key in cover:
-				cover[payment.payment_key] = flt(cover[payment.payment_key] - flt(payment.amount), 2)
+		exported = self.exported_rows(payments)
 		rows, already_exported = [], 0
 		for payment in (p for p in payments if p.export_type == self.export_type):
-			if payment.export_key in live:
+			history = exported.get(payment.payment_key)
+			if history and self.exported_as_is(payment, history):
 				already_exported += 1
 				continue
-			left = cover.get(payment.payment_key, 0)
-			if left > 0 and flt(left - flt(payment.amount), 2) >= 0:  # exported before under another line (rewritten)
-				cover[payment.payment_key] = flt(left - flt(payment.amount), 2)
-				already_exported += 1
-				continue
-			reason = payment.get("reason") or (left > 0 and self.partly_exported(payment, left)) or self.vendor_problem(payment)
+			reason = (history and self.held_for_review(payment, history)) or payment.get("reason") or self.vendor_problem(payment)
 			if reason:
 				self.exclude(payment, reason)
 			else:
@@ -216,34 +211,83 @@ class PaymentSelection:
 		payment.update(supplier_name=supplier.get("supplier_name"), pfms_vendor_code=supplier.get("vendor_code"))
 		return " ".join(problems)
 
-	def partly_exported(self, payment, done):
-		return _("{0} {1}: {2} of it is already exported to PFMS and its lines now add up to more. Review it before exporting.").format(
-			_(payment.voucher_type), payment.voucher_no, frappe.format(done, "Currency")
-		)
+	# already exported
+	@staticmethod
+	def exported_as_is(payment, history):
+		"""The line itself is live in a batch, for the amount it has now."""
+		return any(row.export_key == payment.export_key and flt(row.amount, 2) == flt(payment.amount, 2) for row in history)
 
-	def live_keys(self, keys):
-		"""The export keys among `keys` held by a live (exported, not failed) row of any batch."""
-		if not keys:
-			return set()
-		row = frappe.qb.DocType("PFMS Export Batch Row")
-		query = frappe.qb.from_(row).select(row.export_key).where(row.export_key.isin(keys))
-		return set((query.for_update() if self.lock else query).run(pluck=True))
+	def held_for_review(self, payment, history):
+		"""Why a line of a payment with live exported rows (`history`) is not exported automatically, or None for a line
+		of a sanction no batch of which has the payment, while every exported line of it is unchanged."""
+		exported_here = any(row.sanction == self.sanction.name for row in history)
+		line_exported = any(row.export_key == payment.export_key for row in history)  # for another amount
+		if not exported_here and not line_exported and self.unchanged(history):
+			return None
+		batches = ", ".join(sorted({row.batch for row in history}))
+		return _(
+			"{0} {1}: its payment is already exported to PFMS in {2}, and this line ({3}) is new or has changed since. "
+			"It is excluded for review: check it against the exported rows; it is never exported automatically."
+		).format(_(payment.voucher_type), payment.voucher_no, batches, frappe.format(flt(payment.amount, 2), "Currency"))
 
-	def exported_amounts(self, keys):
-		"""{payment_key: amount in live rows of this sanction's batches} (a payment can pay several sanctions)."""
+	def exported_rows(self, payments):
+		"""{payment_key: [live (exported, not failed) rows of any sanction's batch]} of the payments' lines: by the
+		payment's key, or by a line's export key (rows exported before payment keys were stored have none)."""
+		keys = {p.payment_key for p in payments}
+		by_export_key = {p.export_key: p.payment_key for p in payments}
 		if not keys:
 			return {}
 		row, batch = frappe.qb.DocType("PFMS Export Batch Row"), frappe.qb.DocType("PFMS Export Batch")
-		query = (
+		rows = self.read(
 			frappe.qb.from_(row).join(batch).on(batch.name == row.parent)
-			.select(row.payment_key, Sum(row.amount))
-			.where(
-				row.payment_key.isin(list(keys)) & row.export_key.isnotnull() & (row.parenttype == "PFMS Export Batch")
-				& (batch.sanction == self.sanction.name)
+			.select(
+				row.export_key, row.payment_key, row.amount, row.voucher_type, row.voucher_no, row.reference_doctype,
+				row.reference_name, row.parent.as_("batch"), batch.sanction,
 			)
-			.groupby(row.payment_key)
+			.where(
+				row.export_key.isnotnull() & (row.parenttype == "PFMS Export Batch")
+				& (row.payment_key.isin(list(keys)) | row.export_key.isin(list(by_export_key)))
+			)
 		)  # fmt: skip
-		return {key: flt(amount, 2) for key, amount in (query.for_update() if self.lock else query).run()}
+		history = {}
+		for exported in rows:
+			key = exported.payment_key if exported.payment_key in keys else by_export_key[exported.export_key]
+			history.setdefault(key, []).append(exported)
+		return history
+
+	def unchanged(self, rows):
+		"""Every exported row is still a line of its voucher, for the amount exported."""
+		current = self.current_amounts(rows)
+		return all(current.get(row.export_key) == flt(row.amount, 2) for row in rows)
+
+	def current_amounts(self, rows):
+		"""{export_key: what the exported rows' lines amount to now} (submitted vouchers only)."""
+		vouchers = {(row.voucher_type, row.voucher_no) for row in rows}
+		entries = [name for doctype, name in vouchers if doctype == "Payment Entry"]
+		invoices = [name for doctype, name in vouchers if doctype == "Purchase Invoice"]
+		amounts = {}
+		if entries:
+			pe, ref = frappe.qb.DocType("Payment Entry"), frappe.qb.DocType("Payment Entry Reference")
+			for line in self.read(
+				frappe.qb.from_(ref).join(pe).on(pe.name == ref.parent)
+				.select(ref.parent, ref.reference_doctype, ref.reference_name, Sum(ref.allocated_amount).as_("amount"))
+				.where((pe.docstatus == 1) & (ref.parenttype == "Payment Entry") & pe.name.isin(entries))
+				.groupby(ref.parent, ref.reference_doctype, ref.reference_name)
+			):  # fmt: skip
+				amounts[export_key("Payment Entry", line.parent, line.reference_doctype, line.reference_name)] = flt(line.amount, 2)
+			for entry in self.read(
+				frappe.qb.from_(pe).select(pe.name, pe.unallocated_amount)
+				.where((pe.docstatus == 1) & pe.name.isin(entries) & (pe.unallocated_amount > 0))
+			):  # fmt: skip
+				amounts[export_key("Payment Entry", entry.name)] = flt(entry.unallocated_amount, 2)
+		if invoices:
+			pi = frappe.qb.DocType("Purchase Invoice")
+			for invoice in self.read(
+				frappe.qb.from_(pi).select(pi.name, pi.paid_amount)
+				.where((pi.docstatus == 1) & (pi.is_paid == 1) & pi.name.isin(invoices))
+			):  # fmt: skip
+				amounts[export_key("Purchase Invoice", invoice.name)] = flt(invoice.paid_amount, 2)
+		return amounts
 
 	def exclude(self, payment, reason):
 		self.exclusions.append(

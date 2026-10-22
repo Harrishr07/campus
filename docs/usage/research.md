@@ -213,12 +213,15 @@ an export key, unique in the database. A payment in a submitted batch is not exp
 failed, so re-exporting a period gives only the new and the failed payments. **Already Exported** shows how many were
 left out for that reason. A batch with a row PFMS accepted can't be cancelled; cancelling any other frees its rows.
 
-Exports are also counted per payment, so ERPNext rewriting a payment doesn't send the same money twice: an advance
-later reconciled to an invoice, a reference pointing back to an advance, or a voucher cancelled and amended (the
-amendment counts as its first version) exports nothing more. The count is per sanction, so a payment that pays
-invoices of two sanctions is exported once in each. A line exported as such never goes again; the other lines of
-the same payment (say the unallocated remainder of a payment that also paid an invoice) are exported in their own
-batch. A line whose payment was exported before under different lines, but only partly, is excluded for review. An unallocated payment naming one sanction's project and another's cost centre is
+Exports are also tracked per payment, so ERPNext rewriting a payment (an advance later reconciled to an invoice, a
+reference pointing back to an advance, a voucher cancelled and amended, an allocation unreconciled) never sends the
+same money twice. Once a payment has a live exported row in any sanction's batch, a line counts as already exported
+only when that line itself is in the batch for the amount it has now. Every other line of the payment (an amount
+changed, a new line, money moved to another sanction, what is left after a line was removed, the other part of a
+payment that paid an invoice and kept an unallocated advance) is **excluded for review**, with a reason naming the
+batches it was exported in; it is never exported automatically. Check it against the exported rows and settle it with
+PFMS by hand. The one exception: a payment that pays invoices of two sanctions is exported once in each, provided its
+lines already exported for the other sanction are unchanged. An unallocated payment naming one sanction's project and another's cost centre is
 excluded until it is corrected.
 
 **Cancelling an exported payment**: a Payment Entry or Purchase Invoice in a submitted batch can't be cancelled

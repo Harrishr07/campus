@@ -260,17 +260,60 @@ class TestPfmsExport(SanctionFixtures):
 		batch.import_status(self.status_file(batch, [(ref[first.name], "Success", "PF1", ""), (ref[second.name], "Rejected", "", "Bad IFSC")]))
 		self.assertEqual(self.vouchers(self.batch()), sorted([("Payment Entry", second.name), ("Payment Entry", third.name)]))
 
-	def test_an_advance_reconciled_to_an_invoice_is_not_exported_again(self):
+	def assertExcludedForReview(self, batch, voucher, *exported_in):
+		"""The voucher's line is not exported and its exclusion names the batches its payment is exported in."""
+		self.assertNotIn(voucher, [row.voucher_no for row in batch.rows])
+		reason = next(row.reason for row in batch.exclusions if row.voucher_no == voucher)
+		self.assertIn("review", reason)
+		for exported in exported_in:
+			self.assertIn(exported.name, reason)
+
+	def test_an_advance_reconciled_to_an_invoice_is_excluded_for_review(self):
 		payment = self.advance(self.vendor, 300)
-		self.assertEqual(self.exported("Advance").row_count, 1)
-		self.invoice(
-			self.vendor, 300,
-			advances=[{"reference_type": "Payment Entry", "reference_name": payment.name, "advance_amount": 300, "allocated_amount": 300}],
-		)  # fmt: skip
+		advance = self.exported("Advance")
+		self.reconcile(payment, self.vendor, 300)
 		self.assertTrue(frappe.get_all("Payment Entry Reference", {"parent": payment.name, "reference_doctype": "Purchase Invoice"}))
 		batch = self.batch()
 		self.assertFalse(batch.rows)  # the same money, now allocated to the invoice
-		self.assertEqual(batch.already_exported_count, 1)
+		self.assertExcludedForReview(batch, payment.name, advance)
+		self.assertEqual(batch.already_exported_count, 0)
+
+	def reconcile(self, payment, supplier, amount, sanction=None):
+		"""An invoice that takes `amount` of the advance `payment` (ERPNext adds the invoice to the payment's references)."""
+		return self.invoice(
+			supplier, amount, sanction=sanction,
+			advances=[{"reference_type": "Payment Entry", "reference_name": payment.name, "advance_amount": amount, "allocated_amount": amount}],
+		)  # fmt: skip
+
+	def unreconcile(self, payment, invoice):
+		unreconcile = frappe.get_doc({"doctype": "Unreconcile Payment", "company": COLLEGE, "voucher_type": "Payment Entry", "voucher_no": payment.name})
+		unreconcile.add_references()
+		for allocation in [a for a in unreconcile.allocations if a.reference_name != invoice.name]:
+			unreconcile.remove(allocation)
+		unreconcile.save().submit()
+		return payment.reload()
+
+	def test_a_grown_exported_line_is_excluded_for_review(self):
+		payment = self.mixed_payment()
+		advance = self.exported("Advance")  # the 200 left unallocated
+		invoice = frappe.get_doc("Purchase Invoice", payment.references[0].reference_name)
+		self.assertEqual(self.unreconcile(payment, invoice).unallocated_amount, 1200)
+		again = self.batch("Advance")
+		self.assertFalse(again.rows)  # 200 went to PFMS; the 1000 that joined it is not sent on its own
+		self.assertExcludedForReview(again, payment.name, advance)
+		self.assertEqual(again.already_exported_count, 0)
+		self.assertFalse(self.batch().rows)
+
+	def test_money_reconciled_to_another_sanction_after_export_is_excluded_for_review(self):
+		payment = self.advance(self.vendor, 300)
+		advance = self.exported("Advance")
+		other = self.submitted_sanction()
+		self.reconcile(payment, self.vendor, 300, sanction=other)
+		batch = frappe.get_doc(
+			{"doctype": BATCH, "sanction": other.name, "export_type": "Expenditure", "from_date": self.period[0], "to_date": self.period[1]}
+		).insert()  # fmt: skip
+		self.assertFalse(batch.rows)  # the advance PFMS has, now paying the other sanction's invoice
+		self.assertExcludedForReview(batch, payment.name, advance)
 
 	def test_one_payment_for_two_sanctions_is_exported_for_each(self):
 		other = self.submitted_sanction()
@@ -285,6 +328,9 @@ class TestPfmsExport(SanctionFixtures):
 			{"doctype": BATCH, "sanction": other.name, "export_type": "Expenditure", "from_date": self.period[0], "to_date": self.period[1]}
 		).insert()  # fmt: skip
 		self.assertEqual([(r.reference_name, r.amount) for r in batch.rows], [(theirs.name, 500)])
+		batch.submit()
+		self.assertEqual(self.batch().already_exported_count, 1)
+		self.assertFalse(batch.reload().exclusions)
 
 	def mixed_payment(self):
 		"""1000 against an invoice of the sanction and 200 left unallocated on its project."""
@@ -300,23 +346,19 @@ class TestPfmsExport(SanctionFixtures):
 		self.assertEqual(payment.unallocated_amount, 200)
 		return payment
 
-	def test_a_mixed_payment_exports_its_invoice_part_then_its_advance(self):
+	def test_a_mixed_payment_exports_its_invoice_part_then_holds_its_advance_for_review(self):
 		payment = self.mixed_payment()
-		self.assertEqual([r.amount for r in self.exported("Expenditure").rows], [1000])
-		advance = self.batch("Advance")
-		self.assertEqual([(r.voucher_no, r.amount) for r in advance.rows], [(payment.name, 200)])
-		advance.submit()
-		self.assertFalse(self.batch("Expenditure").rows)
-		self.assertFalse(self.batch("Advance").rows)
+		expenditure = self.exported("Expenditure")
+		self.assertEqual([r.amount for r in expenditure.rows], [1000])
+		self.assertExcludedForReview(self.batch("Advance"), payment.name, expenditure)
+		self.assertEqual(self.batch("Expenditure").already_exported_count, 1)
 
-	def test_a_mixed_payment_exports_its_advance_then_its_invoice_part(self):
+	def test_a_mixed_payment_exports_its_advance_then_holds_its_invoice_part_for_review(self):
 		payment = self.mixed_payment()
-		self.assertEqual([r.amount for r in self.exported("Advance").rows], [200])
-		expenditure = self.batch("Expenditure")
-		self.assertEqual([(r.voucher_no, r.amount) for r in expenditure.rows], [(payment.name, 1000)])
-		expenditure.submit()
-		self.assertFalse(self.batch("Advance").rows)
-		self.assertFalse(self.batch("Expenditure").rows)
+		advance = self.exported("Advance")
+		self.assertEqual([r.amount for r in advance.rows], [200])
+		self.assertExcludedForReview(self.batch("Expenditure"), payment.name, advance)
+		self.assertEqual(self.batch("Advance").already_exported_count, 1)
 
 	def test_an_amendment_of_an_exported_payment_cannot_be_cancelled_either(self):
 		payment = self.pay(self.invoice(self.vendor, 1000))
@@ -327,15 +369,15 @@ class TestPfmsExport(SanctionFixtures):
 		with self.assertRaisesRegex(frappe.ValidationError, batch.name):
 			frappe.get_doc("Payment Entry", amended.name).cancel()
 
-	def test_an_amended_payment_is_not_exported_again(self):
+	def test_an_amended_payment_is_excluded_for_review(self):
 		payment = self.pay(self.invoice(self.vendor, 1000))
-		self.exported()
+		exported = self.exported()
 		with patch("campus.research.pfms.refuse_exported_cancel"):
 			payment.cancel()
 		amended = self.amend(payment)
 		batch = self.batch()
 		self.assertFalse(batch.rows)
-		self.assertEqual(batch.already_exported_count, 1)
+		self.assertExcludedForReview(batch, amended.name, exported)
 		self.assertTrue(amended.name.startswith(payment.name))
 
 	def test_an_exported_payment_cannot_be_cancelled_until_pfms_failed_it(self):
