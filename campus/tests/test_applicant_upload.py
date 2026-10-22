@@ -370,6 +370,11 @@ class TestDuplicateReview(UploadTestCase):
 		self.assertEqual((doc.status, doc.decided_by, doc.new_applicant, doc.note), ("Not Duplicate", OFFICER, created, "Different parents, checked marksheet"))
 		self.assertEqual(frappe.db.get_value("Student Applicant", created, "oc_duplicate_review"), review)
 		self.assertIsNone(doc.candidate_values)  # raw candidate data is dropped once decided
+		versions = frappe.get_all("Version", filters={"ref_doctype": "Candidate Duplicate Review", "docname": review}, pluck="data")
+		self.assertTrue(versions)
+		for version in versions:
+			for value in ("asha.kumar@upload-test.example.com", "9876500001"):  # the uploaded row's e-mail and mobile
+				self.assertNotIn(value, version)  # nor kept in the decision's Version
 		self.assertEqual(self.applicant_count(), 2)
 		self.assertEqual((self.rows(name)[2].status, self.rows(name)[2].applicant), ("Created", created))
 		with self.assertRaises(frappe.ValidationError):

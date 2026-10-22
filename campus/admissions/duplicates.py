@@ -129,9 +129,11 @@ def decide(review: str, decision: str, note: str | None = None):
 		doc.update({"status": "Linked", "linked_applicant": doc.existing_applicant, "linked_student": None if doc.existing_applicant else doc.existing_student})
 	else:
 		doc.update({"status": "Not Duplicate", "new_applicant": create_cleared_applicant(doc)})
-	doc.candidate_values = None  # personal data is needed only until the decision
 	doc.flags.from_decide = True
 	doc.save(ignore_permissions=True, ignore_version=False)  # the decision is always versioned
+	# personal data is needed only until the decision; a direct write keeps it out of the Version diff
+	frappe.db.set_value(REVIEW, doc.name, "candidate_values", None, update_modified=False)
+	doc.candidate_values = None
 	from campus.admissions import applicant_upload
 
 	applicant_upload.review_decided(doc)
