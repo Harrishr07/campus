@@ -29,6 +29,7 @@ MANDATORY_APPROVAL_DOCTYPES = (
 	"Rejoin Application",
 	"Examiner Remuneration Claim",
 	"Utilisation Certificate",
+	"Credit Recognition",  # X-03: clears a degree requirement (M03-09 / M05-15)
 )
 
 

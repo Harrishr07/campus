@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 18:00:00.000000",
  "modified_by": "Administrator",
  "owner": "Administrator",
  "states": [],
@@ -89,7 +89,8 @@
    "fieldtype": "Float",
    "label": "Credits Granted",
    "non_negative": 1,
-   "description": "Credits counted toward the course's category (never more than the curriculum's credits for it). 0 waives the course without credit."
+   "description": "Credits counted toward the course's category (never more than the curriculum's credits for it). Required for every kind but a waiver; a waiver may grant 0 (cleared without credit).",
+   "mandatory_depends_on": "eval:doc.kind!='Waiver'"
   },
   {
    "fieldname": "section_1",
@@ -114,7 +115,9 @@
   {
    "fieldname": "evidence",
    "fieldtype": "Attach",
-   "label": "Evidence"
+   "label": "Evidence",
+   "reqd": 1,
+   "description": "A private file (the transcript, certificate or order)."
   },
   {
    "fieldname": "remarks",

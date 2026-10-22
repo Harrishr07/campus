@@ -6,8 +6,11 @@ from frappe.utils import today
 from campus.campus_platform.approval_access import pending_approvals  # noqa: F401  (public API)
 from campus.campus_platform.approval_engine import find_policy, latest_request, start_request  # noqa: F401  (public API)
 from campus.campus_platform.approvals import ApprovableDocument, request_approval  # noqa: F401  (public API)
+from campus.campus_platform.bulk import live_run, run_bulk  # noqa: F401  (public API)
+from campus.campus_platform.company_scope import permitted_companies  # noqa: F401  (public API)
 from campus.campus_platform.pack_rules import effective_status, status_allows_pack
 from campus.campus_platform.positions import resolve_position  # noqa: F401  (public API)
+from campus.campus_platform.regulation_setup import DEAN_ROLE  # noqa: F401  (public API)
 from campus.campus_platform.regulation_rules import (  # noqa: F401  (public API)
 	apply_regulation_change,
 	get_regulation,

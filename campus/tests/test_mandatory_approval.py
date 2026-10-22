@@ -200,7 +200,7 @@ class TestSeedList(ApprovalTestCase):
 	def test_the_seed_lists_existing_engine_doctypes_not_yet_listed(self):
 		expected = [
 			"Result Ratification", "Fee Refund", "Fee Concession", "Scholarship Application", "Rejoin Application",
-			"Examiner Remuneration Claim", "Utilisation Certificate",
+			"Examiner Remuneration Claim", "Utilisation Certificate", "Credit Recognition",
 		]  # fmt: skip
 		self.assertEqual(list(mandatory_approval.MANDATORY_APPROVAL_DOCTYPES), expected)
 		self.assertEqual(mandatory_approval.missing_doctypes(set()), expected)

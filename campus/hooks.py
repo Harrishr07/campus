@@ -420,11 +420,11 @@ scheduler_events = {
 		"campus.iqac.feedback_invites.send_reminders",
 		"campus.iqac.regulator.send_reminders",
 		"campus.iqac.official_documents.send_expiry_alerts",
+		"campus.examinations.completion.move_graduates_to_alumni",  # M05-15
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
 		"campus.student_services.grievances.escalate_overdue",
-		"campus.examinations.completion.move_graduates_to_alumni",  # M05-15
 		"campus.labs.calibration.send_calibration_notices",  # M12-05
 		"campus.admissions.allotment_import.reconcile_finished_imports",
 		"campus.admissions.applicant_upload.reconcile_finished_uploads",

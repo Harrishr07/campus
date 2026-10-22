@@ -7,10 +7,13 @@ to Study Completed and, unless completion.award_refusal holds them (dues, the de
 convocation date; the reason is kept on the row), to Award Eligible (lifecycle, effective the convocation date once
 it has passed, else the day listed); a refill that drops a student undoes those steps, and one that now holds an
 Award Eligible graduate undoes that step. Mark Graduated, on or after the convocation date, checks award eligibility
-again on that date and moves the Award Eligible graduates to Graduated from it (COE), then to Alumni when the
-Completion Settings say "On Convocation"; it reports the ones refused or held. The export follows the list's
-column table (heading -> source). The university's format is not known yet, so DEFAULT_COLUMNS is a placeholder
-the COE edits to match it. Cells that a spreadsheet would run as a formula are neutralised.
+again on that date, re-runs the completion check and moves the graduates to Graduated from it (COE; a cleared hold
+becomes Award Eligible first), then to Alumni when the Completion Settings say "On Convocation"; it reports the ones
+refused with the current reason. The export follows the list's column table (heading -> source). Filling and Mark
+Graduated run each graduate's checks in the request: fine for a college's convocation (hundreds), not for a whole
+university (ledger: move to the Bulk Run if lists grow). The university's format is not known yet, so
+DEFAULT_COLUMNS is a placeholder the COE edits to match it. Cells that a spreadsheet would run as a formula are
+neutralised.
 """
 
 import frappe
@@ -63,7 +66,7 @@ def fill_graduates(convocation_list):
 		check = completion.run_check(student)
 		if check.result == completion.rules.COMPLETE:
 			row = graduate_row(graduate_record(student))
-			hold = completion.award_refusal(student, award_on)
+			hold = completion.award_refusal(student, award_on, doc.program or row["program"])
 			doc.append("graduates", {**row, "completion_check": check.name, "award_hold": hold})
 	doc.save()
 	for row in doc.graduates:
@@ -102,10 +105,11 @@ def undo_award_eligible(student, doc):
 
 
 def graduate(convocation_list):
-	"""Record the list's Award Eligible graduates as Graduated from the convocation date (and Alumni, per the
-	Completion Settings). Returns {graduated, refused: [{student, reason}]} (plain text): a graduate held on the
-	convocation date (dues, authority) or refused by the lifecycle (e.g. a later change) writes nothing (savepoint)
-	and does not stop the rest; a listed graduate held at listing is reported too."""
+	"""Record the list's graduates as Graduated from the convocation date (and Alumni, per the Completion Settings).
+	Each one is checked again first (graduation_refusal); a Study Completed graduate whose hold has cleared becomes
+	Award Eligible on the way. Returns {graduated, refused: [{student, reason}]} (plain text, the current reason): a
+	graduate refused there or by the lifecycle (e.g. a later change) writes nothing (savepoint) and does not stop the
+	rest."""
 	frappe.only_for((COE_ROLE, "System Manager"))
 	doc = frappe.get_doc(DOCTYPE, convocation_list)
 	doc.check_permission("write")
@@ -114,16 +118,17 @@ def graduate(convocation_list):
 	graduated, refused = 0, []
 	for row in doc.graduates:
 		status = lifecycle_status(row.student)
-		if status == STUDY_COMPLETED and row.award_hold:
-			refused.append({"student": row.student, "reason": _("Not award eligible: {0}").format(row.award_hold)})
-		if status != AWARD_ELIGIBLE:
+		if status not in (STUDY_COMPLETED, AWARD_ELIGIBLE):
+			continue
+		reason = graduation_refusal(row, doc)
+		if reason:
+			refused.append({"student": row.student, "reason": reason})
 			continue
 		messages = len(frappe.local.message_log)
 		frappe.db.savepoint(SAVEPOINT)
 		try:
-			hold = completion.award_refusal(row.student, doc.convocation_date)
-			if hold:
-				frappe.throw(_("Not award eligible: {0}").format(hold))
+			if status == STUDY_COMPLETED:  # a hold that has cleared since listing
+				transition(row.student, AWARD_ELIGIBLE, listing_date(doc, row.student), _("Listed for convocation on {0}").format(doc.name), doc)
 			transition(row.student, GRADUATED, doc.convocation_date, _("Degree conferred at convocation {0}").format(doc.name), doc)
 			completion.alumni_on_convocation(row.student, doc.convocation_date, doc)
 			graduated += 1
@@ -132,6 +137,17 @@ def graduate(convocation_list):
 			del frappe.local.message_log[messages:]
 			refused.append({"student": row.student, "reason": strip_html(str(error))})  # plain text: the form escapes it
 	return {"graduated": graduated, "refused": refused}
+
+
+def graduation_refusal(row, doc):
+	"""Why the listed graduate cannot graduate at this convocation now (plain text), or None: the completion check is
+	run again (a result back to pending ratification, a cancelled recognition) and award eligibility is checked on
+	the convocation date."""
+	check = completion.run_check(row.student)
+	if check.result != completion.rules.COMPLETE:
+		return _("Completion check {0} is Incomplete: {1}").format(check.name, "; ".join((check.reasons or "").splitlines()))
+	hold = completion.award_refusal(row.student, doc.convocation_date, doc.program or row.program)
+	return _("Not award eligible: {0}").format(hold) if hold else None
 
 
 def graduate_row(record):

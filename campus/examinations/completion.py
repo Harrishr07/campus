@@ -25,10 +25,7 @@ from frappe.query_builder.functions import Coalesce
 from frappe.utils import fmt_money, getdate, now_datetime, today
 
 from campus.campus_finance.api import has_dues
-from campus.campus_platform.api import get_regulation
-from campus.campus_platform.bulk import live_run, run_bulk
-from campus.campus_platform.company_scope import permitted_companies
-from campus.campus_platform.regulation_setup import DEAN_ROLE
+from campus.campus_platform.api import DEAN_ROLE, get_regulation, live_run, permitted_companies, run_bulk
 from campus.curriculum.api import effective_curriculum
 from campus.examinations import completion_rules as rules
 from campus.examinations import graduation, graduation_rules
@@ -57,19 +54,21 @@ ALUMNI_SAVEPOINT = "campus_alumni"
 
 
 def run_check(student, bulk_run=None):
-	"""Check `student`'s credit completion; returns the Completion Check (a new one, or the latest when the outcome
-	is unchanged)."""
+	"""Check `student`'s credit completion; returns the Completion Check. The latest one is returned when the outcome
+	is unchanged, unless `bulk_run` is a different run: each run then records every student's outcome (the runner
+	processes a student once per run). The student row is locked, so concurrent checks never record one outcome twice."""
+	frappe.db.get_value("Student", student, "name", for_update=True)
 	facts = check_facts(student)
 	outcome = rules.evaluate(
 		facts.rows, facts.minimums, facts.counting, facts.total, facts.passed, facts.recognised, facts.specialisations
 	)
+	digest = rules.fingerprint(facts.curriculum, outcome)  # before the (translated) reasons: language-independent
 	if not facts.curriculum:
 		outcome["reasons"] = [_("No Effective curriculum for {0} under {1}.").format(facts.program or "-", facts.regulation or "-")]
 	else:
 		outcome["reasons"] = reasons(outcome)
-	digest = rules.fingerprint(facts.curriculum, outcome)
 	latest = latest_check(student)
-	if latest and latest.fingerprint == digest:
+	if latest and latest.fingerprint == digest and (not bulk_run or latest.bulk_run == bulk_run):
 		return latest
 	return record(student, facts, outcome, digest, bulk_run)
 
@@ -126,7 +125,8 @@ def recognised_courses(student):
 
 
 def specialisations(attempts, types, regulation):
-	"""(Honours / Minor, credits required, credits passed) for each variant the student registered for."""
+	"""(Honours / Minor, credits required, credits passed) for each variant the student registered for. Both need the
+	Classification Rule's honours_credits: the regulations set one figure for Honours and Minor (rulings: 18)."""
 	rule = graduation.classification_rule(regulation)
 	needed = rule.honours_credits if rule else 0
 	found = []
@@ -149,7 +149,7 @@ def reasons(outcome):
 
 
 def latest_check(student):
-	name = frappe.db.get_value(CHECK, {"student": student}, "name", order_by="creation desc, name desc")
+	name = frappe.db.get_value(CHECK, {"student": student}, "name", order_by="creation desc, name desc", for_update=True)
 	return frappe.get_doc(CHECK, name) if name else None
 
 
@@ -173,15 +173,16 @@ def record(student, facts, outcome, digest, bulk_run):
 # ---- award eligibility --------------------------------------------------------------------
 
 
-def award_refusal(student, award_date):
-	"""Why `student` cannot be award eligible on `award_date` (every reason, plain text), or None."""
+def award_refusal(student, award_date, program=None):
+	"""Why `student` cannot be award eligible on `award_date` for `program` (default: the latest enrollment's) (every
+	reason, plain text), or None."""
 	found = []
 	dues = has_dues(student)
 	if dues.blocking > 0:
 		owed = ", ".join(f"{company}: {fmt_money(amount, currency='INR')}" for company, amount in dues.by_company.items() if amount > 0)
 		found.append(_("Dues outstanding ({0}).").format(owed))
 	company = frappe.db.get_value("Student", student, "oc_company")
-	problem = authority_refusal(company, student_program(student), getdate(award_date))
+	problem = authority_refusal(company, program or student_program(student), getdate(award_date))
 	if problem:
 		found.append(problem)
 	return " ".join(found) or None
@@ -230,11 +231,11 @@ def alumni_on_convocation(student, convocation_date, source):
 
 
 def move_graduates_to_alumni(on_date=None):
-	"""Daily: graduates whose graduation date is the set number of days past become Alumni, dated that day. A student
-	the lifecycle refuses is logged and skipped."""
-	if frappe.db.get_single_value(SETTINGS, "alumni_move") == ON_CONVOCATION:
-		return 0
-	days = frappe.db.get_single_value(SETTINGS, "alumni_after_days") or 0
+	"""Daily: graduates whose graduation date is the set number of days past become Alumni, dated that day. In "On
+	Convocation" mode the days are 0, so a graduate recorded outside a Convocation List (or before the setting) is not
+	left behind. A student the lifecycle refuses is logged and skipped."""
+	on_convocation = frappe.db.get_single_value(SETTINGS, "alumni_move") == ON_CONVOCATION
+	days = 0 if on_convocation else frappe.db.get_single_value(SETTINGS, "alumni_after_days") or 0
 	on_date, moved = getdate(on_date or today()), 0
 	for student in frappe.get_all("Student", {"oc_academic_status": GRADUATED}, pluck="name", order_by="name asc"):
 		graduated_on = last_change_date(student)

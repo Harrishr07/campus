@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 18:00:00.000000",
  "modified_by": "Administrator",
  "owner": "Administrator",
  "states": [],
@@ -66,7 +66,7 @@
    "options": "Affiliation\nApproval\nRecognition\nAccreditation",
    "reqd": 1,
    "default": "Affiliation",
-   "description": "The Official Document that must be in force on the award date."
+   "description": "The Official Document that must be in force on the award date: an Affiliation by the University for an affiliating university; a Recognition or Approval by the UGC for the institution itself."
   },
   {
    "fieldname": "document_authority",
@@ -89,25 +89,22 @@
    "print": 1
   },
   {
-   "role": "COE",
+   "role": "Principal",
    "read": 1,
    "write": 1,
    "create": 1,
    "report": 1,
    "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
    "print": 1
   },
   {
    "role": "Dean Academics",
-   "read": 1,
-   "write": 1,
-   "create": 1,
-   "report": 1,
-   "export": 1,
-   "print": 1
-  },
-  {
-   "role": "Principal",
    "read": 1,
    "report": 1,
    "print": 1
