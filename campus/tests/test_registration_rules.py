@@ -1,10 +1,9 @@
-"""P1-T13 unit tests (M03-04): every pure registration rule at the R2022 values."""
+"""P1-T13, P2-T26 unit tests (M03-04, M03-07): every pure registration rule at the R2022 values."""
 
 from frappe.tests import UnitTestCase
 from frappe.utils import getdate
 
 from campus.curriculum import registration_rules as rules
-from campus.curriculum.api import prerequisites_met
 
 
 class Rule:
@@ -13,6 +12,9 @@ class Rule:
 	add_from_semester = 5
 	max_add_credits = 6
 	max_add_courses = 2
+	honours_min_cgpa = 7.5
+	honours_cgpa_upto_semester = 3
+	honours_no_arrears = 1
 
 
 PREFIX = rules.clause("R2022", "6.1")
@@ -102,5 +104,60 @@ class TestRegistrationRules(UnitTestCase):
 		self.assertEqual(rules.term_parity("Term B", "2023-01-02", "Odd"), 1)
 		self.assertEqual(rules.term_parity("Odd", "2022-06-01", ""), 1)
 
-	def test_prerequisite_stub_returns_true_until_phase_two(self):
-		self.assertTrue(prerequisites_met("any-student", "any-course"))
+
+class TestPrerequisiteRules(UnitTestCase):
+	def test_prerequisite_codes_parse_commas_and_lines(self):
+		self.assertEqual(rules.prerequisite_codes("CS101, CS102\nMA101,"), ["CS101", "CS102", "MA101"])
+		self.assertEqual(rules.prerequisite_codes(None), [])
+
+	def test_missing_prerequisites_hold_the_row_with_the_courses_named(self):
+		reason = rules.hold_reason(["CS101", "MA101"])
+		self.assertIn("CS101, MA101", reason)
+		self.assertIn("published result", reason)
+
+	def test_no_missing_prerequisite_means_no_hold(self):
+		self.assertIsNone(rules.hold_reason([]))
+
+
+class TestHonoursEligibility(UnitTestCase):
+	PREFIX = rules.clause("R2022", "8.2")
+
+	def problems(self, kinds, cgpa, arrears=(), rule=Rule):
+		return rules.honours_problems(set(kinds), cgpa, list(arrears), rule, self.PREFIX)
+
+	def test_rows_without_honours_or_minor_are_not_checked(self):
+		self.assertEqual(self.problems({"Regular", "Additional"}, 0, ["CS101"]), [])
+
+	def test_honours_at_the_minimum_cgpa_without_arrears_is_eligible(self):
+		self.assertEqual(self.problems({"Honours"}, 7.5), [])
+
+	def test_cgpa_below_the_minimum_refuses_honours_and_minor(self):
+		for kind in ("Honours", "Minor"):
+			(problem,) = self.problems({kind}, 7.49)
+			self.assertIn("R2022 cl. 8.2: ", problem)
+			self.assertIn("at least 7.5 up to semester 3", problem)
+			self.assertIn("7.49", problem)
+
+	def test_an_outstanding_arrear_refuses_honours(self):
+		(problem,) = self.problems({"Honours"}, 9, ["CS101"])
+		self.assertIn("no outstanding arrear", problem)
+		self.assertIn("CS101", problem)
+
+	def test_an_arrear_does_not_refuse_minor(self):
+		self.assertEqual(self.problems({"Minor"}, 9, ["CS101"]), [])
+
+	def test_arrears_allowed_when_the_rule_does_not_forbid_them(self):
+		class Lenient(Rule):
+			honours_no_arrears = 0
+
+		self.assertEqual(self.problems({"Honours"}, 9, ["CS101"], Lenient), [])
+
+	def test_no_minimum_cgpa_on_record_means_no_cgpa_check(self):
+		class NoMinimum(Rule):
+			honours_min_cgpa = 0
+			honours_cgpa_upto_semester = 0
+
+		self.assertEqual(self.problems({"Minor"}, 0, rule=NoMinimum), [])
+
+	def test_both_failures_are_reported(self):
+		self.assertEqual(len(self.problems({"Honours"}, 6, ["CS101"])), 2)

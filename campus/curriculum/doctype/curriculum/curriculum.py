@@ -12,6 +12,7 @@ from frappe.utils import cint, cstr, flt
 
 from campus.campus_platform.regulation_setup import DEAN_ROLE
 from campus.curriculum.credit_rules import category_totals, credit_shortfalls, derive_credits, range_problem
+from campus.curriculum.registration_rules import prerequisite_codes
 
 LOCKED = ("Effective", "Superseded")
 TRANSITIONS = {
@@ -165,7 +166,7 @@ class Curriculum(Document):
 			)
 
 	def validate_prerequisites(self, row):
-		for code in [c.strip() for c in cstr(row.prerequisites).split(",") if c.strip()]:
+		for code in prerequisite_codes(row.prerequisites):
 			if code == row.course:
 				frappe.throw(_("Row {0}: a course cannot be its own prerequisite.").format(row.idx))
 			if not frappe.db.exists("Course", code):

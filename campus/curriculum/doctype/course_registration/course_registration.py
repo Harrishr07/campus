@@ -1,4 +1,4 @@
-"""M03-04 Course Registration: a student's semester course selection, approved advisor -> HOD.
+"""M03-04, M03-07, M05-03 Course Registration: a student's semester course selection, approved advisor -> HOD.
 
 Credits come from the student's Effective curriculum. The limits come from the regulation's
 Registration Rule (credit cap, drop, add, elective seat cap); the Registration Window gives the dates
@@ -8,6 +8,12 @@ on the Elective Group, and final approval enrolls the student exactly once.
 M03-08: a registration is bound to the Program Enrollment it was made for (apply and cancel use that one),
 the credit cap counts the student's other submitted registrations of the term, and the window deadline holds
 for every save of a draft; a late registration needs a reason and Dean Academics' authorisation.
+
+Prerequisites (M03-07) are met only by a Pass in a published result (curriculum.api.unmet_prerequisites). A row
+without that evidence is held with the reason (hold_reason): the registration saves and goes to review, and final
+approval is refused while a row is held. Both re-evaluate on every save and on submit, so a result published
+meanwhile releases the hold. Honours / Minor rows need the Registration Rule's CGPA over the curriculum's courses up
+to its semester, and Honours no outstanding arrear (examinations.api.cgpa, arrear_courses).
 """
 
 from functools import cached_property
@@ -20,7 +26,7 @@ from frappe.utils import cint, getdate
 
 from campus.campus_platform.api import ApprovableDocument, get_regulation, get_rule, latest_enrollment
 from campus.curriculum import registration_rules as rules
-from campus.curriculum.api import effective_curriculum, prerequisites_met
+from campus.curriculum.api import effective_curriculum, unmet_prerequisites
 from campus.curriculum.enrollment import (
 	count_members,
 	current_offering,
@@ -44,9 +50,11 @@ class CourseRegistration(ApprovableDocument, Document):
 		problems = self.rule_problems(window) + self.seat_problems(lock=False)
 		if problems:
 			frappe.throw("<br>".join(problems), title=_("Registration Rules Not Met"))
+		self.report_holds()
 
 	def before_submit(self):
 		super().before_submit()
+		self.refuse_holds()
 		self.assign_offerings()
 		problems = self.credit_problems(self.get_window(), lock=True) + self.seat_problems(lock=True)
 		if problems:
@@ -153,10 +161,26 @@ class CourseRegistration(ApprovableDocument, Document):
 			self.check_prerequisites(item)
 
 	def check_prerequisites(self, item):
-		if item.registration_type == "Dropped" or not self.curriculum_rows[item.course].prerequisites:
-			return
-		if not prerequisites_met(self.student, item.course):
-			frappe.throw(_("Row {0}: prerequisites of {1} are not met.").format(item.idx, frappe.bold(item.course)))
+		"""Hold the row (with the reason) while a prerequisite has no Pass in a published result."""
+		prerequisites = self.curriculum_rows[item.course].prerequisites
+		missing = unmet_prerequisites(self.student, prerequisites) if item.registration_type != "Dropped" else []
+		item.hold_reason = rules.hold_reason(missing)
+
+	def held_rows(self):
+		return [_("Row {0}: {1}: {2}").format(i.idx, i.course, i.hold_reason) for i in self.items if i.hold_reason]
+
+	def report_holds(self):
+		held = self.held_rows()
+		if held:
+			frappe.msgprint("<br>".join(held), title=_("Held For Review"), indicator="orange")
+
+	def refuse_holds(self):
+		held = self.held_rows()
+		if held:
+			frappe.throw(
+				"<br>".join(held) + "<br>" + _("A held row cannot be approved; drop it or wait for the published result."),
+				title=_("Rows Held For Review"),
+			)
 
 	def get_window(self):
 		program = frappe.db.get_value("Curriculum", self.curriculum, "program")
@@ -213,7 +237,19 @@ class CourseRegistration(ApprovableDocument, Document):
 			+ rules.drop_problems(rows, self.registration_date, deadline, rule.max_drop_credits, prefix("drop_clause"))
 			+ rules.add_problems(rows, self.semester, rule, prefix("add_clause"))
 			+ self.choose_problems(prefix("elective_clause"))
+			+ self.honours_problems(prefix("honours_clause"))
 		)
+
+	def honours_problems(self, prefix):
+		kinds = {i.registration_type for i in self.items}
+		if not kinds & {rules.HONOURS, rules.MINOR}:
+			return []
+		from campus.examinations.api import arrear_courses, cgpa  # lazy: examinations.api pulls in the finance stack
+
+		upto = cint(self.rule.honours_cgpa_upto_semester)
+		filters = {"parent": self.curriculum, "parenttype": "Curriculum", **({"semester": ["<=", upto]} if upto else {})}
+		courses = set(frappe.get_all("Curriculum Course", filters, pluck="course"))
+		return rules.honours_problems(kinds, cgpa(self.student, courses), arrear_courses(self.student), self.rule, prefix)
 
 	def credit_problems(self, window, lock):
 		"""The credit cap over the student's other submitted registrations of the term plus this one.

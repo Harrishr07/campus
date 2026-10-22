@@ -1,9 +1,11 @@
-"""M03-04 Registration rules: pure checks of a Course Registration against a Registration Rule.
+"""M03-04, M03-07 Registration rules: pure checks of a Course Registration against a Registration Rule.
 
 No database access. Rows are (registration_type, credits) pairs; every limit comes from the regulation's
 Registration Rule record (e.g. R2022: 36 credits excluding arrear/withdrawal, drop 6 credits within
 30 days, add 6 credits / 2 courses from semester V, elective minimum enrolment 10). Each check returns
-a list of problem messages that cite the regulation clause.
+a list of problem messages that cite the regulation clause. Honours / Minor eligibility (M05-03) comes from the
+same record (R2022: CGPA 7.5 up to semester III, no outstanding arrear for Honours). A course whose
+prerequisites lack evidence is held with a reason (hold_reason), never refused silently or passed.
 """
 
 from frappe import _
@@ -16,6 +18,7 @@ def n(value):
 
 
 TYPES = ("Regular", "Arrear", "Dropped", "Additional", "Honours", "Minor")
+HONOURS, MINOR = "Honours", "Minor"
 
 
 def clause(regulation_code, clause_no):
@@ -75,6 +78,40 @@ def add_problems(rows, semester, rule, prefix):
 	if len(added) > cint(rule.max_add_courses):
 		problems.append(
 			prefix + _("{0} additional courses; at most {1} may be added.").format(len(added), cint(rule.max_add_courses))
+		)
+	return problems
+
+
+def prerequisite_codes(text):
+	"""Course names of a curriculum row's prerequisites (comma or line separated)."""
+	return [code.strip() for code in (text or "").replace("\n", ",").split(",") if code.strip()]
+
+
+def hold_reason(missing):
+	"""Why a row is held for review: the prerequisites with no Pass in a published result (None when all are met)."""
+	if missing:
+		return _("Prerequisite(s) {0} not passed in a published result; held for review.").format(", ".join(missing))
+
+
+def honours_problems(kinds, cgpa, arrears, rule, prefix):
+	"""Honours / Minor rows need the rule's minimum CGPA (0: no check); Honours also no outstanding arrear when the
+	rule says so. `kinds` are the registration types of the rows, `cgpa` is over the rule's semesters."""
+	special = sorted(kinds & {HONOURS, MINOR})
+	if not special:
+		return []
+	problems = []
+	minimum = flt(rule.honours_min_cgpa)
+	if minimum and flt(cgpa) < minimum:
+		upto = cint(rule.honours_cgpa_upto_semester)
+		scope = _("up to semester {0}").format(upto) if upto else _("over all semesters")
+		problems.append(
+			prefix + _("{0} registration needs a CGPA of at least {1} {2}; the CGPA is {3}.").format(
+				" / ".join(_(k) for k in special), n(minimum), scope, n(flt(cgpa, 2))
+			)
+		)
+	if HONOURS in kinds and cint(rule.honours_no_arrears) and arrears:
+		problems.append(
+			prefix + _("Honours registration needs no outstanding arrear; arrears: {0}.").format(", ".join(arrears))
 		)
 	return problems
 

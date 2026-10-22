@@ -1,4 +1,5 @@
-"""M12-02 Arrears: courses a student has sat (or been barred from) and not yet cleared.
+"""M12-02, M03-07 Arrears and passes: courses a student has sat (or been barred from) and not yet cleared, and the
+courses passed (has_passed, the prerequisite evidence of course registration).
 
 Only published Student Results count, and a later Pass of a course clears it. Two views:
 - an arrear (arrear_courses, for transcripts and progression) is any course whose latest outcome is not a Pass:
@@ -32,6 +33,11 @@ def reappearance_courses(student):
 	"""Reappearance courses (sorted) of `student`: latest published outcome Fail, AB or WD (REAPPEAR), never SA."""
 	latest = dict(published_outcomes(student))
 	return sorted(course for course, result in latest.items() if result in REAPPEAR)
+
+
+def has_passed(student, course):
+	"""Whether `student` has a Pass of `course` in a published result (latest, ratified version)."""
+	return any(row == (course, PASS) for row in published_outcomes(student))
 
 
 def published_outcomes(student):

@@ -7,6 +7,7 @@ from frappe.tests import UnitTestCase
 
 from campus.examinations import registration_rules, rules
 from campus.student_services import withdrawal_rules as wr
+from campus.student_services.exam_portal import withdrawable
 
 EXAM = date(2026, 11, 2)
 
@@ -152,3 +153,26 @@ class TestCohortAcademicYear(UnitTestCase):
 
 	def test_no_year_gives_none(self):
 		self.assertIsNone(wr.pick_cohort_year([], "RT-2022", 2022, 2024))
+
+
+class TestPortalWithdrawable(UnitTestCase):
+	"""The portal offers a course again when its only application was Rejected or Returned (the controller counts
+	approved withdrawals only); a Draft, Pending or Approved application still holds it."""
+
+	REGISTRATIONS = [{"exam_session": "S1", "courses": [{"course": c, "kind": "Current", "eligibility": "Eligible"} for c in ("A", "B")]}]
+
+	def offered(self, status, docstatus=0):
+		withdrawals = [{"exam_session": "S1", "courses": ["A"], "status": status, "docstatus": docstatus}]
+		found = withdrawable(self.REGISTRATIONS, withdrawals)
+		return found[0]["courses"] if found else []
+
+	def test_a_rejected_or_returned_application_frees_its_courses(self):
+		for status in ("Rejected", "Returned"):
+			self.assertEqual(self.offered(status), ["A", "B"], status)
+
+	def test_a_live_application_holds_its_courses(self):
+		for status, docstatus in (("Draft", 0), ("Pending", 0), ("Approved", 1)):
+			self.assertEqual(self.offered(status, docstatus), ["B"], status)
+
+	def test_a_cancelled_application_frees_its_courses(self):
+		self.assertEqual(self.offered("Cancelled", 2), ["A", "B"])

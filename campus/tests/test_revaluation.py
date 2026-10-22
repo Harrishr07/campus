@@ -453,6 +453,17 @@ class TestLaterSessions(RevaluationFixture):
 		self.assertIn("RRAT-SUPP", log.method + (log.error or ""))
 		self.assertNotIn("Traceback", log.error or "")
 
+	def test_a_deadlock_or_lock_timeout_in_a_later_session_is_raised_not_logged(self):
+		from pymysql.constants import ER
+		from pymysql.err import OperationalError
+
+		for code in (ER.LOCK_DEADLOCK, ER.LOCK_WAIT_TIMEOUT):
+			before = frappe.db.count("Error Log")
+			with patch("campus.examinations.results.compute_student_result", side_effect=OperationalError(code, "lock")):
+				with self.assertRaises(OperationalError):
+					result_ratification.refresh_later_results(self.s22.name, self.pre_session.name, "RRAT-LOCK")
+			self.assertEqual(frappe.db.count("Error Log"), before)
+
 
 class TestInstructorAccess(RevaluationFixture):
 	def visible(self, user):

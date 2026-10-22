@@ -54,6 +54,14 @@ def graduate_record(student):
 	return record
 
 
+def cgpa(student, courses=None):
+	"""The student's core CGPA from published results, over `courses` only when given (Honours / Minor eligibility)."""
+	attempts = published_attempts(student)
+	if courses is not None:
+		attempts = [a for a in attempts if a.course in courses]
+	return graduation_rules.consolidate(attempts, registration_types(student))["cgpa"]
+
+
 def required_credits(regulation):
 	"""The regulation's credit total for the degree (Curriculum Rule min_total_credits), or 0 when none is set."""
 	return regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits") or 0

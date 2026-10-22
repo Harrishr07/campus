@@ -76,8 +76,12 @@ def my_exams(student=None):
 
 
 def withdrawable(registrations, withdrawals):
-	"""[{exam_session, courses}]: eligible courses of the term (not arrears or bridges) with no live application."""
-	taken = {(w["exam_session"], c) for w in withdrawals if w["docstatus"] < 2 for c in w["courses"]}
+	"""[{exam_session, courses}]: eligible courses of the term (not arrears or bridges) with no live application.
+
+	Live means Draft, Pending or Approved. A Rejected or Returned draft, like a cancelled one, does not hold its courses:
+	the controller's duplicate rule counts approved withdrawals only (earlier_withdrawals), so a new application for
+	them is accepted."""
+	taken = {(w["exam_session"], c) for w in withdrawals if is_live(w) for c in w["courses"]}
 	found = []
 	for row in registrations:
 		courses = [
@@ -87,6 +91,10 @@ def withdrawable(registrations, withdrawals):
 		if courses:
 			found.append({"exam_session": row["exam_session"], "courses": courses})
 	return found
+
+
+def is_live(withdrawal):
+	return withdrawal["docstatus"] < 2 and withdrawal["status"] not in ("Rejected", "Returned")
 
 
 def withdrawal_rows(student):

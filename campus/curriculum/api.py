@@ -10,9 +10,11 @@ from campus.curriculum.outcomes import (  # noqa: F401  (public API, M03-02)
 )
 
 
-def prerequisites_met(student, course):
-	"""True when `student` has met the prerequisites of `course`.
+def unmet_prerequisites(student, prerequisites):
+	"""M03-07 The courses of `prerequisites` (a curriculum row's text) that `student` has not passed in a published
+	result (examinations.api.has_passed). Transfers, equivalences and waivers have no records yet (M03-09), so they
+	satisfy nothing here; a row with an unmet prerequisite is held for review, never passed."""
+	from campus.curriculum.registration_rules import prerequisite_codes
+	from campus.examinations.api import has_passed  # lazy: examinations.api pulls in the finance stack
 
-	Stub until Phase 2 supplies results: every student is treated as eligible.
-	"""
-	return True
+	return [course for course in prerequisite_codes(prerequisites) if not has_passed(student, course)]

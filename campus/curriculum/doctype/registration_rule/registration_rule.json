@@ -20,7 +20,12 @@
   "add_clause",
   "elective_section",
   "elective_min_enrolment",
-  "elective_clause"
+  "elective_clause",
+  "honours_section",
+  "honours_min_cgpa",
+  "honours_cgpa_upto_semester",
+  "honours_no_arrears",
+  "honours_clause"
  ],
  "fields": [
   {
@@ -115,11 +120,38 @@
    "fieldname": "elective_clause",
    "fieldtype": "Data",
    "label": "Clause"
+  },
+  {
+   "fieldname": "honours_section",
+   "fieldtype": "Section Break",
+   "label": "Honours and Minor",
+   "description": "Eligibility to register Honours or Minor courses (M03-04, M05-03). A blank minimum CGPA means no CGPA check."
+  },
+  {
+   "fieldname": "honours_min_cgpa",
+   "fieldtype": "Float",
+   "label": "Minimum CGPA"
+  },
+  {
+   "fieldname": "honours_cgpa_upto_semester",
+   "fieldtype": "Int",
+   "label": "CGPA Over Semesters Up To",
+   "description": "The CGPA counts the published results of the curriculum's courses of semesters up to this one (0: all)."
+  },
+  {
+   "fieldname": "honours_no_arrears",
+   "fieldtype": "Check",
+   "label": "Honours Needs No Outstanding Arrear"
+  },
+  {
+   "fieldname": "honours_clause",
+   "fieldtype": "Data",
+   "label": "Clause"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Registration Rule",

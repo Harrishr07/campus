@@ -286,7 +286,7 @@ def make_curriculum():
 		{
 			"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6,
 			"drop_window_days": 30, "add_from_semester": 5, "max_add_credits": 6, "max_add_courses": 2,
-			"elective_min_enrolment": 10,
+			"elective_min_enrolment": 10, "honours_min_cgpa": 7.5, "honours_cgpa_upto_semester": 3, "honours_no_arrears": 1,
 		},
 	)  # fmt: skip
 	rows = []

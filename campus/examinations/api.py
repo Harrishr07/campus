@@ -6,7 +6,7 @@ from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
 from campus.examinations.access import instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
-from campus.examinations.arrears import arrear_courses  # noqa: F401  (public API)
+from campus.examinations.arrears import arrear_courses, has_passed  # noqa: F401  (public API)
 from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
 
@@ -188,6 +188,13 @@ def days_exam_to_result(company, academic_year, programs=None):
 	from campus.examinations import coe_reports
 
 	return coe_reports.days_exam_to_result(company, academic_year, programs)
+
+
+def cgpa(student, courses=None):
+	"""The student's CGPA from published results (latest, ratified versions), over `courses` only when given."""
+	from campus.examinations import graduation
+
+	return graduation.cgpa(student, courses)
 
 
 def released_sessions(company, academic_year=None, final_year=False):

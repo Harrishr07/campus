@@ -139,8 +139,9 @@ def refresh_later_results(student, exam_session, ratification):
 	"""Recompute the student's results of the sessions that read the ratified version (P2-T20): those of later terms
 	and the other sessions of the same term (a supplementary; results.earlier_rows reads terms starting no later), as
 	their CGPA and arrears read it. A published session gets a pending version (its own ratification publishes it and
-	re-issues its sheet); an unpublished one is replaced in place. A session that cannot be recomputed, for any
-	reason, is logged with an explicit message and never blocks this one or the others."""
+	re-issues its sheet); an unpublished one is replaced in place. A session that cannot be recomputed is logged with
+	an explicit message and never blocks this one or the others, except a deadlock or lock wait timeout, which is
+	raised (the transaction is gone)."""
 	from campus.examinations.results import compute_student_result
 
 	start = frappe.db.get_value("Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date")
@@ -158,6 +159,8 @@ def refresh_later_results(student, exam_session, ratification):
 		try:
 			compute_student_result(student, session)
 		except Exception as e:
+			if frappe.db.is_deadlocked(e) or frappe.db.is_timedout(e):
+				raise  # the database rolled the transaction (and its savepoint) back: the ratification must fail too
 			frappe.db.rollback(save_point="later_result")
 			frappe.clear_messages()
 			frappe.log_error(

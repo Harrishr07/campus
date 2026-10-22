@@ -289,14 +289,6 @@ class TestRegistrationRules(RegistrationTestCase):
 	def test_duplicate_course_in_one_registration_is_rejected(self):
 		self.assert_rejected([("REG C", "Regular"), ("REG C", "Regular")], "listed twice")
 
-	def test_prerequisite_check_is_called_for_courses_that_have_prerequisites(self):
-		frappe.db.set_value("Curriculum Course", {"parent": self.curriculum.name, "course": "REG C"}, "prerequisites", "REG D")
-		with patch("campus.curriculum.doctype.course_registration.course_registration.prerequisites_met", return_value=False) as check:
-			self.assert_rejected([("REG C", "Regular")], "prerequisites of .*REG C.* are not met")
-		check.assert_called_once_with(self.students[0].name, "REG C")
-		self.regular("REG C")  # the Phase 1 stub returns True
-		frappe.db.set_value("Curriculum Course", {"parent": self.curriculum.name, "course": "REG C"}, "prerequisites", None)
-
 	def test_additional_courses_not_allowed_before_semester_five(self):
 		self.assert_rejected([("REG AD3", "Additional")], r"R2022 cl\. 6\.3: additional courses are allowed from semester 5", semester=4)
 
