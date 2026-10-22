@@ -10,3 +10,4 @@ Login `class_advisor@sxcce.example.edu`. Guide: roles/mentor-class-advisor.md.
 | 5 | Student Services > Transactions > Student Leave Application | CSE leaves (medical, on duty) with certificate |
 | N1 | Open the same mentee's confidential note as `faculty@` | Not visible |
 | N2 | Open a student of another class as mentees | Refused: not your mentee |
+| N3 | Student Services > Student, Condonation Request | No **Add** button; condonation requests are read-only for you |

@@ -291,7 +291,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 21:46:00.000000",
+ "modified": "2026-10-22 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",
@@ -324,6 +324,9 @@
   },
   {
    "role": "Academics User"
+  },
+  {
+   "role": "Instructor"
   }
  ],
  "sequence_id": 50.0,

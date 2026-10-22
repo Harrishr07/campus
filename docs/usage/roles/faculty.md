@@ -4,7 +4,7 @@
 
 **What you do:** teach, mark attendance, enter CIA marks, apply for leave. Most daily work is on the faculty portal.
 
-**You see:** Faculty portal at `/campus-portal/faculty` (My timetable, Attendance, CIA marks, Course plan, Leave, My students). Desk: Academics, Examinations, Student Services, Approvals.
+**You see:** Faculty portal at `/campus-portal/faculty` (My timetable, Attendance, CIA marks, Course plan, Leave, My students). Desk: Academics, Examinations, Faculty (Attendance Correction Request), Student Services, Approvals. You hold the Instructor role only: you cannot create students or record corrections, and other teachers' sessions, marks and requests are not yours to change.
 
 ## Daily tasks
 1. **See today's periods:** `/campus-portal/faculty` > My timetable.

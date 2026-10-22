@@ -122,7 +122,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-06 00:00:00.000000",
+ "modified": "2026-10-22 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Condonation Request",
@@ -173,6 +173,12 @@
    "read": 1,
    "write": 1,
    "create": 1
+  },
+  {
+   "role": "Class Advisor",
+   "read": 1,
+   "report": 1,
+   "print": 1
   }
  ],
  "sort_field": "creation",

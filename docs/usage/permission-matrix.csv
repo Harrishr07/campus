@@ -51,7 +51,7 @@ DocType,Appraisal Review,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Approval Delegation,,Desk User,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0
 DocType,Approval Delegation,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Approval Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
-DocType,Approval Request,,Desk User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+DocType,Approval Request,,Desk User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Approval Request,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Attainment Policy,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attainment Policy,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,1,0,0,0,0,0
@@ -61,6 +61,7 @@ DocType,Attainment Policy,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Attendance Correction Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Attendance Correction Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Attendance Correction Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Attendance Correction Request,,Instructor,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,0
 DocType,Attendance Correction Request,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Attendance Correction Request,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
 DocType,Attendance Eligibility Run,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
@@ -72,6 +73,7 @@ DocType,Attendance Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Attendance Rule,,Dean Academics,0,1,1,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Attendance Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Audience Rule,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
+DocType,Audience Rule,,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Audience Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Bank Collection Import,,Accounts Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Bank Collection Import,,Accounts User,0,1,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0
@@ -156,6 +158,7 @@ DocType,Challan Format,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Circular,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
 DocType,Circular,,Employee,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
 DocType,Circular,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
+DocType,Circular,,HOD,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Circular,,Student,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
 DocType,Circular,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
 DocType,Circular Acknowledgement,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
@@ -173,6 +176,7 @@ DocType,Completion Settings,,COE,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Completion Settings,,Dean Academics,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Completion Settings,,System Manager,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Condonation Request,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Condonation Request,,Class Advisor,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0
 DocType,Condonation Request,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Condonation Request,,Guardian,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1
 DocType,Condonation Request,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
@@ -448,6 +452,7 @@ DocType,Malpractice Report,,COE,0,1,1,1,0,1,0,1,1,0,0,1,1,0,0,0,1,0
 DocType,Malpractice Report,,COE,1,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Malpractice Report,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Malpractice Report,,Dean Academics,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
+DocType,Malpractice Report,,Instructor,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,1,1,0
 DocType,Malpractice Report,,Principal,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Malpractice Report,,Principal,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0
 DocType,Malpractice Report,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,1,0,0,0,1,0
@@ -774,6 +779,7 @@ Report,Attainment Target Gap,CO Attainment Run,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attainment Target Gap,CO Attainment Run,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attainment Target Gap,CO Attainment Run,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attendance Shortage,Student Attendance,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Attendance Shortage,Student Attendance,Class Advisor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attendance Shortage,Student Attendance,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attendance Shortage,Student Attendance,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attendance Shortage,Student Attendance,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

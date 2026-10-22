@@ -168,6 +168,16 @@ class TestPilotSetup(IntegrationTestCase):
 		self.assertIn("Placement Officer", frappe.get_roles(placement))
 		self.assertEqual(frappe.get_all("User Permission", {"user": placement, "allow": "Company"}, pluck="for_value"), [self.college])
 
+	def test_a_rerun_takes_away_the_kit_roles_a_user_no_longer_has_and_keeps_the_rest(self):
+		faculty = f"faculty@{SXCCE['user_domain']}"
+		frappe.get_doc("User", faculty).add_roles("Academics User", "Report Manager")  # the office role PR-02 once gave teachers
+		self.addCleanup(lambda: frappe.get_doc("User", faculty).remove_roles("Report Manager"))
+		self.assertEqual(setup_college("sxcce", test_passwords=True)["updated"].get("User"), 1)
+		held = set(frappe.get_roles(faculty))
+		self.assertNotIn("Academics User", held)
+		self.assertTrue({"Instructor", "Report Manager"} <= held)  # a role outside the kit's set stays
+		self.assertNotIn("User", setup_college("sxcce", test_passwords=True)["updated"])
+
 	def test_position_holders_and_pilot_student(self):
 		domain = SXCCE["user_domain"]
 		hod_department = f"Computer Science and Engineering - {SXCCE['college']['abbr']}"

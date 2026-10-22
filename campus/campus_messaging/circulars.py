@@ -13,7 +13,7 @@ from frappe.utils import now_datetime
 
 from campus.campus_messaging import audience
 
-STAFF_ROLES = ("System Manager", "Academics User")
+STAFF_ROLES = ("System Manager", "Academics User", "HOD")  # the roles that write circulars; their role permissions apply
 READ_TYPES = ("read", "print", "email", "export", "report", "select")
 
 

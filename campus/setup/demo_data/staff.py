@@ -10,8 +10,9 @@ from campus.setup.records import upsert
 
 DESIGNATIONS = ("Professor", "Associate Professor", "Assistant Professor")
 FACULTY_PER_DEPARTMENT = 2  # besides the Head of Department
-HOD_ROLES = ["HOD", "Instructor", "Academics User"]
-FACULTY_ROLES = ["Instructor", "Academics User"]
+# The pilot kit's teacher role sets: teachers do not hold the office role (Academics User); a re-run takes it away.
+HOD_ROLES = ["HOD", "Instructor"]
+FACULTY_ROLES = ["Instructor"]
 
 
 def load(ctx):
@@ -59,7 +60,7 @@ def add_member(ctx, spec, test_passwords, result):
 	employee = people.ensure_employee(profile, spec, user, ctx.college, ctx.out)
 	if spec.get("position"):
 		people.ensure_position(profile, spec, user, ctx.college, None, employee, ctx.out)
-	people.grant_roles(user, spec["roles"])
+	people.sync_roles(user, spec["roles"], people.kit_roles(profile))
 	set_personnel_details(ctx, spec["key"], spec["name"], spec["designation"], spec["person"])
 
 

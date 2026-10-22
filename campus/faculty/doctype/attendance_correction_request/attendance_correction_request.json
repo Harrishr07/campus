@@ -151,7 +151,7 @@
  "index_web_pages_for_search": 0,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-22 21:00:00.000000",
+ "modified": "2026-10-22 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Attendance Correction Request",
@@ -196,6 +196,16 @@
    "read": 1,
    "report": 1,
    "print": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1,
+   "if_owner": 1
   }
  ],
  "sort_field": "creation",

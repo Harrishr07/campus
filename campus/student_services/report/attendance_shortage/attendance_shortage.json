@@ -13,7 +13,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-22 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Attendance Shortage",
@@ -26,6 +26,7 @@
   {"role": "System Manager"},
   {"role": "HOD"},
   {"role": "Dean Academics"},
-  {"role": "Academics User"}
+  {"role": "Academics User"},
+  {"role": "Class Advisor"}
  ]
 }

@@ -4,12 +4,17 @@ behind the staff users, their Position Holders, the class group, and a pilot stu
 Passwords: on a developer-mode or demo site (`campus_demo_site`) a new user gets the profile's fixed TEST password. On any
 other site no password is stored: each new user gets a one-time reset link in the run's `reset_links`, so the first login
 sets their own password. On a demo site every desk user also gets the UAT Tester role (campus.campus_platform.uat). The generated people are synthetic; no real personal data is used.
+
+Roles: the kit owns the roles its profile hands out (`kit_roles`). A re-run takes such a role away from a kit user whose
+spec no longer lists it (e.g. Academics User, the office role, once given to teachers), so a site is corrected by re-running
+the kit. Roles outside that set (HRMS's Employee, anything granted by hand) and roles an active position gives are left alone.
 """
 
 import frappe
 from frappe import _
 from frappe.utils.password import update_password
 
+from campus.campus_platform.positions import active_holdings
 from campus.campus_platform.uat import tester_roles_for
 from campus.setup.records import upsert
 from campus.setup.structure import department_name
@@ -28,11 +33,17 @@ def missing_roles(profile):
 	return sorted(role for role in roles if not frappe.db.exists("Role", role))
 
 
+def kit_roles(profile):
+	"""The roles the kit manages: every role a user of the profile is given."""
+	return {role for user in profile.get("users", []) for role in user["roles"]}
+
+
 def ensure_people(profile, companies, out, test_passwords, result):
 	"""Create the users and what hangs on them; returns {user key: Employee name} for the staff with an employee record."""
 	if test_passwords and not test_passwords_allowed():
 		frappe.throw(_("Test passwords are for developer-mode or demo sites only."))
 	group = ensure_class_group(profile, companies["college"], out)
+	managed = kit_roles(profile)
 	employees = {}
 	for spec in profile["users"]:
 		user = ensure_user(profile, spec, out, test_passwords, result)
@@ -42,7 +53,9 @@ def ensure_people(profile, companies, out, test_passwords, result):
 			employees[spec["key"]] = ensure_employee(profile, spec, user, companies["college"], out)
 		if spec.get("position"):
 			ensure_position(profile, spec, user, companies["college"], group, employees.get(spec["key"]), out)
-		grant_roles(user, spec["roles"] + (tester_roles_for(spec["roles"]) if test_passwords_allowed() else []))
+		wanted = spec["roles"] + (tester_roles_for(spec["roles"]) if test_passwords_allowed() else [])
+		if sync_roles(user, wanted, managed):
+			out.updated["User"] += 1
 	ensure_pilot_student(profile, companies["college"], out)
 	return employees
 
@@ -68,11 +81,18 @@ def ensure_user(profile, spec, out, test_passwords, result):
 	return email
 
 
-def grant_roles(user, roles):
+def sync_roles(user, roles, managed=()):
+	"""Give `user` the `roles` it lacks and take away the `managed` roles it holds beyond them, except a role an active
+	Position Holder gives it (campus.campus_platform.positions owns those); returns the roles taken away."""
 	held = set(frappe.get_all("Has Role", filters={"parent": user, "parenttype": "User"}, pluck="role"))
 	missing = [role for role in roles if role not in held]
+	from_positions = {holding.role for holding in active_holdings(user)}
+	surplus = sorted((held & set(managed)) - set(roles) - from_positions)
+	if surplus:
+		frappe.get_doc("User", user).remove_roles(*surplus)
 	if missing:
 		frappe.get_doc("User", user).add_roles(*missing)
+	return surplus
 
 
 def ensure_employee(profile, spec, user, college, out):

@@ -381,8 +381,7 @@
 			"key": "faculty",
 			"name": "Faculty Member",
 			"roles": [
-				"Instructor",
-				"Academics User"
+				"Instructor"
 			],
 			"companies": [
 				"college"
@@ -396,8 +395,7 @@
 			"name": "Head of Department CSE",
 			"roles": [
 				"HOD",
-				"Instructor",
-				"Academics User"
+				"Instructor"
 			],
 			"companies": [
 				"college"
@@ -417,8 +415,7 @@
 			"roles": [
 				"Class Advisor",
 				"Mentor",
-				"Instructor",
-				"Academics User"
+				"Instructor"
 			],
 			"companies": [
 				"college"
@@ -435,8 +432,7 @@
 			"key": "coe",
 			"name": "Controller of Examinations",
 			"roles": [
-				"COE",
-				"Academics User"
+				"COE"
 			],
 			"companies": [
 				"college"

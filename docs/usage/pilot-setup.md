@@ -32,6 +32,12 @@ What it builds, from `campus/setup/profiles/<profile>.json`:
 | Approval policies | Certificate Request, Result Ratification, Rejoin Application, Examiner Remuneration Claim (Principal), only for a document type with no policy yet; Fee Refund, Fee Concession and the others come from `migrate` |
 | People | One user per role (office, admission officer, faculty, HOD, class advisor, COE, accounts, principal, IQAC, student, guardian) with its roles and Company User Permission; Employee / Instructor records for staff; Position Holders (HOD, Class Advisor, COE, Principal, IQAC); a class group; a pilot Student linked to the student user and a Guardian |
 
+Roles: teachers (faculty, HOD, class advisor) and the COE hold only their own roles, never the office role Academics
+User. A re-run takes from a kit user any role the profile hands out that its spec no longer lists (so re-running the
+kit on a site set up before this change takes Academics User from the teacher logins); roles the kit never gives
+(HRMS's Employee, anything added by hand) are kept. The demo data's staff step (`campus.setup.demo_data.load`, step
+`staff`) does the same for the other departments' HODs and faculty.
+
 Locked records are never edited on a re-run: an Effective regulation and its rules, and a submitted Fee Structure (a
 difference is reported in the notes; amend it by cancelling and re-submitting by hand).
 

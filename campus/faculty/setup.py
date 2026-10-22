@@ -29,7 +29,31 @@ def setup_faculty():
 	seed_substitution_template()
 	seed_appraisal_review_policy()
 	seed_attendance_correction_policy()
+	grant_teaching_staff_rights()
 	setup_payroll()
+
+
+# Rights on Education DocTypes the teaching roles need without the office role (Academics User). Custom DocPerm:
+# Education's DocType JSON is never edited. Company User Permissions still scope them.
+TEACHING_STAFF_RIGHTS = {
+	("Course Schedule", "Instructor"): ("select",),  # pick the period of an Attendance Correction Request at the desk
+	("Student Attendance", "HOD"): ("read", "report"),  # the Attendance Shortage report
+	("Student Attendance", "Class Advisor"): ("read", "report"),
+}
+
+
+def grant_teaching_staff_rights():
+	"""Idempotent: a new rule gets exactly its rights (not Custom DocPerm's default read and export); an existing rule
+	keeps what the college added and regains a listed right it lost."""
+	from frappe.permissions import add_permission, update_permission_property
+
+	for (doctype, role), rights in TEACHING_STAFF_RIGHTS.items():
+		if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}):
+			add_permission(doctype, role, 0)
+			for default_right in ("read", "export"):
+				update_permission_property(doctype, role, 0, default_right, int(default_right in rights))
+		for right in rights:
+			update_permission_property(doctype, role, 0, right, 1)
 
 
 SUBSTITUTION_EVENT = "substitution.assigned"
