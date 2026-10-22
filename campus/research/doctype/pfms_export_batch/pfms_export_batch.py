@@ -7,7 +7,8 @@ vendor code, no bank details, an invoice only partly on the sanction). Submittin
 sanction with a locking read of the exported keys, gives each row its reference and export key (unique in the
 database, so a payment sits in one live batch only) and attaches the export file. Import Status reads PFMS's status
 file: accepted rows are final, failed rows free their key so the next batch of the period exports them again. A batch
-with a row PFMS accepted can't be cancelled; cancelling any other frees its rows."""
+with a row PFMS accepted can't be cancelled; cancelling any other frees its rows. Release After Review lets an
+Accounts Manager send a line held for review in the next batch (logged as a PFMS Export Release)."""
 
 import frappe
 from frappe import _
@@ -15,7 +16,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate
 
 from campus.research.grant_recognition import lock_sanction
-from campus.research.pfms import PaymentSelection, default_layout, export_key
+from campus.research.pfms import PaymentSelection, default_layout, export_key, release_after_review
 from campus.research.pfms_adapter import DEFAULT_ADAPTER, adapter_for
 
 ROW_DOCTYPE = "PFMS Export Batch Row"
@@ -97,6 +98,11 @@ class PFMSExportBatch(Document):
 		if isinstance(content, bytes):
 			content = content.decode("utf-8-sig")
 		return self.apply_status(adapter_for(self.adapter).import_status(self, content))
+
+	@frappe.whitelist()
+	def release_after_review(self, exclusion: str, reason: str):
+		"""Release the excluded line `exclusion` (held for review) to the next batch; returns the PFMS Export Release."""
+		return release_after_review(self, exclusion, reason)
 
 	def apply_status(self, updates):
 		# one import at a time, and never into a batch cancelled since this one was loaded

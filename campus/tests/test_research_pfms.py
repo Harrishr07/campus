@@ -25,6 +25,7 @@ from campus.tests.research_fixtures import ABBR, COLLEGE, OTHER, SanctionFixture
 
 ITEM, BANK = "PFMS Test Item", "PFMS Test Bank"
 OTHER_COLLEGE_USER = "pfms-other-accounts@example.com"
+RELEASE_MANAGER, ACCOUNTS_USER = "pfms-release-manager@example.com", "pfms-accounts-user@example.com"
 BATCH = "PFMS Export Batch"
 
 
@@ -43,6 +44,9 @@ class TestPfmsExport(SanctionFixtures):
 			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
 		make_user(OTHER_COLLEGE_USER, [OTHER])
 		frappe.get_doc("User", OTHER_COLLEGE_USER).add_roles("Accounts Manager")
+		for user, role in ((RELEASE_MANAGER, "Accounts Manager"), (ACCOUNTS_USER, "Accounts User")):
+			make_user(user, [COLLEGE])
+			frappe.get_doc("User", user).add_roles(role)
 
 	def setUp(self):
 		super().setUp()
@@ -359,6 +363,143 @@ class TestPfmsExport(SanctionFixtures):
 		self.assertEqual([r.amount for r in advance.rows], [200])
 		self.assertExcludedForReview(self.batch("Expenditure"), payment.name, advance)
 		self.assertEqual(self.batch("Advance").already_exported_count, 1)
+
+	# C-1: an advance against a purchase order, later taken by an invoice
+	def order_advance(self, amount=500):
+		order = self.order(self.vendor, 2000)
+		payment = get_payment_entry("Purchase Order", order.name, party_amount=amount, bank_account=self.bank)
+		payment.update({"reference_no": "UTR-PO", "reference_date": today()})
+		payment.paid_amount = payment.received_amount = amount
+		payment.references[0].allocated_amount = amount
+		payment.insert()
+		payment.submit()
+		return payment
+
+	def take_order_advance(self, payment, amount, sanction=None):
+		"""An invoice that takes `amount` of the order advance (ERPNext moves it from the order row to an invoice row
+		whose advance voucher is the Purchase Order)."""
+		return self.invoice(
+			self.vendor, amount, sanction=sanction,
+			advances=[
+				{"reference_type": "Payment Entry", "reference_name": payment.name, "reference_row": payment.references[0].name,
+				 "advance_amount": payment.paid_amount, "allocated_amount": amount}
+			],
+		)  # fmt: skip
+
+	def assertOrderAdvanceMoved(self, payment, invoice):
+		line = frappe.get_all(
+			"Payment Entry Reference", {"parent": payment.name, "reference_name": invoice.name}, ["advance_voucher_type"]
+		)  # fmt: skip
+		self.assertEqual([row.advance_voucher_type for row in line], ["Purchase Order"])
+
+	def test_an_order_advance_taken_in_full_by_an_invoice_is_excluded_for_review(self):
+		payment = self.order_advance(500)
+		advance = self.exported("Advance")
+		invoice = self.take_order_advance(payment, 500)
+		self.assertOrderAdvanceMoved(payment, invoice)
+		batch = self.batch()
+		self.assertFalse(batch.rows)  # the 500 PFMS has as an advance
+		self.assertExcludedForReview(batch, payment.name, advance)
+
+	def test_an_order_advance_taken_in_part_by_an_invoice_is_excluded_for_review(self):
+		payment = self.order_advance(500)
+		advance = self.exported("Advance")
+		invoice = self.take_order_advance(payment, 200)
+		self.assertOrderAdvanceMoved(payment, invoice)
+		self.assertExcludedForReview(self.batch(), payment.name, advance)
+		self.assertExcludedForReview(self.batch("Advance"), payment.name, advance)  # the order row is now 300
+
+	def test_an_order_advance_taken_by_another_sanctions_invoice_is_excluded_for_review(self):
+		payment = self.order_advance(500)
+		advance = self.exported("Advance")
+		other = self.submitted_sanction()
+		invoice = self.take_order_advance(payment, 500, sanction=other)
+		self.assertOrderAdvanceMoved(payment, invoice)
+		batch = frappe.get_doc(
+			{"doctype": BATCH, "sanction": other.name, "export_type": "Expenditure", "from_date": self.period[0], "to_date": self.period[1]}
+		).insert()  # fmt: skip
+		self.assertFalse(batch.rows)
+		self.assertExcludedForReview(batch, payment.name, advance)
+
+	def test_two_references_to_one_invoice_are_one_line(self):
+		invoice = self.invoice(self.vendor, 1000)
+		payment = get_payment_entry("Purchase Invoice", invoice.name, bank_account=self.bank)
+		payment.references[0].allocated_amount = 600
+		payment.update({"reference_no": "UTR-SPLIT", "reference_date": today(), "paid_amount": 1000, "received_amount": 1000})
+		payment.insert()
+		payment.submit()
+		reconciliation = frappe.get_doc(
+			{"doctype": "Payment Reconciliation", "company": COLLEGE, "party_type": "Supplier", "party": self.vendor, "receivable_payable_account": self.creditors}
+		)  # fmt: skip
+		reconciliation.get_unreconciled_entries()
+		reconciliation.allocate_entries(
+			frappe._dict(invoices=[row.as_dict() for row in reconciliation.invoices], payments=[row.as_dict() for row in reconciliation.payments])
+		)  # fmt: skip
+		reconciliation.reconcile()  # the 400 left unallocated now goes to the same invoice: a second reference row
+		self.assertEqual(sorted(r.allocated_amount for r in payment.reload().references), [400, 600])
+		batch = self.exported()
+		self.assertEqual([(r.voucher_no, r.reference_name, r.amount) for r in batch.rows], [(payment.name, invoice.name, 1000)])
+		self.assertEqual(self.batch().already_exported_count, 1)
+
+	def test_exported_rows_are_read_by_payment_key_and_by_export_key_separately(self):
+		self.pay(self.invoice(self.vendor, 1000))
+		self.exported()
+		with patch("frappe.db.sql", wraps=frappe.db.sql) as sql:
+			self.batch()
+		reads = [str(c.args[0]).upper() for c in sql.call_args_list]
+		reads = [q for q in reads if q.lstrip().startswith("SELECT") and "FROM `TABPFMS EXPORT BATCH ROW`" in q]
+		self.assertTrue(any("`PAYMENT_KEY` IN" in q for q in reads) and any("`EXPORT_KEY` IN" in q for q in reads))
+		self.assertFalse([q for q in reads if " OR " in q])
+
+	# release after review
+	def release(self, batch, voucher, reason="Checked with PFMS: the advance part was never sent.", user=RELEASE_MANAGER):
+		exclusion = next(row for row in batch.exclusions if row.voucher_no == voucher)
+		frappe.set_user(user)
+		try:
+			return frappe.get_doc(BATCH, batch.name).release_after_review(exclusion.name, reason)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_a_line_released_after_review_is_exported_in_the_next_batch(self):
+		payment = self.mixed_payment()
+		self.exported("Expenditure")
+		held = self.batch("Advance")
+		self.assertExcludedForReview(held, payment.name)
+		release = frappe.get_doc("PFMS Export Release", self.release(held, payment.name))
+		self.assertEqual((release.voucher_no, release.amount, release.released_by), (payment.name, 200, RELEASE_MANAGER))
+		self.assertIn("never sent", release.reason)
+		self.assertTrue(frappe.get_all("Comment", {"reference_doctype": BATCH, "reference_name": held.name, "content": ["like", f"%{payment.name}%"]}))
+		advance = self.exported("Advance")
+		self.assertEqual([(r.voucher_no, r.amount) for r in advance.rows], [(payment.name, 200)])
+		self.assertEqual(self.batch("Advance").already_exported_count, 1)
+
+	def test_a_release_is_refused_when_the_money_is_already_exported_in_full(self):
+		payment = self.advance(self.vendor, 300)
+		self.exported("Advance")
+		self.reconcile(payment, self.vendor, 300)
+		held = self.batch()
+		with self.assertRaisesRegex(frappe.ValidationError, "in full"):
+			self.release(held, payment.name)
+		self.assertFalse(frappe.get_all("PFMS Export Release", {"voucher_no": payment.name}))
+
+	def test_a_release_is_refused_for_a_line_whose_own_row_is_live(self):
+		payment = self.mixed_payment()
+		self.exported("Advance")
+		invoice = frappe.get_doc("Purchase Invoice", payment.references[0].reference_name)
+		self.unreconcile(payment, invoice)
+		held = self.batch("Advance")  # the exported 200 line has grown to 1200
+		with self.assertRaisesRegex(frappe.ValidationError, "withdraw"):
+			self.release(held, payment.name)
+
+	def test_only_an_accounts_manager_can_release_and_only_with_a_reason(self):
+		payment = self.mixed_payment()
+		self.exported("Expenditure")
+		held = self.batch("Advance")
+		with self.assertRaises(frappe.PermissionError):
+			self.release(held, payment.name, user=ACCOUNTS_USER)
+		with self.assertRaises(frappe.ValidationError):
+			self.release(held, payment.name, reason="  ")
+		self.assertFalse(self.batch("Advance").rows)
 
 	def test_an_amendment_of_an_exported_payment_cannot_be_cancelled_either(self):
 		payment = self.pay(self.invoice(self.vendor, 1000))
