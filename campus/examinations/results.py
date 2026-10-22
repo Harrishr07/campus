@@ -36,10 +36,11 @@ is refused listing the incomplete courses. Internal Only is the explicit exam ty
 
 import json
 import math
+from collections import Counter
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, escape_html, flt, getdate
 
 from campus.campus_platform.api import get_regulation, get_rule
 from campus.examinations import result_rules, rules, seating
@@ -96,10 +97,10 @@ def check_configuration(session, students):
 	"""Refuse the run, listing every incomplete course, when an offering of the students in the session's term
 	has no curriculum row or course type, or a course type a student's Exam Rule Set does not cover (M06-12)."""
 	courses = offered_courses(session.academic_term, students)
-	regulations = {r for course in courses for r in course["regulations"] if r}
-	gaps = result_rules.configuration_gaps(courses, regulation_rule_types(regulations))
+	regulations = {r for course in courses for r in course["regulations"]}
+	gaps = result_rules.configuration_gaps(courses, *regulation_rule_types(regulations))
 	if gaps:
-		listed = "".join(f"<li>{frappe.bold(label)}: {reason}</li>" for label, reason in gaps)
+		listed = "".join(f"<li>{frappe.bold(escape_html(label))}: {escape_html(reason)}</li>" for label, reason in gaps)
 		frappe.throw(
 			_("The Result Run cannot start: these courses are not fully configured.") + f"<ul>{listed}</ul>",
 			title=_("Incomplete course configuration"),
@@ -119,13 +120,22 @@ def offered_courses(term, students):
 		.orderby(group.name)
 		.run(as_dict=True)
 	)  # fmt: skip
-	regulations = {student: get_regulation(student) for student in {m.student for m in members}}
+	regulations = student_regulations({m.student for m in members})
 	courses = {}
 	for m in members:
 		if m.name not in courses:
 			courses[m.name] = offered_course(m)
-		courses[m.name]["regulations"].add(regulations[m.student])
+		if regulations[m.student]:
+			courses[m.name]["regulations"].add(regulations[m.student])
+		else:
+			courses[m.name]["unregulated"].add(m.student)
 	return list(courses.values())
+
+
+def student_regulations(students):
+	"""{student: regulation or None}: the assigned regulations read at once, the others resolved one by one."""
+	assigned = dict(frappe.get_all("Student", {"name": ["in", list(students) or [""]]}, ["name", "oc_regulation"], as_list=True))
+	return {student: assigned.get(student) or get_regulation(student) for student in students}
 
 
 def offered_course(offering):
@@ -137,19 +147,21 @@ def offered_course(offering):
 	)  # fmt: skip
 	return {
 		"label": f"{offering.course} ({offering.name})", "has_row": bool(row), "exam_type": row and row.exam_type,
-		"course_type": row and row.exam_type and course_type(row), "regulations": set(),
+		"course_type": row and row.exam_type and course_type(row), "regulations": set(), "unregulated": set(),
 	}  # fmt: skip
 
 
 def regulation_rule_types(regulations):
-	"""{regulation: course types its Exam Rule Set covers} of those of `regulations` with an Exam Rule Set."""
+	"""({regulation: course types its Exam Rule Set covers}, regulations with more than one Exam Rule Set) of those
+	of `regulations` with an Exam Rule Set."""
 	rule_sets = dict(frappe.get_all("Exam Rule Set", {"regulation": ["in", list(regulations) or [""]]}, ["name", "regulation"], as_list=True))
+	counts = Counter(rule_sets.values())
 	types = {regulation: set() for regulation in rule_sets.values()}
 	for row in frappe.get_all(
 		"Exam Rule Set Type", {"parent": ["in", list(rule_sets) or [""]], "parenttype": "Exam Rule Set"}, ["parent", "course_type"]
 	):
 		types[rule_sets[row.parent]].add(row.course_type)
-	return types
+	return types, {regulation for regulation, count in counts.items() if count > 1}
 
 
 def run_student(student, run):

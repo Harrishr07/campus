@@ -37,7 +37,12 @@ def reappearance_courses(student):
 
 def has_passed(student, course):
 	"""Whether `student` has a Pass of `course` in a published result (latest, ratified version)."""
-	return any(row == (course, PASS) for row in published_outcomes(student))
+	return course in passed_courses(student)
+
+
+def passed_courses(student):
+	"""The courses `student` has a Pass of in a published result, read once (prerequisite checks of many courses)."""
+	return {course for course, result in published_outcomes(student) if result == PASS}
 
 
 def published_outcomes(student):
@@ -50,7 +55,7 @@ def published_outcomes(student):
 		.join(session)
 		.on(session.name == result.exam_session)
 		.select(course_row.course, course_row.result)
-		.where((result.student == student) & (result.is_latest == 1))
+		.where((result.student == student) & (result.is_latest == 1) & (result.pending_ratification == 0))
 		.where(session.status == "Published")
 		.where(session.publish_at <= now_datetime())
 		.orderby(session.publish_at)

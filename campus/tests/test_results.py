@@ -329,6 +329,67 @@ class TestRunPreValidation(ExamFixture):
 		self.assertIn("EXM FA", str(refused.exception))
 
 
+class TestBlankExamTypes(ExamFixture):
+	"""R-08 carry-overs: a blank exam type is refused everywhere a course is examined, a student without a regulation
+	is named, a blank arrear fails its student's bulk row, and only ratified results count as passes."""
+
+	def blank(self, course):
+		for curriculum in (self.curriculum22, self.curriculum26):
+			frappe.db.set_value("Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", "")
+
+	def test_registration_mark_sheet_and_cia_refuse_a_blank_exam_type(self):
+		from campus.examinations import cia, registration
+
+		self.blank("EXM FA")
+		with self.assertRaises(frappe.ValidationError) as refused:
+			registration.registrable_courses(self.s22.name, self.term)
+		self.assertIn("EXM FA", str(refused.exception))
+		with self.assertRaises(frappe.ValidationError) as refused:
+			frappe.get_doc("Mark Sheet Entry", {"course_offering": self.offerings22["EXM FA"]}).save()
+		self.assertIn("no exam type", str(refused.exception))
+		with self.assertRaises(frappe.ValidationError) as refused:
+			cia.template_for(self.offerings22["EXM FA"])
+		self.assertIn("no exam type", str(refused.exception))
+
+	def test_a_student_without_a_regulation_is_named_in_the_refusal(self):
+		frappe.db.set_value("Student", self.s26.name, "oc_regulation", None)
+		resolve = results.get_regulation
+		frappe.set_user(COE_USER)
+		with patch.object(results, "get_regulation", lambda s: None if s == self.s26.name else resolve(s)), patch.object(bulk, "enqueue_run"):
+			with self.assertRaises(frappe.ValidationError) as refused:
+				results.start_run(self.session.name, PROGRAM)
+		self.assertIn(f"student {self.s26.name} has no regulation", str(refused.exception))
+
+	def test_a_blank_arrear_course_fails_its_students_bulk_row(self):
+		pre_sheet = frappe.db.get_value("Mark Sheet Entry", {"course_offering": self.pre_offering})
+		frappe.db.set_value("Mark Sheet Entry Row", {"parent": pre_sheet, "student": self.s22.name}, "ese", 5)  # EXM PRE failed
+		results.compute_student_result(self.s22.name, self.pre_session.name)
+		frappe.db.set_value("Exam Session", self.pre_session.name, {"status": "Published", "publish_at": add_days(now_datetime(), -1)})
+		registration = frappe.get_doc(
+			{"doctype": "Exam Registration", "exam_session": self.session.name, "student": self.s22.name, "attendance_status": "Eligible",
+			"courses": [{"course": PRE_COURSE[0], "kind": "Arrear"}]}
+		).insert()  # fmt: skip
+		self.assertEqual(registration.courses[0].eligibility, "Eligible")
+		frappe.db.set_value("Curriculum Course", {"parent": self.curriculum22, "course": PRE_COURSE[0]}, "exam_type", "")
+		frappe.set_user(COE_USER)
+		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
+			run = results.start_run(self.session.name, PROGRAM)  # EXM PRE is not offered this term: the run starts
+			bulk.process_bulk_run(run)
+		errors = frappe.get_all("Bulk Run Row Error", {"parent": run}, ["item_key", "error"])
+		self.assertEqual([e.item_key for e in errors], [self.s22.name])
+		self.assertIn("EXM PRE", errors[0].error)
+
+	def test_a_pending_ratification_version_is_no_pass(self):
+		from campus.examinations import arrears
+
+		self.run_session()
+		self.publish(add_days(now_datetime(), -1))
+		self.assertTrue(arrears.has_passed(self.s22.name, "EXM TH"))
+		frappe.db.set_value("Student Result", self.result(self.s22).name, "pending_ratification", 1)
+		self.assertFalse(arrears.has_passed(self.s22.name, "EXM TH"))
+		self.assertNotIn("EXM TH", arrears.passed_courses(self.s22.name))
+
+
 class TestResultAccess(ExamFixture):
 	def visible(self, user):
 		frappe.set_user(user)

@@ -101,11 +101,12 @@ def number(value):
 	return f"{value:g}"
 
 
-def configuration_gaps(courses, rule_types):
+def configuration_gaps(courses, rule_types, duplicated=frozenset()):
 	"""[(label, reason)] of the offered `courses` a Result Run cannot grade. Each course is a dict: label, has_row
 	(a curriculum course row exists), exam_type (blank is a gap, never a guess; Internal Only needs no rule),
-	course_type and regulations (of its students, None when a student has none). `rule_types` maps a regulation
-	with an Exam Rule Set to the course types it covers."""
+	course_type, regulations (of its students) and unregulated (its students with no regulation). `rule_types` maps
+	a regulation with an Exam Rule Set to the course types it covers; `duplicated` holds the regulations with more
+	than one Exam Rule Set."""
 	gaps = []
 	for course in courses:
 		if not course["has_row"]:
@@ -113,15 +114,17 @@ def configuration_gaps(courses, rule_types):
 		elif not course["exam_type"]:
 			gaps.append((course["label"], _("no course type")))
 		elif course["exam_type"] != INTERNAL_ONLY:
-			gaps.extend((course["label"], reason) for reason in rule_gaps(course["course_type"], course["regulations"], rule_types))
+			reasons = [_("student {0} has no regulation").format(s) for s in sorted(course.get("unregulated") or ())]
+			reasons += rule_gaps(course["course_type"], course["regulations"], rule_types, duplicated)
+			gaps.extend((course["label"], reason) for reason in reasons)
 	return gaps
 
 
-def rule_gaps(course_type, regulations, rule_types):
+def rule_gaps(course_type, regulations, rule_types, duplicated=frozenset()):
 	reasons = []
-	for regulation in sorted(regulations, key=lambda r: r or ""):
-		if not regulation:
-			reasons.append(_("a student has no regulation"))
+	for regulation in sorted(regulations):
+		if regulation in duplicated:
+			reasons.append(_("regulation {0} has more than one Exam Rule Set").format(regulation))
 		elif regulation not in rule_types:
 			reasons.append(_("regulation {0} has no Exam Rule Set").format(regulation))
 		elif course_type not in rule_types[regulation]:

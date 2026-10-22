@@ -148,7 +148,7 @@ class CourseRegistration(ApprovableDocument, Document):
 		return candidates[0]
 
 	def check_items(self):
-		seen = set()
+		seen, self.flags.passed_cache = set(), {}  # the student's passes, read once for every row
 		for item in self.items:
 			if item.course in seen:
 				frappe.throw(_("Row {0}: {1} is listed twice.").format(item.idx, frappe.bold(item.course)))
@@ -163,7 +163,7 @@ class CourseRegistration(ApprovableDocument, Document):
 	def check_prerequisites(self, item):
 		"""Hold the row (with the reason) while a prerequisite has no Pass in a published result."""
 		prerequisites = self.curriculum_rows[item.course].prerequisites
-		missing = unmet_prerequisites(self.student, prerequisites) if item.registration_type != "Dropped" else []
+		missing = unmet_prerequisites(self.student, prerequisites, self.flags.passed_cache) if item.registration_type != "Dropped" else []
 		item.hold_reason = rules.hold_reason(missing)
 
 	def held_rows(self):

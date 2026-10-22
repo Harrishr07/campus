@@ -20,7 +20,7 @@ the existing rows and refreshes the attendance status. A confirmed registration 
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, now_datetime, today
+from frappe.utils import escape_html, getdate, now_datetime, today
 
 from campus.campus_platform.api import latest_enrollment
 from campus.campus_platform.bulk import live_run, run_bulk
@@ -131,7 +131,14 @@ def registrable_courses(student, academic_term):
 	kinds, bridge = registered_kinds(student, academic_term), set(pending_bridge_courses(student))
 	rows = []
 	for offering in student_offerings(student, academic_term):
-		if not offering_course(offering.name)["course_type"]:  # Internal Only: no end-semester exam
+		course = offering_course(offering.name)
+		if not course["configured"]:  # blank: refused, never registered as a guessed Theory (R-08)
+			frappe.throw(
+				_("Course {0} ({1}) has no exam type; set it on the curriculum before registering.").format(
+					frappe.bold(escape_html(offering.course)), escape_html(offering.name)
+				)
+			)
+		if not course["course_type"]:  # Internal Only: no end-semester exam
 			continue
 		kind = BRIDGE if offering.course in bridge else REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
 		rows.append({"course": offering.course, "course_offering": offering.name, "kind": kind})
