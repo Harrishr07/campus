@@ -124,14 +124,14 @@ def make_private(file_url, doctype="Allotment Import", fieldname="import_file"):
 	return new_url
 
 
-def discard_file(import_name):
+def discard_file(import_name, doctype="Allotment Import", fieldname="import_file"):
 	"""Delete the uploaded file once the import is complete; its sha256 stays on the import as the audit trail."""
-	file_url = frappe.db.get_value("Allotment Import", import_name, "import_file")
+	file_url = frappe.db.get_value(doctype, import_name, fieldname)
 	if not file_url:
 		return
-	for name in frappe.get_all("File", {"file_url": file_url, "attached_to_doctype": "Allotment Import", "attached_to_name": import_name}, pluck="name"):
+	for name in frappe.get_all("File", {"file_url": file_url, "attached_to_doctype": doctype, "attached_to_name": import_name}, pluck="name"):
 		frappe.delete_doc("File", name, ignore_permissions=True, force=True)
-	frappe.db.set_value("Allotment Import", import_name, "import_file", None, update_modified=False)
+	frappe.db.set_value(doctype, import_name, fieldname, None, update_modified=False)
 
 
 def parse_file(file_url, content=None):

@@ -177,6 +177,28 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Applicant Upload",
+   "link_to": "Applicant Upload",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Candidate Duplicate Review",
+   "link_to": "Candidate Duplicate Review",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Admission Cancellation",
    "link_to": "Admission Cancellation",
    "link_type": "DocType",
@@ -276,6 +298,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Applicant Upload Row",
+   "link_to": "Applicant Upload Row",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Seat Override Log",
    "link_to": "Seat Override Log",
    "link_type": "DocType",
@@ -316,7 +349,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",

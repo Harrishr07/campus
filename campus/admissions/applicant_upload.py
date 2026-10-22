@@ -18,6 +18,11 @@ and after a review Linked or Created. The upload is Awaiting Review while a revi
 Idempotency: the candidate key (register no + date of birth + program + year, unique on Student Applicant) is read
 with a locking read before the insert, so uploading the same file again, or two uploads at once, never creates a
 second applicant. An upload is imported once; a retry is a new upload, whose preview shows the rows already imported.
+A run that ends with rows still waiting (a lost transaction) is finished by `reconcile` (hourly): those rows become
+Error rows asking for a new upload, so an upload never stays Importing.
+
+Personal data: rows carry the upload's company (User Permissions scope them); once nothing is left to import, the
+rows' raw file values and the uploaded file are deleted, keeping the file's sha256.
 """
 
 import csv
@@ -71,7 +76,7 @@ def validate_upload(name: str):
 	frappe.db.delete(ROW, {"applicant_upload": name})
 	check = RowCheck(upload)
 	for row_no, values in rows:
-		save_row(name, row_no, values, *check.preview(row_no, values))
+		save_row(upload, row_no, values, *check.preview(row_no, values))
 	upload.db_set({"status": "Validated", "total_rows": len(rows), "file_sha256": hashlib.sha256(content).hexdigest()})
 	return refresh_summary(name)
 
@@ -118,7 +123,7 @@ def import_row(item):
 	"""(status, applicant, review, message) of one row."""
 	upload = frappe.db.get_value(UPLOAD, item["upload"], ["name", "company", "academic_year"], as_dict=True)
 	fields = applicant_fields(upload, json.loads(frappe.db.get_value(ROW, item["row"], "values_json")))
-	existing = frappe.db.get_value("Student Applicant", {"oc_candidate_key": key_of(fields)}, "name", for_update=True)
+	existing = imported_applicant(fields)
 	if existing:
 		return "Unchanged", existing, None, _("Already imported.")
 	doc = frappe.get_doc({"doctype": "Student Applicant", **fields})
@@ -128,7 +133,20 @@ def import_row(item):
 		frappe.db.rollback(save_point=SAVEPOINT)
 		review = duplicates.hold_for_review(fields, error.matches, upload.name, item["row"])
 		return "Held for Review", None, review, cstr(error)
+	except frappe.UniqueValidationError as error:
+		frappe.db.rollback(save_point=SAVEPOINT)
+		existing = imported_applicant(fields)  # another upload committed the same candidate meanwhile
+		if existing:
+			return "Unchanged", existing, None, _("Already imported.")
+		if "student_email_id" in cstr(error):
+			return "Error", None, None, _("Another applicant already has this e-mail address.")
+		return "Error", None, None, _("A value of this row must be unique and is already used.")
 	return "Created", doc.name, None, ""
+
+
+def imported_applicant(fields):
+	"""Locking read: the applicant already holding this row's candidate key (latest committed), or None."""
+	return frappe.db.get_value("Student Applicant", {"oc_candidate_key": key_of(fields)}, "name", for_update=True)
 
 
 def review_decided(review):
@@ -164,6 +182,41 @@ def refresh_status(name):
 	else:
 		status = "Completed"
 	frappe.db.set_value(UPLOAD, name, "status", status)
+	discard_raw_data(name)
+
+
+def discard_raw_data(name):
+	"""Nothing is left to import: drop the rows' file values and the file itself (its sha256 stays)."""
+	frappe.db.set_value(ROW, {"applicant_upload": name}, "values_json", None, update_modified=False)
+	allotment_import.discard_file(name, UPLOAD, "upload_file")
+
+
+def reconcile(name):
+	"""Finish an upload whose bulk run ended while rows still wait (a lost transaction, a failed run).
+
+	Each such row becomes an Error row asking for a new upload (the rows already imported show as Already
+	Imported there), and the upload completes. A no-op unless it is Importing and its run has finished.
+	"""
+	upload = frappe.db.get_value(UPLOAD, name, ["status", "bulk_run"], as_dict=True, for_update=True)
+	if not upload or upload.status != "Importing" or not upload.bulk_run:
+		return
+	if frappe.db.get_value("Bulk Run", upload.bulk_run, "status") not in ("Completed", "Completed with errors", "Failed"):
+		return
+	message = _("Not imported: the import was interrupted at this row. Upload the file again to retry it.")
+	for row in frappe.get_all(ROW, {"applicant_upload": name, "status": ["in", QUEUED]}, pluck="name"):
+		set_outcome(row, "Error", None, None, message)
+	refresh_status(name)
+
+
+def reconcile_finished_uploads():
+	"""Scheduler (hourly): complete uploads whose bulk run has finished; one bad upload never stops the others."""
+	for name in frappe.get_all(UPLOAD, {"status": "Importing"}, pluck="name"):
+		try:
+			reconcile(name)
+			frappe.db.commit()
+		except Exception:  # noqa: BLE001
+			frappe.db.rollback()
+			frappe.log_error(title=f"Applicant upload reconcile failed: {name}", message=frappe.get_traceback(with_context=False))
 
 
 def refresh_summary(name):
@@ -182,7 +235,7 @@ class RowCheck:
 
 	def __init__(self, upload):
 		self.upload = upload
-		self.keys, self.names, self.register_nos = {}, {}, {}
+		self.keys, self.names, self.register_nos, self.emails = {}, {}, {}, {}
 
 	def preview(self, row_no, values):
 		"""(status, applicant, message) of one row, without writing anything."""
@@ -200,24 +253,41 @@ class RowCheck:
 		existing = frappe.db.get_value("Student Applicant", {"oc_candidate_key": key}, "name")
 		if existing:
 			return "Already Imported", existing, _("Already imported.")
+		email_problem = self.email_in_use(row_no, fields.get("student_email_id"))
+		if email_problem:
+			return "Invalid", None, email_problem
 		earlier = self.earlier_row(row_no, fields)
 		status, message = dry_run(fields)
 		if status == "Valid" and earlier:
 			return "Possible Duplicate", None, _("Same candidate as row {0}?").format(earlier)
 		return status, None, message
 
+	def email_in_use(self, row_no, email):
+		"""Applicant e-mail is unique: a repeat in the file or an e-mail already held fails the insert."""
+		if not email:
+			return None
+		if email.lower() in self.emails:
+			return _("The e-mail is also on row {0}.").format(self.emails[email.lower()])
+		self.emails[email.lower()] = row_no
+		if frappe.db.exists("Student Applicant", {"student_email_id": email}):
+			return _("Another applicant already has this e-mail address.")
+		return None
+
 	def earlier_row(self, row_no, fields):
+		"""An earlier row with the same name and birth date, or the same register number of a compatible exam."""
 		name = (duplicates.name_key(fields.get("first_name"), fields.get("middle_name"), fields.get("last_name")), str(fields["date_of_birth"]))
-		register_no = duplicates.id_key(fields["oc_qualifying_register_no"])
-		earlier = self.names.get(name) or self.register_nos.get(register_no)
+		exam = duplicates.id_key(fields["oc_qualifying_exam"])
+		same_number = self.register_nos.setdefault(duplicates.id_key(fields["oc_qualifying_register_no"]), [])
+		earlier = self.names.get(name) or next((row for other, row in same_number if duplicates.same_exam(other, exam)), None)
 		self.names.setdefault(name, row_no)
-		self.register_nos.setdefault(register_no, row_no)
+		same_number.append((exam, row_no))
 		return earlier
 
 
 def dry_run(fields):
 	"""(status, message) of the Student Applicant validation run in memory; any write it makes is rolled back."""
 	doc = frappe.get_doc({"doctype": "Student Applicant", **fields})
+	doc.flags.advisory_duplicate_check = True  # the preview writes nothing: no gap locks
 	messages = len(frappe.message_log)
 	frappe.db.savepoint(DRY_RUN)
 	try:
@@ -263,14 +333,16 @@ def applicant_fields(upload, values):
 
 
 def key_of(fields):
-	return duplicates.candidate_key(fields["oc_qualifying_register_no"], fields["date_of_birth"], fields["program"], fields["academic_year"])
+	return duplicates.candidate_key(
+		fields["oc_qualifying_register_no"], fields["oc_qualifying_exam"], fields["date_of_birth"], fields["program"], fields["academic_year"]
+	)
 
 
 def save_row(upload, row_no, values, status, applicant, message):
 	name = " ".join(filter(None, (values.get(f) for f in ("first_name", "middle_name", "last_name"))))
 	frappe.get_doc(
 		{
-			"doctype": ROW, "applicant_upload": upload, "row_no": row_no, "candidate": name[:140], "status": status,
+			"doctype": ROW, "applicant_upload": upload.name, "company": upload.company, "row_no": row_no, "candidate": name[:140], "status": status,
 			"applicant": applicant, "message": allotment_import.mask_numbers(message)[:500], "values_json": json.dumps(values),
 		}
 	).insert(ignore_permissions=True)  # fmt: skip

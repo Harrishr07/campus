@@ -37,8 +37,8 @@
    "fieldname": "upload_file",
    "fieldtype": "Attach",
    "label": "Applicant File (CSV or XLSX)",
-   "reqd": 1,
-   "description": "Use the approved template (Download Template). Required columns: First Name, Date of Birth, Program, Qualifying Exam, Qualifying Register No."
+   "description": "Use the approved template (Download Template). Required columns: First Name, Date of Birth, Program, Qualifying Exam, Qualifying Register No. The file is deleted once the import is complete; its SHA-256 is kept.",
+   "mandatory_depends_on": "eval:doc.status=='Draft'"
   },
   {
    "fieldname": "column_break_status",
@@ -92,7 +92,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Applicant Upload",
@@ -109,14 +109,6 @@
   },
   {
    "role": "Admission Officer",
-   "read": 1,
-   "report": 1,
-   "export": 1,
-   "write": 1,
-   "create": 1
-  },
-  {
-   "role": "Academics User",
    "read": 1,
    "report": 1,
    "export": 1,

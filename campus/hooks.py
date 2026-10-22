@@ -415,6 +415,7 @@ scheduler_events = {
 		"campus.campus_platform.approval_escalation.escalate_overdue",
 		"campus.student_services.grievances.escalate_overdue",
 		"campus.admissions.allotment_import.reconcile_finished_imports",
+		"campus.admissions.applicant_upload.reconcile_finished_uploads",
 		"campus.examinations.cia.lock_due_schedules",
 	],
 	"weekly": [

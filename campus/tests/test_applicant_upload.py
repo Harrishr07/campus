@@ -1,7 +1,9 @@
 """L-04 tests (M04-06, M04-07): bulk applicant upload with a validation preview, duplicate candidate detection and review."""
 
 import csv
+import hashlib
 import io
+import os
 from unittest.mock import patch
 
 import frappe
@@ -16,6 +18,7 @@ from campus.tests.utils import CampusTestCase
 COLLEGE, OTHER_COLLEGE = "Upload Test College", "Upload Test Other College"
 PROGRAM, OTHER_PROGRAM = "Upload Test BSc", "Upload Test Other BSc"
 OFFICER, CLERK = "upload-officer@example.com", "upload-clerk@example.com"
+LEFTOVER_FILES = []
 HEADER = [
 	"First Name", "Middle Name", "Last Name", "Date of Birth", "Gender", "Email", "Mobile", "Program",
 	"Qualifying Exam", "Qualifying Register No",
@@ -46,13 +49,22 @@ def make_applicant(first, last, dob="2007-04-01", company=COLLEGE, program=PROGR
 	).insert()  # fmt: skip
 
 
+def remove_leftover_files():
+	while LEFTOVER_FILES:
+		path = LEFTOVER_FILES.pop()
+		if os.path.exists(path):
+			os.remove(path)
+
+
 class UploadTestCase(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
+		cls.addClassCleanup(remove_leftover_files)  # registered first, so it runs after the class rollback
 		super().setUpClass()
 		make_company(COLLEGE, "UTC")
 		make_company(OTHER_COLLEGE, "UTO")
 		make_year("2022")
+		make_year("2023")
 		make_program(PROGRAM, COLLEGE)
 		make_program(OTHER_PROGRAM, OTHER_COLLEGE)
 		make_user(OFFICER, [COLLEGE])
@@ -142,7 +154,88 @@ class TestUploadPreview(UploadTestCase):
 			self.run_import(name)
 
 
+class TestUploadPreviewChecks(UploadTestCase):
+	def test_e_mail_in_use_or_repeated_is_invalid_and_another_exam_is_not_a_duplicate(self):
+		make_applicant("Asha", "Kumar", student_email_id="asha@upload-test.example.com")
+		name = self.upload(
+			[
+				file_row("Ravi", "Menon", email="asha@upload-test.example.com"), file_row("Meena", "Raj", regno="777"),
+				file_row("Divya", "Nair", regno="777", exam="CBSE"), file_row("Arun", "Das", email="meena.raj@upload-test.example.com"),
+			]
+		)  # fmt: skip
+		self.preview(name)
+		rows = self.rows(name)
+		self.assertEqual([rows[n].status for n in (2, 3, 4, 5)], ["Invalid", "Valid", "Valid", "Invalid"])
+		self.assertIn("e-mail", rows[2].message)
+		self.assertIn("3", rows[5].message)
+
+	def test_changing_company_or_year_after_validation_needs_a_new_preview(self):
+		name = self.upload([file_row("Ravi", "Menon")])
+		self.preview(name)
+		doc = frappe.get_doc("Applicant Upload", name)
+		doc.academic_year = year_name("2023")
+		doc.save()
+		self.assertEqual(doc.status, "Draft")
+
+	def test_status_is_not_user_writable(self):
+		name = self.upload([file_row("Ravi", "Menon")])
+		doc = frappe.get_doc("Applicant Upload", name)
+		doc.status = "Completed"
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+		fresh = frappe.get_doc({"doctype": "Applicant Upload", "company": COLLEGE, "academic_year": year(), "upload_file": "x.csv", "status": "Completed"}).insert()
+		self.assertEqual(fresh.status, "Draft")
+
+	def test_real_file_is_made_private_then_deleted_and_its_hash_kept(self):
+		content = csv_bytes([HEADER, file_row("Ravi", "Menon")])
+		file = frappe.get_doc({"doctype": "File", "file_name": f"upload-{frappe.generate_hash(length=8)}.csv", "content": content, "is_private": 0}).insert()
+		name = frappe.get_doc({"doctype": "Applicant Upload", "company": COLLEGE, "academic_year": year(), "upload_file": file.file_url}).insert().name
+		applicant_upload.validate_upload(name)
+		url = frappe.db.get_value("Applicant Upload", name, "upload_file")
+		self.assertTrue(url.startswith("/private/files/"))
+		self.assertEqual(frappe.db.get_value("File", {"file_url": url}, "is_private"), 1)
+		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
+			bulk.process_bulk_run(applicant_upload.start_import(name))
+		doc = frappe.get_doc("Applicant Upload", name)
+		self.assertEqual((doc.status, doc.upload_file, doc.file_sha256), ("Completed", None, hashlib.sha256(content).hexdigest()))
+		self.assertFalse(frappe.db.exists("File", {"file_url": url}))
+		self.assertFalse(os.path.exists(frappe.get_site_path(url.lstrip("/"))))
+		# The test never commits: Frappe's File rollback will move the private file back to public, so give it
+		# the file to move and remove the public copy once the class has rolled back.
+		with open(frappe.get_site_path(url.lstrip("/")), "wb") as f:
+			f.write(content)
+		LEFTOVER_FILES.append(frappe.get_site_path("public", "files", url.rsplit("/", 1)[1]))
+
+
 class TestUploadImport(UploadTestCase):
+	def test_a_lost_transaction_never_leaves_the_upload_importing(self):
+		name = self.upload([file_row("Ravi", "Menon"), file_row("Meena", "Raj")])
+		self.preview(name)
+		with self.file(), patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
+			run = applicant_upload.start_import(name)
+		real_import, real_rollback = applicant_upload.import_row, frappe.db.rollback
+		frappe.db.savepoint("pre_run")
+
+		def import_row(item):
+			if item["row_no"] == 2:
+				raise frappe.QueryDeadlockError("deadlock found")
+			return real_import(item)
+
+		def rollback(*args, **kwargs):
+			return real_rollback(save_point=kwargs.get("save_point") or "pre_run")  # the full rollback returns to 'pre_run'
+
+		with patch.object(applicant_upload, "import_row", side_effect=import_row), patch.object(frappe.db, "rollback", side_effect=rollback), patch.object(frappe.db, "commit"):
+			bulk.process_bulk_run(run)
+		self.assertEqual(frappe.db.get_value("Bulk Run", run, "status"), "Completed with errors")
+		self.assertEqual(frappe.db.get_value("Applicant Upload", name, "status"), "Importing")
+		applicant_upload.reconcile(name)
+		rows = self.rows(name)
+		self.assertEqual((rows[2].status, rows[3].status), ("Error", "Created"))
+		self.assertIn("Upload the file again", rows[2].message)
+		self.assertEqual(frappe.db.get_value("Applicant Upload", name, "status"), "Completed with errors")
+		applicant_upload.reconcile(name)  # idempotent
+		self.assertEqual(self.rows(name)[3].status, "Created")
+
 	def test_import_creates_only_valid_rows_and_holds_duplicates_for_review(self):
 		existing = make_applicant("Asha", "Kumar")
 		name = self.upload([file_row("Ravi", "Menon"), file_row("", "Noname"), file_row("Asha", "Kumar", regno="X1")])
@@ -159,6 +252,9 @@ class TestUploadImport(UploadTestCase):
 		review = frappe.get_doc("Candidate Duplicate Review", rows[4].review)
 		self.assertEqual((review.status, review.existing_applicant, review.company, review.applicant_upload), ("Open", existing.name, COLLEGE, name))
 		self.assertEqual(doc.status, "Awaiting Review")
+		self.assertEqual(set(frappe.get_all("Applicant Upload Row", {"applicant_upload": name}, pluck="company")), {COLLEGE})
+		self.assertEqual(frappe.get_all("Applicant Upload Row", {"applicant_upload": name, "values_json": ["is", "set"]}), [])
+		self.assertIsNone(doc.upload_file)  # the file is discarded once nothing is left to import
 
 	def test_retry_with_the_same_file_creates_nothing_new(self):
 		rows = [file_row("Ravi", "Menon"), file_row("Meena", "Raj")]
@@ -238,6 +334,8 @@ class TestDuplicateRule(UploadTestCase):
 		applicant.save()
 		applicant.first_name = "Asha "
 		applicant.save()
+		self.assertEqual(duplicates.find_matches(applicant), [])
+		self.assertEqual(self.applicant_count(), 1)
 
 
 class TestDuplicateReview(UploadTestCase):
@@ -271,6 +369,7 @@ class TestDuplicateReview(UploadTestCase):
 		doc = frappe.get_doc("Candidate Duplicate Review", review)
 		self.assertEqual((doc.status, doc.decided_by, doc.new_applicant, doc.note), ("Not Duplicate", OFFICER, created, "Different parents, checked marksheet"))
 		self.assertEqual(frappe.db.get_value("Student Applicant", created, "oc_duplicate_review"), review)
+		self.assertIsNone(doc.candidate_values)  # raw candidate data is dropped once decided
 		self.assertEqual(self.applicant_count(), 2)
 		self.assertEqual((self.rows(name)[2].status, self.rows(name)[2].applicant), ("Created", created))
 		with self.assertRaises(frappe.ValidationError):
@@ -281,6 +380,18 @@ class TestDuplicateReview(UploadTestCase):
 		_existing, _name, review = self.held_review()
 		with self.assertRaises(duplicates.DuplicateCandidateError):
 			make_applicant("Asha", "Kumar", oc_duplicate_review=review)
+
+	def test_a_review_changes_only_through_a_decision(self):
+		_existing, _name, review = self.held_review()
+		self.assertFalse([p for p in frappe.get_meta("Candidate Duplicate Review").permissions if p.write or p.create])
+		frappe.set_user(OFFICER)
+		self.assertFalse(frappe.has_permission("Candidate Duplicate Review", "write", review))
+		frappe.set_user("Administrator")
+		doc = frappe.get_doc("Candidate Duplicate Review", review)
+		doc.status, doc.decided_by = "Linked", OFFICER
+		with self.assertRaises(frappe.PermissionError):
+			doc.save(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Candidate Duplicate Review", review, "status"), "Open")
 
 	def test_only_an_admission_officer_decides(self):
 		_existing, _name, review = self.held_review()
