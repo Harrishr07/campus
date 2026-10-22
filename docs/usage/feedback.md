@@ -40,11 +40,12 @@ A **named** (not anonymous) campaign also stores the respondent on the response.
 
 - An anonymous campaign whose audience is smaller than the minimum group size (counted in people: a student's record and their login are one person) takes no answers and sends no invitations: its responses keep the offering and instructor, which could point to the few people addressed. Widen the audience or make it named.
 - A user who answers to several records of the audience (e.g. a User and a Student key) claims all of them at once.
-- A refused answer gives a message that names no answer. The posted campaign, answers, member and signature are taken out of the request's form data before anything else runs, so no Error Log or request error snapshot of that request holds them. Any other failure writes one Error Log "Feedback response failed" with the class name only and empty metadata (no form data, no user), and the respondent sees a generic error.
+- A refused answer gives a message that names no answer. The posted campaign, answers, member and signature are taken out of the request's form data before anything else runs (a call missing them is refused the same way, not with a server error), so no Error Log or request error snapshot of that request holds them. Only a refusal or the generic error ever leaves the answer call: any other failure, even when its rollback or its Error Log write fails too, writes at most one Error Log "Feedback response failed" with the class name only, empty metadata (no form data, no user), owner "Guest" and the day's midnight as its time, and the respondent sees a generic error.
 
 Site settings a college collecting real feedback must keep:
 - **developer_mode off**: in developer mode Frappe stores every request error with its stack locals, which hold the posted answers and the respondent.
 - **view tracking off** for Feedback Response (it is off in the DocType).
+- **recorder off** (Frappe's request recorder): it stores every SQL query of a request with the user, including the answers being inserted.
 - **telemetry off** (no Sentry DSN / `enable_telemetry` unset): Frappe sends each logged error with its request data to the telemetry service.
 - **do not rotate the site encryption key while a campaign is open**: tokens are keyed by it, so after a rotation the same people could answer again.
 
@@ -58,7 +59,7 @@ A System Manager who reads Message Log sees each invitee's signed link and, by o
 
 Only **closed** campaigns (window ended before today) of the colleges you are permitted for are counted, so figures don't move while answers come in. A closed campaign with responses cannot reopen.
 
-Each (campaign, question) cell, and then each (campaign, group) cell, with fewer responses than **Campus Settings > Feedback Minimum Group Size** (seeded 5, never below 3: settings refuse less and code treats a lower stored value as 3) is dropped **before** cells are pooled. So an optional question answered by a few never shows as a Course or Faculty figure minus the question rows. A small campaign therefore never shows as the difference between two filters (say "all campaigns" minus "the big campaign"). The report says how many cells were hidden.
+Each (campaign, question) cell, and then each (campaign, group) cell, with fewer responses than **Campus Settings > Feedback Minimum Group Size** (seeded 5, and a blank value means 5; never below 3: settings refuse less and code treats a lower stored value as 3) is dropped **before** cells are pooled. So an optional question answered by a few never shows as a Course or Faculty figure minus the question rows. A small campaign therefore never shows as the difference between two filters (say "all campaigns" minus "the big campaign"). The report says how many cells were hidden.
 
 The minimum group size hides small groups. It does not protect a group whose members all gave the same rating: if all 5 rated 1, each of them did.
 

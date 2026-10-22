@@ -12,9 +12,12 @@ class CampusSettings(Document):
 		self.validate_feedback_group_size()
 
 	def validate_feedback_group_size(self):
-		"""Feedback groups smaller than 3 would let one respondent's answer show (M01-05 anonymity)."""
-		from campus.iqac.api import MINIMUM_GROUP_FLOOR
+		"""Feedback groups smaller than 3 would let one respondent's answer show (M01-05 anonymity). A blank value is
+		the default, not an error."""
+		from campus.iqac.api import MINIMUM_GROUP_DEFAULT, MINIMUM_GROUP_FLOOR
 
+		if not cint(self.feedback_minimum_group_size):
+			self.feedback_minimum_group_size = MINIMUM_GROUP_DEFAULT
 		if cint(self.feedback_minimum_group_size) < MINIMUM_GROUP_FLOOR:
 			frappe.throw(_("Feedback Minimum Group Size must be at least {0}.").format(MINIMUM_GROUP_FLOOR))
 

@@ -6,7 +6,7 @@ from campus.campus_platform.api import request_approval
 from campus.iqac import compute, evidence, feedback, feedback_invites, metric_values, validation
 from campus.iqac import export as exporter
 from campus.iqac.access import OWNER_ROLE, ROLES
-from campus.iqac.feedback import MINIMUM_GROUP_FLOOR  # noqa: F401  (public API: Campus Settings floor)
+from campus.iqac.feedback import MINIMUM_GROUP_DEFAULT, MINIMUM_GROUP_FLOOR  # noqa: F401  (public API: Campus Settings)
 from campus.iqac import cycle as lifecycle
 from campus.iqac import framework as framework_lifecycle
 

@@ -269,6 +269,73 @@ class TestAnonymity(FeedbackFixture):
 		for text in (secret, fx.STUDENT_USER, "T07-MEMBER", "T07-SIGNATURE", campaign.name):
 			self.assertNotIn(text, new[0].metadata or "")
 
+	def test_a_failed_rollback_or_error_log_still_ends_in_the_generic_refusal(self):
+		from unittest.mock import patch
+
+		campaign, other, third = self.campaign(), self.campaign(), self.campaign()
+		secret = "SECRET-ROLLBACK-T07"
+		self.respond(campaign, fx.STUDENT_USER)
+		before = set(frappe.get_all("Error Log", pluck="name"))
+		lost = frappe.db.OperationalError(2013, "Lost connection")
+		frappe.set_user(fx.STUDENT_USER)
+		try:
+			with patch.object(frappe.db, "rollback", side_effect=lost):  # neither the savepoint nor a full rollback works
+				with self.assertRaisesRegex(frappe.ValidationError, "already answered"):
+					feedback.submit_response(campaign.name, self.answers(campaign, text=secret))  # the refusal, not the rollback error
+				with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
+					with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded") as raised:
+						feedback.submit_response(other.name, self.answers(other, text=secret))
+			self.assertIsNone(raised.exception.__context__)  # no chain carries the failure or its frames
+			with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
+				with patch("campus.iqac.feedback.log_failure", side_effect=lost):
+					with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded") as raised:
+						feedback.submit_response(third.name, self.answers(third, text=secret))  # other's token stayed: rollback was patched
+			self.assertIsNone(raised.exception.__context__)
+		finally:
+			frappe.set_user("Administrator")
+		new = frappe.get_all("Error Log", {"name": ["not in", list(before) or [""]]}, ["error", "metadata", "owner", "creation"])
+		self.assertEqual([row.error for row in new], ["KeyError"])
+		for text in (secret, fx.STUDENT_USER, self.world["asha"]):
+			self.assertNotIn(text, f"{new[0].error} {new[0].metadata}")
+
+	def test_the_failure_log_does_not_mark_the_respondent(self):
+		from unittest.mock import patch
+
+		campaign = self.campaign()
+		before = set(frappe.get_all("Error Log", pluck="name"))
+		frappe.set_user(fx.STUDENT_USER)
+		try:
+			with patch("campus.iqac.feedback.store_response", side_effect=KeyError("x")):
+				with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded"):
+					feedback.submit_response(campaign.name, self.answers(campaign))
+		finally:
+			frappe.set_user("Administrator")
+		(row,) = frappe.get_all("Error Log", {"name": ["not in", list(before) or [""]]}, ["owner", "modified_by", "creation"])
+		self.assertEqual((row.owner, row.modified_by), ("Guest", "Guest"))
+		self.assertEqual(str(row.creation), f"{today()} 00:00:00")  # the day only, like a response
+
+	def test_a_call_missing_its_arguments_is_refused_cleanly(self):
+		campaign = self.campaign()
+		frappe.set_user(fx.STUDENT_USER)
+		try:
+			with self.assertRaisesRegex(frappe.PermissionError, "not available"):
+				feedback.submit_response()
+			with self.assertRaisesRegex(frappe.ValidationError, "expected form"):
+				feedback.submit_response(campaign.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_a_blank_minimum_group_size_means_the_default(self):
+		settings = frappe.get_single("Campus Settings")
+		settings.feedback_minimum_group_size = None
+		settings.save()  # blank is not a save blocker
+		self.assertEqual(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size"), api.MINIMUM_GROUP_DEFAULT)
+		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 0)
+		try:
+			self.assertEqual(feedback.minimum_group_size(), api.MINIMUM_GROUP_DEFAULT)
+		finally:
+			frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 3)
+
 	def test_the_audience_size_counts_people_not_their_records(self):
 		from unittest.mock import patch
 

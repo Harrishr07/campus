@@ -15,6 +15,7 @@ for internal audiences, and "External Member:<name>" for invited alumni and empl
 import hashlib
 import hmac
 import json
+from contextlib import suppress
 from datetime import datetime, time
 
 import frappe
@@ -33,6 +34,7 @@ SAVEPOINT = "feedback_response"
 CO_AUDIENCE = "Course Offering Students"
 USER_FIELDS = {"Student": "user", "Guardian": "user", "Employee": "user_id"}  # the login a key belongs to
 MINIMUM_GROUP_FLOOR = 3
+MINIMUM_GROUP_DEFAULT = 5  # a blank Campus Settings value means this
 REQUEST_FIELDS = ("campaign", "answers", "member", "signature")
 
 
@@ -167,42 +169,57 @@ def open_campaigns_for(user=None):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-def submit_response(campaign, answers, member=None, signature=None):
+def submit_response(campaign=None, answers=None, member=None, signature=None):
 	"""Record the caller's answers ({question row name: value}, JSON) to an open campaign, once per respondent.
 
-	A refusal is a ValidationError / PermissionError with a message that names no answer. Any other failure is undone to
-	a savepoint, logged by its class name only (never a traceback, whose frames hold the answers and the respondent) and
-	reported as one generic ValidationError raised outside the handler, so no exception chain carries it either.
+	Nothing but a ValidationError / PermissionError leaves this function, so no request error snapshot (which holds the
+	frames' locals: the answers and the respondent) is ever taken. A refusal names no answer. Any other failure, even
+	one whose rollback or Error Log write fails too, is undone, logged by its class name only and reported as one generic
+	ValidationError raised outside the handler, so no exception chain carries it either. Missing arguments default to
+	None and are refused inside, never as a TypeError before the fields are taken out.
 
 	The posted fields are taken out of frappe.form_dict first: Frappe copies form_dict and the session user into the
 	metadata of every Error Log and request error snapshot, so nothing logged later in this request may see them."""
 	for field in REQUEST_FIELDS:
 		frappe.form_dict.pop(field, None)
 	failed = None
-	frappe.db.savepoint(SAVEPOINT)
 	try:
+		frappe.db.savepoint(SAVEPOINT)
 		return record_response(campaign, answers, member, signature)
 	except (frappe.ValidationError, frappe.PermissionError):
-		frappe.db.rollback(save_point=SAVEPOINT)  # e.g. a second key already claimed: nothing of this attempt stays
+		undo_attempt()  # e.g. a second key already claimed: nothing of this attempt stays
 		raise
 	except Exception as error:
 		failed = type(error).__name__
-		frappe.db.rollback(save_point=SAVEPOINT)
-	log_failure(failed)
+		undo_attempt()
+	with suppress(Exception):
+		log_failure(failed)
 	frappe.throw(_("Your feedback could not be recorded. Please try again later."))
 
 
+def undo_attempt():
+	"""Roll back to the savepoint or, if that fails (deadlock, lost connection, no savepoint), the whole transaction;
+	never raises."""
+	try:
+		frappe.db.rollback(save_point=SAVEPOINT)
+	except Exception:
+		with suppress(Exception):
+			frappe.db.rollback()
+
+
 def log_failure(error_class):
-	"""An Error Log row naming the failure's class only, with empty metadata (log_error would add the request and user)."""
-	frappe.get_doc({"doctype": "Error Log", "method": _("Feedback response failed"), "error": error_class, "metadata": "{}"}).insert(
-		ignore_permissions=True
-	)
+	"""An Error Log row naming the failure's class only, with empty metadata (log_error would add the request and user),
+	owner "Guest" and the day's midnight, so neither its owner nor its time marks the respondent."""
+	log = frappe.new_doc("Error Log")
+	log.update({"name": frappe.generate_hash(length=16), "method": _("Feedback response failed"), "error": error_class, "metadata": "{}"})
+	stamp(log, midnight(today()), ANONYMOUS_OWNER)
+	log.db_insert()
 
 
 def record_response(name, answers, member, signature):
 	if frappe.session.user == "Guest" and not (member or signature):
 		frappe.throw(_("Please log in to give feedback."), frappe.PermissionError)
-	if not frappe.db.exists("Feedback Campaign", name):
+	if not (isinstance(name, str) and frappe.db.exists("Feedback Campaign", name)):
 		not_available()
 	campaign = frappe.get_doc("Feedback Campaign", name)  # respondents cannot read campaigns; checked next
 	addressed = respondents(campaign)
@@ -296,8 +313,10 @@ def midnight(day):
 
 
 def minimum_group_size():
-	"""Smallest group a report or score may show (Campus Settings); never below MINIMUM_GROUP_FLOOR."""
-	return max(cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size")), MINIMUM_GROUP_FLOOR)
+	"""Smallest group a report or score may show (Campus Settings; blank means MINIMUM_GROUP_DEFAULT); never below
+	MINIMUM_GROUP_FLOOR."""
+	value = cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size")) or MINIMUM_GROUP_DEFAULT
+	return max(value, MINIMUM_GROUP_FLOOR)
 
 
 def indirect_co_scores(offering):

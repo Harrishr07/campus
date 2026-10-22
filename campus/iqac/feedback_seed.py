@@ -6,6 +6,8 @@ a labelled placeholder with stand-in questions for the college to replace.
 
 import frappe
 
+from campus.iqac.feedback import MINIMUM_GROUP_DEFAULT
+
 PLACEHOLDER = "Placeholder questions - replace with the official or the college's own wording."
 AGREE = "Likert"
 
@@ -58,9 +60,6 @@ TEMPLATES = {
 		"{{ frappe.format(doc.end_date, {'fieldtype': 'Date'}) }}: {{ context.link }} (please ignore this if you already have).",
 	),
 }
-MINIMUM_GROUP_SIZE = 5  # the seeded default only; the college sets its own in Campus Settings
-
-
 def setup_feedback():
 	seed_feedback_forms()
 	seed_feedback_templates()
@@ -90,4 +89,4 @@ def seed_feedback_templates():
 
 def seed_minimum_group_size():
 	if not frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size"):
-		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", MINIMUM_GROUP_SIZE)
+		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", MINIMUM_GROUP_DEFAULT)
