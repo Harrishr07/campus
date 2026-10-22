@@ -1,0 +1,106 @@
+{
+ "app": "campus",
+ "creation": "2026-10-22 16:30:00.000000",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "briefcase",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "icon": "home",
+   "label": "Home",
+   "link_to": "Placement",
+   "link_type": "Workspace",
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "icon": "database",
+   "label": "Masters",
+   "link_type": "DocType",
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "label": "Recruiter",
+   "link_to": "Recruiter",
+   "link_type": "DocType",
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "label": "Placement Eligibility Template",
+   "link_to": "Placement Eligibility Template",
+   "link_type": "DocType",
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 1,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "icon": "calendar",
+   "label": "Drives",
+   "link_type": "DocType",
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "label": "Placement Drive",
+   "link_to": "Placement Drive",
+   "link_type": "DocType",
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "label": "Drive Registration",
+   "link_to": "Drive Registration",
+   "link_type": "DocType",
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "show_arrow": 0,
+   "label": "Round Result",
+   "link_to": "Round Result",
+   "link_type": "DocType",
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-22 16:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Placement",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Placement"
+}

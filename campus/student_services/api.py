@@ -28,6 +28,7 @@ from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API
 	CANCELLED,
 	GRADUATED,
 	JOINED,
+	ON_ROLL,
 	STUDY_COMPLETED,
 )
 from campus.student_services.onboarding import create_for_student as create_onboarding  # noqa: F401  (public API)

@@ -206,6 +206,13 @@ def cgpa(student, courses=None):
 	return graduation.cgpa(student, courses)
 
 
+def had_arrears(student):
+	"""Whether the student ever failed or missed a course at its first appearance (published results), cleared or not."""
+	from campus.examinations import graduation
+
+	return graduation.had_arrears(student)
+
+
 def released_sessions(company, academic_year=None, final_year=False):
 	"""Names of the company's released Exam Sessions (Published, publish_at passed), optionally of one academic year
 	and final-year only: the session reader every examination report and data point shares (P2-T24 fix 1)."""
