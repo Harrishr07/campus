@@ -4,12 +4,14 @@ sanctioned under (P3-T14), the `oc_budget_head` custom fields on purchase, journ
 the Utilisation Certificate approval policy, PI -> Accounts -> Principal (P3-T17), and the PFMS vendor fields on
 Supplier with the placeholder PFMS EAT export layouts (P3-T18), and for project staff (P3-T19) the "Project Staff"
 Employment Type, the JRF / SRF / Project Assistant designations and the "Fellowship" salary component, with the
-progress report fields on Project Update, and the IPR committee policy for Invention Disclosures (P3-T21).
+progress report fields on Project Update, the IPR committee policy for Invention Disclosures (P3-T21), and for
+consultancy (P3-T20) the `oc_consultancy_project` field on Sales Invoice and the "Consultancy Share" salary component.
 Existing (possibly edited) records are left alone."""
 
 import frappe
 
 from campus.research.budget_control import setup_budget_head_fields
+from campus.research.consultancy import seed_salary_component, setup_consultancy_fields
 from campus.research.pfms import seed_layouts, setup_pfms_fields
 from campus.research.progress import setup_progress_fields
 from campus.research.utilisation import UC_DOCTYPE, UC_POLICY
@@ -28,6 +30,7 @@ def setup_research():
 	setup_budget_head_fields()
 	setup_pfms_fields()
 	setup_progress_fields()
+	setup_consultancy_fields()
 
 
 def seed_research():
@@ -39,6 +42,7 @@ def seed_research():
 	seed_uc_policy()
 	seed_layouts()
 	seed_project_staff()
+	seed_salary_component()
 
 
 def seed_reminder_template():

@@ -1,0 +1,222 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-22 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "consultancy_project",
+  "sales_invoice",
+  "posting_date",
+  "column_break_1",
+  "company",
+  "client",
+  "currency",
+  "amended_from",
+  "split_section",
+  "taxable_amount",
+  "institution_percent",
+  "faculty_percent",
+  "staff_percent",
+  "column_break_2",
+  "institution_amount",
+  "faculty_amount",
+  "staff_amount",
+  "members_section",
+  "members"
+ ],
+ "fields": [
+  {
+   "default": "CRS-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "CRS-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "consultancy_project",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Consultancy Project",
+   "options": "Consultancy Project",
+   "reqd": 1
+  },
+  {
+   "description": "A submitted, fully paid invoice of the project; shared once.",
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "College",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Client",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Consultancy Revenue Share",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "split_section",
+   "fieldtype": "Section Break",
+   "label": "Split"
+  },
+  {
+   "description": "The invoice's value before GST.",
+   "fieldname": "taxable_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Taxable Value Received",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "institution_percent",
+   "fieldtype": "Percent",
+   "label": "Institution %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "faculty_percent",
+   "fieldtype": "Percent",
+   "label": "Faculty %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "staff_percent",
+   "fieldtype": "Percent",
+   "label": "Staff %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "institution_amount",
+   "fieldtype": "Currency",
+   "label": "Institution Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "faculty_amount",
+   "fieldtype": "Currency",
+   "label": "Faculty Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "staff_amount",
+   "fieldtype": "Currency",
+   "label": "Staff Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "description": "An Additional Salary for each member on submit.",
+   "fieldname": "members_section",
+   "fieldtype": "Section Break",
+   "label": "Paid Through Payroll"
+  },
+  {
+   "fieldname": "members",
+   "fieldtype": "Table",
+   "label": "Members",
+   "options": "Consultancy Revenue Share Member",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-22 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Consultancy Revenue Share",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Principal"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -283,6 +283,11 @@ for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Clai
 _validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
 doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
 doc_events["Payment Entry"]["before_cancel"].append(f"{_budget_control}.refuse_payment_cancel_on_closed")  # P3-T19: its deductions stay
+_consultancy = "campus.research.consultancy"  # P3-T20: consultancy invoices within the agreement; a shared invoice stays paid
+doc_events["Sales Invoice"]["before_submit"] = [doc_events["Sales Invoice"]["before_submit"], f"{_consultancy}.check_invoice"]
+doc_events["Sales Invoice"]["before_cancel"] = f"{_consultancy}.refuse_invoice_cancel"
+for _dt in ("Payment Entry", "Journal Entry"):
+	doc_events[_dt]["before_cancel"].append(f"{_consultancy}.refuse_payment_cancel")
 
 # Scheduled Tasks
 # ---------------
