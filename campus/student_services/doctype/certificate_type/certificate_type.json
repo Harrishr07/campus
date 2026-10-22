@@ -15,7 +15,10 @@
   "verifiable",
   "is_transfer_certificate",
   "column_break_2",
-  "fee_amount"
+  "fee_amount",
+  "section_reissue",
+  "mark_reissues",
+  "reissue_fee"
  ],
  "fields": [
   {"fieldname": "type_name", "fieldtype": "Data", "label": "Certificate Type", "reqd": 1, "unique": 1, "in_list_view": 1},
@@ -33,11 +36,16 @@
   {"fieldname": "is_transfer_certificate", "fieldtype": "Check", "label": "Transfer Certificate",
    "description": "Issuing records the student's leaving date, certificate number and reason, and sets the academic status to Discontinued. Blocked while any dues are outstanding."},
   {"fieldname": "column_break_2", "fieldtype": "Column Break"},
-  {"fieldname": "fee_amount", "fieldtype": "Currency", "label": "Fee", "description": "Charged under the Certificate fee category when the certificate is issued. 0 = free."}
+  {"fieldname": "fee_amount", "fieldtype": "Currency", "label": "Fee", "description": "Charged under the Certificate fee category when the certificate is issued. 0 = free."},
+  {"fieldname": "section_reissue", "fieldtype": "Section Break", "label": "Reissue"},
+  {"fieldname": "mark_reissues", "fieldtype": "Check", "label": "Mark Reissues", "default": "1",
+   "description": "Print DUPLICATE (lost, damaged, duplicate) or REISSUED (correction) on a reissued certificate. Switch off where the regulation does not require it."},
+  {"fieldname": "reissue_fee", "fieldtype": "Currency", "label": "Duplicate Fee",
+   "description": "Charged for a lost, damaged or duplicate reissue under the Certificate fee category. A correction of particulars is free. 0 = free."}
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-07 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Certificate Type",

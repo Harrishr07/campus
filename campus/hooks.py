@@ -537,6 +537,7 @@ approval_final_actions = []
 jinja = {
 	"methods": [
 		"campus.campus_platform.verification.oc_qr_block",
+		"campus.student_services.certificate_reissue.oc_reissue_mark",
 		"campus.curriculum.structure.curriculum_structure",
 		"campus.curriculum.outcomes.co_po_grid",
 		"campus.curriculum.attainment.course_attainment_sheet",

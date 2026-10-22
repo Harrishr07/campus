@@ -31,6 +31,7 @@ from frappe import _
 
 from campus.campus_platform.api import get_institution, is_approved
 from campus.examinations.graduation import graduate_record
+from campus.student_services.api import keeps_original_record
 
 TRANSCRIPT, CONSOLIDATED, PROVISIONAL, DEGREE, DATA_SHEET = (
 	"Transcript", "Consolidated Grade Sheet", "Provisional Certificate", "Degree Certificate", "Degree Data Sheet",
@@ -135,7 +136,9 @@ def before_submit_request(doc, method=None):
 		frappe.throw(_("{0} needs approval before it can be issued. Use Request Approval.").format(doc.name))
 	frappe.db.get_value("Student", doc.student, "name", for_update=True)  # one issue per student at a time
 	check_once_only(doc, print_format, lock=True)
-	doc.record_snapshot = frappe.as_json(live_record(doc, print_format), indent=None)
+	# a duplicate (M05-14) prints what the original printed
+	original = keeps_original_record(doc) and frappe.db.get_value(REQUEST, doc.supersedes, "record_snapshot")
+	doc.record_snapshot = original or frappe.as_json(live_record(doc, print_format), indent=None)
 
 
 def check_once_only(doc, print_format, lock=False):
@@ -148,6 +151,7 @@ def check_once_only(doc, print_format, lock=False):
 		frappe.qb.from_(table)
 		.select(table.name)
 		.where((table.student == doc.student) & (table.docstatus == 1) & (table.name != doc.name))
+		.where((table.superseded_by.isnull()) | (table.superseded_by == ""))  # a reissue replaces its original (M05-14)
 		.where(table.certificate_type.isin(types_of([print_format])))
 	)
 	issued = (query.for_update() if lock else query).run(pluck=True)

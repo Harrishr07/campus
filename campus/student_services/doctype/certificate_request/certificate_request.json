@@ -19,6 +19,14 @@
   "section_leaving",
   "leaving_date",
   "reason_for_leaving",
+  "section_reissue",
+  "supersedes",
+  "reissue_reason",
+  "reference_note",
+  "column_break_3",
+  "evidence",
+  "marking",
+  "superseded_by",
   "section_issue",
   "certificate_number",
   "issued_on",
@@ -183,11 +191,77 @@
    "read_only": 1,
    "no_copy": 1,
    "print_hide": 1
+  },
+  {
+   "fieldname": "section_reissue",
+   "fieldtype": "Section Break",
+   "label": "Correction / Reissue",
+   "description": "M05-14: a correction, duplicate or reissue of an issued certificate. The original is marked Superseded, never deleted, and its QR points to this one."
+  },
+  {
+   "fieldname": "supersedes",
+   "fieldtype": "Link",
+   "label": "Supersedes",
+   "options": "Certificate Request",
+   "set_only_once": 1,
+   "no_copy": 1,
+   "search_index": 1,
+   "in_standard_filter": 1,
+   "description": "The issued certificate this one replaces (same student and type). Leave blank for a new certificate."
+  },
+  {
+   "fieldname": "reissue_reason",
+   "fieldtype": "Select",
+   "label": "Reissue Reason",
+   "options": "\nCorrection of Particulars\nDamaged\nLost\nDuplicate",
+   "no_copy": 1,
+   "depends_on": "supersedes",
+   "mandatory_depends_on": "supersedes"
+  },
+  {
+   "fieldname": "reference_note",
+   "fieldtype": "Data",
+   "label": "Affidavit / FIR Reference",
+   "no_copy": 1,
+   "depends_on": "supersedes",
+   "mandatory_depends_on": "eval:doc.reissue_reason=='Lost'"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Evidence",
+   "no_copy": 1,
+   "depends_on": "supersedes",
+   "mandatory_depends_on": "eval:doc.reissue_reason=='Lost' || doc.reissue_reason=='Correction of Particulars'",
+   "description": "Private file: the affidavit or FIR for a lost certificate, the proof of the corrected particulars."
+  },
+  {
+   "fieldname": "marking",
+   "fieldtype": "Select",
+   "label": "Print Marking",
+   "options": "\nDuplicate\nReissued",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Printed on the certificate when its type marks reissues."
+  },
+  {
+   "fieldname": "superseded_by",
+   "fieldtype": "Data",
+   "label": "Superseded By",
+   "read_only": 1,
+   "no_copy": 1,
+   "search_index": 1,
+   "description": "The certificate that replaced this one (Data, not a Link, so that cancelling the reissue is not blocked by a back link)."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 18:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Certificate Request",

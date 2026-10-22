@@ -8,6 +8,7 @@ from frappe.permissions import add_permission
 
 from campus.examinations.access import COMMITTEE_ROLE, MENTOR_ROLE
 from campus.student_services import lifecycle_rules
+from campus.student_services.certificate_reissue import seed_reissue_policy
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
 from campus.student_services.onboarding import ensure_default_templates
 from campus.student_services.student_records_setup import setup_student_records
@@ -38,6 +39,7 @@ def setup_student_services():
 	setup_grievances()
 	setup_student_records()
 	seed_lifecycle_rules()
+	seed_reissue_policy()
 
 
 def seed_lifecycle_rules():

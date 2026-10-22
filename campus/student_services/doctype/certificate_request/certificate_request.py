@@ -6,6 +6,8 @@ doctype must exist; without one a needs-approval type cannot be issued); approva
 is issuing: the certificate number is allotted (per type, company and year), the Verifiable Document with
 its QR is created and, for a Transfer Certificate, the Student's leaving fields and academic status are set,
 all in the one transaction. A fee, if any, is invoiced afterwards in a background job.
+
+M05-14: with `supersedes` set the request reissues an issued certificate (see certificate_reissue).
 """
 
 import frappe
@@ -16,7 +18,7 @@ from frappe.utils import now_datetime
 
 from campus.campus_platform import verification
 from campus.campus_platform.api import ApprovableDocument, is_approved
-from campus.student_services import certificates
+from campus.student_services import certificate_reissue, certificates
 from campus.student_services.certificate_fee import queue_fee
 
 
@@ -27,14 +29,17 @@ class CertificateRequest(ApprovableDocument, Document):
 		if self.docstatus == 0:
 			self.apply_type()
 			self.check_open_request()
-			if self.is_transfer_certificate:
+			certificate_reissue.validate_reissue(self)
+			if self.is_transfer_certificate and not self.supersedes:
 				self.check_transfer()
 
 	def before_submit(self):
 		super().before_submit()
 		if self.needs_approval and not is_approved(self):
 			frappe.throw(_("{0} needs approval before it can be issued. Use Request Approval.").format(self.name))
-		if self.is_transfer_certificate:
+		if self.supersedes:
+			certificate_reissue.lock_original(self)
+		elif self.is_transfer_certificate:
 			certificates.check_transfer_allowed(self.student)
 		self.certificate_number = certificates.next_certificate_number(self.certificate_type, self.company)
 		self.issued_on = now_datetime()
@@ -43,17 +48,22 @@ class CertificateRequest(ApprovableDocument, Document):
 		type_values = frappe.db.get_value("Certificate Type", self.certificate_type, ["verifiable", "print_format"], as_dict=True)
 		if type_values.verifiable:
 			self.db_set("verification_code", verification.issue(self, type_values.print_format).code)
-		if self.is_transfer_certificate:
+		if self.supersedes:
+			certificate_reissue.supersede(self)  # the status change belongs to the original TC and is never run again
+		elif self.is_transfer_certificate:
 			certificates.apply_leaving(self)
 		queue_fee(self)
 
 	def before_cancel(self):
+		certificate_reissue.refuse_cancel_of_superseded(self)
 		if self.fee_invoice and frappe.db.get_value("Sales Invoice", self.fee_invoice, "docstatus") == 1:
 			frappe.throw(_("Cancel or credit the fee invoice {0} before cancelling this certificate.").format(self.fee_invoice))
 
 	def on_cancel(self):
 		verification.revoke_for(self, _("Certificate {0} was cancelled.").format(self.certificate_number))
-		if self.is_transfer_certificate:
+		if self.supersedes:
+			certificate_reissue.reinstate(self)
+		elif self.is_transfer_certificate:
 			certificates.undo_leaving(self)
 
 	def set_company(self):
@@ -72,6 +82,8 @@ class CertificateRequest(ApprovableDocument, Document):
 		self.is_transfer_certificate = kind.is_transfer_certificate
 		if not kind.is_transfer_certificate:
 			self.leaving_date = self.reason_for_leaving = None
+		if self.supersedes:
+			certificate_reissue.apply_terms(self, kind)
 
 	def check_open_request(self):
 		if frappe.db.exists(

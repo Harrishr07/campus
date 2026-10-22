@@ -17,6 +17,7 @@ from campus.student_services.attendance_rules import (
 )
 from campus.student_services.attendance_rules import attendance_marks as marks_for_pct
 from campus.student_services import mentors as allocation
+from campus.student_services.certificate_reissue import keeps_original_record  # noqa: F401  (public API)
 from campus.student_services.lifecycle import current_status as lifecycle_status  # noqa: F401  (public API)
 from campus.student_services.lifecycle import last_change_date  # noqa: F401  (public API)
 from campus.student_services.lifecycle import revert as revert_transition  # noqa: F401  (public API)
