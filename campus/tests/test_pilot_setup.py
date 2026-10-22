@@ -34,11 +34,17 @@ def other_college():
 	profile["trust"] = {"name": "Other Pilot Trust", "abbr": "OPT"}
 	profile["college"].update(name="Other Pilot Engineering College", abbr="OPEC")
 	profile["user_domain"] = "other.example.edu"
-	profile["programmes"] = [p for p in profile["programmes"] if p["abbr"] == "CSE"]
-	profile["regulation"]["programmes"] = ["B.E. CSE"]
-	profile["fees"]["programmes"] = ["B.E. CSE"]
+	profile["programmes"] = [dict(p, name="B.E. CSE (OPEC)") for p in profile["programmes"] if p["abbr"] == "CSE"]
+	profile["regulation"]["programmes"] = ["B.E. CSE (OPEC)"]
+	profile["fees"]["programmes"] = ["B.E. CSE (OPEC)"]
+	profile["class_group"]["programme"] = "B.E. CSE (OPEC)"
+	profile["college"]["leaders"] = {"principal": "principal"}
 	profile["class_group"]["name"] = "OPEC B.E. CSE 2026-27 A"
 	profile["users"] = [u for u in profile["users"] if u["key"] in ("office", "principal", "student", "guardian")]
+	for user in profile["users"]:
+		user["position"] = user.get("position") if user["key"] == "principal" else None
+		if not user["position"]:
+			del user["position"]
 	profile["approval_policies"] = []
 	return profile
 
@@ -162,6 +168,34 @@ class TestPilotProfile(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			setup_college(profile, test_passwords=True)
 
+	def test_seat_rules_are_checked_before_any_write(self):
+		for change, fragment in (
+			(lambda p: p["seats"]["quotas"][0].update(share_pct=60), "add up to 100"),
+			(lambda p: p["seats"]["split"].pop("MQ"), "no category split"),
+			(lambda p: p["seats"].update(academic_year="1999-00"), "1999-00"),
+		):
+			profile = copy.deepcopy(SXCCE)
+			change(profile)
+			self.assertIn(fragment, " ".join(profile_errors(profile)))
+
+	def test_references_are_validated_up_front(self):
+		profile = copy.deepcopy(SXCCE)
+		profile["class_group"]["programme"] = "Nope"
+		profile["college"]["leaders"]["coe"] = "office"
+		del profile["users"][0]["roles"]
+		profile["users"][1]["position"] = {"code": "HOD", "scope": "group"}
+		profile["class_group"] = None
+		errors = " ".join(profile_errors(profile))
+		for fragment in ("needs a key, a name and roles", "no employee record", "no class group"):
+			self.assertIn(fragment, errors)
+
+	def test_test_passwords_flag_is_parsed_strictly(self):
+		from campus.setup.pilot import parse_flag
+
+		self.assertEqual([parse_flag(v) for v in (None, True, "false", "Yes", "0")], [None, True, False, True, False])
+		with self.assertRaises(frappe.ValidationError):
+			parse_flag("maybe")
+
 	def test_other_inconsistencies_are_named(self):
 		profile = copy.deepcopy(SXCCE)
 		profile["programmes"][0]["department"] = "Astrology"
@@ -206,6 +240,23 @@ class TestPilotPasswords(IntegrationTestCase):
 		self.assertTrue(result["reset_links"][user].startswith("http"))
 		with self.assertRaises(frappe.AuthenticationError):
 			check_password(user, SXCCE["test_password"])
+
+	def test_a_programme_of_another_college_is_refused_and_untouched(self):
+		setup_college("sxcce", test_passwords=True)
+		profile = other_college()
+		profile["programmes"][0]["name"] = "B.E. CSE"
+		profile["regulation"]["programmes"] = ["B.E. CSE"]
+		with self.assertRaises(frappe.ValidationError):
+			setup_college(profile, test_passwords=True)
+		self.assertEqual(frappe.db.get_value("Program", "B.E. CSE", "oc_company"), SXCCE["college"]["name"])
+
+	def test_a_difference_on_an_effective_regulation_is_reported(self):
+		setup_college("sxcce", test_passwords=True)
+		name = regulation_name("R2022", SXCCE["college"]["name"])
+		rule = frappe.db.get_value("Attendance Rule", {"regulation": name})
+		frappe.db.set_value("Attendance Rule", rule, "condonation_fee", 900)
+		notes = setup_college("sxcce", test_passwords=True)["notes"]
+		self.assertTrue(any("Attendance Rule" in n and "differs" in n for n in notes), notes)
 
 	def test_a_second_college_needs_no_code_change(self):
 		result = setup_college(other_college(), test_passwords=True)

@@ -63,11 +63,13 @@ def regulation_errors(profile, programmes):
 	regulation = profile.get("regulation")
 	if not regulation:
 		return []
+	from campus.curriculum.rule_seed import RULES
 	from campus.examinations.seed import GRADES
 
 	errors = []
-	if regulation.get("code") not in GRADES:
-		errors.append(_("Regulation {0} has no seeded exam rules; use one of {1}.").format(regulation.get("code"), ", ".join(GRADES)))
+	seeded = [code for code in RULES if code in GRADES]
+	if regulation.get("code") not in seeded:
+		errors.append(_("Regulation {0} has no seeded rules; use one of {1}.").format(regulation.get("code"), ", ".join(seeded)))
 	errors += [_("Regulation {0} names an unknown programme {1}.").format(regulation.get("code"), p) for p in regulation.get("programmes", []) if p not in programmes]
 	return errors
 
@@ -79,9 +81,17 @@ def seat_errors(profile, programmes):
 	quotas = {q.get("code") for q in seats.get("quotas", [])}
 	categories = {c.get("category") for c in seats.get("categories", [])}
 	errors = []
+	if sum(q.get("share_pct", 0) for q in seats.get("quotas", [])) != 100:
+		errors.append(_("Quota shares must add up to 100."))
+	if seats.get("academic_year") not in {y.get("name") for y in profile.get("academic_years", [])}:
+		errors.append(_("Seats name an unknown academic year {0}.").format(seats.get("academic_year")))
+	for quota in quotas - set(seats.get("split", {})):
+		errors.append(_("Quota {0} has no category split.").format(quota))
 	for quota, split in seats.get("split", {}).items():
 		if quota not in quotas:
 			errors.append(_("Seat split names an unknown quota {0}.").format(quota))
+		elif sum(split.values()) <= 0:
+			errors.append(_("Category split of {0} is empty.").format(quota))
 		errors += [_("Seat split of {0} names an unknown category {1}.").format(quota, c) for c in split if c not in categories]
 	for name, programme in programmes.items():
 		intake = programme.get("intake")
@@ -110,11 +120,39 @@ def user_errors(profile, departments):
 	users = profile.get("users", [])
 	keys = [u.get("key") for u in users]
 	errors += [_("User key {0} is used twice.").format(k) for k in set(keys) if keys.count(k) > 1]
+	group = profile.get("class_group")
+	programmes = {p.get("name") for p in profile.get("programmes", [])}
+	if group and group.get("programme") not in programmes:
+		errors.append(_("The class group names an unknown programme {0}.").format(group.get("programme")))
 	for user in users:
-		errors += [_("User {0} is scoped to unknown company {1}.").format(user.get("key"), c) for c in user.get("companies", []) if c not in COMPANY_TOKENS]
+		label = user.get("key")
+		if not (label and user.get("name") and user.get("roles")):
+			errors.append(_("Every user needs a key, a name and roles ({0}).").format(label))
+			continue
+		errors += [_("User {0} is scoped to unknown company {1}.").format(label, c) for c in user.get("companies", []) if c not in COMPANY_TOKENS]
 		if "trust" in user.get("companies", []) and not profile.get("trust"):
-			errors.append(_("User {0} is scoped to the trust, which the profile does not define.").format(user.get("key")))
-		scope = (user.get("position") or {}).get("department")
-		if scope and scope not in departments:
-			errors.append(_("User {0} holds a position in unknown department {1}.").format(user.get("key"), scope))
+			errors.append(_("User {0} is scoped to the trust, which the profile does not define.").format(label))
+		if user.get("department") and user["department"] not in departments:
+			errors.append(_("User {0} is in unknown department {1}.").format(label, user["department"]))
+		errors += position_errors(user, group, departments)
+	by_key = {u.get("key"): u for u in users}
+	for field, key in (profile.get("college") or {}).get("leaders", {}).items():
+		if not by_key.get(key, {}).get("employee"):
+			errors.append(_("Institution leader {0} names user {1}, who has no employee record.").format(field, key))
+	return errors
+
+
+def position_errors(user, group, departments):
+	position = user.get("position")
+	if not position:
+		return []
+	errors = []
+	if position.get("scope") not in ("college", "department", "group"):
+		errors.append(_("User {0} has an unknown position scope {1}.").format(user.get("key"), position.get("scope")))
+	if position.get("scope") == "group" and not group:
+		errors.append(_("User {0} holds a group position but the profile has no class group.").format(user.get("key")))
+	if position.get("scope") == "department" and position.get("department") not in departments:
+		errors.append(_("User {0} holds a position in unknown department {1}.").format(user.get("key"), position.get("department")))
+	if not user.get("employee"):
+		errors.append(_("User {0} holds a position and needs an employee record.").format(user.get("key")))
 	return errors

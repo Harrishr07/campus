@@ -49,10 +49,26 @@ def setup_college(profile="sxcce", test_passwords=None):
 	return {**out.as_dict(), "profile": profile["name"], "college": college, **result}
 
 
+TRUE_WORDS, FALSE_WORDS = ("1", "true", "yes"), ("0", "false", "no")
+
+
+def parse_flag(value):
+	"""None, a bool or a plain word like "true"/"no"; anything else is refused (a quoted "false" must not read as True)."""
+	if value is None or isinstance(value, bool):
+		return value
+	word = str(value).strip().lower()
+	if word in TRUE_WORDS:
+		return True
+	if word in FALSE_WORDS:
+		return False
+	frappe.throw(_("test_passwords must be true or false, not {0}.").format(frappe.as_json(value)))
+
+
 def decide_passwords(test_passwords):
+	test_passwords = parse_flag(test_passwords)
 	allowed = people.test_passwords_allowed()
 	if test_passwords and not allowed:
 		frappe.throw(
 			_("Test passwords are for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config.")
 		)
-	return allowed if test_passwords is None else bool(test_passwords)
+	return allowed if test_passwords is None else test_passwords

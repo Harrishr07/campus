@@ -25,6 +25,7 @@ from campus.admissions.api import admit, confirm_joining
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.verification import issue
 from campus.curriculum.offerings import generate_offerings
+from campus.curriculum.rule_seed import CREDIT_PER_PERIOD, REGISTRATION
 from campus.examinations import results
 from campus.iqac import compute
 from campus.iqac.setup import FRAMEWORK, seed_framework
@@ -244,13 +245,11 @@ def make_curriculum():
 	regulation = regulation_name(REGULATION_CODE, demo.ENGINEERING)
 	demo.get_or_insert(
 		"Curriculum Rule", {"regulation": regulation},
-		{"lecture_credit_per_period": 1, "tutorial_credit_per_period": 1, "practical_credit_per_period": 0.5,
-		"min_total_credits": 0, "max_total_credits": 170},
+		{**CREDIT_PER_PERIOD, "min_total_credits": 0, "max_total_credits": 170},
 	)  # fmt: skip
 	demo.get_or_insert(
 		"Registration Rule", {"regulation": regulation},
-		{"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6, "drop_window_days": 30,
-		"add_from_semester": 5, "max_add_credits": 6, "max_add_courses": 2, "elective_min_enrolment": 10},
+		REGISTRATION,
 	)  # fmt: skip
 	existing = frappe.db.get_value("Curriculum", {"program": PROGRAM, "regulation": regulation, "version": 1})
 	if existing:

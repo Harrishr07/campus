@@ -2,10 +2,12 @@
 with its rule records, and the trust's shared service agreements. All idempotent: see `records.upsert`."""
 
 import frappe
+from frappe import _
 
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
+from campus.curriculum.rule_seed import RULES
 from campus.examinations.seed import seed_regulation
-from campus.setup.records import upsert
+from campus.setup.records import same_value, upsert
 
 DEFAULT_CURRENCY = "INR"
 
@@ -64,7 +66,11 @@ def ensure_departments(profile, college, out):
 
 
 def ensure_programmes(profile, college, out):
+	"""Programme names are global in Education: one already owned by another company is refused, never taken over."""
 	for programme in profile["programmes"]:
+		owner = frappe.db.get_value("Program", programme["name"], "oc_company")
+		if owner and owner != college:
+			frappe.throw(_("Programme {0} belongs to {1}; give the programme of {2} a different name.").format(programme["name"], owner, college))
 		upsert(
 			out, "Program", {"program_name": programme["name"]},
 			{
@@ -96,9 +102,13 @@ def ensure_regulation(profile, college, out):
 	for doctype, key in (
 		("Curriculum Rule", "curriculum_rule"), ("Registration Rule", "registration_rule"), ("Attendance Rule", "attendance_rule"),
 	):
-		if spec.get(key) and not frappe.db.exists(doctype, {"regulation": name}):
-			frappe.get_doc({"doctype": doctype, "regulation": name, **spec[key]}).insert(ignore_permissions=True)
+		values = RULES[spec["code"]][key]
+		existing = frappe.db.get_value(doctype, {"regulation": name}, list(values), as_dict=True)
+		if not existing:
+			frappe.get_doc({"doctype": doctype, "regulation": name, **values}).insert(ignore_permissions=True)
 			out.created[doctype] += 1
+		elif any(not same_value(existing[field], value) for field, value in values.items()):
+			out.notes.append(f"{doctype} of {name} differs from the seed values; the regulation is Effective and was left as it is.")
 	exam_rules_before = frappe.db.exists("Exam Rule Set", {"regulation": name})
 	seed_regulation(name, spec["code"])
 	if not exam_rules_before:

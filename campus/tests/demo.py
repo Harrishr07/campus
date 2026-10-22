@@ -17,8 +17,9 @@ import frappe
 
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.regulation_rules import latest_enrollment, resolve_regulation
-from campus.tests.factories import make_company
+from campus.curriculum.rule_seed import RULES as RULE_SEED
 from campus.examinations.seed import GRADES, seed_regulation
+from campus.tests.factories import make_company
 
 DOMAIN = "demo.campus.test"
 TRUST = "Demo Educational Trust"
@@ -269,26 +270,8 @@ CSE_R2022_COURSES = [
 def make_curriculum():
 	"""R2022 credit and registration rules (L 1, T 1, P 0.5; 165-170 credits; 36 per semester) and a Draft B.E. CSE curriculum of 3 semesters."""
 	regulation = regulation_name("R2022", ENGINEERING)
-	get_or_insert(
-		"Curriculum Rule",
-		{"regulation": regulation},
-		{
-			"lecture_credit_per_period": 1,
-			"tutorial_credit_per_period": 1,
-			"practical_credit_per_period": 0.5,
-			"min_total_credits": 165,
-			"max_total_credits": 170,
-		},
-	)
-	get_or_insert(
-		"Registration Rule",
-		{"regulation": regulation},
-		{
-			"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6,
-			"drop_window_days": 30, "add_from_semester": 5, "max_add_credits": 6, "max_add_courses": 2,
-			"elective_min_enrolment": 10, "honours_min_cgpa": 7.5, "honours_cgpa_upto_semester": 3, "honours_no_arrears": 1,
-		},
-	)  # fmt: skip
+	get_or_insert("Curriculum Rule", {"regulation": regulation}, RULE_SEED["R2022"]["curriculum_rule"])
+	get_or_insert("Registration Rule", {"regulation": regulation}, RULE_SEED["R2022"]["registration_rule"])
 	rows = []
 	for semester, title, category, lecture, tutorial, practical in CSE_R2022_COURSES:
 		course = get_or_insert("Course", {"course_name": title}, {"oc_company": ENGINEERING})
@@ -303,10 +286,7 @@ def make_curriculum():
 
 # regulation code -> Attendance Rule values (anna-university-autonomous-rules.md, section 3)
 ATTENDANCE_RULES = {
-	"R2022": {
-		"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0,
-		"od_counts": 1, "medical_counts": 1, "condonation_fee": 500,
-	},
+	"R2022": RULE_SEED["R2022"]["attendance_rule"],
 	"R2026": {
 		"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75,
 		"od_counts": 1, "medical_counts": 1, "condonation_fee": 500,

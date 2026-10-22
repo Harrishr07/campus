@@ -3,6 +3,7 @@ quota. Amounts are the profile's. A submitted Fee Structure is never edited: whe
 profile the run says so in its notes and leaves it."""
 
 import frappe
+from frappe import _
 
 from campus.campus_finance.fee_heads import CAUTION_DEPOSIT, FEE_HEADS, seed_fee_categories, set_item_default
 
@@ -27,7 +28,10 @@ def ensure_fee_accounts(company, out):
 	abbr = frappe.db.get_value("Company", company, "abbr")
 	income = frappe.db.get_value("Company", company, "default_income_account") or f"Sales - {abbr}"
 	deposit = ensure_deposit_account(company, abbr, out)
-	cost_center = frappe.db.get_value("Cost Center", {"company": company, "is_group": 0}, "name")
+	cost_center = frappe.db.get_value("Cost Center", {"company": company, "is_group": 0}, "name", order_by="creation, name")
+	receivable = frappe.db.get_value("Company", company, "default_receivable_account")
+	if not receivable:
+		frappe.throw(_("Company {0} has no default receivable account.").format(company))
 	for head in FEE_HEADS:
 		category = frappe.get_doc("Fee Category", head)
 		account = deposit if head == CAUTION_DEPOSIT else income
@@ -35,7 +39,7 @@ def ensure_fee_accounts(company, out):
 		if not row or row.income_account != account or row.selling_cost_center != cost_center:
 			set_item_default(head, company, account, cost_center)
 			out.updated["Fee Category"] += 1
-	return {"receivable": frappe.db.get_value("Company", company, "default_receivable_account"), "cost_center": cost_center}
+	return {"receivable": receivable, "cost_center": cost_center}
 
 
 def ensure_deposit_account(company, abbr, out):
@@ -72,4 +76,5 @@ def ensure_fee_structure(out, company, programme, year, quota, components, accou
 def note_differences(out, name, components):
 	stored = {row.fees_category: row.amount for row in frappe.get_doc("Fee Structure", name).components}
 	if any(stored.get(category) != amount for category, amount in components.items()) or set(stored) != set(components):
-		out.notes.append(f"Fee Structure {name} differs from the profile; it is submitted and was left as it is.")
+		state = "submitted" if frappe.db.get_value("Fee Structure", name, "docstatus") == 1 else "a draft"
+		out.notes.append(f"Fee Structure {name} differs from the profile; it is {state} and was left as it is.")

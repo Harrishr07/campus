@@ -201,6 +201,15 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 3 | Government quota category split | OC 31, BC 30, MBC 20, SC 18, ST 1 (Tamil Nadu community reservation, grouped); Management all OC |
 | 4 | Fee amounts | Placeholders per quota; the college supplies its approved schedule |
 | 5 | Autonomy date of the college | not set |
+| 6 | Attendance Rule R2022: condonation fee | Rs 500; unsourced |
+| 7 | Attendance Rule R2022: OD and medical leave count towards attendance | both count (od_counts, medical_counts = 1); unsourced |
+| 8 | Attendance Rule R2022: per-course minimum | 0 (none); the note gives only the overall 75% and the 65% medical band |
+| 9 | Registration Rule R2022: Honours | CGPA 7.5 up to semester 3, no arrears (sourced for 7.5; the semester and arrears rule are the college's to confirm) |
+| 10 | Registration Rule R2022: windows and caps | drop window 30 days, add from semester 5, add up to 6 credits / 2 courses, drop up to 6 credits, elective minimum enrolment 10, 36 credits a semester; unsourced except 36 |
+| 11 | Curriculum Rule R2022 | 165-170 total credits, L 1 / T 1 / P 0.5 credit per period |
+
+Rule values of Curriculum, Registration and Attendance Rule now live in one module (`campus/curriculum/rule_seed.py`), used by the demo data and by the pilot kit.
+
 - **X-04 certificate reissue**: the duplicate fee applies to Damaged, Lost and Duplicate reissues; a correction of particulars is free. Damaged, Lost and Duplicate print DUPLICATE; a correction prints REISSUED; both print "In place of No. ...". A duplicate reprints the original record; a correction freezes the current one. Reissue is requested at the desk only. A reissued TC never runs the lifecycle change again.
 - **L-08 record corrections**: one field per correction request. Locked against direct edit by default: date of birth, Aadhaar, register number, roll number (configurable in Student Correction Settings, override role System Manager). Identity and academic-identifier corrections need COE then Principal; other categories COE. Students and guardians may raise Personal, Contact and Guardian corrections from the portal; Contact needs no evidence. A new Aadhaar number is stored encrypted and only masked values appear in history.
 - **PR-05 permissions**: Placement Officers keep delete on Round Result so shortlists can be corrected before results are final.

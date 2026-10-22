@@ -29,34 +29,38 @@ def missing_roles(profile):
 
 def ensure_people(profile, companies, out, test_passwords, result):
 	"""Create the users and what hangs on them; returns {user key: Employee name} for the staff with an employee record."""
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # bulk load: skip Frappe's user-creation throttle
-	try:
-		group = ensure_class_group(profile, companies["college"], out)
-		employees = {}
-		for spec in profile["users"]:
-			user = ensure_user(profile, spec, out, test_passwords, result)
-			for token in spec.get("companies", []):
-				upsert(out, "User Permission", {"user": user, "allow": "Company", "for_value": companies[token]})
-			if spec.get("employee"):
-				employees[spec["key"]] = ensure_employee(profile, spec, user, companies["college"], out)
-			if spec.get("position"):
-				ensure_position(profile, spec, user, companies["college"], group, employees.get(spec["key"]), out)
-			grant_roles(user, spec["roles"])
-		ensure_pilot_student(profile, companies["college"], out)
-		return employees
-	finally:
-		frappe.flags.in_import = was_importing
+	if test_passwords and not test_passwords_allowed():
+		frappe.throw(_("Test passwords are for developer-mode or demo sites only."))
+	group = ensure_class_group(profile, companies["college"], out)
+	employees = {}
+	for spec in profile["users"]:
+		user = ensure_user(profile, spec, out, test_passwords, result)
+		for token in spec.get("companies", []):
+			upsert(out, "User Permission", {"user": user, "allow": "Company", "for_value": companies[token]})
+		if spec.get("employee"):
+			employees[spec["key"]] = ensure_employee(profile, spec, user, companies["college"], out)
+		if spec.get("position"):
+			ensure_position(profile, spec, user, companies["college"], group, employees.get(spec["key"]), out)
+		grant_roles(user, spec["roles"])
+	ensure_pilot_student(profile, companies["college"], out)
+	return employees
 
 
 def ensure_user(profile, spec, out, test_passwords, result):
 	email = user_email(profile, spec["key"])
 	if frappe.db.exists("User", email):
 		return email
-	user = frappe.get_doc(
-		{"doctype": "User", "email": email, "first_name": spec["name"], "enabled": 1, "send_welcome_email": 0}
-	).insert(ignore_permissions=True)
+	was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # skip Frappe's 60-users-per-minute creation throttle
+	try:
+		user = frappe.get_doc(
+			{"doctype": "User", "email": email, "first_name": spec["name"], "enabled": 1, "send_welcome_email": 0}
+		).insert(ignore_permissions=True)
+	finally:
+		frappe.flags.in_import = was_importing
 	out.created["User"] += 1
 	if test_passwords:
+		if not test_passwords_allowed():
+			frappe.throw(_("Test passwords are for developer-mode or demo sites only."))
 		update_password(email, profile["test_password"])
 	else:
 		result["reset_links"][email] = user._reset_password(send_email=False, password_expired=True)
