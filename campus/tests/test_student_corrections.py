@@ -7,7 +7,10 @@ import json
 from unittest.mock import patch
 
 import frappe
+from frappe.utils import add_days, today
 
+from campus.admissions import aadhaar
+from campus.campus_finance import ledger
 from campus.campus_platform.approvals import approve, reject, request_approval
 from campus.student_services import corrections, portal, student_360
 from campus.tests import demo
@@ -19,7 +22,10 @@ OFFICE, COE, PRINCIPAL = demo.email("admissions"), demo.email("coe"), demo.email
 STUDENT_USER, GUARDIAN_USER = demo.email("student_1"), demo.email("guardian_1")
 ACCOUNTS = demo.email("accounts")
 ADMIN_USER = "campus-l08-sysmgr@example.com"
+ARTS_OFFICE = "campus-l08-arts-office@example.com"  # an Academics User of the other college
+TEACHER = "campus-l08-teacher@example.com"  # an Instructor and nothing else
 NEW_MOBILE, NEW_AADHAAR = "9876543210", "234123412346"
+RECORD_SECTIONS = {"profile", "lifecycle", "enrollments", "attendance", "results", "certificates", "corrections"}
 EVIDENCE = ("proof.png", b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\xdacd`\xf8_\x0f\x00\x02\x87\x01\x80\xebG\xba\x92\x00\x00\x00\x00IEND\xaeB`\x82')  # a 1x1 PNG
 
 
@@ -40,6 +46,11 @@ class CorrectionFixture(MentoringFixture):
 		corrections.seed_policies()
 		make_user(ADMIN_USER, [demo.ENGINEERING])
 		frappe.get_doc("User", ADMIN_USER).add_roles("System Manager")
+		make_user(ARTS_OFFICE, [demo.ARTS])
+		if not frappe.db.exists("User", TEACHER):
+			frappe.get_doc(
+				{"doctype": "User", "email": TEACHER, "first_name": "L08 Teacher", "send_welcome_email": 0, "roles": [{"role": "Instructor"}]}
+			).insert()
 
 	def correction(self, category="Contact", field="student_mobile_number", value=NEW_MOBILE, **values):
 		doc = {"doctype": DOCTYPE, "student": self.student, "category": category, "field_name": field, "new_value": value, "reason": "Wrong entry", **values}
@@ -82,7 +93,7 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		doc = self.correction()
 		with self.assertRaises(frappe.ValidationError):
 			self.as_user(OFFICE, lambda: frappe.get_doc(DOCTYPE, doc.name).submit())
-		self.assertEqual(self.value() != NEW_MOBILE, True)
+		self.assertNotEqual(self.value(), NEW_MOBILE)
 
 	def test_pending_correction_is_frozen(self):
 		doc = self.correction()
@@ -131,6 +142,75 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		self.assertEqual(frappe.db.get_value("Guardian", guardian, "mobile_number"), NEW_MOBILE)
 		with self.assertRaises(frappe.ValidationError):
 			self.correction("Guardian", "mobile_number", NEW_MOBILE, guardian=self.other_guardian, evidence="/private/files/g.pdf")
+
+
+	def test_an_office_user_of_another_college_cannot_raise_or_read_by_claiming_the_portal(self):
+		count = frappe.db.count(DOCTYPE)
+		payload = {
+			"doctype": DOCTYPE, "student": self.student, "category": "Contact", "field_name": "student_mobile_number",
+			"new_value": NEW_MOBILE, "reason": "Wrong entry", "requested_via": "Portal",
+		}  # fmt: skip
+		with self.assertRaises(frappe.PermissionError):
+			self.as_user(ARTS_OFFICE, frappe.client.insert, json.dumps(payload))
+		self.assertEqual(frappe.db.count(DOCTYPE), count)  # nothing kept, and no old value came back
+		self.assertEqual(self.correction(requested_via="Portal").requested_via, "Desk")  # the client value is ignored
+
+	def test_server_fields_cannot_be_forged(self):
+		version = frappe.db.get_value("Version", {})
+		doc = self.correction(applied_by=COE, applied_on="2026-01-01 00:00:00", version=version, status="Applied")
+		self.assertEqual((doc.status, doc.applied_by, doc.applied_on, doc.version), ("Draft", None, None, None))
+
+	def test_a_second_open_correction_of_the_same_field_is_refused(self):
+		self.correction()
+		with self.assertRaises(frappe.ValidationError):
+			self.correction(value="9123456789")
+
+	def test_apply_refuses_when_the_value_changed_after_the_request(self):
+		doc = self.correction()
+		request = self.send(doc)
+		frappe.db.set_value("Student", self.student, "student_mobile_number", "9111111111")
+		with self.assertRaises(frappe.ValidationError):
+			self.as_user(COE, approve, request)
+		self.assertEqual(self.value(), "9111111111")
+
+	def test_a_failure_while_applying_is_reported_without_the_record(self):
+		doc = self.correction("Identity Document", "oc_aadhaar", NEW_AADHAAR, evidence="/private/files/aadhaar.pdf")
+		request = self.send(doc)
+		self.as_user(COE, approve, request)
+		with patch.object(corrections, "save_target", side_effect=RuntimeError(NEW_AADHAAR)):
+			with self.assertRaises(frappe.ValidationError) as raised:
+				self.as_user(PRINCIPAL, approve, request)
+		self.assertNotIn(NEW_AADHAAR, str(raised.exception))
+		self.assertIsNone(raised.exception.__context__)
+
+	def test_rejected_correction_cannot_be_sent_again_or_edited(self):
+		doc = self.correction()
+		self.as_user(COE, reject, self.send(doc), "Not supported by the proof")
+		with self.assertRaises(frappe.ValidationError):
+			self.send(doc)
+		doc = frappe.get_doc(DOCTYPE, doc.name)
+		doc.new_value = "9000000000"
+		with self.assertRaises(frappe.ValidationError):
+			self.as_user(OFFICE, doc.save)
+		self.assertEqual((self.status(doc), frappe.db.count("Approval Request", {"reference_name": doc.name})), ("Rejected", 1))
+		self.correction()  # a new correction of the same field may be raised
+
+	def test_a_masked_aadhaar_or_a_client_secret_is_never_taken(self):
+		other = next(f"2341234123{n:02d}" for n in range(100) if aadhaar.is_valid_aadhaar(f"2341234123{n:02d}") and f"2341234123{n:02d}" != NEW_AADHAAR)
+		identity = {"category": "Identity Document", "field": "oc_aadhaar", "evidence": "/private/files/aadhaar.pdf"}
+		with self.assertRaises(frappe.ValidationError):
+			self.correction(value="XXXX-XXXX-2346", new_secret=NEW_AADHAAR, **identity)
+		with self.assertRaises(frappe.ValidationError):
+			self.correction(value="1234", **identity)
+		doc = self.correction(value=NEW_AADHAAR, new_secret=other, **identity)
+		self.assertEqual(doc.get_password("new_secret"), NEW_AADHAAR)
+		doc = frappe.get_doc(DOCTYPE, doc.name)
+		doc.update({"reason": "Typo in the register", "new_secret": other})
+		self.as_user(OFFICE, doc.save)  # the unchanged mask is kept; the sent secret is not
+		self.assertEqual((doc.new_value, doc.get_password("new_secret")), ("XXXX-XXXX-2346", NEW_AADHAAR))
+		doc.new_value = aadhaar.mask(other)
+		with self.assertRaises(frappe.ValidationError):
+			self.as_user(OFFICE, doc.save)
 
 
 class TestPortalCorrections(CorrectionFixture):
@@ -219,12 +299,46 @@ class Test360View(CorrectionFixture):
 		self.assertTrue({"profile", "lifecycle", "enrollments", "corrections"} <= sections)
 		self.assertNotIn("mentoring", sections)
 
-	def test_sections_follow_the_viewers_read_rights(self):
-		for user in (OFFICE, PRINCIPAL, MENTOR_A, ADMIN_USER):
-			sections = self.sections(user)
-			for key, doctype, _build in student_360.SECTIONS:
-				allowed = self.as_user(user, frappe.has_permission, doctype, "read")
-				self.assertEqual(key in sections, bool(allowed), f"{user} {key}")
+	def test_each_role_sees_its_own_sections(self):
+		expected = {
+			OFFICE: RECORD_SECTIONS | {"fees"},
+			PRINCIPAL: RECORD_SECTIONS | {"mentoring"},
+			MENTOR_A: RECORD_SECTIONS | {"mentoring"},
+			TEACHER: {"profile"},  # an Instructor alone: no fees, no mentoring, no record history
+		}
+		for user, sections in expected.items():
+			self.assertEqual(self.sections(user), sections, user)
+		with self.assertRaises(frappe.PermissionError):
+			self.sections(ACCOUNTS)  # Accounts reads invoices, not students: the fee ledger is its view
+		self.assertNotIn("mentoring", self.as_user(GUARDIAN_USER, student_360.portal_view))
+
+	def test_mentoring_shows_to_a_reader_of_parent_interactions_only(self):
+		real = student_360.can_read
+		with patch.object(student_360, "can_read", lambda doctype: doctype != "Counselling Note" and real(doctype)):
+			mentoring = self.as_user(MENTOR_A, student_360.desk_view, self.a_student)["sections"]["mentoring"]
+		self.assertEqual(set(mentoring), {"parent_interactions"})
+
+	def test_fees_match_the_ledger_including_customer_only_invoices(self):
+		customer = frappe.db.get_value("Student", self.student, "customer")
+		self.assertTrue(customer)
+		for name, student in (("L08-SI-STUDENT", self.student), ("L08-SI-CUSTOMER", None)):
+			doc = frappe.new_doc("Sales Invoice")
+			doc.update(
+				{
+					"name": name, "company": demo.ENGINEERING, "student": student, "customer": customer, "docstatus": 1,
+					"posting_date": today(), "due_date": add_days(today(), 10), "currency": "INR", "grand_total": 700,
+					"outstanding_amount": 700, "status": "Unpaid",
+				}
+			)  # fmt: skip
+			doc.db_insert()
+		ledger_total = sum(row.outstanding_amount for row in ledger.student_invoices(self.student))
+		with patch.object(student_360, "LIST_LIMIT", 1):
+			fees = self.as_user(OFFICE, student_360.desk_view, self.student)["sections"]["fees"]
+		self.assertEqual(len(fees["invoices"]), 1)  # the page is capped, the total is not
+		self.assertEqual(fees["total_outstanding"], ledger_total)
+		with patch.object(student_360, "LIST_LIMIT", 50):
+			names = [row.name for row in self.as_user(OFFICE, student_360.desk_view, self.student)["sections"]["fees"]["invoices"]]
+		self.assertTrue({"L08-SI-STUDENT", "L08-SI-CUSTOMER"} <= set(names))
 
 	def test_profile_masks_the_aadhaar_and_never_includes_it(self):
 		profile = self.as_user(OFFICE, student_360.desk_view, self.student)["sections"]["profile"]
@@ -243,13 +357,10 @@ class Test360View(CorrectionFixture):
 			self.assertEqual(mentoring["counselling_notes"]["count"], len(expected))
 			self.assertNotIn("SECRET-NOTE-TEXT", json.dumps(mentoring))
 
-	def test_another_mentor_cannot_open_the_360_of_a_mentee_they_cannot_read(self):
-		if not self.as_user(MENTOR_B, frappe.has_permission, "Student", "read", self.a_student):
-			with self.assertRaises(frappe.PermissionError):
-				self.as_user(MENTOR_B, student_360.desk_view, self.a_student)
-		else:
-			mentoring = self.as_user(MENTOR_B, student_360.desk_view, self.a_student)["sections"].get("mentoring") or {}
-			self.assertEqual(mentoring.get("counselling_notes", {"count": 0})["count"], 0)
+	def test_another_mentor_sees_none_of_the_notes_on_a_student_they_do_not_mentor(self):
+		self.add_note(MENTOR_A, self.a_student)
+		mentoring = self.as_user(MENTOR_B, student_360.desk_view, self.a_student)["sections"]["mentoring"]
+		self.assertEqual(mentoring["counselling_notes"], {"count": 0, "names": []})
 
 	def test_corrections_and_lifecycle_history_appear_in_the_360(self):
 		doc = self.correction()
@@ -264,9 +375,8 @@ class TestPortalPages(CorrectionFixture):
 
 		row = TestPortalCorrections.raise_as(self, STUDENT_USER, "Contact", "student_mobile_number")
 		for page in (profile_page, corrections_page):
-			frappe.set_user(STUDENT_USER)
 			context = frappe._dict()
-			page.get_context(context)
+			self.as_user(STUDENT_USER, page.get_context, context)
 			self.assertEqual(context.student, self.student)
 		self.assertIn(row["name"], [c["name"] for c in context.corrections])
 		self.assertEqual([g["category"] for g in context.fields], ["Personal", "Contact", "Guardian"])

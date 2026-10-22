@@ -35,8 +35,8 @@ def desk_view(student):
 	"""{student, sections: {key: data}} of the sections the session user may read; throws unless they read the Student."""
 	frappe.has_permission("Student", "read", doc=student, throw=True)
 	sections = {"profile": profile(student)}
-	for key, doctype, build in SECTIONS:
-		if can_read(doctype) and (data := build(student)) is not None:
+	for key, doctypes, build in SECTIONS:
+		if any(can_read(doctype) for doctype in doctypes) and (data := build(student)) is not None:
 			sections[key] = data
 	return {"student": student, "sections": sections}
 
@@ -82,8 +82,15 @@ def results_section(student):
 
 
 def fees_section(student):
-	rows = listed("Sales Invoice", student, ["name", "posting_date", "grand_total", "outstanding_amount", "company"], filters={"docstatus": 1})
-	return {"invoices": rows, "total_outstanding": sum(row.outstanding_amount or 0 for row in rows)}
+	"""The invoices the fee ledger counts (campus_finance.ledger.student_invoices), as far as the viewer reads them:
+	those of the student, and those made out to the student's Customer with no student set."""
+	fields = ["name", "posting_date", "grand_total", "outstanding_amount", "company"]
+	scopes = [{"student": student}]
+	if customer := frappe.db.get_value("Student", student, "customer"):
+		scopes.append({"customer": customer, "student": ["in", ["", None]]})
+	rows = [row for scope in scopes for row in frappe.get_list("Sales Invoice", {**scope, "docstatus": 1}, fields, limit_page_length=0)]
+	rows.sort(key=lambda row: (row.posting_date, row.name), reverse=True)
+	return {"invoices": rows[:LIST_LIMIT], "total_outstanding": sum(row.outstanding_amount or 0 for row in rows)}
 
 
 def certificates_section(student):
@@ -104,16 +111,16 @@ def corrections_section(student):
 	return listed(corrections.DOCTYPE, student, ["name", "category", "field_name", "status", "creation"])
 
 
-# key, DocType whose read permission gates the section, builder. The profile is gated by the Student itself.
+# key, DocTypes of which the viewer must read one to see the section, builder. The profile is gated by the Student.
 SECTIONS = (
-	("lifecycle", lifecycle.LOG, lifecycle_section),
-	("enrollments", "Program Enrollment", enrollments_section),
-	("attendance", "Student Attendance", attendance_section),
-	("results", "Student Result", results_section),
-	("fees", "Sales Invoice", fees_section),
-	("certificates", "Certificate Request", certificates_section),
-	("mentoring", NOTE, mentoring_section),
-	("corrections", corrections.DOCTYPE, corrections_section),
+	("lifecycle", (lifecycle.LOG,), lifecycle_section),
+	("enrollments", ("Program Enrollment",), enrollments_section),
+	("attendance", ("Student Attendance",), attendance_section),
+	("results", ("Student Result",), results_section),
+	("fees", ("Sales Invoice",), fees_section),
+	("certificates", ("Certificate Request",), certificates_section),
+	("mentoring", (NOTE, INTERACTION), mentoring_section),
+	("corrections", (corrections.DOCTYPE,), corrections_section),
 )
 
 
