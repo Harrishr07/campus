@@ -67,7 +67,7 @@ class TestAcademicProposals(CampusTestCase):
 		self.addCleanup(frappe.set_user, "Administrator")
 		seed_body_types()
 		seed_proposal_types()
-		for year in ("2022", "2026"):
+		for year in ("2022", "2023", "2026"):  # 2023: a batch of the version-precedence tests
 			make_year(year)
 		self.department = self.make_department(DEPARTMENT)
 		self.other_department = self.make_department(OTHER_DEPARTMENT)
