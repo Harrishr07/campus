@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 13:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "floor",
+  "room_no",
+  "room_type",
+  "is_ac",
+  "column_break_1",
+  "status",
+  "capacity",
+  "asset_location",
+  "location_section",
+  "block",
+  "hostel",
+  "company"
+ ],
+ "fields": [
+  {
+   "fieldname": "floor",
+   "fieldtype": "Link",
+   "label": "Hostel Floor",
+   "options": "Hostel Floor",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "room_no",
+   "fieldtype": "Data",
+   "label": "Room No",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "room_type",
+   "fieldtype": "Link",
+   "label": "Room Type",
+   "options": "Hostel Room Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "is_ac",
+   "fieldtype": "Check",
+   "label": "AC",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Available\nUnder Maintenance\nClosed",
+   "default": "Available",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Capacity",
+   "read_only": 1,
+   "in_list_view": 1,
+   "no_copy": 1,
+   "description": "The number of active beds in the room."
+  },
+  {
+   "fieldname": "asset_location",
+   "fieldtype": "Link",
+   "label": "Asset Location",
+   "options": "Location",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Made when the room is saved. Record the room's inventory (furniture, fittings) against it."
+  },
+  {
+   "fieldname": "location_section",
+   "fieldtype": "Section Break",
+   "label": "Location"
+  },
+  {
+   "fieldname": "block",
+   "fieldtype": "Link",
+   "label": "Hostel Block",
+   "options": "Hostel Block",
+   "fetch_from": "floor.block",
+   "read_only": 1
+  },
+  {
+   "fieldname": "hostel",
+   "fieldtype": "Link",
+   "label": "Hostel",
+   "options": "Hostel",
+   "fetch_from": "floor.hostel",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "floor.company",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Hostel",
+ "name": "Hostel Room",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "Warden",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:{floor}-{room_no}"
+}

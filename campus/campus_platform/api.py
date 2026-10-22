@@ -65,6 +65,20 @@ def service_provider(service, company):
 	return agreements[0].provider_company if agreements else None
 
 
+def served_companies(service, provider_company):
+	"""Member companies served with `service` by `provider_company` under the agreements in force today."""
+	agreements = frappe.get_all(
+		"Shared Service Agreement",
+		filters={"service": service, "provider_company": provider_company, "from_date": ["<=", today()]},
+		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", today()]],
+		pluck="name",
+	)
+	if not agreements:
+		return []
+	members = frappe.get_all("Shared Service Member", filters={"parent": ["in", agreements]}, pluck="company")
+	return sorted(set(members))
+
+
 def _agreements_with_member(company):
 	return frappe.get_all("Shared Service Member", filters={"company": company}, pluck="parent") or [""]
 
