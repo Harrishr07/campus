@@ -23,7 +23,7 @@ from frappe.utils import getdate
 
 from campus.campus_platform.api import ApprovableDocument, apply_regulation_change, get_regulation, resolve_regulation
 from campus.student_services import lifecycle, student_records, withdrawal_rules
-from campus.student_services.lifecycle_rules import ACTIVE
+from campus.student_services.lifecycle_rules import migrated_status
 
 DOCTYPE, BREAK = "Rejoin Application", "Break of Study"
 PLACEMENT_FIELDS = ("from_regulation", "to_regulation", "from_batch", "to_batch")
@@ -64,7 +64,8 @@ class RejoinApplication(ApprovableDocument, Document):
 				", ".join(row.course for row in self.bridge_courses) or None,
 			)
 		frappe.db.set_value("Student", self.student, "oc_batch", self.to_batch)
-		status = frappe.db.get_value(BREAK, self.break_of_study, "previous_status") or ACTIVE
+		# a break from before L-01 may keep an old academic status (Long Absent, Detained): map it
+		status = migrated_status(frappe.db.get_value(BREAK, self.break_of_study, "previous_status"))
 		reason = _("Rejoined after break of study {0}").format(self.break_of_study)
 		lifecycle.transition(self.student, status, self.rejoin_date, reason, self)
 

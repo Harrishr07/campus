@@ -17,7 +17,7 @@ from frappe.permissions import has_user_permission
 from frappe.utils import cint, getdate
 
 from campus.campus_platform.api import ApprovableDocument, latest_enrollment
-from campus.student_services import lifecycle, student_records, withdrawal_rules
+from campus.student_services import lifecycle, lifecycle_rules, student_records, withdrawal_rules
 
 DOCTYPE = "Break of Study"
 ON_BREAK, ACTIVE = student_records.ON_BREAK, "Active"
@@ -46,7 +46,9 @@ class BreakofStudy(ApprovableDocument, Document):
 		lifecycle.transition(self.student, ON_BREAK, self.from_date, self.reason, self)
 
 	def on_cancel(self):
-		lifecycle.revert(self, _("Break of Study {0} cancelled").format(self.name))
+		# a break migrated from before L-01 is undone to its previous status mapped onto the lifecycle statuses
+		previous = lifecycle_rules.migrated_status(self.previous_status)
+		lifecycle.revert(self, _("Break of Study {0} cancelled").format(self.name), legacy_status=previous)
 
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)

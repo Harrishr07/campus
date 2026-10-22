@@ -10,6 +10,7 @@ from frappe.utils import add_days, getdate, today
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations import registration, results
 from campus.student_services import student_records_setup
+from campus.student_services import lifecycle
 from campus.student_services.lifecycle import LOG
 from campus.student_services.api import pending_bridge_courses, withdrawal_code
 from campus.tests.approval_fixtures import make_department
@@ -264,6 +265,32 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		self.assertEqual(self.status(self.s22), "Active")
 		log = frappe.get_last_doc(LOG, {"student": self.s22.name}, order_by="creation desc, name desc")
 		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Reversal", "On Break", "Active", doc.name))
+
+	def pre_l01_break(self, previous):
+		"""A break approved before L-01 as the patch finds it (old academic statuses, no lifecycle record), migrated."""
+		doc = self.approve_fully(self.study_break(self.s22, "2025-06-01", "2025-12-31"))
+		frappe.db.delete(LOG, {"student": self.s22.name})
+		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Break of Study")
+		frappe.db.set_value(BREAK, doc.name, "previous_status", previous)
+		self.assertEqual(lifecycle.migrate_student(self.s22.name), "On Break")
+		return doc
+
+	def test_cancelling_a_migrated_break_restores_the_mapped_previous_status(self):
+		doc = self.pre_l01_break("Long Absent")
+		migrated = frappe.get_last_doc(LOG, {"student": self.s22.name})
+		self.assertEqual((migrated.kind, migrated.source_name), ("Migrated", doc.name))
+		frappe.get_doc(BREAK, doc.name).cancel()
+		self.assertEqual(self.status(self.s22), "Active")
+		log = frappe.get_last_doc(LOG, {"student": self.s22.name}, order_by="creation desc, name desc")
+		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "On Break", "Active", migrated.name))
+
+	def test_a_detained_student_on_a_migrated_break_keeps_the_detention(self):
+		doc = self.pre_l01_break("Detained")
+		lifecycle.migrate_break_statuses()
+		self.assertEqual(frappe.db.get_value(BREAK, doc.name, "previous_status"), "Active")
+		self.assertEqual(frappe.db.get_value("Student", self.s22.name, "oc_detained"), 1)
+		frappe.get_doc(BREAK, doc.name).cancel()
+		self.assertEqual(self.status(self.s22), "Active")
 
 	def test_a_break_cannot_start_unless_the_table_permits_it(self):
 		frappe.db.set_value("Student", self.s22.name, "oc_academic_status", "Withdrawn")

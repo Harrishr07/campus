@@ -96,6 +96,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Lifecycle Transition Rule",
+   "link_to": "Lifecycle Transition Rule",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "clipboard-list",
@@ -254,6 +265,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Lifecycle Transition",
+   "link_to": "Lifecycle Transition",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Counselling Note",
    "link_to": "Counselling Note",
    "link_type": "DocType",
@@ -320,6 +342,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Student Status Summary",
+   "link_to": "Student Status Summary",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Grievance SLA",
    "link_to": "Grievance SLA",
    "link_type": "Report",
@@ -338,7 +371,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",

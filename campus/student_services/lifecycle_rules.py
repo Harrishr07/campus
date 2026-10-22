@@ -13,7 +13,7 @@ STATUSES = [
 	STUDY_COMPLETED, AWARD_ELIGIBLE, GRADUATED, ALUMNI,
 ]  # fmt: skip
 NEW = ""  # the "from" of a record's first status
-ON_ROLL = (ADMITTED, JOINED, ACTIVE, ON_BREAK, READMITTED)  # still studying: a TC means they withdraw
+ON_ROLL = (JOINED, ACTIVE, ON_BREAK)  # studying: a TC means they withdraw (each has a seeded rule to Withdrawn)
 
 # The seeded transition table (Lifecycle Transition Rule records); colleges disable or add rows.
 DEFAULT_TRANSITIONS = [

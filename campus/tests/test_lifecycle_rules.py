@@ -52,6 +52,12 @@ class TestTransitionRefusal(UnitTestCase):
 		self.assertNotIn((rules.ACTIVE, rules.GRADUATED), rules.DEFAULT_TRANSITIONS)
 		self.assertNotIn((rules.CANCELLED, rules.ACTIVE), rules.DEFAULT_TRANSITIONS)
 
+	def test_every_on_roll_status_can_withdraw_by_the_default_graph(self):
+		for status in rules.ON_ROLL:
+			self.assertIn((status, rules.WITHDRAWN), rules.DEFAULT_TRANSITIONS, status)
+		self.assertNotIn(rules.ADMITTED, rules.ON_ROLL)  # not joined yet: an Admission Cancellation, not a TC
+		self.assertNotIn(rules.READMITTED, rules.ON_ROLL)
+
 	def test_applicant_is_not_a_student_status(self):
 		self.assertNotIn("Applicant", rules.STATUSES)
 

@@ -18,6 +18,7 @@ from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.verification import verify
 from campus.examinations import api, convocation, exam_certificates, graduation, progression
 from campus.examinations.seed import seed_regulation
+from campus.student_services import lifecycle
 from campus.tests.approval_fixtures import level
 from campus.tests.factories import make_company, make_user
 from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
@@ -25,6 +26,7 @@ from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR, PROGRAM, UNIVERSITY = "Grad Test College", "GRDC", "Grad Test BE", "Grad Test University"
 APPROVER, POLICY = "grd-coe-approver@example.com", "GRD Certificate Policy"
+NON_COE_USER = "grd-academics@example.com"
 DISTINCTION, FIRST, SECOND = "First Class with Distinction", "First Class", "Second Class"
 CORE = ("GRD C1", "GRD C2", "GRD C3", "GRD C4")
 TRANSCRIPT, CONSOLIDATED, PROVISIONAL, DEGREE, DATA_SHEET = (
@@ -398,14 +400,65 @@ class TestConvocation(GraduationFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "convocation date"):
 			convocation.graduate(doc.name)
 		doc.db_set("convocation_date", add_days(today(), 0))
-		self.assertEqual(convocation.graduate(doc.name), 5)
+		self.assertEqual(convocation.graduate(doc.name), {"graduated": 5, "refused": []})
 		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Graduated")
 		self.assertEqual(self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", getdate(today())))
-		self.assertEqual(convocation.graduate(doc.name), 0)  # once
+		self.assertEqual(convocation.graduate(doc.name), {"graduated": 0, "refused": []})  # once
+
+	def test_a_list_filled_after_its_convocation_is_dated_from_it_and_graduates(self):
+		held = getdate(add_days(today(), -20))
+		doc = frappe.get_doc({"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM, "convocation_date": held}).insert()
+		convocation.fill_graduates(doc.name)
+		self.assertEqual([row[3] for row in self.lifecycle("dist")], [held, held])
+		self.assertEqual(convocation.graduate(doc.name)["graduated"], 5)
+		self.assertEqual(self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", held))
+
+	def test_a_legacy_list_with_a_past_convocation_graduates_its_migrated_students(self):
+		held = getdate(add_days(today(), -20))
+		doc = self.make_list()
+		doc.db_set("convocation_date", held)
+		student = self.students["dist"]
+		frappe.db.delete("Lifecycle Transition", {"student": student})  # as recorded before L-01
+		frappe.db.set_value("Student", student, "oc_academic_status", "Active")
+		self.assertEqual(lifecycle.migrate_student(student), "Award Eligible")
+		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": student})
+		self.assertEqual((migrated.kind, migrated.effective_date, migrated.source_name), ("Migrated", held, doc.name))
+		result = convocation.graduate(doc.name)
+		self.assertNotIn(student, [row["student"] for row in result["refused"]])
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Graduated")
+
+	def test_a_refused_graduate_does_not_stop_the_others(self):
+		doc = self.make_list()  # dated today
+		doc.db_set("convocation_date", add_days(today(), -1))
+		others = [self.students[k] for k in ("cleared", "honours", "partial", "weak26")]
+		frappe.db.set_value("Lifecycle Transition", {"student": ["in", others], "source_name": doc.name}, "effective_date", add_days(today(), -2))
+		result = convocation.graduate(doc.name)
+		self.assertEqual(result["graduated"], 4)
+		self.assertEqual([row["student"] for row in result["refused"]], [self.students["dist"]])
+		self.assertIn("before the last status change", result["refused"][0]["reason"])
+		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Award Eligible")
+
+	def test_a_refill_that_drops_a_graduate_undoes_award_eligible(self):
+		doc = self.make_list()
+		frappe.get_doc({"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 15, "max_total_credits": 200}).insert()
+		convocation.fill_graduates(doc.name)
+		self.assertNotIn(self.students["dist"], {g.student for g in frappe.get_doc("Convocation List", doc.name).graduates})
+		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Active")
+		kinds = frappe.get_all(
+			"Lifecycle Transition", {"student": self.students["dist"], "source_name": doc.name}, ["kind", "to_status"], order_by="creation asc, name asc"
+		)
+		self.assertEqual(
+			[(k.kind, k.to_status) for k in kinds],
+			[("Transition", "Study Completed"), ("Transition", "Award Eligible"), ("Reversal", "Study Completed"), ("Reversal", "Active")],
+		)
 
 	def test_only_the_coe_records_graduates(self):
 		doc = self.make_list()
 		doc.db_set("convocation_date", today())
+		make_user(NON_COE_USER, [COLLEGE])  # Academics User of the college, write access but not the COE
+		frappe.set_user(NON_COE_USER)
+		with self.assertRaises(frappe.PermissionError):
+			api.graduate_convocation_list(doc.name)
 		frappe.set_user("Guest")
 		with self.assertRaises(frappe.PermissionError):
 			api.graduate_convocation_list(doc.name)

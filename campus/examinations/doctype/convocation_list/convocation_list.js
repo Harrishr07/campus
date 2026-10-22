@@ -22,7 +22,15 @@ frappe.ui.form.on("Convocation List", {
 						args: { convocation_list: frm.doc.name },
 						freeze: true,
 					})
-					.then((r) => frappe.show_alert(__("{0} graduates recorded", [r.message])))
+					.then((r) => {
+						frappe.show_alert(__("{0} graduates recorded", [r.message.graduated]));
+						if (r.message.refused.length) {
+							frappe.msgprint({
+								title: __("Not recorded"),
+								message: r.message.refused.map((row) => `${row.student}: ${row.reason}`).join("<br>"),
+							});
+						}
+					})
 			);
 		}
 		frm.add_custom_button(__("Download"), () =>

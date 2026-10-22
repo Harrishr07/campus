@@ -7,6 +7,7 @@ import frappe
 from campus.examinations import registration, results
 from campus.examinations.seed import seed_regulation
 from campus.student_services.api import pending_bridge_courses
+from campus.student_services import lifecycle
 from campus.student_services.lifecycle import LOG
 from campus.tests.test_regulation import make_regulation, year_name
 from campus.tests.test_results import COLLEGE, PROGRAM, enter_marks, make_course, make_curriculum, make_offering
@@ -126,6 +127,17 @@ class TestRejoin(StudentRecordsFixture):
 			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.kind),
 			("On Break", "Active", frappe.utils.getdate("2027-06-15"), REJOIN, doc.name, "Transition"),
 		)
+
+	def test_a_rejoin_after_a_pre_l01_break_restores_a_lifecycle_status(self):
+		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))
+		frappe.db.delete(LOG, {"student": self.s26.name})  # as recorded before L-01
+		frappe.db.set_value("Student", self.s26.name, "oc_academic_status", "Break of Study")
+		frappe.db.set_value("Break of Study", study_break.name, "previous_status", "Long Absent")  # not mapped yet
+		lifecycle.migrate_student(self.s26.name)
+		doc = self.approve_fully(self.rejoin(study_break, year="2027", rejoin_date="2027-06-15", bridge=()))
+		self.assertEqual(frappe.db.get_value("Student", self.s26.name, "oc_academic_status"), "Active")
+		log = frappe.get_last_doc(LOG, {"student": self.s26.name}, order_by="creation desc, name desc")
+		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Transition", "On Break", "Active", doc.name))
 
 	def test_a_break_with_a_rejoin_cannot_be_cancelled(self):
 		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))

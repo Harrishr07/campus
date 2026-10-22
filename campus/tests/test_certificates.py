@@ -8,7 +8,7 @@ from frappe.utils import add_days, getdate, today
 from campus.campus_finance import api as finance
 from campus.campus_platform.approvals import approve, reject
 from campus.campus_platform.verification import verify
-from campus.student_services import certificate_fee, portal
+from campus.student_services import certificate_fee, lifecycle, portal
 from campus.student_services.report.certificates_issued import certificates_issued
 from campus.student_services.report.tc_register import tc_register
 from campus.tests.approval_fixtures import level
@@ -224,6 +224,18 @@ class TestTransferCertificate(CertificateFixture):
 		self.assertEqual(student.oc_academic_status, "Active")
 		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
 		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Reversal", "Withdrawn", "Active", doc.name))
+
+	def test_cancelling_a_migrated_tc_restores_active(self):
+		doc = self.approve_request(self.tc())
+		frappe.db.delete("Lifecycle Transition", {"student": self.a})  # as recorded before L-01
+		frappe.db.set_value("Student", self.a, "oc_academic_status", "Discontinued")
+		self.assertEqual(lifecycle.migrate_student(self.a), "Withdrawn")
+		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": self.a})
+		self.assertEqual((migrated.kind, migrated.source_doctype, migrated.source_name), ("Migrated", "Certificate Request", doc.name))
+		doc.cancel()
+		self.assertEqual(frappe.db.get_value("Student", self.a, "oc_academic_status"), "Active")
+		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
+		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "Withdrawn", "Active", migrated.name))
 
 	def test_a_tc_to_a_student_who_completed_the_programme_keeps_the_status(self):
 		frappe.db.set_value("Student", self.a, "oc_academic_status", "Graduated")

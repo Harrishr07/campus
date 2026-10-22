@@ -209,6 +209,29 @@ class TestTransitionService(LifecycleFixture):
 			lifecycle.revert(source, "Recorded in error")
 		self.assertEqual(status(student), rules.WITHDRAWN)
 
+	def test_a_reversed_change_no_longer_dates_later_ones(self):
+		student = self.student()
+		enrollment = self.enroll(student)
+		source = ("Program Enrollment", enrollment.name)
+		lifecycle.transition(student, rules.ON_BREAK, "2025-01-10", "Recorded in error", source=source)
+		lifecycle.revert(source, "Wrong date")
+		lifecycle.transition(student, rules.ON_BREAK, "2025-01-05", "The real start")  # before the reversed change
+		self.assertEqual(status(student), rules.ON_BREAK)
+
+	def test_detention_is_written_by_the_progression_run_only(self):
+		student = self.student(oc_detained=1)
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_detained"), 0)
+		doc = frappe.get_doc("Student", student)
+		doc.oc_detained = 1
+		with self.assertRaisesRegex(frappe.ValidationError, "Progression Run"):
+			doc.save()
+
+	def test_an_initial_record_is_never_undone(self):
+		student = self.student()
+		frappe.db.set_value(LOG, {"student": student}, {"source_doctype": "Program", "source_name": PROGRAM})
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot be undone automatically"):
+			lifecycle.revert(("Program", PROGRAM), "No", student=student)
+
 	def test_the_log_is_written_by_the_service_only_and_never_deleted(self):
 		student = self.student()
 		with self.assertRaisesRegex(frappe.ValidationError, "lifecycle service"):
@@ -247,6 +270,7 @@ class TestMigration(LifecycleFixture):
 		lifecycle.migrate_student(student)
 		log = self.latest(student)
 		self.assertEqual((status(student), log.effective_date), (rules.WITHDRAWN, getdate("2025-03-31")))
+		self.assertEqual((log.source_doctype, log.source_name), (None, None))  # no Certificate Request has that number
 
 	def test_the_old_break_and_completed_values_map_onto_the_new_ones(self):
 		on_break, completed = self.legacy("Break of Study"), self.legacy("Completed")

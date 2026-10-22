@@ -74,4 +74,7 @@ def undo_leaving(request):
 		frappe.db.set_value(
 			"Student", request.student, {"date_of_leaving": None, "leaving_certificate_number": None, "reason_for_leaving": None}
 		)
-		lifecycle.revert(request, _("Transfer certificate {0} cancelled").format(request.certificate_number))
+		# a TC migrated from before L-01 (Withdrawn, no earlier lifecycle record) goes back to Active, as before L-01
+		lifecycle.revert(
+			request, _("Transfer certificate {0} cancelled").format(request.certificate_number), legacy_status=lifecycle_rules.ACTIVE
+		)
