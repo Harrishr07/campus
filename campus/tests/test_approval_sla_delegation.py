@@ -210,8 +210,13 @@ class TestMyPendingApprovals(ApprovalTestCase):
 		self.assertEqual(len(self.rows_for(fx.HOD, company=fx.COLLEGE)), 1)
 
 	def test_requests_of_companies_the_user_is_not_permitted_for_are_hidden(self):
+		# appointed while permitted for the other college (an approver must be able to open the document), then moved off it
 		fx.make_policy("APR Test Other Co", [fx.level("User", fx.HOD)], priority=99, company=fx.OTHER_COLLEGE)
-		_doc, name = self.new_request(company=fx.OTHER_COLLEGE)
+		grant = frappe.get_doc({"doctype": "User Permission", "user": fx.HOD, "allow": "Company", "for_value": fx.OTHER_COLLEGE}).insert()
+		try:
+			_doc, name = self.new_request(company=fx.OTHER_COLLEGE)
+		finally:
+			grant.delete()
 		self.assertFalse(self.rows_for(fx.HOD))
 		with self.assertRaises(frappe.PermissionError):
 			self.act_as(fx.HOD, approve, name)
