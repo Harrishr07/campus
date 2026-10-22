@@ -42,8 +42,9 @@ HISTORY_KEPT = (
 )  # fmt: skip
 # Submittable campus DocTypes are history too (a cancelled document stays) unless listed here. Name the reason.
 HISTORY_EXEMPT = ()
-# Awaiting a ruling, deliberately not in HISTORY_KEPT: Accounts Manager deletes Bank Collection Import / Row and COE
-# deletes Convocation List and University Result Import (import and list drafts that may be redone).
+# Ruled (PR-05), deliberately not in HISTORY_KEPT: Bank Collection Import / Row, Convocation List and University Result
+# Import stay deletable (Accounts Manager / COE) only before they write anything; each controller's on_trash refuses
+# once a Payment Entry, a lifecycle transition or a result was written from it.
 
 # What a student, guardian or guest may open on the desk (the portal reads through its own API).
 STUDENT_READABLE = (

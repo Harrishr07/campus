@@ -374,6 +374,15 @@ class TestConvocation(GraduationFixture):
 		convocation.fill_graduates(doc.name)
 		return frappe.get_doc("Convocation List", doc.name)
 
+	def test_list_deletable_only_before_it_moves_students(self):
+		empty = frappe.get_doc({"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM}).insert()
+		empty.delete()
+		self.assertFalse(frappe.db.exists("Convocation List", empty.name))
+		doc = self.make_list()
+		with self.assertRaises(frappe.ValidationError):
+			doc.delete()
+		self.assertTrue(frappe.db.exists("Convocation List", doc.name))
+
 	def test_lists_the_eligible_graduates_only(self):
 		doc = self.make_list()
 		expected = {self.students[k] for k in ("dist", "cleared", "honours", "partial", "weak26")}

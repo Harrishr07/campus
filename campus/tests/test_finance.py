@@ -508,6 +508,20 @@ class BankCollectionImportTests:
 		bank_import.process_row(item, None)
 		self.assertEqual(frappe.db.get_value("Bank Collection Row", {"bank_collection_import": doc.name}, "status"), "Unmatched")
 
+	def test_import_and_rows_deletable_only_before_they_write_anything(self):
+		draft = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/d.csv"}).insert()
+		draft.delete()
+		self.assertFalse(frappe.db.exists("Bank Collection Import", draft.name))
+		doc, _run = self.run_import(self.file_rows(matched=1, unmatched=1, tag="G"))
+		posted = frappe.get_doc("Bank Collection Row", {"bank_collection_import": doc.name, "status": "Matched"})
+		unmatched = frappe.get_doc("Bank Collection Row", {"bank_collection_import": doc.name, "status": "Unmatched"})
+		self.assertTrue(posted.payment_entry)
+		with self.assertRaises(frappe.ValidationError):
+			posted.delete()
+		unmatched.delete()  # wrote nothing
+		with self.assertRaises(frappe.ValidationError):
+			doc.delete()
+
 
 class FeeReceiptTests:
 	def collect(self, reference="UTR-R-1", challan_format=None):

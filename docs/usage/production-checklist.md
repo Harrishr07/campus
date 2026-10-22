@@ -43,7 +43,8 @@ is broken. Commit the CSV after a permission change: its diff is the review of t
   `HISTORY_KEPT` (Lifecycle Transition, Official Document, Completion Check, results, certificates, regulator
   submissions, question papers, the financial and audit ledgers). A submittable DocType that should be deletable goes
   in `HISTORY_EXEMPT` with a reason. Bank Collection Import / Row, Convocation List and University Result Import are
-  deletable by Accounts Manager / COE pending a ruling.
+  deletable by Accounts Manager / COE only before they write anything (a Payment Entry, a lifecycle transition or a
+  result); the controller refuses the delete afterwards.
 - Student-facing roles (Student, Guardian, Guest and any role with desk access off) read only the DocTypes in
   `STUDENT_READABLE`, write or create only those in `STUDENT_WRITABLE`, never delete, share or export, and open no
   Report.
