@@ -88,6 +88,17 @@ def ensure_holiday_list(profile, companies, out):
 			out.updated["Company"] += 1
 
 
+def ensure_default_company(company, out):
+	"""Make `company` the site's default company when it has none, as ERPNext's setup wizard does: Education's attendance
+	and leave validation read the default company's Holiday List, and without a default they take whichever company
+	the database lists first."""
+	if frappe.db.get_default("company"):
+		return
+	frappe.db.set_single_value("Global Defaults", "default_company", company)
+	frappe.db.set_default("company", company)
+	out.updated["Global Defaults"] += 1
+
+
 def department_name(department, company):
 	return f"{department} - {frappe.db.get_value('Company', company, 'abbr')}"
 

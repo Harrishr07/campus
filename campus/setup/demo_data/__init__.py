@@ -76,6 +76,8 @@ def check_kit(ctx):
 			missing.append(f"{ctx.college}: {field}")
 	if not (company.default_cash_account or company.default_bank_account):
 		missing.append(f"{ctx.college}: a default cash or bank account")
+	if not frappe.db.get_default("company"):
+		missing.append("Global Defaults: default company (Education's attendance reads its Holiday List)")
 	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
 		missing.append("Selling Settings: selling price list")
 	if not frappe.db.exists("Fee Structure", {"company": ctx.college, "docstatus": 1}):
