@@ -106,3 +106,16 @@ New applicants (not existing students) load through Admissions > Applicant Uploa
 
 A file whose Link cells name a master that does not exist is refused whole by Data Import: load the masters in the order
 above, and check each sheet first with the Import Check report.
+
+## Staging site for the SXCCE demo and intern UAT
+
+The staging site is `campus.localhost`, served on its own port so it does not depend on the bench's default site:
+
+```bash
+cd /workspace/development/education-bench
+bench --site campus.localhost serve --port 8005
+```
+
+Open http://campus.localhost:8005. Staff log in to the desk, students and guardians land on `/campus-portal`. Logins and the demo walkthrough are in `docs/usage/demo-data.md`; the intern UAT scripts are in `docs/usage/uat/`.
+
+The site was built with developer mode, telemetry and the request recorder off and `campus_demo_site` on (test passwords and the UAT Tester role are allowed only there). To rebuild it from scratch: create the site with all apps, then run `campus.setup.pilot.setup_college` with `{"profile": "sxcce"}` and `campus.setup.demo_data.load` with `{"profile": "sxcce", "seed": 2026}` (about 10 minutes). After code changes, run `bench --site campus.localhost migrate`, re-run `setup_college`, and re-run the demo `staff` step.
