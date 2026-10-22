@@ -312,6 +312,7 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 		settings.download_lead_minutes = 121
 		with self.assertRaises(frappe.ValidationError):
 			settings.save()
+		settings.reload()  # the refused save already stamped a new modified on the in-memory document
 		settings.download_lead_minutes = 120
 		settings.save()
 

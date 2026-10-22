@@ -126,7 +126,8 @@ class TestDemoShape(IntegrationTestCase):
 	# TestDemoData rolls its 10-minute load back, so the tests that need the loaded people skip unless it was committed (bench execute)
 
 	def require_loaded_demo(self):
-		if not frappe.db.exists("Student", {"oc_company": COLLEGE}):
+		# a few Students from other tests can be committed on a site without the demo: the demo is loaded when its taught groups exist
+		if not frappe.db.exists("Student Group Instructor", {"parenttype": "Student Group"}):
 			self.skipTest("the SXCCE demo is not loaded on this site (campus.setup.demo_data.load)")
 
 	def test_production_code_does_not_import_the_tests_package(self):
