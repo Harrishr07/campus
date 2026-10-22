@@ -1,13 +1,16 @@
-"""M06-07, M05-09 Convocation List: the eligible graduates of a company (and programme) and their export for the
-university.
+"""M06-07, M05-09, M05-15 Convocation List: the eligible graduates of a company (and programme) and their export for
+the university.
 
-Eligible: a published final-year result, the programme completed with no arrear (campus.examinations.graduation),
-and not already on another Convocation List. Listing moves an Active graduate to Study Completed and then Award
-Eligible (lifecycle, effective the convocation date once it has passed, else the day listed); a refill that drops a
-student undoes those steps. Mark Graduated, on or after the convocation date, moves the Award Eligible graduates
-to Graduated from that date (COE) and reports the ones the lifecycle refuses. The export follows the list's column table (heading -> source). The
-university's format is not known yet, so DEFAULT_COLUMNS is a placeholder the COE edits to match it. Cells that a
-spreadsheet would run as a formula are neutralised.
+Eligible: a published final-year result, a Complete credit completion check (campus.examinations.completion, run
+on every fill and linked on the row), and not already on another Convocation List. Listing moves an Active graduate
+to Study Completed and, unless completion.award_refusal holds them (dues, the degree-awarding authority on the
+convocation date; the reason is kept on the row), to Award Eligible (lifecycle, effective the convocation date once
+it has passed, else the day listed); a refill that drops a student undoes those steps, and one that now holds an
+Award Eligible graduate undoes that step. Mark Graduated, on or after the convocation date, checks award eligibility
+again on that date and moves the Award Eligible graduates to Graduated from it (COE), then to Alumni when the
+Completion Settings say "On Convocation"; it reports the ones refused or held. The export follows the list's
+column table (heading -> source). The university's format is not known yet, so DEFAULT_COLUMNS is a placeholder
+the COE edits to match it. Cells that a spreadsheet would run as a formula are neutralised.
 """
 
 import frappe
@@ -15,7 +18,7 @@ from frappe import _
 from frappe.utils import getdate, strip_html, today
 from frappe.utils.csvutils import build_csv_response
 
-from campus.examinations import graduation_rules
+from campus.examinations import completion, graduation_rules
 from campus.examinations.access import COE_ROLE
 from campus.examinations.graduation import final_year_students, graduate_record
 from campus.student_services.api import (
@@ -53,12 +56,15 @@ def fill_graduates(convocation_list):
 	listed = set(frappe.get_all(ROW, {"parenttype": DOCTYPE, "parent": ["!=", doc.name]}, pluck="student"))
 	before = {row.student for row in doc.graduates}
 	doc.graduates = []
+	award_on = doc.convocation_date or today()
 	for student in final_year_students(doc.company, doc.program):
 		if student in listed:
 			continue
-		record = graduate_record(student)
-		if record.completed:
-			doc.append("graduates", graduate_row(record))
+		check = completion.run_check(student)
+		if check.result == completion.rules.COMPLETE:
+			row = graduate_row(graduate_record(student))
+			hold = completion.award_refusal(student, award_on)
+			doc.append("graduates", {**row, "completion_check": check.name, "award_hold": hold})
 	doc.save()
 	for row in doc.graduates:
 		record_award_eligible(row, doc)
@@ -68,11 +74,16 @@ def fill_graduates(convocation_list):
 
 
 def record_award_eligible(row, doc):
-	"""Active -> Study Completed -> Award Eligible, dated by listing_date; a graduate already past either step is
-	left as they are."""
+	"""Active -> Study Completed -> Award Eligible (unless held), dated by listing_date; a graduate already past
+	either step is left as they are, except that a hold undoes this list's Award Eligible."""
 	if lifecycle_status(row.student) == ACTIVE:
-		reason = _("Programme completed in {0}").format(row.completion_term) if row.completion_term else _("Programme completed")
+		reason = _("Credit completion check {0} passed").format(row.completion_check)
+		if row.completion_term:
+			reason = _("Programme completed in {0}; credit completion check {1} passed").format(row.completion_term, row.completion_check)
 		transition(row.student, STUDY_COMPLETED, listing_date(doc, row.student), reason, doc)
+	if row.award_hold:
+		revert_transition(doc, _("Held: {0}").format(row.award_hold), student=row.student, statuses=(AWARD_ELIGIBLE,))
+		return
 	if lifecycle_status(row.student) == STUDY_COMPLETED:
 		transition(row.student, AWARD_ELIGIBLE, listing_date(doc, row.student), _("Listed for convocation on {0}").format(doc.name), doc)
 
@@ -91,9 +102,10 @@ def undo_award_eligible(student, doc):
 
 
 def graduate(convocation_list):
-	"""Record the list's Award Eligible graduates as Graduated from the convocation date. Returns {graduated,
-	refused: [{student, reason}]} (plain text): a graduate the lifecycle refuses (e.g. a later change) writes
-	nothing (savepoint) and does not stop the rest."""
+	"""Record the list's Award Eligible graduates as Graduated from the convocation date (and Alumni, per the
+	Completion Settings). Returns {graduated, refused: [{student, reason}]} (plain text): a graduate held on the
+	convocation date (dues, authority) or refused by the lifecycle (e.g. a later change) writes nothing (savepoint)
+	and does not stop the rest; a listed graduate held at listing is reported too."""
 	frappe.only_for((COE_ROLE, "System Manager"))
 	doc = frappe.get_doc(DOCTYPE, convocation_list)
 	doc.check_permission("write")
@@ -101,12 +113,19 @@ def graduate(convocation_list):
 		frappe.throw(_("Set the convocation date; graduates are recorded on or after it."))
 	graduated, refused = 0, []
 	for row in doc.graduates:
-		if lifecycle_status(row.student) != AWARD_ELIGIBLE:
+		status = lifecycle_status(row.student)
+		if status == STUDY_COMPLETED and row.award_hold:
+			refused.append({"student": row.student, "reason": _("Not award eligible: {0}").format(row.award_hold)})
+		if status != AWARD_ELIGIBLE:
 			continue
 		messages = len(frappe.local.message_log)
 		frappe.db.savepoint(SAVEPOINT)
 		try:
+			hold = completion.award_refusal(row.student, doc.convocation_date)
+			if hold:
+				frappe.throw(_("Not award eligible: {0}").format(hold))
 			transition(row.student, GRADUATED, doc.convocation_date, _("Degree conferred at convocation {0}").format(doc.name), doc)
+			completion.alumni_on_convocation(row.student, doc.convocation_date, doc)
 			graduated += 1
 		except frappe.ValidationError as error:  # the refused student writes nothing
 			frappe.db.rollback(save_point=SAVEPOINT)

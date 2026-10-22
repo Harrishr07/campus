@@ -1,7 +1,9 @@
 """M06-07, M05-03 integration tests (P2-T22): the graduate record from published results, the verifiable prints
 (semester grade sheet, consolidated grade sheet, provisional certificate, degree certificate or degree data sheet,
 transcript) through Certificate Requests, the degree_awarding_body switch, the Convocation List export and the
-Progression Run.
+Progression Run. X-03: listing needs a Complete credit completion check (each regulation's Effective curriculum lists
+GRD C1-C4 as mandatory PCC courses) and Award Eligible a valid Degree Awarding Authority (an Active university
+affiliation on the Official Document register).
 
 Fixture: R2022 and R2026 students of one college with hand-made Student Results (3-credit core courses GRD C1-C4,
 9-credit Honours courses GRD H1/H2, a 3-credit additional course GRD A1) in published sessions S1 and S2 (final
@@ -62,6 +64,30 @@ def fail(course, credits=3):
 	return (course, 0, "Fail", credits)
 
 
+def make_effective_curriculum(regulation, courses, category="PCC", credits=3):
+	"""An Effective curriculum of PROGRAM listing `courses` as mandatory (written Effective directly: the Dean's
+	approval path is not under test here)."""
+	rows = [{"semester": 1, "course": c, "category": category, "credits_override": 1, "credits": credits} for c in courses]
+	name = frappe.get_doc(
+		{"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "status": "Draft", "courses": rows}
+	).insert().name  # fmt: skip
+	frappe.db.set_value("Curriculum", name, "status", "Effective")
+	return name
+
+
+def make_degree_authority(valid_to=None):
+	"""The university awards PROGRAM's degree; its affiliation is in force from 2020 to `valid_to` (default: a year ahead)."""
+	frappe.get_doc(
+		{"doctype": "Degree Awarding Authority", "company": COLLEGE, "program": PROGRAM, "awarding_body": "Affiliating University",
+		"authority_name": UNIVERSITY, "document_type": "Affiliation", "document_authority": "University"}
+	).insert()  # fmt: skip
+	return frappe.get_doc(
+		{"doctype": "Official Document", "company": COLLEGE, "program": PROGRAM, "authority": "University",
+		"document_type": "Affiliation", "reference_no": "GRD-AFF-1", "valid_from": "2020-01-01",
+		"valid_to": valid_to or add_days(today(), 365)}
+	).insert()  # fmt: skip
+
+
 class GraduationFixture(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -117,6 +143,9 @@ class GraduationFixture(CampusTestCase):
 		for key, courses in (("honours", ("GRD H1", "GRD H2")), ("partial", ("GRD H1",))):
 			cls.register_honours(cls.students[key], courses)
 		cls.register_additional(cls.students["honours"], "GRD A1")
+		for regulation in cls.regs.values():
+			make_effective_curriculum(regulation, CORE)
+		make_degree_authority()
 
 	@classmethod
 	def make_result(cls, student, session, rows):

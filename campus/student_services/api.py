@@ -24,6 +24,7 @@ from campus.student_services.lifecycle import transition  # noqa: F401  (public 
 from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API: lifecycle statuses)
 	ACTIVE,
 	ADMITTED,
+	ALUMNI,
 	AWARD_ELIGIBLE,
 	CANCELLED,
 	GRADUATED,

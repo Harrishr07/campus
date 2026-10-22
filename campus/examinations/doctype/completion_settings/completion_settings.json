@@ -1,0 +1,57 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Completion Settings",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "alumni_move",
+  "alumni_after_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "alumni_move",
+   "fieldtype": "Select",
+   "label": "Move Graduates to Alumni",
+   "options": "Days After Graduation\nOn Convocation",
+   "reqd": 1,
+   "default": "Days After Graduation"
+  },
+  {
+   "fieldname": "alumni_after_days",
+   "fieldtype": "Int",
+   "label": "Days After Graduation",
+   "default": "30",
+   "non_negative": 1,
+   "depends_on": "eval:doc.alumni_move=='Days After Graduation'",
+   "description": "A graduate becomes Alumni this many days after the graduation date (daily job), dated that day."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1
+  }
+ ],
+ "module": "Examinations",
+ "issingle": 1
+}

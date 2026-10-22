@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 9,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -50,6 +50,17 @@
    "label": "Classification Rule",
    "link_count": 0,
    "link_to": "Classification Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Degree Awarding Authority",
+   "link_count": 0,
+   "link_to": "Degree Awarding Authority",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -124,7 +135,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 28,
+   "link_count": 30,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -223,6 +234,28 @@
    "label": "Convocation List",
    "link_count": 0,
    "link_to": "Convocation List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Completion Check",
+   "link_count": 0,
+   "link_to": "Completion Check",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Credit Recognition",
+   "link_count": 0,
+   "link_to": "Credit Recognition",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -440,7 +473,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 17,
+   "link_count": 18,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -632,10 +665,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Completion Status",
+   "link_count": 0,
+   "link_to": "Completion Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
-   "link_count": 1,
+   "link_count": 2,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -649,9 +693,20 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Completion Settings",
+   "link_count": 0,
+   "link_to": "Completion Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

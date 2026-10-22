@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-09 15:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Convocation List Graduate",
@@ -89,6 +89,20 @@
    "label": "Completion Term",
    "options": "Academic Term",
    "read_only": 1
+  },
+  {
+   "fieldname": "completion_check",
+   "fieldtype": "Link",
+   "label": "Completion Check",
+   "options": "Completion Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "award_hold",
+   "fieldtype": "Small Text",
+   "label": "Award Hold",
+   "read_only": 1,
+   "description": "Why the graduate is not Award Eligible yet (dues, degree-awarding authority)."
   }
  ],
  "field_order": [
@@ -102,7 +116,9 @@
   "percentage",
   "classification",
   "variant",
-  "completion_term"
+  "completion_term",
+  "completion_check",
+  "award_hold"
  ],
  "istable": 1,
  "editable_grid": 1

@@ -1,0 +1,125 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Degree Awarding Authority",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "company",
+  "program",
+  "awarding_body",
+  "authority_name",
+  "column_break_1",
+  "document_type",
+  "document_authority"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "awarding_body",
+   "fieldtype": "Select",
+   "label": "Awarding Body",
+   "options": "Affiliating University\nInstitution",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Who awards the degree of this programme: the affiliating university or the (autonomous) institution itself."
+  },
+  {
+   "fieldname": "authority_name",
+   "fieldtype": "Data",
+   "label": "Authority Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Select",
+   "label": "Document Type",
+   "options": "Affiliation\nApproval\nRecognition\nAccreditation",
+   "reqd": 1,
+   "default": "Affiliation",
+   "description": "The Official Document that must be in force on the award date."
+  },
+  {
+   "fieldname": "document_authority",
+   "fieldtype": "Select",
+   "label": "Document Authority",
+   "options": "University\nUGC\nAICTE\nState Government\nNAAC\nNBA\nNIRF\nOther",
+   "reqd": 1,
+   "default": "University"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "module": "Examinations",
+ "autoname": "format:{company}-{program}",
+ "title_field": "program",
+ "description": "The degree-awarding authority of a programme of a college, validated against the Official Document register."
+}
