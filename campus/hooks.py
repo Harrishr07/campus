@@ -540,3 +540,12 @@ website_route_rules = [
 
 # Message Logs are an audit trail: they must not block deleting the documents they refer to.
 ignore_links_on_delete = ["Message Log"]
+
+# L-09 (M05-13): mentoring records are read per campus.student_services.mentoring_access and never shared
+_mentoring = "campus.student_services.mentoring_access"
+permission_query_conditions["Counselling Note"] = f"{_mentoring}.note_permission_query"
+has_permission["Counselling Note"] = f"{_mentoring}.note_has_permission"
+permission_query_conditions["Parent Interaction"] = f"{_mentoring}.interaction_permission_query"
+has_permission["Parent Interaction"] = f"{_mentoring}.interaction_has_permission"
+doc_events["DocShare"]["validate"].append(f"{_mentoring}.block_share")
+scheduler_events["daily"].append("campus.student_services.mentoring.send_follow_up_reminders")

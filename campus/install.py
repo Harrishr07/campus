@@ -27,6 +27,7 @@ from campus.iqac.setup import (
 	sync_data_points,
 )
 from campus.research.setup import setup_research
+from campus.student_services.mentoring import ensure_mentoring_roles, setup_mentoring
 from campus.student_services.setup import ensure_grievance_role, setup_student_services
 
 
@@ -37,12 +38,14 @@ def before_install():
 	ensure_coe_role()  # exam doctypes likewise
 	ensure_iqac_role()  # iqac doctypes likewise
 	ensure_grievance_role()  # student_grievance.json likewise
+	ensure_mentoring_roles()  # counselling_note.json and parent_interaction.json likewise
 
 
 def before_migrate():
 	ensure_coe_role()  # exam doctype permissions reference it during DocType sync
 	ensure_iqac_role()
 	ensure_grievance_role()
+	ensure_mentoring_roles()
 
 
 def after_install():
@@ -59,6 +62,7 @@ def after_install():
 	setup_messaging()
 	setup_finance()
 	setup_student_services()
+	setup_mentoring()
 	setup_faculty()
 	seed_course_allocation_policy()
 	seed_co_po_matrix_policy()
@@ -90,6 +94,7 @@ def after_migrate():
 	setup_messaging()
 	setup_finance()
 	setup_student_services()
+	setup_mentoring()
 	setup_faculty()
 	seed_course_allocation_policy()
 	seed_co_po_matrix_policy()

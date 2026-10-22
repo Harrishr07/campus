@@ -4,7 +4,73 @@
 {% if not mentees %}<p class="cp-empty">{{ _("No mentees are allocated to you.") }}</p>{% endif %}
 <ul class="cp-list">
 	{% for m in mentees %}
-	<li><strong>{{ m.student_name|e }}</strong> <small>{{ m.student|e }}</small>{% if m.program %}<br>{{ m.program|e }}{% endif %}</li>
+	<li><a href="/campus-portal/faculty/mentees?student={{ m.student|urlencode }}"><strong>{{ m.student_name|e }}</strong></a>
+		<small>{{ m.student|e }}</small>{% if m.program %}<br>{{ m.program|e }}{% endif %}</li>
 	{% endfor %}
 </ul>
+{% if refused %}<p class="cp-empty" role="alert">{{ _("This student is not your mentee.") }}</p>{% endif %}
+{% if record %}
+<h3>{{ record.student_name|e }} <small>{{ record.student|e }}</small></h3>
+
+<h4>{{ _("Counselling notes") }}</h4>
+<form class="cp-card cp-form" data-method="campus.faculty.portal_mentoring.add_note">
+	<input type="hidden" name="student" value="{{ record.student|e }}">
+	<label for="cp-category">{{ _("Category") }}</label>
+	<select id="cp-category" name="category" required>
+		{% for c in record.categories %}<option value="{{ c|e }}">{{ _(c)|e }}</option>{% endfor %}
+	</select>
+	<label for="cp-notes">{{ _("Notes") }}</label>
+	<textarea id="cp-notes" name="notes" rows="4" required></textarea>
+	<label for="cp-action">{{ _("Agreed action (yours)") }}</label>
+	<input id="cp-action" name="action" type="text">
+	<label for="cp-action-due">{{ _("Action due") }}</label>
+	<input id="cp-action-due" name="action_due" type="date">
+	<label for="cp-follow-up">{{ _("Follow-up date") }}</label>
+	<input id="cp-follow-up" name="follow_up_date" type="date">
+	<label class="cp-check"><input name="is_confidential" type="checkbox" value="1"> {{ _("Confidential (only you and a designated counsellor read it)") }}</label>
+	<button class="cp-btn" type="submit">{{ _("Add note") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% if not record.notes %}<p class="cp-empty">{{ _("No counselling notes you can read.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for n in record.notes %}
+	<li><strong>{{ _(n.category)|e }}</strong> {{ frappe.utils.formatdate(n.note_date) }}
+		{% if n.is_confidential %}<span class="cp-badge">{{ _("Confidential") }}</span>{% endif %}
+		<small>{{ n.author|e }}</small>
+		<p style="white-space: pre-wrap">{{ n.notes|e }}</p>
+		{% if n.follow_up_date %}<small>{{ _("Follow-up") }}: {{ frappe.utils.formatdate(n.follow_up_date) }}</small>{% endif %}</li>
+	{% endfor %}
+</ul>
+
+<h4>{{ _("Parent interactions") }}</h4>
+{% if not record.guardians %}<p class="cp-empty">{{ _("No guardian is linked to this student.") }}</p>{% else %}
+<form class="cp-card cp-form" data-method="campus.faculty.portal_mentoring.add_parent_interaction">
+	<input type="hidden" name="student" value="{{ record.student|e }}">
+	<label for="cp-guardian">{{ _("Guardian") }}</label>
+	<select id="cp-guardian" name="guardian" required>
+		{% for g in record.guardians %}<option value="{{ g.guardian|e }}">{{ g.guardian_name|e }}{% if g.relation %} ({{ _(g.relation)|e }}){% endif %}</option>{% endfor %}
+	</select>
+	<label for="cp-mode">{{ _("Mode") }}</label>
+	<select id="cp-mode" name="mode" required>
+		{% for m in record.modes %}<option value="{{ m|e }}">{{ _(m)|e }}</option>{% endfor %}
+	</select>
+	<label for="cp-date">{{ _("Date") }}</label>
+	<input id="cp-date" name="interaction_date" type="date">
+	<label for="cp-outcome">{{ _("Outcome") }}</label>
+	<textarea id="cp-outcome" name="outcome" rows="3" required></textarea>
+	<label for="cp-follow-up-due">{{ _("Follow-up due (yours)") }}</label>
+	<input id="cp-follow-up-due" name="follow_up_due" type="date">
+	<button class="cp-btn" type="submit">{{ _("Add interaction") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+{% endif %}
+{% if not record.interactions %}<p class="cp-empty">{{ _("No parent interactions recorded.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for i in record.interactions %}
+	<li><strong>{{ i.guardian_name|e }}</strong> <span class="cp-badge">{{ _(i.mode)|e }}</span> {{ frappe.utils.formatdate(i.interaction_date) }}
+		<p style="white-space: pre-wrap">{{ i.outcome|e }}</p>
+		{% if i.follow_up_due %}<small>{{ _("Follow-up") }}: {{ frappe.utils.formatdate(i.follow_up_due) }}{% if i.follow_up_done %} - {{ _("done") }}{% endif %}</small>{% endif %}</li>
+	{% endfor %}
+</ul>
+{% endif %}
 {% endblock %}
