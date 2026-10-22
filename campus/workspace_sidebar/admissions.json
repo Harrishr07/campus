@@ -206,6 +206,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Late Joining Request",
+   "link_to": "Late Joining Request",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "sheet",
@@ -234,6 +245,17 @@
    "keep_closed": 0,
    "label": "Programs without Seat Matrix",
    "link_to": "Programs without Seat Matrix",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Admission No-Shows",
+   "link_to": "Admission No-Shows",
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
@@ -360,7 +382,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 13:00:00.000000",
+ "modified": "2026-10-22 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",

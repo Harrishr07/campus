@@ -2,7 +2,7 @@
 
 - The joining fields exist (patches run before after_migrate creates custom fields).
 - Every enrollment without an attendance start date starts on its enrollment date.
-- The first enrollment of a student made from an applicant becomes that applicant's joining enrollment
+- The first submitted enrollment of a student made from an applicant becomes that applicant's joining enrollment
   (oc_joining_key), so a joining confirmation of the applicant returns it instead of enrolling them again.
 - A student still Admitted who has a submitted enrollment moves to Joined, then Active, from its enrollment date
   (never before their last lifecycle change). Admitted students without one join through the joining confirmation.
@@ -37,7 +37,7 @@ def key_joining_enrollments():
 		if student.student_applicant in keyed:
 			continue
 		first = frappe.db.get_value(
-			ENROLLMENT, {"student": student.name, "docstatus": ("in", [1, 2])}, ["name", "oc_joining_key"], as_dict=True,
+			ENROLLMENT, {"student": student.name, "docstatus": 1}, ["name", "oc_joining_key"], as_dict=True,
 			order_by="enrollment_date asc, creation asc",
 		)  # fmt: skip
 		if first and not first.oc_joining_key:

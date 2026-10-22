@@ -13,6 +13,7 @@ CANDIDATE_INDEX = "oc_candidate_index"
 APPLICANT_INDEX = "oc_student_applicant_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
 OFFICER_ROLE = "Admission Officer"  # may admit approved applicants, confirm their joining and cancel admissions
+LATE_REQUEST = "Late Joining Request"  # M04-10
 
 
 def setup_admissions():
@@ -20,6 +21,7 @@ def setup_admissions():
 	ensure_admission_roles()
 	setup_admission_fields()
 	seed_strict_seat_matrix()
+	seed_late_joining_policy()
 	from campus.admissions.enquiry_setup import setup_enquiry
 
 	setup_enquiry()
@@ -38,6 +40,20 @@ def seed_strict_seat_matrix():
 	)
 	if not stored:
 		frappe.db.set_single_value("Admission Settings", "strict_seat_matrix", 1)
+
+
+def seed_late_joining_policy():
+	"""M04-10: a late joining is approved by the Principal, unless the college has its own policy."""
+	if not frappe.db.exists("Position", "PRINCIPAL") or frappe.db.exists("Approval Policy", {"document_type": LATE_REQUEST}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": LATE_REQUEST, "document_type": LATE_REQUEST,
+			"levels": [
+				{"title": "Principal approval", "approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "sla_hours": 48}
+			],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
 
 
 def ensure_aadhaar_role():
@@ -144,6 +160,8 @@ def setup_admission_fields():
 		field("oc_register_no", "Data", "Register No", "student_applicant", unique=1, read_only=1, no_copy=1,
 			in_standard_filter=1, description="Assigned at the joining confirmation from the Admission Settings pattern."),
 		field("oc_roll_no", "Data", "Roll No", "oc_register_no", read_only=1, no_copy=1),
+		field("oc_reporting_deadline", "Date", "Reporting Deadline", "oc_roll_no", read_only=1, no_copy=1,
+			description="Last day to join, stamped at admission from Admission Settings (M04-10)."),
 	]  # fmt: skip
 	category = [
 		field("oc_is_reserved", "Check", "Reserved Category", "category", in_list_view=1,

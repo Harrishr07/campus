@@ -197,7 +197,10 @@ doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
 	"campus.faculty.session_states.validate_session",
 ]
 doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
-doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
+doc_events["Program Enrollment"]["on_submit"] = [
+	"campus.admissions.seat_matrix.refresh_cache_of",
+	"campus.admissions.joining.carry_joining_key",  # L-03: an amended joining enrollment keeps the joining
+]
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
 doc_events["Lead"] = {
@@ -431,6 +434,7 @@ scheduler_events = {
 		"campus.iqac.official_documents.send_expiry_alerts",
 		"campus.examinations.completion.move_graduates_to_alumni",  # M05-15
 		"campus.labs.calibration.send_calibration_notices",  # M12-05
+		"campus.admissions.reporting.refer_no_shows",  # M04-10
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",

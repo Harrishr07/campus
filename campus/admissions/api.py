@@ -4,6 +4,7 @@ import frappe
 
 from campus.admissions import admit as admission, documents, eligibility, joining
 from campus.admissions import enquiry, seat_matrix as seats
+from campus.admissions.documents import grant_temporary_clearance as grant_clearance
 from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
 
@@ -42,6 +43,14 @@ def pending_documents(applicant):
 def set_document_status(applicant: str, document_type: str, status: str, remarks: str | None = None, original_retained: int | None = None):
 	"""Verifier action on one checklist item; Verified/Rejected need the Admission Verifier role."""
 	return documents.set_document_status(applicant, document_type, status, remarks, original_retained)
+
+
+@frappe.whitelist(methods=["POST"])
+def grant_temporary_clearance(applicant: str, documents: list | str, due_date: str, reason: str):
+	"""Temporary clearance (role Admission Officer, M04-10): the applicant may be admitted and join while the listed
+	pending mandatory documents are outstanding, until `due_date`; they are reminded daily. Returns {cleared_until,
+	documents}."""
+	return grant_clearance(applicant, documents, due_date, reason)
 
 
 @frappe.whitelist(methods=["POST"])

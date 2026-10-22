@@ -184,6 +184,17 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Late Joining Request",
+   "link_count": 0,
+   "link_to": "Late Joining Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
@@ -209,6 +220,17 @@
    "label": "Programs without Seat Matrix",
    "link_count": 0,
    "link_to": "Programs without Seat Matrix",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Student",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Admission No-Shows",
+   "link_count": 0,
+   "link_to": "Admission No-Shows",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -332,7 +354,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 13:00:00.000000",
+ "modified": "2026-10-22 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",

@@ -9,6 +9,13 @@ A cancellation is final: cancel the Credit Note and Payment Entry in Accounts if
 While a scholarship disbursement settles the invoice the cancellation is refused: the credit note would turn the
 scholarship into the student's credit, so Accounts cancels the disbursement voucher first. Submit takes the invoice's
 row lock and reads what was paid with locking reads.
+
+M04-10 Before joining: an Admitted student who never joined (a no-show) has no Program Enrollment, invoice or seat.
+Their cancellation names no enrollment: on submit the advance they paid (unallocated Payment Entries against their
+customer, less refunds already paid) gets a draft refund Payment Entry in full (no fee was charged, so no slab
+deduction applies), and the student moves Admitted -> Cancelled. Nothing else is released: nothing was held. Submit
+takes the applicant's and the Student's row locks (the joining's lock order), re-reads the status under them and
+reads the advance with locking reads; one cancellation per student.
 """
 
 import frappe
@@ -19,28 +26,70 @@ from frappe.utils import getdate, today
 from campus.admissions import refund
 from campus.admissions.admit import check_company_access
 from campus.campus_finance import api as finance
-from campus.student_services.api import CANCELLED, transition
+from campus.student_services.api import ADMITTED, CANCELLED, last_change_date, transition
 
 
 class AdmissionCancellation(Document):
 	def validate(self):
 		self.check_company()
-		self.validate_enrollment()
+		if self.program_enrollment:
+			self.validate_enrollment()
+		else:
+			self.validate_not_joined()
 		self.validate_date()
-		self.compute_refund()
+		if self.program_enrollment:
+			self.compute_refund()
+		else:
+			self.compute_advance_refund()
 
 	def check_company(self):
 		"""Before anything is read back to the user: an officer limited to another company gets no figures."""
-		company = frappe.db.get_value("Program Enrollment", self.program_enrollment, "oc_company")
+		if self.program_enrollment:
+			company = frappe.db.get_value("Program Enrollment", self.program_enrollment, "oc_company")
+		else:
+			company = frappe.db.get_value("Student", self.student, "oc_company")
 		check_company_access(company)
+		self.company = company
 
 	def validate_date(self):
 		"""Cancelled on or after the admission, not in the future (the refund slab counts from this date)."""
-		admitted = frappe.db.get_value("Program Enrollment", self.program_enrollment, "enrollment_date")
+		if self.program_enrollment:
+			admitted = frappe.db.get_value("Program Enrollment", self.program_enrollment, "enrollment_date")
+		else:
+			admitted = last_change_date(self.student)
 		if getdate(self.cancellation_date) > getdate(today()):
 			frappe.throw(_("The cancellation date cannot be in the future."))
 		if admitted and getdate(self.cancellation_date) < getdate(admitted):
 			frappe.throw(_("The cancellation date cannot be before the admission date {0}.").format(admitted))
+
+	def validate_not_joined(self):
+		"""Without an enrollment only a student still Admitted (not joined) is cancelled; on submit the status is read
+		under the applicant's and the Student's row locks, so a joining cannot pass in between."""
+		locking = self.docstatus == 1
+		applicant = frappe.db.get_value("Student", self.student, "student_applicant")
+		if locking and applicant:
+			frappe.db.get_value("Student Applicant", applicant, "name", for_update=True)
+		status = frappe.db.get_value("Student", self.student, "oc_academic_status", for_update=locking)
+		if status != ADMITTED:
+			frappe.throw(
+				_("{0} is {1}: name the Program Enrollment to cancel an admission after joining.").format(
+					frappe.bold(self.student), _(status or "")
+				)
+			)
+		clash = frappe.db.exists("Admission Cancellation", {"student": self.student, "docstatus": 1, "name": ("!=", self.name)})
+		if clash:
+			frappe.throw(_("{0} already cancels this admission.").format(clash))
+
+	def compute_advance_refund(self):
+		"""No invoice and no fee: the whole advance is refunded (read with locking reads on submit)."""
+		customer = frappe.db.get_value("Student", self.student, "customer")
+		advance = finance.unallocated_advance(customer, self.company, locking=self.docstatus == 1) if customer else 0
+		self.update(
+			{
+				"fee_invoice": None, "refund_rule": None, "admission_start": None, "days_since_start": 0, "invoice_total": 0,
+				"amount_paid": advance, "deduction": 0, "refundable_amount": 0, "cash_refund": advance,
+			}
+		)  # fmt: skip
 
 	def validate_enrollment(self):
 		enrollment = frappe.db.get_value(
@@ -79,9 +128,12 @@ class AdmissionCancellation(Document):
 		)  # fmt: skip
 
 	def on_submit(self):
-		credit_note = make_credit_note(self) if self.refundable_amount else None
-		payment = make_refund_payment(self, credit_note) if credit_note and self.cash_refund else None
-		cancel_enrollment(self.program_enrollment)
+		if self.program_enrollment:
+			credit_note = make_credit_note(self) if self.refundable_amount else None
+			payment = make_refund_payment(self, credit_note) if credit_note and self.cash_refund else None
+			cancel_enrollment(self.program_enrollment)
+		else:  # not joined: no invoice, enrollment or seat to release
+			credit_note, payment = None, make_advance_refund(self) if self.cash_refund else None
 		close_records(self)
 		self.db_set({"credit_note": credit_note and credit_note.name, "payment_entry": payment and payment.name})
 
@@ -120,6 +172,15 @@ def make_refund_payment(cancellation, credit_note):
 		cancellation.name, cancellation.cancellation_date, cancellation.reason
 	)
 	return finance.make_refund_payment(credit_note, cancellation.cash_refund, cancellation.name, remarks)
+
+
+def make_advance_refund(cancellation):
+	"""Draft Payment Entry (Pay) refunding the advance of a student cancelled before joining, for accounts to submit."""
+	remarks = _("Refund of the advance on cancellation of admission {0} dated {1}: {2}").format(
+		cancellation.name, cancellation.cancellation_date, cancellation.reason
+	)
+	customer = frappe.db.get_value("Student", cancellation.student, "customer")
+	return finance.make_advance_refund(customer, cancellation.company, cancellation.cash_refund, cancellation.name, remarks)
 
 
 def cancel_enrollment(program_enrollment):

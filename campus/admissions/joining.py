@@ -8,7 +8,9 @@ behind a savepoint, after a locking read of the applicant and of its Student:
   (unique: one joining enrollment per applicant). An override needs the officer's typed justification, stored on
   the Seat Override Log;
 - register and roll numbers from the Admission Settings patterns (the ID card can be issued from now on);
-- lifecycle Joined from the joining date (M05-09); the fee Sales Invoice from the quota/category Fee Structure,
+- lifecycle Joined from the joining date (M05-09), never before the last lifecycle change; a joining dated after the
+  student's reporting deadline needs an approved Late Joining Request for that date (M04-10,
+  campus.admissions.reporting); the fee Sales Invoice from the quota/category Fee Structure,
   with the advances paid before joining (unallocated Payment Entries against the student's customer) allocated to
   it; the onboarding checklist; lifecycle Active, which marks the joining complete.
 
@@ -28,9 +30,10 @@ from frappe.utils import add_days, getdate, today
 from campus.admissions import numbers
 from campus.admissions import seat_matrix as seats
 from campus.admissions.admit import admission_year, check_cleared, check_company_access, lock_applicant, retry_on_deadlock
+from campus.admissions.reporting import check_late_joining, student_deadline
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
-from campus.student_services.api import ACTIVE, ADMITTED, JOINED, create_onboarding, transition
+from campus.student_services.api import ACTIVE, ADMITTED, CANCELLED, JOINED, create_onboarding, last_change_date, transition
 
 SAVEPOINT = "campus_joining"
 JOINING = (ADMITTED, JOINED)  # statuses a joining starts from (Joined: resuming one that stopped part-way)
@@ -39,7 +42,8 @@ JOINING = (ADMITTED, JOINED)  # statuses a joining starts from (Joined: resuming
 def confirm_joining(applicant, joining_date=None, override_justification=None):
 	"""See `campus.admissions.api.confirm_joining`."""
 	frappe.only_for(OFFICER_ROLE)
-	return retry_on_deadlock(join_once, applicant, joining_date, override_justification)
+	action = _("confirming the joining of {0}").format(applicant)
+	return retry_on_deadlock(join_once, applicant, joining_date, override_justification, action=action)
 
 
 def join_once(applicant, joining_date, justification):
@@ -48,10 +52,9 @@ def join_once(applicant, joining_date, justification):
 	student = lock_student(applicant)
 	if student.oc_academic_status not in JOINING:
 		return earlier_result(applicant, student)
+	date = check_joining_date(student.name, joining_date)
 	check_joinable(applicant, state, student)
-	date = getdate(joining_date or today())
-	if date > getdate(today()):
-		frappe.throw(_("The joining date cannot be in the future."))
+	check_late_joining(applicant, student_deadline(student.oc_reporting_deadline, state.program), date)
 	frappe.db.savepoint(SAVEPOINT)
 	try:
 		return join(applicant, state, student, date, justification)
@@ -66,7 +69,8 @@ def lock_student(applicant):
 	"""The applicant's Student (Education allows one), read with a locking read: its lifecycle status says whether
 	the joining is still to do."""
 	student = frappe.db.get_value(
-		"Student", {"student_applicant": applicant}, ["name", "oc_academic_status", "enabled", "oc_register_no", "oc_roll_no"],
+		"Student", {"student_applicant": applicant},
+		["name", "oc_academic_status", "enabled", "oc_register_no", "oc_roll_no", "oc_reporting_deadline"],
 		as_dict=True, for_update=True,
 	)  # fmt: skip
 	if not student:
@@ -82,6 +86,22 @@ def earlier_result(applicant, student):
 			_("{0} cannot join: their lifecycle status is {1}.").format(frappe.bold(student.name), _(student.oc_academic_status))
 		)
 	return result(student.name, enrollment)
+
+
+def check_joining_date(student, joining_date):
+	"""The joining date (default today): not in the future, not before the last lifecycle change. Checked before any
+	write (transition() checks the floor again under the Student lock)."""
+	date = getdate(joining_date or today())
+	if date > getdate(today()):
+		frappe.throw(_("The joining date cannot be in the future."))
+	last = last_change_date(student)
+	if last and date < getdate(last):
+		frappe.throw(
+			_("The joining date {0} is before the last status change of {1} ({2}).").format(
+				frappe.format(date, "Date"), frappe.bold(student), frappe.format(last, "Date")
+			)
+		)
+	return date
 
 
 def check_joinable(applicant, state, student):
@@ -133,6 +153,7 @@ def joining_enrollment(applicant):
 def create_enrollment(applicant, student, state, year, date, justification):
 	"""The seat check under the matrix lock (taken before any enrollment row lock), then the submitted enrollment."""
 	seats.check_seat_available(state.program, year, state.oc_admission_quota, state.student_category, applicant, justification)
+	release_cancelled_key(applicant)
 	enrollment = frappe.get_doc(
 		{
 			"doctype": "Program Enrollment", "student": student.name, "program": state.program, "academic_year": year,
@@ -144,6 +165,23 @@ def create_enrollment(applicant, student, state, year, date, justification):
 	enrollment.flags.campus_joining = True
 	enrollment.insert(ignore_permissions=True)
 	return enrollment.submit().name
+
+
+def release_cancelled_key(applicant):
+	"""A cancelled enrollment holds no joining: the applicant's key (unique) moves to the new joining enrollment.
+	Run after the seat check, so the key's index lock is taken under the matrix lock, as the insert's is."""
+	cancelled = {"oc_joining_key": applicant, "docstatus": 2}
+	if frappe.db.exists("Program Enrollment", cancelled):
+		frappe.db.set_value("Program Enrollment", cancelled, "oc_joining_key", None, update_modified=False)
+
+
+def carry_joining_key(doc, method=None):
+	"""Program Enrollment on_submit: the amendment of a joining enrollment becomes the joining enrollment, so a retried
+	joining returns it. The key moves from the cancelled original (cleared there first: the key is unique)."""
+	key = doc.amended_from and frappe.db.get_value("Program Enrollment", doc.amended_from, "oc_joining_key")
+	if key:
+		frappe.db.set_value("Program Enrollment", doc.amended_from, "oc_joining_key", None, update_modified=False)
+		doc.db_set("oc_joining_key", key, update_modified=False)
 
 
 def admission_invoice(enrollment):
@@ -191,7 +229,8 @@ def validate_enrollment(doc, method=None):
 
 	That is the first enrollment of an admitted student (lifecycle Admitted, or made from a Student Applicant with no
 	submitted enrollment yet) into a program of a college. A legacy import (Data Import, or `flags.legacy_import`)
-	may load enrollments directly; later enrollments of a joined student (promotion) are not affected."""
+	may load enrollments directly; later enrollments of a joined student (promotion) and the amendment of a joining
+	enrollment are not affected."""
 	if not doc.get("oc_attendance_start_date"):
 		doc.oc_attendance_start_date = doc.enrollment_date
 	if doc.is_new() and needs_joining(doc):
@@ -213,4 +252,6 @@ def needs_joining(doc):
 		return False
 	if student.oc_academic_status == ADMITTED:
 		return True
+	if student.oc_academic_status != CANCELLED and doc.amended_from and frappe.db.get_value("Program Enrollment", doc.amended_from, "oc_joining_key"):
+		return False  # a joined student's corrected joining enrollment (carry_joining_key moves the key to it)
 	return bool(student.student_applicant) and not frappe.db.exists("Program Enrollment", {"student": doc.student, "docstatus": 1})

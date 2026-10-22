@@ -264,7 +264,7 @@ class TestAdmit(AdmitTestCase):
 
 	def test_incomplete_documents_block_admission(self):
 		applicant = self.applicant()
-		with patch.object(admit_module.documents, "documents_complete", return_value=False):
+		with patch.object(admit_module.documents, "uncleared_mandatory", return_value=["Transfer Certificate"]):
 			with self.assertRaises(frappe.ValidationError):
 				self.admit_as_officer(applicant)
 
@@ -437,7 +437,7 @@ class TestJoining(AdmitTestCase):
 
 	def test_clearances_are_checked_again_at_joining(self):
 		applicant, student = self.admitted()
-		with patch.object(admit_module.documents, "documents_complete", return_value=False):
+		with patch.object(admit_module.documents, "uncleared_mandatory", return_value=["Transfer Certificate"]):
 			with self.assertRaisesRegex(frappe.ValidationError, "incomplete mandatory documents"):
 				self.join_as_officer(applicant)
 		self.assertFalse(frappe.db.exists("Program Enrollment", {"student": student}))

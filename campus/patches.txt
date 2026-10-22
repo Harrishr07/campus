@@ -38,3 +38,4 @@ campus.patches.require_consultancy_share_approval
 campus.patches.require_credit_recognition_approval
 campus.patches.joining_gate
 campus.patches.coe_pack_for_affiliated
+campus.patches.repair_joining_keys

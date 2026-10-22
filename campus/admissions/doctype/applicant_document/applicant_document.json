@@ -13,7 +13,8 @@
   "original_required",
   "from_rule",
   "verified_by",
-  "verified_on"
+  "verified_on",
+  "cleared_until"
  ],
  "fields": [
   {
@@ -80,11 +81,20 @@
    "fieldtype": "Datetime",
    "label": "Verified On",
    "read_only": 1
+  },
+  {
+   "fieldname": "cleared_until",
+   "fieldtype": "Date",
+   "label": "Temporarily Cleared Until",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "description": "Set by a temporary clearance: the student may be admitted and join while this document is pending, until this date."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 12:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Applicant Document",
