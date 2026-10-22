@@ -359,8 +359,9 @@ class TestSeatOverride(SeatTestCase):
 		frappe.set_user(PLAIN)
 		self.assertIs(check_seat_available(PROGRAM, year(), GOVT, OC), True)
 
-	def test_supernumerary_quota_and_unconfigured_rows_are_not_enforced(self):
+	def test_supernumerary_quota_and_unconfigured_rows_are_not_enforced_outside_strict_mode(self):
 		self.full_matrix()
+		strict(False)
 		frappe.set_user(PLAIN)
 		self.assertIs(check_seat_available(PROGRAM, year(), SUPER, OC), True)  # supernumerary
 		self.assertIs(check_seat_available(PROGRAM, year(), GOVT, MBC), True)  # no row for the category
@@ -378,6 +379,105 @@ class TestSeatOverride(SeatTestCase):
 		with patch.object(frappe.db, "get_value", side_effect=spy), self.assertRaises(frappe.ValidationError):
 			frappe.set_user(PLAIN)
 			check_seat_available(PROGRAM, year(), GOVT, OC)
+		self.assertIn(("Seat Matrix", True), calls)
+		self.assertIn(("Seat Matrix Row", True), calls)
+		self.assertNotIn(("Seat Matrix Row", False), calls)
+
+
+def strict(on):
+	frappe.db.set_single_value("Admission Settings", "strict_seat_matrix", int(on))
+
+
+class TestStrictSeatMatrix(SeatTestCase):
+	"""M04-08: in strict mode a missing matrix or row refuses admission unless an override is logged."""
+
+	def setUp(self):
+		super().setUp()
+		strict(True)
+
+	def refused(self, program, quota, category, message):
+		frappe.set_user(PLAIN)
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			check_seat_available(program, year(), quota, category)
+		frappe.set_user("Administrator")
+		self.assertIn(message, str(ctx.exception))
+
+	def overridden(self, program, quota, category):
+		applicant = make_applicant()
+		frappe.set_user(OVERRIDER)
+		self.assertEqual(check_seat_available(program, year(), quota, category, applicant.name), "override")
+		frappe.set_user("Administrator")
+		return applicant.name
+
+	def logs(self):
+		return frappe.get_all("Seat Override Log", fields=["program", "quota", "category", "applicant", "user", "reason", "sanctioned"])
+
+	def test_missing_row_is_refused_and_nothing_is_logged(self):
+		self.matrix([(GOVT, OC, 5)])
+		self.refused(PROGRAM, GOVT, MBC, "no row")
+		self.assertEqual(frappe.db.count("Seat Override Log"), 0)
+
+	def test_missing_matrix_is_refused(self):
+		self.refused(OTHER_PROGRAM, GOVT, OC, "No Seat Matrix")
+
+	def test_override_of_a_missing_row_admits_logs_the_reason_and_keeps_the_intake(self):
+		matrix = self.matrix([(GOVT, OC, 5)])
+		applicant = self.overridden(PROGRAM, GOVT, MBC)
+		log = self.logs()
+		self.assertEqual(len(log), 1)
+		self.assertEqual(
+			(log[0].program, log[0].quota, log[0].category, log[0].applicant, log[0].user, log[0].reason, log[0].sanctioned),
+			(PROGRAM, GOVT, MBC, applicant, OVERRIDER, "No Seat Matrix Row", 0),
+		)
+		rows = frappe.get_all("Seat Matrix Row", {"parent": matrix.name}, ["quota", "category", "sanctioned"])
+		self.assertEqual([(r.quota, r.category, r.sanctioned) for r in rows], [(GOVT, OC, 5)])  # no row added, intake unchanged
+
+	def test_override_of_a_missing_matrix_logs_and_creates_no_matrix(self):
+		self.overridden(OTHER_PROGRAM, GOVT, OC)
+		self.assertEqual([r.reason for r in self.logs()], ["No Seat Matrix"])
+		self.assertEqual(frappe.db.count("Seat Matrix"), 0)
+
+	def test_a_full_row_override_is_logged_as_row_full_and_keeps_the_sanctioned_seats(self):
+		matrix = self.matrix([(GOVT, OC, 1)])
+		self.enrollment(GOVT, OC)
+		self.overridden(PROGRAM, GOVT, OC)
+		self.assertEqual([(r.reason, r.sanctioned) for r in self.logs()], [("Row Full", 1)])
+		self.assertEqual(self.row(matrix, GOVT, OC).sanctioned, 1)
+
+	def test_supernumerary_quota_is_still_not_enforced(self):
+		frappe.set_user(PLAIN)
+		self.assertIs(check_seat_available(OTHER_PROGRAM, year(), SUPER, OC), True)
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.count("Seat Override Log"), 0)
+
+	def test_a_configured_row_with_a_free_seat_is_allowed(self):
+		self.matrix([(GOVT, OC, 2)])
+		frappe.set_user(PLAIN)
+		self.assertIs(check_seat_available(PROGRAM, year(), GOVT, OC), True)
+
+	def test_strict_mode_is_seeded_on_once_and_a_stored_choice_is_kept(self):
+		from campus.admissions.setup import seed_strict_seat_matrix
+
+		frappe.db.delete("Singles", {"doctype": "Admission Settings", "field": "strict_seat_matrix"})
+		seed_strict_seat_matrix()
+		self.assertEqual(frappe.db.get_single_value("Admission Settings", "strict_seat_matrix", cache=False), 1)
+		strict(False)
+		seed_strict_seat_matrix()
+		self.assertEqual(frappe.db.get_single_value("Admission Settings", "strict_seat_matrix", cache=False), 0)
+
+	def test_a_missing_row_is_checked_under_the_matrix_lock(self):
+		self.matrix([(GOVT, OC, 1)])
+		real = frappe.db.get_value
+		calls = []
+
+		def spy(doctype, *args, **kwargs):
+			calls.append((doctype, bool(kwargs.get("for_update"))))
+			return real(doctype, *args, **kwargs)
+
+		frappe.set_user(PLAIN)
+		with patch.object(frappe.db, "get_value", side_effect=spy), self.assertRaises(frappe.ValidationError):
+			check_seat_available(PROGRAM, year(), GOVT, MBC)
+		frappe.set_user("Administrator")
 		self.assertIn(("Seat Matrix", True), calls)
 		self.assertIn(("Seat Matrix Row", True), calls)
 		self.assertNotIn(("Seat Matrix Row", False), calls)

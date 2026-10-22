@@ -2,6 +2,12 @@
 
 One Seat Matrix per (company, program, academic year). Its rows are (quota, category) pairs.
 
+M04-08 strict mode (Admission Settings `strict_seat_matrix`, on for new installs): a program and year without a
+matrix, or a counted quota and category without a row, is refused unless the user holds "Admission Override";
+the override is then logged (Seat Override Log, reason No Seat Matrix / No Seat Matrix Row). With strict mode
+off such admissions pass unchecked, as before. A full row is refused or logged (reason Row Full) in both modes.
+No override ever adds a row or changes sanctioned seats. Supernumerary and not-counted quotas are never checked.
+
 - `filled` is the number of SUBMITTED Program Enrollments of the program and year with that quota
   (`oc_admission_quota`) and student category. Enforcement always uses the LIVE locked count of the
   enrollments (`live_counts`), never the stored `filled`, which is only a display cache refreshed from the
@@ -40,9 +46,12 @@ committed rows locked by others, which undercounts and oversells.
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import cint, now_datetime
 
 from campus.admissions.setup import OVERRIDE_ROLE
+
+# Seat Override Log reasons
+ROW_FULL, NO_MATRIX, NO_ROW = "Row Full", "No Seat Matrix", "No Seat Matrix Row"
 
 
 def matrix_key(company, program, academic_year):
@@ -243,26 +252,50 @@ def check_seat_available(program, academic_year, quota, category, applicant=None
 	matrix = find_matrix(company, program, academic_year, for_update=True)
 	row = matrix and locked_row(matrix, quota, category)  # sanctioned, re-read under the lock
 	if not row:
-		return True
+		return check_unconfigured(company, program, academic_year, quota, category, applicant, matrix)
 	live = live_counts(company, program, academic_year).get((quota, category), 0)  # the truth: never the cached filled
 	if vacancy(row, live) > 0:
 		return True
-	if OVERRIDE_ROLE not in frappe.get_roles():
-		frappe.throw(
-			_("No seat is vacant for {0} / {1} in {2} ({3}); sanctioned {4}, filled {5}.").format(
-				quota, category, program, academic_year, row.sanctioned, live
-			),
-			title=_("Seat Matrix Full"),
-		)
-	log_override(company, program, academic_year, quota, category, applicant, row, live)
+	require_override(
+		_("No seat is vacant for {0} / {1} in {2} ({3}); sanctioned {4}, filled {5}.").format(
+			quota, category, program, academic_year, row.sanctioned, live
+		),
+		_("Seat Matrix Full"),
+	)
+	log_override(company, program, academic_year, quota, category, applicant, ROW_FULL, row.sanctioned, live)
 	return "override"
 
 
-def log_override(company, program, academic_year, quota, category, applicant, row, live):
+def check_unconfigured(company, program, academic_year, quota, category, applicant, matrix):
+	"""M04-08: no matrix or no row is allowed outside strict mode; in strict mode only by a logged override."""
+	if not strict_mode():
+		return True
+	if matrix:
+		reason = NO_ROW
+		message = _("The Seat Matrix of {0} ({1}) has no row for {2} / {3}.").format(program, academic_year, quota, category)
+	else:
+		reason = NO_MATRIX
+		message = _("No Seat Matrix is set up for {0} ({1}).").format(program, academic_year)
+	require_override(message, _("Seat Matrix Not Configured"))
+	log_override(company, program, academic_year, quota, category, applicant, reason, 0, 0)
+	return "override"
+
+
+def strict_mode():
+	return bool(cint(frappe.db.get_single_value("Admission Settings", "strict_seat_matrix")))
+
+
+def require_override(message, title):
+	if OVERRIDE_ROLE not in frappe.get_roles():
+		frappe.throw(message, title=title)
+
+
+def log_override(company, program, academic_year, quota, category, applicant, reason, sanctioned, filled):
+	"""Record the override. It never changes the matrix: the approved intake stays as sanctioned."""
 	frappe.get_doc(
 		{
 			"doctype": "Seat Override Log", "company": company, "program": program, "academic_year": academic_year,
 			"quota": quota, "category": category, "applicant": applicant, "user": frappe.session.user,
-			"overridden_on": now_datetime(), "sanctioned": row.sanctioned, "filled": live,
+			"overridden_on": now_datetime(), "reason": reason, "sanctioned": sanctioned, "filled": filled,
 		}
 	).insert(ignore_permissions=True)  # fmt: skip

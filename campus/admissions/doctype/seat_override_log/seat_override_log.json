@@ -13,6 +13,7 @@
   "column_break",
   "user",
   "overridden_on",
+  "reason",
   "sanctioned",
   "filled"
  ],
@@ -83,6 +84,14 @@
    "reqd": 1
   },
   {
+   "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Reason",
+   "options": "Row Full\nNo Seat Matrix\nNo Seat Matrix Row",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
    "fieldname": "sanctioned",
    "fieldtype": "Int",
    "label": "Sanctioned"
@@ -95,7 +104,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Seat Override Log",

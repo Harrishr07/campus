@@ -28,3 +28,4 @@ campus.patches.backfill_metric_values
 campus.patches.backfill_metric_values_v2
 campus.patches.fill_revaluation_rules
 campus.patches.bind_course_registrations_to_enrollment
+campus.patches.enable_strict_seat_matrix

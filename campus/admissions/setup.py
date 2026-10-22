@@ -7,7 +7,7 @@ from campus.admissions.aadhaar import VIEWER_ROLE
 
 MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
-OVERRIDE_ROLE = "Admission Override"  # may admit into a full quota/category row (logged)
+OVERRIDE_ROLE = "Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
 SEAT_COUNT_INDEX = "oc_seat_count_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
 OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
@@ -17,6 +17,7 @@ def setup_admissions():
 	ensure_aadhaar_role()
 	ensure_admission_roles()
 	setup_admission_fields()
+	seed_strict_seat_matrix()
 	from campus.admissions.enquiry_setup import setup_enquiry
 
 	setup_enquiry()
@@ -26,6 +27,15 @@ def ensure_admission_roles():
 	for role in (OVERRIDE_ROLE, VERIFIER_ROLE, OFFICER_ROLE):
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+
+
+def seed_strict_seat_matrix():
+	"""M04-08: strict seat matrix is on for a new install. A value already stored (on or off) is never changed."""
+	stored = frappe.db.sql(
+		"select 1 from `tabSingles` where doctype = 'Admission Settings' and field = 'strict_seat_matrix'"
+	)
+	if not stored:
+		frappe.db.set_single_value("Admission Settings", "strict_seat_matrix", 1)
 
 
 def ensure_aadhaar_role():

@@ -4,7 +4,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "owner": "Administrator",
@@ -18,6 +18,7 @@
   "active_admission_year",
   "register_no_pattern",
   "roll_no_pattern",
+  "strict_seat_matrix",
   "enquiry_section",
   "enquiry_ack_dedupe_hours",
   "enquiry_ack_hourly_cap"
@@ -43,6 +44,13 @@
    "fieldtype": "Data",
    "label": "Roll No Pattern (optional)",
    "description": "Same placeholders as the register number; use a different prefix so the counters are separate."
+  },
+  {
+   "fieldname": "strict_seat_matrix",
+   "fieldtype": "Check",
+   "label": "Strict Seat Matrix",
+   "default": "1",
+   "description": "When on, a program and year without a Seat Matrix, or a quota and category without a row in it, cannot be admitted into unless the user holds Admission Override (the override is logged). Supernumerary quotas and quotas not counted in the matrix are never checked."
   },
   {
    "fieldname": "enquiry_section",

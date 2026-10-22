@@ -1,4 +1,4 @@
-"""M04-01 Admission Settings: active admission year and the register / roll number patterns."""
+"""M04-01 Admission Settings: active admission year, the register / roll number patterns and M04-08 strict seat matrix."""
 
 from frappe.model.document import Document
 

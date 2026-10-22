@@ -18,10 +18,11 @@ def check_seat_available(program, academic_year, quota, category, applicant=None
 	"""Block admission into a full quota/category row unless the user holds "Admission Override" (then log it).
 
 	Call it in the same transaction that creates and submits the Program Enrollment: it locks the Seat Matrix
-	row until commit, so two admissions into the last seat cannot both pass. Allowed without a check when the
-	program and year have no Seat Matrix, the matrix has no row for the quota and category, or the quota is
-	supernumerary / not counted in the matrix. Returns True when a seat is free, "override" when a full row was
-	admitted by an override holder.
+	row until commit, so two admissions into the last seat cannot both pass. Supernumerary / not-counted quotas
+	are allowed without a check. When the program and year have no Seat Matrix, or the matrix has no row for the
+	quota and category: in strict mode (M04-08, Admission Settings `strict_seat_matrix`) the same override rule
+	applies; otherwise it is allowed without a check. Returns True when a seat is free (or no check applies),
+	"override" when an override holder was let through (logged with its reason; the matrix is never changed).
 	"""
 	return seats.check_seat_available(program, academic_year, quota, category, applicant)
 

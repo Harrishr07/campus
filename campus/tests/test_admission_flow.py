@@ -24,6 +24,7 @@ QUOTA, FREE_QUOTA = "AFGQ", "AFMQ"
 OC, BC = "AF OC", "AF BC"
 OFFICER, PLAIN = "admit-officer@example.com", "admit-plain@example.com"
 OTHER_COLLEGE, OTHER_OFFICER = "Admit Flow Other College", "admit-other@example.com"
+OVERRIDE_OFFICER = "admit-override@example.com"
 TUITION_FEE, EXAM_FEE, BC_TUITION = 50000, 2000, 30000
 SERIAL = [0]
 
@@ -95,7 +96,9 @@ class AdmitTestCase(CampusTestCase):
 		make_user(OFFICER, [COLLEGE])
 		make_user(PLAIN, [COLLEGE])
 		make_user(OTHER_OFFICER, [OTHER_COLLEGE])
+		make_user(OVERRIDE_OFFICER, [COLLEGE])
 		frappe.get_doc("User", OFFICER).add_roles("Admission Officer")
+		frappe.get_doc("User", OVERRIDE_OFFICER).add_roles("Admission Officer", "Admission Override")
 		frappe.get_doc("User", OTHER_OFFICER).add_roles("Admission Officer")
 
 	@classmethod
@@ -134,7 +137,8 @@ class AdmitTestCase(CampusTestCase):
 		self.addCleanup(setattr, frappe.flags, "in_import", was_importing)
 		frappe.db.delete("Seat Matrix")
 		frappe.db.delete("Refund Rule")
-		self.settings(register_no_pattern="{abbr}{yy}{program_code}{####}", roll_no_pattern="")
+		# most admit tests have no Seat Matrix: they run non-strict (M04-08 strict mode is tested in TestStrictAdmit)
+		self.settings(register_no_pattern="{abbr}{yy}{program_code}{####}", roll_no_pattern="", strict_seat_matrix=0)
 		self.rule(slabs=[(0, 15, 0, 1000), (16, 30, 20, 0)])
 
 	def settings(self, **values):
@@ -176,8 +180,8 @@ class AdmitTestCase(CampusTestCase):
 			self.touched.append(doc.name)
 		return doc.name
 
-	def admit_as_officer(self, applicant):
-		frappe.set_user(OFFICER)
+	def admit_as_officer(self, applicant, officer=OFFICER):
+		frappe.set_user(officer)
 		try:
 			return admit(applicant)
 		finally:
@@ -296,6 +300,53 @@ class TestAdmit(AdmitTestCase):
 
 YEAR_FULL = int(today()[:4])
 YEAR_YY = today()[2:4]
+
+
+class TestStrictAdmit(AdmitTestCase):
+	"""M04-08 on the Admit path: a missing matrix or row refuses admission unless the officer may override."""
+
+	def setUp(self):
+		super().setUp()
+		self.settings(strict_seat_matrix=1)
+
+	def test_admit_without_a_seat_matrix_is_refused_and_nothing_is_created(self):
+		applicant = self.applicant()
+		before = self.counts()
+		with self.assertRaisesRegex(frappe.ValidationError, "No Seat Matrix"):
+			self.admit_as_officer(applicant)
+		self.assertEqual(self.counts(), before)
+		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Approved")
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
+
+	def test_admit_into_a_missing_row_is_refused(self):
+		self.matrix([(QUOTA, OC, 5)])
+		applicant = self.applicant(category=BC)
+		with self.assertRaisesRegex(frappe.ValidationError, "no row"):
+			self.admit_as_officer(applicant)
+		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Approved")
+
+	def test_an_override_officer_admits_into_a_missing_row_and_it_is_logged(self):
+		matrix = self.matrix([(QUOTA, OC, 5)])
+		applicant = self.applicant(category=BC)
+		result = self.admit_as_officer(applicant, officer=OVERRIDE_OFFICER)
+		self.assertEqual(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "docstatus"), 1)
+		log = frappe.get_all("Seat Override Log", {"applicant": applicant}, ["user", "reason", "quota", "category"])
+		self.assertEqual([(r.user, r.reason, r.quota, r.category) for r in log], [(OVERRIDE_OFFICER, "No Seat Matrix Row", QUOTA, BC)])
+		rows = frappe.get_all("Seat Matrix Row", {"parent": matrix.name}, ["quota", "category", "sanctioned"])
+		self.assertEqual([(r.quota, r.category, r.sanctioned) for r in rows], [(QUOTA, OC, 5)])
+
+	def test_a_free_seat_in_a_configured_row_admits_without_a_log(self):
+		self.matrix([(QUOTA, OC, 1)])
+		applicant = self.applicant()
+		self.admit_as_officer(applicant)
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
+
+	def test_non_strict_mode_admits_without_a_matrix_as_before(self):
+		self.settings(strict_seat_matrix=0)
+		applicant = self.applicant()
+		self.admit_as_officer(applicant)
+		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
 
 
 class TestRegisterNumbers(AdmitTestCase):
