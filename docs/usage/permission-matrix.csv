@@ -158,7 +158,7 @@ DocType,Challan Format,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Circular,,Academics User,0,1,1,1,0,1,0,0,1,0,0,0,0,0,0,0,1,0
 DocType,Circular,,Employee,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0
 DocType,Circular,,Guardian,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
-DocType,Circular,,HOD,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,1,0
+DocType,Circular,,HOD,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,0
 DocType,Circular,,Student,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1
 DocType,Circular,,System Manager,0,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,1,0
 DocType,Circular Acknowledgement,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0

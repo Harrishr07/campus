@@ -35,25 +35,39 @@ def setup_faculty():
 
 # Rights on Education DocTypes the teaching roles need without the office role (Academics User). Custom DocPerm:
 # Education's DocType JSON is never edited. Company User Permissions still scope them.
+# Once a doctype has Custom DocPerms, the site ignores its standard DocPerms: a later Education upgrade to the
+# Course Schedule or Student Attendance permissions does not reach the site (review in the Role Permission Manager).
 TEACHING_STAFF_RIGHTS = {
 	("Course Schedule", "Instructor"): ("select",),  # pick the period of an Attendance Correction Request at the desk
 	("Student Attendance", "HOD"): ("read", "report"),  # the Attendance Shortage report
 	("Student Attendance", "Class Advisor"): ("read", "report"),
 }
+GRANTED_RIGHTS_KEY = "campus_teaching_staff_rights"  # global default: the TEACHING_STAFF_RIGHTS rules already granted
 
 
 def grant_teaching_staff_rights():
-	"""Idempotent: a new rule gets exactly its rights (not Custom DocPerm's default read and export); an existing rule
-	keeps what the college added and regains a listed right it lost."""
-	from frappe.permissions import add_permission, update_permission_property
-
+	"""Grant each rule once: a missing row is added with exactly its rights (not Custom DocPerm's default read and
+	export), and the rule is recorded as granted. A recorded rule is never touched again, so a right the college
+	removes or adds in the Role Permission Manager stays as the college left it."""
+	granted = set(frappe.parse_json(frappe.db.get_global(GRANTED_RIGHTS_KEY) or "[]"))
 	for (doctype, role), rights in TEACHING_STAFF_RIGHTS.items():
+		key = f"{doctype}:{role}"
+		if key in granted:
+			continue
 		if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}):
-			add_permission(doctype, role, 0)
-			for default_right in ("read", "export"):
-				update_permission_property(doctype, role, 0, default_right, int(default_right in rights))
-		for right in rights:
-			update_permission_property(doctype, role, 0, right, 1)
+			add_rule(doctype, role, rights)
+		granted.add(key)
+	frappe.db.set_global(GRANTED_RIGHTS_KEY, frappe.as_json(sorted(granted), indent=None))
+
+
+def add_rule(doctype, role, rights):
+	from frappe.core.doctype.custom_docperm.custom_docperm import update_custom_docperm
+	from frappe.core.doctype.doctype.doctype import validate_permissions_for_doctype
+	from frappe.permissions import add_permission
+
+	name = add_permission(doctype, role, 0)  # copies the standard DocPerms first, so none is lost
+	update_custom_docperm(name, {"read": 0, "export": 0, **{right: 1 for right in rights}})
+	validate_permissions_for_doctype(doctype)
 
 
 SUBSTITUTION_EVENT = "substitution.assigned"

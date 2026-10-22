@@ -5,9 +5,11 @@ Passwords: on a developer-mode or demo site (`campus_demo_site`) a new user gets
 other site no password is stored: each new user gets a one-time reset link in the run's `reset_links`, so the first login
 sets their own password. On a demo site every desk user also gets the UAT Tester role (campus.campus_platform.uat). The generated people are synthetic; no real personal data is used.
 
-Roles: the kit owns the roles its profile hands out (`kit_roles`). A re-run takes such a role away from a kit user whose
-spec no longer lists it (e.g. Academics User, the office role, once given to teachers), so a site is corrected by re-running
-the kit. Roles outside that set (HRMS's Employee, anything granted by hand) and roles an active position gives are left alone.
+Roles: a re-run gives each kit user the roles its spec lists. It takes away only a retired role (`RETIRED_ROLES`: Academics
+User, the office role the kit once gave teachers and the COE) from a kit user whose spec lists a role it was retired for and
+not the retired role itself, so a site set up before is corrected by re-running the kit. No other role is ever taken away:
+HRMS's Employee, any role granted by hand (even one the kit gives other users, such as Mentor to a teacher) and roles an
+active position gives stay.
 """
 
 import frappe
@@ -33,9 +35,13 @@ def missing_roles(profile):
 	return sorted(role for role in roles if not frappe.db.exists("Role", role))
 
 
-def kit_roles(profile):
-	"""The roles the kit manages: every role a user of the profile is given."""
-	return {role for user in profile.get("users", []) for role in user["roles"]}
+# role the kit no longer gives -> the spec roles whose holders lose it on a re-run (PR-02 least privilege)
+RETIRED_ROLES = {"Academics User": {"Instructor", "HOD", "Class Advisor", "COE"}}
+
+
+def retired_roles(roles):
+	"""The retired roles a user with the spec `roles` must not hold."""
+	return {retired for retired, holders in RETIRED_ROLES.items() if holders & set(roles) and retired not in roles}
 
 
 def ensure_people(profile, companies, out, test_passwords, result):
@@ -43,9 +49,9 @@ def ensure_people(profile, companies, out, test_passwords, result):
 	if test_passwords and not test_passwords_allowed():
 		frappe.throw(_("Test passwords are for developer-mode or demo sites only."))
 	group = ensure_class_group(profile, companies["college"], out)
-	managed = kit_roles(profile)
 	employees = {}
 	for spec in profile["users"]:
+		existed = frappe.db.exists("User", user_email(profile, spec["key"]))
 		user = ensure_user(profile, spec, out, test_passwords, result)
 		for token in spec.get("companies", []):
 			upsert(out, "User Permission", {"user": user, "allow": "Company", "for_value": companies[token]})
@@ -54,7 +60,7 @@ def ensure_people(profile, companies, out, test_passwords, result):
 		if spec.get("position"):
 			ensure_position(profile, spec, user, companies["college"], group, employees.get(spec["key"]), out)
 		wanted = spec["roles"] + (tester_roles_for(spec["roles"]) if test_passwords_allowed() else [])
-		if sync_roles(user, wanted, managed):
+		if any(sync_roles(user, wanted)) and existed:  # a role gained or taken away
 			out.updated["User"] += 1
 	ensure_pilot_student(profile, companies["college"], out)
 	return employees
@@ -81,18 +87,18 @@ def ensure_user(profile, spec, out, test_passwords, result):
 	return email
 
 
-def sync_roles(user, roles, managed=()):
-	"""Give `user` the `roles` it lacks and take away the `managed` roles it holds beyond them, except a role an active
-	Position Holder gives it (campus.campus_platform.positions owns those); returns the roles taken away."""
+def sync_roles(user, roles):
+	"""Give `user` the `roles` it lacks and take away the retired roles it holds for them, except a role an active
+	Position Holder gives it (campus.campus_platform.positions owns those); returns (roles added, roles taken away)."""
 	held = set(frappe.get_all("Has Role", filters={"parent": user, "parenttype": "User"}, pluck="role"))
 	missing = [role for role in roles if role not in held]
 	from_positions = {holding.role for holding in active_holdings(user)}
-	surplus = sorted((held & set(managed)) - set(roles) - from_positions)
+	surplus = sorted((held & retired_roles(roles)) - from_positions)
 	if surplus:
 		frappe.get_doc("User", user).remove_roles(*surplus)
 	if missing:
 		frappe.get_doc("User", user).add_roles(*missing)
-	return surplus
+	return missing, surplus
 
 
 def ensure_employee(profile, spec, user, college, out):

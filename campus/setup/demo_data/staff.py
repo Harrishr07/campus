@@ -60,7 +60,7 @@ def add_member(ctx, spec, test_passwords, result):
 	employee = people.ensure_employee(profile, spec, user, ctx.college, ctx.out)
 	if spec.get("position"):
 		people.ensure_position(profile, spec, user, ctx.college, None, employee, ctx.out)
-	people.sync_roles(user, spec["roles"], people.kit_roles(profile))
+	people.sync_roles(user, spec["roles"])
 	set_personnel_details(ctx, spec["key"], spec["name"], spec["designation"], spec["person"])
 
 

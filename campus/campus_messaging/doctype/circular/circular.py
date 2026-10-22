@@ -12,6 +12,7 @@ from frappe.model.document import Document
 from frappe.utils import get_datetime, now_datetime
 
 from campus.campus_messaging import audience, bulk_send
+from campus.campus_messaging.circulars import check_author_audience
 from campus.campus_platform.approvals import ApprovableDocument
 
 EVENT_KEY = "circular.published"
@@ -23,6 +24,7 @@ class Circular(ApprovableDocument, Document):
 		rule = frappe.get_doc("Audience Rule", self.audience_rule)
 		if rule.company != self.company:
 			frappe.throw(_("Audience Rule {0} belongs to {1}, not {2}.").format(rule.name, rule.company, self.company))
+		check_author_audience(rule)
 		audience.ensure_available(rule)
 		if self.publish_until and get_datetime(self.publish_until) <= get_datetime(self.publish_from):
 			frappe.throw(_("Publish Until must be after Publish From."))

@@ -11,6 +11,7 @@ from unittest import mock
 
 import frappe
 from frappe.boot import get_bootinfo
+from frappe.desk import reportview
 from frappe.desk.query_report import get_report_doc
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_to_date, now_datetime, today
@@ -18,12 +19,14 @@ from frappe.utils import add_days, add_to_date, now_datetime, today
 from campus.campus_platform.api import latest_request
 from campus.campus_platform.approvals import approve, request_approval
 from campus.faculty import attendance_corrections, portal, portal_mentoring
+from campus.faculty.setup import GRANTED_RIGHTS_KEY, TEACHING_STAFF_RIGHTS, grant_teaching_staff_rights
 from campus.setup import people
 from campus.setup.demo_data import staff
 from campus.setup.profile import PROFILE_DIR
 from campus.student_services import corrections
 from campus.tests import demo
 from campus.tests.test_faculty_portal import COLLEAGUE, TEACHER, FacultyPortalFixture
+from campus.tests.test_malpractice import INVIGILATOR, OTHER_INVIGILATOR, MalpracticeFixture
 from campus.tests.test_mentoring import MENTOR_A, MentoringFixture
 from campus.tests.test_timetable import CSE, employee
 
@@ -90,32 +93,48 @@ class TestKitRoleSets(IntegrationTestCase):
 		self.assertEqual(set(KIT_ROLES["class_advisor"]), {"Class Advisor", "Mentor", "Instructor"})
 		self.assertEqual(KIT_ROLES["coe"], ["COE"])
 
-	def test_a_sync_takes_away_only_the_kit_roles_the_spec_no_longer_lists(self):
+	def test_only_teaching_specs_lose_the_retired_office_role(self):
+		for key in TEACHING_KEYS:
+			self.assertEqual(people.retired_roles(KIT_ROLES[key]), {OFFICE_ROLE}, key)
+		for key in ("office", "admissions", "principal", "iqac", "accounts", "student"):
+			self.assertEqual(people.retired_roles(KIT_ROLES[key]), set(), key)
+
+	def test_a_sync_takes_away_only_the_retired_role(self):
 		user = "campus-pilot-roles-sync@example.com"
 		frappe.get_doc(
 			{"doctype": "User", "email": user, "first_name": "sync", "send_welcome_email": 0,
-			"roles": [{"role": r} for r in ("Instructor", OFFICE_ROLE, BY_HAND)]}
+			"roles": [{"role": r} for r in ("Instructor", OFFICE_ROLE, "Mentor", BY_HAND)]}
 		).insert()  # fmt: skip
-		managed = people.kit_roles(SXCCE)
-		self.assertIn(OFFICE_ROLE, managed)
-		self.assertNotIn(BY_HAND, managed)
-		self.assertEqual(people.sync_roles(user, ["Instructor", "Mentor"], managed), [OFFICE_ROLE])
+		self.assertEqual(people.sync_roles(user, ["Instructor", "Class Advisor"]), (["Class Advisor"], [OFFICE_ROLE]))
 		held = set(frappe.get_roles(user))
-		self.assertTrue({"Instructor", "Mentor", BY_HAND} <= held)  # a role outside the kit's set is left alone
+		self.assertTrue({"Instructor", "Class Advisor", "Mentor", BY_HAND} <= held)  # Mentor: a kit role given by hand
 		self.assertNotIn(OFFICE_ROLE, held)
-		self.assertEqual(people.sync_roles(user, ["Instructor", "Mentor"], managed), [])  # idempotent
+		self.assertEqual(people.sync_roles(user, ["Instructor", "Class Advisor"]), ([], []))  # idempotent
 		self.assertEqual(set(frappe.get_roles(user)), held)
 
-	def test_a_sync_keeps_a_kit_role_an_active_position_gives(self):
+	def test_a_sync_keeps_a_retired_role_an_active_position_gives(self):
 		user = "campus-pilot-roles-position@example.com"
 		frappe.get_doc(
-			{"doctype": "User", "email": user, "first_name": "position", "send_welcome_email": 0, "roles": [{"role": r} for r in ("Instructor", "Mentor")]}
+			{"doctype": "User", "email": user, "first_name": "position", "send_welcome_email": 0, "roles": [{"role": r} for r in ("Instructor", OFFICE_ROLE)]}
 		).insert()  # fmt: skip
-		mentor_seat = [frappe._dict(name="seat", position="MENTOR", role="Mentor", role_granted=1)]
-		with mock.patch("campus.setup.people.active_holdings", return_value=mentor_seat):
-			self.assertEqual(people.sync_roles(user, ["Instructor"], people.kit_roles(SXCCE)), [])
-		self.assertIn("Mentor", frappe.get_roles(user))
-		self.assertEqual(people.sync_roles(user, ["Instructor"], people.kit_roles(SXCCE)), ["Mentor"])  # the seat ended
+		office_seat = [frappe._dict(name="seat", position="OFFICE", role=OFFICE_ROLE, role_granted=1)]
+		with mock.patch("campus.setup.people.active_holdings", return_value=office_seat):
+			self.assertEqual(people.sync_roles(user, ["Instructor"]), ([], []))
+		self.assertIn(OFFICE_ROLE, frappe.get_roles(user))
+		self.assertEqual(people.sync_roles(user, ["Instructor"]), ([], [OFFICE_ROLE]))  # the seat ended
+
+	def test_a_teacher_has_no_desk_rights_on_attendance_marks_or_periods(self):
+		user = kit_login("faculty")
+		refused = {
+			"Student Attendance": ("read", "write", "create", "submit"),
+			"Assessment Result": ("write", "create", "submit"),
+			"Assessment Plan": ("write", "create", "submit"),
+			"Course Schedule": ("read", "write", "create"),
+		}
+		for doctype, ptypes in refused.items():
+			for ptype in ptypes:
+				self.assertFalse(frappe.has_permission(doctype, ptype, user=user), f"{doctype} {ptype}")
+		self.assertTrue(frappe.has_permission("Course Schedule", "select", user=user))
 
 	@mock.patch("campus.campus_platform.pack_visibility.hidden_workspaces", return_value=set())
 	def test_each_role_sees_its_desk_areas_and_no_office_area(self, _packs):
@@ -225,23 +244,86 @@ class TestFacultyAndHodWithoutTheOfficeRole(FacultyPortalFixture):
 		frappe.db.set_value("Student", self.students[0], "oc_mentor", employee("faculty_1"))
 		self.assertEqual([m["student"] for m in as_user(TEACHER, portal.my_mentees)], [self.students[0]])
 
-	def test_the_hod_writes_and_submits_a_circular_to_the_department(self):
-		rule = frappe.get_doc(
-			{"doctype": "Audience Rule", "rule_name": "Pilot roles CSE staff", "company": demo.ENGINEERING, "rule_type": "Department", "department": CSE}
+	def audience_rule(self, name, rule_type="Department", **filters):
+		values = {"department": CSE} if rule_type == "Department" and not filters else filters
+		return frappe.get_doc(
+			{"doctype": "Audience Rule", "rule_name": name, "company": demo.ENGINEERING, "rule_type": rule_type, **values}
 		).insert().name  # fmt: skip
 
-		def circulate():
-			doc = frappe.get_doc(
-				{"doctype": "Circular", "title": "Department meeting", "company": demo.ENGINEERING, "audience_rule": rule,
-				"publish_from": now_datetime(), "body": "Friday 3 pm"}
-			).insert()  # fmt: skip
+	def circular(self, rule, submit=True):
+		doc = frappe.get_doc(
+			{"doctype": "Circular", "title": "Department meeting", "company": demo.ENGINEERING, "audience_rule": rule,
+			"publish_from": now_datetime(), "body": "Friday 3 pm"}
+		).insert()  # fmt: skip
+		if submit:
 			doc.submit()
-			return doc.name
+		return doc.name
 
+	def test_the_hod_writes_and_submits_a_circular_to_the_department(self):
+		rule = self.audience_rule("Pilot roles CSE staff")
 		self.assertTrue(frappe.has_permission("Audience Rule", "read", rule, user=HOD))
-		self.assertEqual(frappe.db.get_value("Circular", as_user(HOD, circulate), "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Circular", as_user(HOD, self.circular, rule), "docstatus"), 1)
 		with self.assertRaises(frappe.PermissionError):
-			as_user(TEACHER, circulate)
+			as_user(TEACHER, self.circular, rule)
+
+	def test_the_hod_cannot_edit_or_submit_the_offices_draft(self):
+		draft = self.circular(self.audience_rule("Pilot roles office draft"), submit=False)  # written by the office
+		for ptype in ("write", "submit"):
+			self.assertFalse(frappe.has_permission("Circular", ptype, draft, user=HOD), ptype)
+
+		def edit_and_submit():
+			doc = frappe.get_doc("Circular", draft)
+			doc.body = "Changed by the HOD"
+			doc.submit()
+
+		with self.assertRaises(frappe.PermissionError):
+			as_user(HOD, edit_and_submit)
+		self.assertEqual(frappe.db.get_value("Circular", draft, ["docstatus", "body"]), (0, "Friday 3 pm"))
+
+	def test_the_hod_cannot_address_the_college_or_another_department(self):
+		other = frappe.get_all("Department", {"company": demo.ENGINEERING, "is_group": 0, "name": ["!=", CSE]}, pluck="name", limit=1)[0]
+		college_wide = self.audience_rule("Pilot roles all students", "Role", role="Student")
+		other_department = self.audience_rule("Pilot roles other department", department=other)
+		for rule in (college_wide, other_department):
+			with self.assertRaisesRegex(frappe.PermissionError, "your own department"):
+				as_user(HOD, self.circular, rule)
+			self.assertFalse(frappe.db.exists("Circular", {"audience_rule": rule}), rule)
+		self.assertTrue(frappe.db.exists("Circular", self.circular(college_wide, submit=False)))  # the office may
+
+	def test_the_teacher_cannot_submit_a_correction_without_its_approval(self):
+		self.mark(TEACHER, self.own.name, [])
+
+		def raise_and_submit():
+			doc = frappe.get_doc({"doctype": CORRECTION, "course_schedule": self.own.name, "student": self.students[0], "new_status": "Absent", "reason": "x"})
+			doc.insert()
+			doc.submit()
+
+		with self.after_cutoff(), self.assertRaisesRegex(frappe.ValidationError, "approval"):
+			as_user(TEACHER, raise_and_submit)
+		self.assertEqual(self.attendance(self.own.name)[self.students[0]], "Present")
+
+	def test_an_approval_request_is_not_listed_to_a_desk_user_who_is_not_a_party(self):
+		self.mark(TEACHER, self.own.name, [])
+		with self.after_cutoff():
+			name = self.raise_at_desk(TEACHER, self.own.name, self.students[0])
+		request = latest_request(frappe.get_doc(CORRECTION, name)).name
+
+		def report_view_names():
+			self.addCleanup(setattr, frappe.local, "form_dict", frappe.local.form_dict)
+			frappe.local.form_dict = frappe._dict(
+				doctype="Approval Request", fields=json.dumps(["`tabApproval Request`.`name`", "`tabApproval Request Approver`.`user`"]),
+				filters=json.dumps([]), limit=100, order_by="`tabApproval Request`.`creation` desc",
+			)  # fmt: skip
+			result = reportview.get()
+			return {row[0] for row in result.get("values", [])} if result else set()
+
+		def listed():
+			return set(frappe.get_list("Approval Request", pluck="name"))
+
+		self.assertIn(request, as_user(TEACHER, report_view_names))  # the requester: the call does show rows
+		for user in (COLLEAGUE, kit_login("coe")):  # their only Approval Request right is Desk User's
+			self.assertNotIn(request, as_user(user, listed), user)
+			self.assertNotIn(request, as_user(user, report_view_names), user)
 
 
 class TestClassAdvisorWithoutTheOfficeRole(MentoringFixture):
@@ -265,9 +347,92 @@ class TestClassAdvisorWithoutTheOfficeRole(MentoringFixture):
 		with self.assertRaises(frappe.PermissionError):
 			as_user(MENTOR_A, portal_mentoring.mentee_record, self.b_student)
 
+	def condonation(self, student):
+		doc = frappe.get_doc(
+			{"doctype": "Condonation Request", "student": student, "academic_term": frappe.db.get_value("Academic Term", {}, "name"),
+			"company": demo.ENGINEERING, "evidence_kind": "Medical", "evidence": "/private/files/x.pdf", "reason": "Fever"}
+		)  # fmt: skip
+		doc.name = f"CND-PILOT-{frappe.generate_hash(length=6)}"
+		doc.db_insert()  # past the attendance band check: only who reads it matters here
+		evidence = frappe.get_doc(
+			{"doctype": "File", "file_name": f"{doc.name}.txt", "content": "medical certificate", "is_private": 1,
+			"attached_to_doctype": "Condonation Request", "attached_to_name": doc.name}
+		).insert()  # fmt: skip
+		return doc.name, evidence
+
+	def test_the_advisor_reads_condonation_only_for_the_advised_class(self):
+		frappe.db.set_value("Student", self.a_student, "oc_class_advisor", MENTOR_A)
+		frappe.db.set_value("Student", self.b_student, "oc_class_advisor", None)
+		(own, own_file), (other, other_file) = self.condonation(self.a_student), self.condonation(self.b_student)
+		self.assertTrue(frappe.has_permission("Condonation Request", "read", own, user=MENTOR_A))
+		self.assertTrue(frappe.has_permission("File", "read", own_file, user=MENTOR_A))
+		self.assertFalse(frappe.has_permission("Condonation Request", "read", other, user=MENTOR_A))
+		self.assertFalse(frappe.has_permission("File", "read", other_file, user=MENTOR_A))  # the evidence of another class
+		listed = as_user(MENTOR_A, frappe.get_list, "Condonation Request", filters={"name": ["in", [own, other]]}, pluck="name")
+		self.assertEqual(listed, [own])
+		self.assertTrue(frappe.has_permission("Condonation Request", "read", other, user=HOD))  # HOD scope unchanged
+
 	def test_the_advisor_reads_leave_and_condonation_but_creates_no_student(self):
 		for doctype in ("Student Leave Application", "Condonation Request", "Parent Interaction"):
 			self.assertTrue(frappe.has_permission(doctype, "read", user=MENTOR_A), doctype)
 		self.assertEqual(as_user(MENTOR_A, get_report_doc, "Attendance Shortage").name, "Attendance Shortage")
 		for doctype in ("Student", "Student Record Correction", "Condonation Request"):
 			self.assertFalse(frappe.has_permission(doctype, "create", user=MENTOR_A), doctype)
+
+
+class TestMalpracticeAsInstructor(MalpracticeFixture):
+	def setUp(self):
+		super().setUp()
+		drop_office_role(self, INVIGILATOR, OTHER_INVIGILATOR)
+
+	def test_the_invigilator_files_a_report_with_instructor_rights_only(self):
+		self.assertNotIn(OFFICE_ROLE, frappe.get_roles(INVIGILATOR))
+		frappe.set_user(INVIGILATOR)
+		try:
+			report = self.report(decision="Debarment")
+			self.assertFalse(report.committee_decision)  # permlevel 1: the committee's, not the invigilator's
+			with self.assertRaisesRegex(frappe.ValidationError, "approval"):
+				frappe.get_doc("Malpractice Report", report.name).submit()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Malpractice Report", report.name, "docstatus"), 0)
+		self.assertFalse(frappe.has_permission("Malpractice Report", "read", report.name, user=OTHER_INVIGILATOR))
+		self.assertNotIn(report.name, as_user(OTHER_INVIGILATOR, frappe.get_list, "Malpractice Report", pluck="name"))
+		decided = frappe.get_doc("Malpractice Report", report.name)
+		decided.committee_decision = "Debarment"
+		with self.assertRaisesRegex(frappe.ValidationError, "Only the COE"):
+			as_user(INVIGILATOR, decided.save, ignore_permissions=True)
+
+
+def custom_perms(doctype):
+	fields = ["role", "permlevel", "if_owner", "read", "write", "create", "submit", "report", "export", "print", "select"]
+	return {(p.role, p.permlevel, p.if_owner): p for p in frappe.get_all("Custom DocPerm", {"parent": doctype}, fields)}
+
+
+class TestTeachingStaffRights(IntegrationTestCase):
+	def test_a_rerun_keeps_every_row_and_what_the_college_changed(self):
+		hod_row = frappe.db.get_value("Custom DocPerm", {"parent": "Student Attendance", "role": "HOD", "permlevel": 0, "if_owner": 0})
+		frappe.db.set_value("Custom DocPerm", hod_row, {"print": 1, "report": 0})  # the college adds print, removes report
+		before = {doctype: custom_perms(doctype) for doctype in ("Course Schedule", "Student Attendance")}
+		grant_teaching_staff_rights()
+		grant_teaching_staff_rights()
+		for doctype, rows in before.items():
+			self.assertEqual(custom_perms(doctype), rows, doctype)
+			standard = {(p.role, p.permlevel, p.if_owner) for p in frappe.get_all("DocPerm", {"parent": doctype}, ["role", "permlevel", "if_owner"])}
+			self.assertTrue(standard <= set(rows), f"{doctype}: lost {standard - set(rows)}")  # Academics User, Student, Guardian...
+		self.assertEqual(frappe.db.get_value("Custom DocPerm", hod_row, ["print", "report"]), (1, 0))
+		instructor = before["Course Schedule"][("Instructor", 0, 0)]
+		self.assertEqual((instructor.select, instructor.read, instructor.write, instructor.export), (1, 0, 0, 0))
+
+	def test_a_rule_is_added_once_with_exactly_its_rights(self):
+		key = {"parent": "Student Attendance", "role": "Class Advisor", "permlevel": 0, "if_owner": 0}
+		frappe.db.delete("Custom DocPerm", key)
+		granted = set(frappe.parse_json(frappe.db.get_global(GRANTED_RIGHTS_KEY))) - {"Student Attendance:Class Advisor"}
+		frappe.db.set_global(GRANTED_RIGHTS_KEY, frappe.as_json(sorted(granted), indent=None))
+		grant_teaching_staff_rights()
+		row = custom_perms("Student Attendance")[("Class Advisor", 0, 0)]
+		self.assertEqual((row.read, row.report, row.export, row.write, row.create), (1, 1, 0, 0, 0))
+		self.assertEqual(len(frappe.parse_json(frappe.db.get_global(GRANTED_RIGHTS_KEY))), len(TEACHING_STAFF_RIGHTS))
+		frappe.db.delete("Custom DocPerm", key)  # the college takes the rule away
+		grant_teaching_staff_rights()
+		self.assertFalse(frappe.db.exists("Custom DocPerm", key))

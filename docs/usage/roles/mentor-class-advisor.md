@@ -12,6 +12,6 @@
 3. **Parent contact:** Student Services > Transactions > Parent Interaction.
 4. **Attendance shortage:** Student Services > Reports > Attendance Shortage and Mentoring Activity.
 5. **Student leave:** Student Services > Transactions > Student Leave Application (medical and on-duty leave with certificate).
-6. **Condonation / grievances raised for your class:** Student Services > Transactions > Condonation Request, Student Grievance.
+6. **Condonation / grievances raised for your class** (you see the condonation requests, and their evidence, of the students you advise only): Student Services > Transactions > Condonation Request, Student Grievance.
 
 You cannot open a student who is not your mentee in the portal.

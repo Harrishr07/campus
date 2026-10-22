@@ -91,7 +91,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 23:30:00.000000",
+ "modified": "2026-10-22 23:40:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Messaging",
  "name": "Circular",
@@ -131,6 +131,7 @@
   },
   {
    "role": "HOD",
+   "if_owner": 1,
    "read": 1,
    "write": 1,
    "create": 1,

@@ -1,7 +1,8 @@
 """M16-03 Who can see a circular, the portal feed and acknowledgements.
 
 A circular is visible to its audience only while it is approved (docstatus 1) and now is inside its publish
-window. Staff roles (System Manager, Academics User) see circulars through the ordinary role permissions;
+window. Staff roles (System Manager, Academics User, HOD) see circulars through the ordinary role permissions (an
+HOD only their own, and addressed only to their own department: check_author_audience);
 every other user, such as a student, guardian or employee on the portal, sees exactly the live circulars
 whose audience includes them. Visibility is a pure function of the clock and the audience, so nothing
 needs to be switched on or off when a window opens or closes.
@@ -12,8 +13,11 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from campus.campus_messaging import audience
+from campus.campus_platform.api import resolve_position
 
-STAFF_ROLES = ("System Manager", "Academics User", "HOD")  # the roles that write circulars; their role permissions apply
+OFFICE_ROLES = ("System Manager", "Academics User")  # write circulars to any audience of their college
+HOD_ROLE = "HOD"  # writes own circulars (if_owner) to a Department rule of a department they head
+STAFF_ROLES = (*OFFICE_ROLES, HOD_ROLE)  # the roles that write circulars; their role permissions apply
 READ_TYPES = ("read", "print", "email", "export", "report", "select")
 
 
@@ -48,6 +52,22 @@ def circulars_for(user):
 		if matched:
 			result.append({**circular, "matched": matched[0]})
 	return result
+
+
+def check_author_audience(rule, user=None):
+	"""Circular validate: an author holding HOD but no office role may address only a Department rule of a department
+	they hold the HOD position for; a college-wide or another department's audience is refused."""
+	user = user or frappe.session.user
+	roles = set(frappe.get_roles(user))
+	if user == "Administrator" or HOD_ROLE not in roles or set(OFFICE_ROLES) & roles:
+		return
+	if rule.rule_type != "Department" or user not in resolve_position(HOD_ROLE, scope=rule.department or ""):
+		frappe.throw(
+			_("As Head of Department you can send a circular only to a Department audience of your own department, not {0}.").format(
+				frappe.bold(rule.name)
+			),
+			frappe.PermissionError,
+		)
 
 
 def is_staff(user):
