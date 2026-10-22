@@ -5,6 +5,7 @@
  "engine": "InnoDB",
  "field_order": [
   "room_type_name",
+  "is_ac",
   "description"
  ],
  "fields": [
@@ -17,6 +18,11 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "is_ac",
+   "fieldtype": "Check",
+   "label": "AC"
+  },
+  {
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
@@ -26,7 +32,7 @@
  "istable": 0,
  "issingle": 0,
  "links": [],
- "modified": "2026-10-22 13:00:00.000000",
+ "modified": "2026-10-22 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hostel",
  "name": "Hostel Room Type",

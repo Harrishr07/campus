@@ -11,5 +11,5 @@ class HostelFeeRate(Document):
 		if len(categories) != len(set(categories)):
 			frappe.throw(_("A fee category is listed more than once"))
 		for row in self.items:
-			if row.amount < 0:
+			if (row.amount or 0) < 0:
 				frappe.throw(_("Row {0}: amount cannot be negative").format(row.idx))

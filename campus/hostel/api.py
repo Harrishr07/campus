@@ -15,13 +15,21 @@ def served_colleges(hostel):
 
 
 def validate_allotment(hostel, student):
-	"""Throw unless `student` (Student name) may be allotted in `hostel`: same gender, college served."""
-	gender = frappe.db.get_value("Student", student, "gender")
-	if not gender_allowed(frappe.db.get_value("Hostel", hostel, "gender"), gender):
-		frappe.throw(_("{0} cannot take a student of gender {1}").format(hostel, gender or _("not set")))
-	company = frappe.db.get_value("Student", student, "oc_company")
-	if company not in served_colleges(hostel):
-		frappe.throw(_("{0} does not serve {1}").format(hostel, company))
+	"""Throw unless `student` (Student name) may be allotted in `hostel`: it is enabled, same gender, college served."""
+	row = frappe.db.get_value("Hostel", hostel, ["gender", "disabled"], as_dict=True)
+	if not row:
+		frappe.throw(_("Hostel {0} does not exist").format(hostel))
+	if row.disabled:
+		frappe.throw(_("Hostel {0} is disabled").format(hostel))
+	details = frappe.db.get_value("Student", student, ["gender", "oc_company"], as_dict=True)
+	if not details:
+		frappe.throw(_("Student {0} does not exist").format(student))
+	if not gender_allowed(row.gender, details.gender):
+		frappe.throw(_("{0} cannot take a student of gender {1}").format(hostel, details.gender or _("not set")))
+	if not details.oc_company:
+		frappe.throw(_("Student {0} has no college set").format(student))
+	if details.oc_company not in served_colleges(hostel):
+		frappe.throw(_("{0} does not serve {1}").format(hostel, details.oc_company))
 
 
 def fee_rate(company, academic_year, room_type):
@@ -35,6 +43,7 @@ def fee_rate(company, academic_year, room_type):
 
 def add_beds(room, count):
 	"""Add `count` active beds to `room`, numbered after the highest existing number; returns their names."""
+	frappe.db.get_value("Hostel Room", room, "name", for_update=True)  # one numbering at a time
 	existing = frappe.get_all("Hostel Bed", filters={"room": room}, pluck="bed_no")
 	start = max((int(n) for n in existing if str(n).isdigit()), default=0)
 	beds = []

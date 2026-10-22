@@ -12,7 +12,8 @@ SERVICE = "Hostel"
 
 class Hostel(Document):
 	def validate(self):
-		if not served_companies(SERVICE, self.company):
+		# only when the hostel is made: a lapsed agreement must not block editing or disabling it
+		if self.is_new() and not served_companies(SERVICE, self.company):
 			frappe.throw(_("{0} has no Hostel Shared Service Agreement as provider in force today").format(self.company))
 
 	def after_insert(self):
@@ -20,3 +21,11 @@ class Hostel(Document):
 			{"doctype": "Location", "location_name": f"{self.name} (Hostel)", "is_group": 1}
 		).insert(ignore_permissions=True)
 		self.db_set("asset_location", location.name)
+
+	def after_delete(self):
+		delete_location(self.asset_location)
+
+
+def delete_location(location):
+	if location and frappe.db.exists("Location", location):
+		frappe.delete_doc("Location", location, ignore_permissions=True)

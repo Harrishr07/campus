@@ -20,6 +20,17 @@ def make_gender(name):
 		frappe.get_doc({"doctype": "Gender", "gender": name}).insert()
 
 
+def make_role_user(email, roles):
+	if not frappe.db.exists("User", email):
+		frappe.get_doc({"doctype": "User", "email": email, "first_name": "Hostel", "send_welcome_email": 0}).insert()
+	user = frappe.get_doc("User", email)
+	for role in roles:
+		if not frappe.db.exists("Role", role):
+			frappe.get_doc({"doctype": "Role", "role_name": role}).insert()
+	user.add_roles(*roles)
+	return email
+
+
 def make_student(first_name, company, gender):
 	return frappe.get_doc(
 		{
@@ -75,7 +86,8 @@ class TestHostelMasters(CampusTestCase):
 		block_name = f"B-{floor_name}"
 		if not frappe.db.exists("Hostel Block", f"{hostel.name}-{block_name}"):
 			frappe.get_doc({"doctype": "Hostel Block", "hostel": hostel.name, "block_name": block_name}).insert()
-		floor = frappe.get_doc(
+		floor_id = f"{hostel.name}-{block_name}-{floor_name}"
+		floor = frappe.get_doc("Hostel Floor", floor_id) if frappe.db.exists("Hostel Floor", floor_id) else frappe.get_doc(
 			{"doctype": "Hostel Floor", "block": f"{hostel.name}-{block_name}", "floor_name": floor_name}
 		).insert()
 		if not frappe.db.exists("Hostel Room Type", room_type):
@@ -162,6 +174,93 @@ class TestHostelMasters(CampusTestCase):
 		girls = self.make_hostel("Test Girls Hostel", "Female")
 		with self.assertRaises(frappe.ValidationError):
 			validate_allotment(girls.name, make_student("HostelBoy2", COLLEGE_B, "Male").name)
+
+	def test_disabled_hostel_and_missing_records_refused(self):
+		boy = make_student("HostelBoy3", COLLEGE_A, "Male")
+		frappe.db.set_value("Hostel", self.boys.name, "disabled", 1)
+		with self.assertRaisesRegex(frappe.ValidationError, "disabled"):
+			validate_allotment(self.boys.name, boy.name)
+		with self.assertRaisesRegex(frappe.ValidationError, "does not exist"):
+			validate_allotment("No Such Hostel", boy.name)
+		frappe.db.set_value("Hostel", self.boys.name, "disabled", 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "does not exist"):
+			validate_allotment(self.boys.name, "No Such Student")
+
+	def test_student_without_college_refused(self):
+		student = make_student("HostelNoCollege", COLLEGE_A, "Male")
+		frappe.db.set_value("Student", student.name, "oc_company", None)
+		with self.assertRaisesRegex(frappe.ValidationError, "no college"):
+			validate_allotment(self.boys.name, student.name)
+
+	# lifecycle and immutability
+	def test_lapsed_agreement_does_not_block_editing_or_disabling(self):
+		self.agreement.db_set("to_date", add_days(today(), -1))
+		hostel = frappe.get_doc("Hostel", self.boys.name)
+		hostel.disabled = 1
+		hostel.save()
+		self.assertEqual(frappe.db.get_value("Hostel", self.boys.name, "disabled"), 1)
+
+	def test_hostel_company_and_bed_room_cannot_change(self):
+		hostel = frappe.get_doc("Hostel", self.boys.name)
+		hostel.company = COLLEGE_A
+		with self.assertRaises(frappe.CannotChangeConstantError):
+			hostel.save()
+		add_beds(self.room.name, 1)
+		other = self.make_room(self.boys, "G", "102")
+		bed = frappe.get_doc("Hostel Bed", f"{self.room.name}-1")
+		bed.room = other.name
+		with self.assertRaises(frappe.CannotChangeConstantError):
+			bed.save()
+		self.assertEqual((self.capacity(), self.capacity(other)), (1, 0))
+
+	def test_room_identity_cannot_change(self):
+		room = frappe.get_doc("Hostel Room", self.room.name)
+		room.room_no = "999"
+		with self.assertRaises(frappe.CannotChangeConstantError):
+			room.save()
+
+	def test_room_save_keeps_bed_capacity(self):
+		add_beds(self.room.name, 2)
+		stale = frappe.get_doc("Hostel Room", self.room.name)
+		add_beds(self.room.name, 1)  # a bed commits after the room was loaded
+		stale.status = "Under Maintenance"
+		stale.save()
+		self.assertEqual(self.capacity(), 3)
+
+	def test_room_is_ac_follows_room_type(self):
+		frappe.get_doc({"doctype": "Hostel Room Type", "room_type_name": "Double AC", "is_ac": 1}).insert()
+		room = self.make_room(self.boys, "G", "103", room_type="Double AC")
+		self.assertEqual(room.is_ac, 1)
+		self.assertEqual(self.make_room(self.boys, "G", "104", room_type="Double").is_ac, 0)
+
+	def test_deleting_room_and_hostel_removes_locations(self):
+		room_location = frappe.db.get_value("Hostel Room", self.room.name, "asset_location")
+		hostel_location = frappe.db.get_value("Hostel", self.boys.name, "asset_location")
+		frappe.delete_doc("Hostel Room", self.room.name)
+		self.assertFalse(frappe.db.exists("Location", room_location))
+		self.assertTrue(frappe.db.exists("Location", hostel_location))
+		frappe.delete_doc("Hostel Floor", frappe.db.get_value("Hostel Floor", {"hostel": self.boys.name}))
+		frappe.delete_doc("Hostel Block", frappe.db.get_value("Hostel Block", {"hostel": self.boys.name}))
+		frappe.delete_doc("Hostel", self.boys.name)
+		self.assertFalse(frappe.db.exists("Location", hostel_location))
+
+	def test_hostel_with_rooms_cannot_be_deleted(self):
+		with self.assertRaises(frappe.LinkExistsError):
+			frappe.delete_doc("Hostel", self.boys.name)
+
+	# permissions
+	def test_warden_and_accounts_manager_permissions(self):
+		user = make_role_user("hostel-roles@example.com", ["Warden"])
+		self.assertTrue(frappe.has_permission("Hostel Bed", "create", user=user))
+		self.assertTrue(frappe.has_permission("Hostel Room", "write", user=user))
+		self.assertTrue(frappe.has_permission("Hostel", "read", user=user))
+		self.assertFalse(frappe.has_permission("Hostel", "write", user=user))
+		self.assertFalse(frappe.has_permission("Hostel Fee Rate", "write", user=user))
+		accounts = make_role_user("hostel-accounts@example.com", ["Accounts Manager"])
+		self.assertTrue(frappe.has_permission("Hostel Fee Rate", "create", user=accounts))
+		self.assertTrue(frappe.has_permission("Hostel Settings", "write", user=accounts))
+		self.assertFalse(frappe.has_permission("Hostel Bed", "create", user=accounts))
+		self.assertFalse(frappe.has_permission("Hostel", "read", user=make_role_user("hostel-none@example.com", [])))
 
 	# fee rate
 	def make_rate(self, items):
