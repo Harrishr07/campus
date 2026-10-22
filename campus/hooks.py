@@ -564,11 +564,10 @@ permission_query_conditions["Counselling Note"] = f"{_mentoring}.note_permission
 has_permission["Counselling Note"] = f"{_mentoring}.note_has_permission"
 permission_query_conditions["Parent Interaction"] = f"{_mentoring}.interaction_permission_query"
 has_permission["Parent Interaction"] = f"{_mentoring}.interaction_has_permission"
-doc_events["DocShare"]["validate"].append(f"{_mentoring}.block_share")
 scheduler_events["daily"].append("campus.student_services.mentoring.send_follow_up_reminders")
 
 # L-09 fix: restricted records - DocTypes read only through their own permission hooks. Their Comments, attached Files
-# (always private) and Connections counts follow the same rule (campus.campus_platform.restricted_records).
+# (always private), shares, Connections and dashboard counts follow the same rule (campus.campus_platform.restricted_records).
 restricted_record_doctypes = ["Counselling Note", "Parent Interaction"]
 _restricted = "campus.campus_platform.restricted_records"
 permission_query_conditions["Comment"] = f"{_restricted}.comment_permission_query"
@@ -577,3 +576,5 @@ permission_query_conditions["File"] = f"{_restricted}.file_permission_query"
 has_permission["File"] = [has_permission["File"], f"{_restricted}.file_has_permission"]
 extend_doctype_class["File"] = [f"{_restricted}.PrivateAttachmentMixin"]
 override_whitelisted_methods["frappe.desk.form.linked_with.get"] = f"{_restricted}.get_linked_docs"
+override_whitelisted_methods["frappe.desk.notifications.get_open_count"] = f"{_restricted}.get_open_count"
+doc_events["DocShare"]["validate"].append(f"{_restricted}.block_share")

@@ -6,7 +6,7 @@ edits. Only the student's current mentor or a Student Counsellor writes a note.
 Parent Interaction: who recorded it, the student's current mentor and class advisor, the HOD of its department and
 the office roles. The current mentor, the class advisor and the office roles edit; a follow-up owner must already be
 one of its readers. No guardian or student role has any right on either. Both are never shared (a share would grant
-what these rules refuse). Their Comments, Files and Connections counts: campus.campus_platform.restricted_records.
+what these rules refuse). Sharing, Comments, Files and Connections counts: campus.campus_platform.restricted_records.
 Company scope comes from the User Permissions on the `company` field.
 """
 
@@ -103,12 +103,6 @@ def check_may_record_interaction(user, student):
 
 
 # ---- shared ---------------------------------------------------------------------------------
-
-
-def block_share(doc, method=None):
-	"""DocShare validate: mentoring records are never shared (an assignment shares too, so it is refused as well)."""
-	if doc.share_doctype in (NOTE, INTERACTION):
-		frappe.throw(_("{0} records cannot be shared.").format(_(doc.share_doctype)), frappe.PermissionError)
 
 
 def scoped_student_rule(user, table):

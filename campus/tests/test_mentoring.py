@@ -8,6 +8,8 @@ activity report shows counts only.
 from unittest import mock
 
 import frappe
+from frappe.core.doctype.file.utils import find_file_by_url
+from frappe.desk import notifications
 from frappe.desk.form import linked_with
 from frappe.utils import add_days, set_request, today
 from frappe.website.serve import get_response_without_exception_handling
@@ -165,6 +167,11 @@ class TestCounsellingNoteAccess(MentoringFixture):
 		self.as_user(MENTOR_A, tamper, {"mentor": demo.employee_of("faculty_2"), "department": demo.department_name(demo.ECE_DEPARTMENT, demo.ENGINEERING)})
 		tamper({"company": demo.ARTS})  # as Administrator: the author's own User Permissions would refuse the save
 		self.assertEqual(frappe.db.get_value(NOTE, name, ["mentor", "company", "department"]), before)
+		try:
+			tamper({"student": self.b_student})
+		except frappe.CannotChangeConstantError:
+			pass
+		self.assertEqual(frappe.db.get_value(NOTE, name, "student"), self.a_student)
 
 	def test_the_designated_counsellor_must_belong_to_the_notes_company(self):
 		arts = "campus-l09-arts-counsellor@example.com"
@@ -391,6 +398,59 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 		self.assertNotIn(INTERACTION, shown)
 		self.assertEqual(frappe.get_hooks("override_whitelisted_methods")["frappe.desk.form.linked_with.get"][-1],
 			"campus.campus_platform.restricted_records.get_linked_docs")  # fmt: skip
+
+	def open_counts(self, user, fn, student):
+		self.addCleanup(frappe.db.set_execution_timeout, 0)  # get_open_count sets a 1 s statement limit
+		result = self.as_user(user, fn, "Student", student, items=[NOTE, INTERACTION, "Program Enrollment"])
+		return {d["doctype"]: d["count"] for d in result["count"]["external_links_found"]}
+
+	def test_dashboard_counts_hide_records_a_guardian_cannot_read(self):
+		self.add_note(MENTOR_A, self.guarded)
+		self.add_interaction(MENTOR_A, self.guarded, self.guardian)
+		raw = self.open_counts(GUARDIAN, notifications.get_open_count, self.guarded)
+		self.assertGreaterEqual(raw[NOTE], 1)  # what Frappe alone would reveal for caller-chosen items
+		shown = self.open_counts(GUARDIAN, restricted_records.get_open_count, self.guarded)
+		self.assertNotIn(NOTE, shown)
+		self.assertNotIn(INTERACTION, shown)
+		self.assertIn("Program Enrollment", shown)  # other counts are left alone
+		self.assertEqual(frappe.get_hooks("override_whitelisted_methods")["frappe.desk.notifications.get_open_count"][-1],
+			"campus.campus_platform.restricted_records.get_open_count")  # fmt: skip
+
+	def test_dashboard_counts_give_a_reader_their_permitted_count(self):
+		self.add_note(MENTOR_A, self.a_student)
+		self.add_note(MENTOR_A, self.a_student)
+		self.add_note(COUNSELLOR, self.a_student, is_confidential=1, counsellor=COUNSELLOR)
+		self.add_interaction(MENTOR_A, self.a_student, self.other_guardian)
+		shown = self.open_counts(MENTOR_A, restricted_records.get_open_count, self.a_student)
+		self.assertEqual((shown[NOTE], shown[INTERACTION]), (2, 1))
+
+	def test_the_owner_of_a_note_file_cannot_download_it_without_reading_the_note(self):
+		note = self.add_note(COUNSELLOR, self.a_student)
+		name = self.attach(COUNSELLOR, note)
+		frappe.db.set_value("File", name, "owner", MENTOR_A)  # uploaded by the mentor of that time
+		frappe.db.set_value("Student", self.a_student, "oc_mentor", demo.employee_of("faculty_2"))
+		url = frappe.db.get_value("File", name, "file_url")
+		self.assertTrue(self.as_user(COUNSELLOR, find_file_by_url, url))
+		self.assertIsNone(self.as_user(MENTOR_A, find_file_by_url, url))
+
+	def test_a_second_file_row_with_the_url_neither_opens_nor_publishes_it(self):
+		url = frappe.db.get_value("File", self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student)), "file_url")
+		copy = {"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}
+		copy_name = frappe.get_doc(copy).insert().name  # Frappe lets only a reader add a row for a private URL
+		frappe.db.set_value("File", copy_name, "owner", MENTOR_B)
+		self.assertFalse(self.can(MENTOR_B, "File", copy_name))
+		self.assertIsNone(self.as_user(MENTOR_B, find_file_by_url, url))
+		with self.assertRaisesRegex(frappe.PermissionError, "cannot be made public"):
+			frappe.get_doc({**copy, "file_name": "public.txt", "is_private": 0}).insert(ignore_permissions=True)
+
+	def test_a_note_file_cannot_be_detached_or_shared(self):
+		name = self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student))
+		file = frappe.get_doc("File", name)
+		file.update({"attached_to_doctype": None, "attached_to_name": None})
+		with self.assertRaises(frappe.PermissionError):
+			file.save()
+		with self.assertRaises(frappe.PermissionError):
+			frappe.share.add_docshare("File", name, MENTOR_B, read=1, flags={"ignore_share_permission": True})
 
 	def test_connections_show_a_reader_only_their_records_and_no_hidden_count(self):
 		mine = self.add_note(MENTOR_A, self.a_student)

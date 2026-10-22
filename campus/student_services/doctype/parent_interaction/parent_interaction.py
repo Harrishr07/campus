@@ -10,7 +10,7 @@ from campus.student_services import mentoring_access
 from campus.student_services.mentoring import student_department
 
 
-FIXED_FIELDS = ("recorded_by", "company", "department")
+FIXED_FIELDS = ("student", "recorded_by", "company", "department")
 
 
 class ParentInteraction(Document):

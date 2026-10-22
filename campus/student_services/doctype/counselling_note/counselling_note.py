@@ -13,7 +13,7 @@ from campus.student_services import mentoring_access
 from campus.student_services.mentoring import COUNSELLOR_ROLE, student_department
 
 
-FIXED_FIELDS = ("author", "mentor", "company", "department")
+FIXED_FIELDS = ("student", "author", "mentor", "company", "department")
 
 
 class CounsellingNote(Document):
