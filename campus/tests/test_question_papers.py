@@ -17,6 +17,7 @@ from campus.examinations.exam_halls import EXAM_HALL
 from campus.examinations.question_papers import EXAM_CONFIDENTIAL, QPAccessDenied
 from campus.examinations.report.question_paper_print_log.question_paper_print_log import execute as print_log
 from campus.tests.factories import make_company
+from campus.tests.test_regulation import make_year
 from campus.tests.test_results import make_term
 from campus.tests.utils import CampusTestCase
 
@@ -66,6 +67,7 @@ class QuestionPaperFixture(CampusTestCase):
 		super().setUpClass()
 		make_company(COLLEGE, "QPTC")
 		make_company(OTHER_COLLEGE, "QPOC")
+		make_year("2022")  # make_term files its terms under RT-2022
 		cls.term = make_term("QPT Term", "2022-10-01", "2022-12-31")
 		cls.term_2 = make_term("QPT Term 2", "2022-07-01", "2022-09-30")
 		if not frappe.db.exists("Course", COURSE):
