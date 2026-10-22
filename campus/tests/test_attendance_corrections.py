@@ -8,7 +8,7 @@ Fixture: the faculty portal fixture (T07 timetable published from Monday 2026-11
 from unittest import mock
 
 import frappe
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_days, add_to_date, get_datetime, now_datetime
 
 from campus.campus_platform.api import latest_request
 from campus.campus_platform.approvals import approve
@@ -163,16 +163,72 @@ class TestSessionMarkingAndCorrections(FacultyPortalFixture):
 		self.mark(TEACHER, self.own.name, [])
 		first = self.students[0]
 		frappe.get_doc("Student Attendance", self.record_of(first)).cancel()
-		date = frappe.db.get_value("Course Schedule", self.own.name, "schedule_date")
-		leave = frappe.get_doc({"doctype": "Student Leave Application", "student": first, "from_date": date, "to_date": date})
-		leave.flags.ignore_validate = True
-		leave.insert(ignore_permissions=True)
+		leave, date = self.leave_of(first)
 		record = {"doctype": "Student Attendance", "student": first, "course_schedule": self.own.name, "date": date, "status": "Leave"}
 		with self.after_cutoff():
-			attendance_corrections.guard_record(frappe.get_doc({**record, "leave_application": leave.name}))  # as Education's leave approval writes it
-			other = frappe.get_doc({**record, "student": self.students[1], "leave_application": leave.name})
+			attendance_corrections.guard_record(frappe.get_doc({**record, "leave_application": leave}))  # as Education's leave approval writes it
+			other = frappe.get_doc({**record, "student": self.students[1], "leave_application": leave})
 			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
 				attendance_corrections.guard_record(other)  # another student's leave does not back it
+
+	def leave_of(self, student, docstatus=1, **extra):
+		date = frappe.db.get_value("Course Schedule", self.own.name, "schedule_date")
+		leave = frappe.get_doc({"doctype": "Student Leave Application", "student": student, "from_date": date, "to_date": date, **extra})
+		leave.flags.ignore_validate = True
+		leave.insert(ignore_permissions=True)
+		frappe.db.set_value("Student Leave Application", leave.name, "docstatus", docstatus)
+		return leave.name, date
+
+	def leave_record(self, student, leave, date, status="Leave"):
+		return frappe.get_doc(
+			{"doctype": "Student Attendance", "student": student, "course_schedule": self.own.name, "date": date, "status": status, "leave_application": leave}
+		)
+
+	def test_a_draft_or_cancelled_leave_or_a_wrong_status_does_not_back_a_late_record(self):
+		self.mark(TEACHER, self.own.name, [])
+		first = self.students[0]
+		frappe.get_doc("Student Attendance", self.record_of(first)).cancel()
+		with self.after_cutoff():
+			for docstatus in (0, 2):
+				leave, date = self.leave_of(first, docstatus)
+				with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+					attendance_corrections.guard_record(self.leave_record(first, leave, date))
+			leave, date = self.leave_of(first)
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				attendance_corrections.guard_record(self.leave_record(first, leave, date, "Present"))
+			attendance_corrections.guard_record(self.leave_record(first, leave, date))
+			frappe.db.set_value("Student Leave Application", leave, "mark_as_present", 1)
+			attendance_corrections.guard_record(self.leave_record(first, leave, date, "Present"))
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				attendance_corrections.guard_record(self.leave_record(first, leave, date))
+
+	def test_a_leave_link_does_not_let_a_late_cancel_through(self):
+		self.mark(TEACHER, self.own.name, [])
+		first = self.students[0]
+		leave, date = self.leave_of(first)
+		marked = frappe.get_doc("Student Attendance", self.record_of(first))
+		frappe.db.set_value("Student Attendance", marked.name, {"leave_application": leave, "status": "Leave"})
+		with self.after_cutoff():
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				frappe.get_doc("Student Attendance", marked.name).cancel()
+
+	def test_a_record_without_a_session_has_the_cut_off_of_its_date(self):
+		date = frappe.db.get_value("Course Schedule", self.own.name, "schedule_date")
+		record = {"doctype": "Student Attendance", "student": self.students[0], "student_group": self.own.student_group, "date": date, "status": "Present"}
+		hours = attendance_corrections.cutoff_hours()
+		day_end = add_days(date, 1)
+
+		def at(offset):
+			return mock.patch("campus.faculty.attendance_corrections.now_datetime", return_value=add_to_date(get_datetime(day_end), hours=offset))
+
+		with at(hours - 1):
+			attendance_corrections.guard_record(frappe.get_doc(record))
+		with at(hours + 1):
+			with self.assertRaisesRegex(frappe.ValidationError, "approved Attendance Correction Request"):
+				attendance_corrections.guard_record(frappe.get_doc(record))
+			late = frappe.get_doc(record)
+			late.flags.attendance_correction = True
+			attendance_corrections.guard_record(late)
 
 	def test_after_the_cut_off_a_never_marked_student_is_marked_through_a_request(self):
 		self.mark(TEACHER, self.own.name, [])

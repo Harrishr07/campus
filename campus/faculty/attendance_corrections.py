@@ -9,13 +9,14 @@ cut-off, also marked only through a request (an unmarked student counts as not a
 
 The cut-off holds for every writer of Student Attendance (doc_events, `guard_record` / `guard_cancel`): desk cancel and
 amend, Education's attendance tool and `mark_period` alike. Only `apply()` passes, by flagging the records it writes and
-cancels, and a record carrying the student's approved leave for its date (Education's leave approval); no role is exempt.
+cancels, and the record a submitted leave of the student writes for its date (Education's leave approval); no role is exempt.
+A record without a session has the cut-off of its date's end.
 """
 
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Min
-from frappe.utils import add_to_date, cint, get_datetime, getdate, now_datetime
+from frappe.utils import add_days, add_to_date, cint, get_datetime, getdate, now_datetime
 
 from campus.campus_platform.api import find_policy, start_request
 
@@ -65,25 +66,52 @@ def refuse_late_changes(course_schedule, wanted):
 
 
 def guard_record(doc, method=None):
-	"""Student Attendance validate: after the cut-off no record of the period is written (a new mark, an amendment,
-	Education's tool) except by an approved correction, or by the student's approved leave covering its date (Education
-	writes and, on the leave's cancel, cancels those records)."""
-	if not doc.course_schedule or doc.flags.attendance_correction or backed_by_leave(doc):
+	"""Student Attendance validate: after the cut-off no record is written (a new mark, an amendment, Education's tool)
+	except by an approved correction (`apply()` flags it), or as the record of the student's submitted leave
+	(Education's leave approval writes it). A record with a session is late when its period was first marked more than
+	the cut-off ago; one without a session (Education's tool in Student Group mode) when its date ended more than the
+	cut-off ago."""
+	if doc.flags.attendance_correction or backed_by_leave(doc):
 		return
-	if past_cutoff(doc.course_schedule):
+	late = past_cutoff(doc.course_schedule) if doc.course_schedule else past_day_cutoff(doc.date)
+	if late:
 		frappe.throw(late_change_message(doc))
 
 
+def past_day_cutoff(date):
+	"""True when the cut-off after the end of `date` has passed."""
+	return bool(date) and now_datetime() > add_to_date(get_datetime(add_days(getdate(date), 1)), hours=cutoff_hours())
+
+
 def backed_by_leave(doc):
+	"""The record is the one a submitted leave of this student writes: the leave covers its date and scope, and the
+	status is Leave (Present when the leave marks present)."""
 	if not doc.leave_application:
 		return False
-	leave = frappe.db.get_value("Student Leave Application", doc.leave_application, ["student", "from_date", "to_date"], as_dict=True)
-	return bool(leave) and leave.student == doc.student and getdate(leave.from_date) <= getdate(doc.date) <= getdate(leave.to_date)
+	leave = frappe.db.get_value(
+		"Student Leave Application", doc.leave_application,
+		["student", "docstatus", "from_date", "to_date", "mark_as_present", "attendance_based_on", "student_group", "course_schedule"],
+		as_dict=True,
+	)  # fmt: skip
+	return (
+		bool(leave)
+		and leave.docstatus == 1
+		and leave.student == doc.student
+		and getdate(leave.from_date) <= getdate(doc.date) <= getdate(leave.to_date)
+		and leave.course_schedule in (None, "", doc.course_schedule)
+		and (leave.attendance_based_on != "Student Group" or leave.student_group in (None, "", doc.student_group))
+		and doc.status == ("Present" if leave.mark_as_present else "Leave")
+	)
 
 
 def guard_cancel(doc, method=None):
-	"""Student Attendance before_cancel: after the cut-off a mark is cancelled only by an approved correction."""
-	guard_record(doc)
+	"""Student Attendance before_cancel: after the cut-off a mark is cancelled only by an approved correction. No leave
+	exemption: Education's leave cancel sets docstatus with db.set_value and never reaches this hook."""
+	if doc.flags.attendance_correction:
+		return
+	late = past_cutoff(doc.course_schedule) if doc.course_schedule else past_day_cutoff(doc.date)
+	if late:
+		frappe.throw(late_change_message(doc))
 
 
 def late_change_message(doc):
