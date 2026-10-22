@@ -37,8 +37,12 @@ class TestToolAttainment(UnitTestCase):
 	def test_no_student_gives_no_figure(self):
 		self.assertEqual(rules.tool_attainment({}, 60), (0, 0, None))
 
-	def test_percent_is_rounded_to_two_places(self):
-		self.assertEqual(rules.tool_attainment({"a": (9, 10), "b": (1, 10), "c": (1, 10)}, 60), (3, 1, 33.33))
+	def test_the_share_is_exact_and_banded_before_rounding(self):
+		percent = rules.tool_attainment({"a": (9, 10), "b": (1, 10), "c": (1, 10)}, 60)[2]
+		self.assertAlmostEqual(percent, 100 / 3, places=9)
+		self.assertEqual(rules.rounded(percent), 33.33)
+		self.assertEqual(rules.level_for(59.996, SXCCE.bands), 2)  # 60.00 once rounded, but not L3
+		self.assertEqual(rules.rounded(59.996), 60)
 
 
 class TestLevels(UnitTestCase):
@@ -59,10 +63,12 @@ class TestLevels(UnitTestCase):
 	def test_top_level_is_the_highest_band(self):
 		self.assertEqual(rules.top_level(SXCCE.bands), 3)
 
-	def test_indirect_level_scales_the_survey_percent_to_the_top_level(self):
-		self.assertEqual(rules.indirect_level(80, 3), 2.4)
-		self.assertEqual(rules.indirect_level(72, 3), 2.16)
-		self.assertIsNone(rules.indirect_level(None, 3))
+	def test_indirect_level_scales_the_survey_mean_to_the_top_level(self):
+		self.assertEqual(rules.indirect_level(4.0, 5, 3), 2.4)
+		self.assertEqual(rules.indirect_level(3.6, 5, 3), 2.16)
+		self.assertEqual(rules.indirect_level(3, 4, 3), 2.25)  # a 1-4 scale from the policy
+		self.assertIsNone(rules.indirect_level(None, 5, 3))
+		self.assertEqual(rules.survey_percent(3.6, 5), 72)
 
 
 class TestWeighted(UnitTestCase):
@@ -84,33 +90,33 @@ class TestCOResult(UnitTestCase):
 	"""The fixture course of test_attainment under the SXCCE policy (80/20; 60 ESE + 40 CIA; 60 %; 40/50/60)."""
 
 	def test_co1_both_tools_and_the_survey(self):
-		result = rules.co_result(cia=(10, 7, 70.0), ese=(9, 5, 55.56), indirect_percent=80, policy=SXCCE)
+		result = rules.co_result(cia=(10, 7, 70.0), ese=(9, 5, 55.56), indirect_average=4.0, policy=SXCCE)
 		self.assertEqual((result.cia_level, result.ese_level, result.direct_level), (3, 2, 2.4))
 		self.assertEqual((result.indirect_level, result.final_level, result.target_met), (2.4, 2.4, 1))
 
 	def test_co2_misses_the_target(self):
-		result = rules.co_result(cia=(10, 6, 60.0), ese=(9, 4, 44.44), indirect_percent=72, policy=SXCCE)
+		result = rules.co_result(cia=(10, 6, 60.0), ese=(9, 4, 44.44), indirect_average=3.6, policy=SXCCE)
 		self.assertEqual((result.direct_level, result.indirect_level, result.final_level), (1.8, 2.16, 1.87))
 		self.assertEqual((result.target_met, result.gap), (0, 0.13))
 
 	def test_without_a_survey_score_the_final_is_the_direct(self):
-		result = rules.co_result(cia=(9, 3, 33.33), ese=(9, 5, 55.56), indirect_percent=None, policy=SXCCE)
+		result = rules.co_result(cia=(9, 3, 33.33), ese=(9, 5, 55.56), indirect_average=None, policy=SXCCE)
 		self.assertEqual((result.cia_level, result.direct_level, result.final_level), (0, 1.2, 1.2))
 		self.assertIn(rules.NO_INDIRECT, result.notes)
 
 	def test_a_co_without_cia_questions_is_direct_from_the_ese(self):
-		result = rules.co_result(cia=(0, 0, None), ese=(9, 5, 55.56), indirect_percent=None, policy=SXCCE)
+		result = rules.co_result(cia=(0, 0, None), ese=(9, 5, 55.56), indirect_average=None, policy=SXCCE)
 		self.assertEqual((result.cia_level, result.direct_level), (None, 2))
 		self.assertIn(rules.NO_CIA, result.notes)
 
 	def test_a_co_assessed_nowhere_has_no_level(self):
-		result = rules.co_result(cia=(0, 0, None), ese=(0, 0, None), indirect_percent=90, policy=SXCCE)
+		result = rules.co_result(cia=(0, 0, None), ese=(0, 0, None), indirect_average=4.5, policy=SXCCE)
 		self.assertEqual((result.direct_level, result.final_level, result.target_met), (None, None, 0))
 		self.assertIsNone(result.gap)
 
 	def test_another_policy_gives_other_levels(self):
 		other = rules.Policy(50, 50, 50, 50, 50, ((1, 30), (2, 40), (3, 50)), 2)
-		result = rules.co_result(cia=(10, 6, 60.0), ese=(9, 4, 44.44), indirect_percent=72, policy=other)
+		result = rules.co_result(cia=(10, 6, 60.0), ese=(9, 4, 44.44), indirect_average=3.6, policy=other)
 		self.assertEqual((result.cia_level, result.ese_level, result.direct_level, result.final_level), (3, 2, 2.5, 2.33))
 
 
@@ -122,19 +128,25 @@ class TestPOAttainment(UnitTestCase):
 	def test_unassessed_cos_and_zero_cells_are_left_out(self):
 		self.assertEqual(rules.po_direct([(1.2, 2), (None, 3), (3, 0)]), 1.2)
 
+	def test_a_course_in_several_sections_is_one_student_weighted_final(self):
+		self.assertEqual(rules.combine_sections([(2.4, 10), (3, 30)]), 2.85)  # (24 + 90) / 40
+		self.assertEqual(rules.combine_sections([(1.8, 60), (1.8, 60), (1.8, 60)]), 1.8)  # 3 sections weigh as one course
+		self.assertEqual(rules.combine_sections([(2, 10), (None, 30), (3, 0)]), 2)
+		self.assertIsNone(rules.combine_sections([]))
+
 	def test_a_po_no_co_maps_to_has_no_level(self):
 		self.assertIsNone(rules.po_direct([]))
 
 	def test_po_final_weighs_in_the_exit_survey(self):
-		result = rules.po_result(direct=2.19, indirect_percent=88, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(direct=2.19, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2)
 		self.assertEqual((result.indirect_level, result.final_level, result.target_met), (2.64, 2.28, 1))
 
 	def test_po_final_without_the_survey_is_the_direct(self):
-		result = rules.po_result(direct=1.7, indirect_percent=None, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(direct=1.7, indirect_average=None, scale=5, top=3, indirect_weight=20, target_level=2)
 		self.assertEqual((result.final_level, result.target_met, result.gap), (1.7, 0, 0.3))
 
 	def test_an_unmapped_po(self):
-		result = rules.po_result(direct=None, indirect_percent=88, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(direct=None, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2)
 		self.assertEqual((result.final_level, result.target_met), (None, 0))
 		self.assertIn(rules.NOT_MAPPED, result.notes)
 

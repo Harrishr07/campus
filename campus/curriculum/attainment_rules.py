@@ -6,10 +6,12 @@ regulation's Attainment Policy (campus.curriculum.attainment).
 - The tool's attainment is the share of the students assessed on the CO who score at least the student threshold, mapped
   to the highest level band it reaches (0 below the first band).
 - Direct = CIA level x CIA weight + ESE level x ESE weight; a tool with no question tagged with the CO drops out and the
-  other carries the direct alone. Indirect = the exit-survey mean rating as a share of 5, scaled to the top level.
+  other carries the direct alone. Indirect = the exit-survey mean rating over the policy's survey scale (5 for the
+  1-5 feedback forms), scaled to the top level. Levels are banded on the exact share of students.
   Final = direct x direct weight + indirect x indirect weight; without a survey score the final is the direct.
 - PO / PSO = sum(CO final x correlation) / sum(correlation) over the COs mapped to it; final with the programme exit
-  survey at the policy's PO indirect weight.
+  survey at the policy's PO indirect weight. A course taught in several sections first gets one final per CO, the
+  student-weighted mean of its sections' finals.
 Every level is rounded to 2 places and the next step uses the rounded figure, as the NBA course file shows it.
 A missing figure is None here; stored, it is 0 with its flag off (assessed / mapped / has_indirect), see `shown`.
 """
@@ -19,8 +21,9 @@ from collections import namedtuple
 from frappe.utils import flt
 
 Policy = namedtuple(
-	"Policy", "direct_weight indirect_weight cia_weight ese_weight student_threshold bands target_level"
-)  # bands: ((level, minimum % of students), ...)
+	"Policy", "direct_weight indirect_weight cia_weight ese_weight student_threshold bands target_level survey_scale",
+	defaults=(5,),
+)  # bands: ((level, minimum % of students), ...); survey_scale: the highest rating of the survey's scale
 
 NO_CIA = "No CIA question is tagged with this CO."
 NO_ESE = "No ESE question is tagged with this CO."
@@ -45,15 +48,20 @@ def student_scores(rows):
 	return {student: score for student, score in scores.items() if score[1] > 0}
 
 
+def rounded(percent):
+	return None if percent is None else flt(percent, 2)
+
+
 def attains(score, threshold):
 	marks, maximum = score
 	return marks * 100 >= threshold * maximum
 
 
 def tool_attainment(scores, threshold):
-	"""(students, attained, percent) of `scores` at the student threshold %; percent None when nobody was assessed."""
+	"""(students, attained, percent) of `scores` at the student threshold %; percent None when nobody was assessed.
+	The percent is not rounded: the level is banded on the exact share, and only the stored figure is rounded."""
 	attained = sum(1 for score in scores.values() if attains(score, threshold))
-	return len(scores), attained, flt(attained * 100 / len(scores), 2) if scores else None
+	return len(scores), attained, attained * 100 / len(scores) if scores else None
 
 
 def level_for(percent, bands):
@@ -67,8 +75,21 @@ def top_level(bands):
 	return max(level for level, _minimum in bands)
 
 
-def indirect_level(percent, top):
-	return None if percent is None else flt(percent * top / 100, 2)
+def survey_percent(average, scale):
+	"""The survey mean rating as a share of the scale's highest rating."""
+	return None if average is None else flt(average * 100 / scale, 2)
+
+
+def indirect_level(average, scale, top):
+	"""The survey mean rating scaled from the survey's highest rating to the top level."""
+	return None if average is None else flt(average * top / scale, 2)
+
+
+def combine_sections(sections):
+	"""One CO final of a course from its sections' (final, students): the student-weighted mean, so a course taught in
+	three sections weighs in a PO as one course, like a single-section elective. Sections without a final or a student
+	are left out; None when nothing is left."""
+	return weighted([(final, students) for final, students in sections if students])
 
 
 def weighted(parts):
@@ -87,20 +108,20 @@ def gap(final, target):
 	return flt(target - final, 2)
 
 
-def co_result(cia, ese, indirect_percent, policy):
-	"""One CO's figures from its (students, attained, percent) per tool and its survey percent (None if none)."""
+def co_result(cia, ese, indirect_average, policy):
+	"""One CO's figures from its (students, attained, percent) per tool and its survey mean rating (None if none)."""
 	cia_level, ese_level = level_for(cia[2], policy.bands), level_for(ese[2], policy.bands)
 	direct = weighted([(cia_level, policy.cia_weight), (ese_level, policy.ese_weight)])
-	indirect = indirect_level(indirect_percent, top_level(policy.bands))
+	indirect = indirect_level(indirect_average, policy.survey_scale, top_level(policy.bands))
 	final = weighted([(direct, policy.direct_weight), (indirect, policy.indirect_weight)]) if direct is not None else None
 	notes = [
 		note for note, missing in ((NO_CIA, cia[2] is None), (NO_ESE, ese[2] is None), (NO_INDIRECT, indirect is None), (NO_DIRECT, direct is None))
 		if missing
 	]  # fmt: skip
 	return Result(
-		cia_students=cia[0], cia_attained=cia[1], cia_percent=cia[2], cia_level=cia_level,
-		ese_students=ese[0], ese_attained=ese[1], ese_percent=ese[2], ese_level=ese_level,
-		direct_level=direct, indirect_percent=indirect_percent, indirect_level=indirect, final_level=final,
+		cia_students=cia[0], cia_attained=cia[1], cia_percent=rounded(cia[2]), cia_level=cia_level,
+		ese_students=ese[0], ese_attained=ese[1], ese_percent=rounded(ese[2]), ese_level=ese_level,
+		direct_level=direct, indirect_percent=survey_percent(indirect_average, policy.survey_scale), indirect_level=indirect, final_level=final,
 		target_level=policy.target_level, target_met=int(final is not None and final >= policy.target_level),
 		gap=gap(final, policy.target_level), notes=notes, assessed=int(direct is not None), has_indirect=int(indirect is not None),
 	)  # fmt: skip
@@ -112,12 +133,12 @@ def po_direct(cells):
 	return weighted(mapped) if mapped else None
 
 
-def po_result(direct, indirect_percent, top, indirect_weight, target_level):
-	indirect = indirect_level(indirect_percent, top)
+def po_result(direct, indirect_average, scale, top, indirect_weight, target_level):
+	indirect = indirect_level(indirect_average, scale, top)
 	final = weighted([(direct, 100 - indirect_weight), (indirect, indirect_weight)]) if direct is not None else None
 	notes = [note for note, missing in ((NOT_MAPPED, direct is None), (NO_EXIT_SURVEY, indirect is None)) if missing]
 	return Result(
-		direct_level=direct, indirect_percent=indirect_percent, indirect_level=indirect, final_level=final,
+		direct_level=direct, indirect_percent=survey_percent(indirect_average, scale), indirect_level=indirect, final_level=final,
 		target_level=target_level, target_met=int(final is not None and final >= target_level),
 		gap=gap(final, target_level), notes=notes, mapped=int(direct is not None), has_indirect=int(indirect is not None),
 	)  # fmt: skip

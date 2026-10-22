@@ -2,6 +2,7 @@
 
 `seed_outcome_demo()` is idempotent and also serves a demo site (after make_demo):
     bench --site <site> execute campus.tests.attainment_fixtures.seed_outcome_demo
+It approves the matrix as the demo HOD with frappe.set_user: for bench execute and tests only, never a request path.
 It adds the NBA PO1-PO12 and PSO1-PSO2 of B.E. CSE under R2022 and R2026, CO1-CO3 of Data Structures in the R2022
 curriculum, its CO-PO matrix approved by the CSE HOD through the approval engine, and the Attainment Policies: R2022
 the SXCCE rule (80 % direct + 20 % indirect; direct 60 % ESE + 40 % CIA; threshold 60 %; bands L1 40 %, L2 50 %,
@@ -48,7 +49,7 @@ POLICIES = {
 }  # fmt: skip
 
 OFFERING, SESSION, BUNDLE = "ATT-DS-2022-A", "ATT-ES-1", "ATT-BUNDLE-1"
-CO_CAMPAIGN, EXIT_CAMPAIGN = "ATT-FBC-CO", "ATT-FBC-EXIT"
+CO_CAMPAIGN, EXIT_CAMPAIGN, EXIT_RULE = "ATT-FBC-CO", "ATT-FBC-EXIT", "ATT-AR-CSE"
 STUDENTS = [f"ATT22-{n:02d}" for n in range(1, 13)]
 # CIA questions (component, question, max, CO) and per student marks in that order; None = absent
 CIA_QUESTIONS = (("CIA 1", "Q1", 10, "CO1"), ("CIA 1", "Q2", 10, "CO2"), ("CIA 2", "Q1", 10, "CO2"), ("CIA 2", "Q2", 10, "CO3"), ("CIA 2", "Q3", 5, ""))
@@ -106,7 +107,7 @@ def seed_outcome_demo():
 
 
 def seed_policy(code):
-	name = frappe.db.get_value("Attainment Policy", {"regulation": regulation(code)})
+	name = frappe.db.get_value("Attainment Policy", {"regulation": regulation(code), "disabled": 0})
 	if not name:
 		name = frappe.get_doc({"doctype": "Attainment Policy", "regulation": regulation(code), **POLICIES[code]}).insert().name
 	return name
@@ -213,6 +214,8 @@ def make_feedback():
 		[("q1", "CO1", a), ("q2", "CO2", b), *([("q3", "CO3", c)] if c else [])] for a, b, c in co_answers
 	])  # fmt: skip
 	exit_answers = [(5, 4), (5, 4), (4, None), (4, None), (4, None)]  # PO1 avg 4.4; PO2 answered twice
+	insert({"doctype": "Audience Rule", "name": EXIT_RULE, "rule_name": EXIT_RULE, "company": ENGINEERING,
+		"rule_type": "Program and Semester", "program": PROGRAM})  # fmt: skip
 	campaign(EXIT_CAMPAIGN, "Students", None, [
 		[("q1", "PO1", a), *([("q2", "PO2", b)] if b else [])] for a, b in exit_answers
 	])  # fmt: skip
@@ -221,7 +224,7 @@ def make_feedback():
 def campaign(name, audience, offering, responses, end_date="2023-05-15"):
 	insert({"doctype": "Feedback Campaign", "name": name, "campaign_title": name, "company": ENGINEERING,
 		"academic_year": BATCH, "audience": audience, "course_offering": offering, "start_date": "2023-05-01",
-		"end_date": end_date, "is_anonymous": 1})  # fmt: skip
+		"end_date": end_date, "is_anonymous": 1, "audience_rule": EXIT_RULE if audience == "Students" else None})  # fmt: skip
 	for k, answers in enumerate(responses, 1):
 		insert({"doctype": "Feedback Response", "name": f"{name}-R{k}", "campaign": name, "company": ENGINEERING,
 			"course_offering": offering, "response_date": "2023-05-10",

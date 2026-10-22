@@ -20,7 +20,8 @@ from campus.curriculum.report.co_attainment_by_course import co_attainment_by_co
 from campus.curriculum.report.po_attainment_by_program import po_attainment_by_program
 from campus.iqac import api as iqac_api
 from campus.tests import attainment_fixtures as fx
-from campus.tests.demo import ENGINEERING
+from campus.tests.demo import ECE_DEPARTMENT, ENGINEERING, department_name, email
+from campus.tests.factories import make_user
 from campus.tests.utils import CampusTestCase
 
 S = fx.STUDENTS
@@ -101,6 +102,24 @@ class TestAttainmentPolicy(AttainmentFixture):
 		with self.assertRaises(frappe.ValidationError):
 			doc.save()
 
+	def test_weights_add_up_to_100_within_a_hundredth(self):
+		doc = frappe.get_doc("Attainment Policy", attainment.policy_for(self.r22))
+		doc.update({"direct_weight": 80.005, "indirect_weight": 19.999})
+		doc.save()
+
+	def test_a_policy_a_submitted_run_used_is_locked_and_replaced_by_a_new_one(self):
+		run = self.submitted_co_run()
+		policy = frappe.get_doc("Attainment Policy", run.policy)
+		policy.update({"direct_weight": 70, "indirect_weight": 30})
+		with self.assertRaisesRegex(frappe.ValidationError, "locked"):
+			policy.save()
+		policy.reload()
+		policy.disabled = 1
+		policy.save()
+		new = frappe.get_doc({"doctype": "Attainment Policy", "regulation": self.r22, **fx.POLICIES["R2022"], "direct_weight": 70, "indirect_weight": 30}).insert()
+		self.assertEqual(attainment.policy_for(self.r22), new.name)
+		self.assertEqual(frappe.db.get_value("CO Attainment Run", run.name, ["policy", "direct_weight"]), (policy.name, 80))
+
 
 class TestCOAttainmentRun(AttainmentFixture):
 	def test_the_fixture_course_gives_the_hand_computed_co_levels(self):  # AC1
@@ -121,7 +140,8 @@ class TestCOAttainmentRun(AttainmentFixture):
 		self.assertTrue(co3.indirect_suppressed)
 
 	def test_the_snapshot_lists_the_questions_and_students_used_per_co(self):  # AC3
-		snapshot = frappe.parse_json(self.co_run().input_snapshot)
+		run = self.co_run()
+		snapshot = frappe.parse_json(run.input_snapshot)
 		self.assertEqual(snapshot["exam_sessions"], [fx.SESSION])
 		self.assertEqual(snapshot["students"], S[:10])  # SA and pending-ratification students left out
 		co1, co3 = snapshot["cos"]["CO1"], snapshot["cos"]["CO3"]
@@ -135,6 +155,11 @@ class TestCOAttainmentRun(AttainmentFixture):
 		self.assertNotIn(S[9], co3["cia"]["students"])  # absent from CIA 2 Q2
 		self.assertEqual(snapshot["cos"]["CO2"]["indirect"], {"responses": 5, "average": 3.6, "percent": 72.0, "suppressed": 0})
 		self.assertEqual(snapshot["policy"]["bands"], [[1, 40], [2, 50], [3, 60]])
+		self.assertEqual(snapshot["batches"], {fx.BATCH: 10})
+		self.assertIn("raw valuation question marks", snapshot["ese_basis"])
+		used = frappe.parse_json(run.questions_used)
+		self.assertEqual(used["cos"]["CO3"], {"cia": ["CIA 2 Q2"], "ese": ["Q3", "Q4"]})
+		self.assertNotIn("students", json.dumps(used))
 
 	def test_only_released_sessions_count(self):
 		frappe.db.set_value("Exam Session", fx.SESSION, "publish_at", add_days(today(), 3))  # embargoed
@@ -186,7 +211,7 @@ class TestPolicyIsolation(AttainmentFixture):
 	def test_a_submitted_run_keeps_the_policy_it_was_computed_with(self):
 		doc = self.submitted_co_run()
 		before = self.levels(doc)
-		frappe.db.set_value("Attainment Policy", attainment.policy_for(self.r22), "direct_weight", 50)
+		frappe.db.set_value("Attainment Policy", attainment.policy_for(self.r22), "direct_weight", 50)  # behind the lock
 		self.assertEqual(self.levels(frappe.get_doc("CO Attainment Run", doc.name)), before)
 		self.assertEqual(frappe.db.get_value("CO Attainment Run", doc.name, "direct_weight"), 80)
 
@@ -215,7 +240,11 @@ class TestPOAttainmentRun(AttainmentFixture):
 		self.assertEqual(len(rows), 14)
 		snapshot = frappe.parse_json(doc.input_snapshot)
 		self.assertEqual([r["course_offering"] for r in snapshot["co_runs"]], [fx.OFFERING])
-		self.assertEqual(sorted(snapshot["cells"]["PO1"]), sorted([["CO1", 2.4, 3, snapshot["co_runs"][0]["name"]], ["CO2", 1.87, 2, snapshot["co_runs"][0]["name"]]]))
+		run = snapshot["co_runs"][0]["name"]
+		self.assertEqual(
+			sorted(snapshot["cells"]["PO1"]),
+			[["CO1", 2.4, 3, fx.course(), [[run, 2.4, 10]]], ["CO2", 1.87, 2, fx.course(), [[run, 1.87, 10]]]],
+		)
 
 	def test_draft_co_runs_and_other_years_do_not_count(self):
 		doc = self.co_run()  # computed, not submitted
@@ -305,3 +334,154 @@ class TestCOTags(AttainmentFixture):
 		bundle.questions[0].course_outcome = "CO1, CO3"
 		with self.assertRaises(frappe.ValidationError):
 			validate_co_tags(bundle)
+
+
+class TestAttainmentAccess(AttainmentFixture):
+	"""C1 / I1: per-student marks are read by System Manager, COE and Dean Academics only; a run is read by IQAC and COE
+	college-wide, by the programme's HOD and the offering's instructors; only the programme's HOD (or the Dean) manages it."""
+
+	OTHER_HOD = "att-ece-hod@example.com"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		make_user(cls.OTHER_HOD, [ENGINEERING])
+		frappe.get_doc("User", cls.OTHER_HOD).add_roles("HOD", "Instructor")
+		frappe.get_doc(
+			{"doctype": "Position Holder", "position": "HOD", "scope_value": department_name(ECE_DEPARTMENT, ENGINEERING),
+			"user": cls.OTHER_HOD, "from_date": add_days(today(), -30)}
+		).insert(ignore_permissions=True)  # fmt: skip
+
+	def setUp(self):
+		super().setUp()
+		self.run = self.co_run()
+
+	def read_as(self, user, doctype="CO Attainment Run", name=None):
+		frappe.set_user(user)
+		try:
+			return frappe.client.get(doctype, name or self.run.name)
+		finally:
+			frappe.set_user("Administrator")
+
+	def listed_as(self, user, fields=("name", "input_snapshot", "questions_used")):
+		frappe.set_user(user)
+		try:
+			return frappe.get_list("CO Attainment Run", fields=list(fields))
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_only_coe_dean_and_system_manager_read_the_per_student_snapshot(self):
+		self.assertIn(S[0], self.read_as(email("coe"))["input_snapshot"])
+		for user in (email("iqac"), email("hod_cse"), email("faculty_1")):
+			doc = self.read_as(user)
+			self.assertFalse(doc.get("input_snapshot"), user)
+			self.assertTrue(doc.get("questions_used"), user)
+			self.assertEqual(len(doc["results"]), 3, user)
+			rows = self.listed_as(user)
+			self.assertEqual([r.name for r in rows], [self.run.name], user)
+			self.assertFalse(rows[0].get("input_snapshot"), user)  # report view / export
+
+	def test_another_departments_hod_and_a_non_owning_instructor_cannot_read_the_run(self):
+		for user in (self.OTHER_HOD, email("faculty_2")):
+			with self.assertRaises(frappe.PermissionError):
+				self.read_as(user)
+			self.assertEqual(self.listed_as(user, ("name",)), [], user)
+
+	def test_only_the_programmes_hod_or_the_dean_computes_and_submits(self):
+		for user in (self.OTHER_HOD, email("faculty_1"), email("iqac")):
+			frappe.set_user(user)
+			try:
+				with self.assertRaises(frappe.PermissionError):
+					attainment.queue_co_run(self.run.name)
+				with self.assertRaises(frappe.PermissionError):
+					frappe.get_doc("CO Attainment Run", self.run.name).submit()
+			finally:
+				frappe.set_user("Administrator")
+		frappe.set_user(self.OTHER_HOD)
+		try:
+			with self.assertRaisesRegex(frappe.ValidationError, "No offering"):  # the term's offerings are not their department's
+				attainment.start_term_runs(ENGINEERING, self.world.term)
+		finally:
+			frappe.set_user("Administrator")
+		frappe.set_user(email("hod_cse"))
+		try:
+			frappe.get_doc("CO Attainment Run", self.run.name).submit()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("CO Attainment Run", self.run.name, "docstatus"), 1)
+
+	def test_a_po_run_is_the_programme_hods(self):
+		po = frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH}).insert()
+		self.assertEqual(self.read_as(email("hod_cse"), "PO Attainment Run", po.name)["name"], po.name)
+		self.assertEqual(self.read_as(email("iqac"), "PO Attainment Run", po.name)["name"], po.name)
+		with self.assertRaises(frappe.PermissionError):
+			self.read_as(self.OTHER_HOD, "PO Attainment Run", po.name)
+		frappe.set_user(self.OTHER_HOD)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH, "academic_year": fx.BATCH}).insert()
+		finally:
+			frappe.set_user("Administrator")
+
+
+class TestInputGuards(AttainmentFixture):
+	def test_untagged_ese_questions_flag_the_run_and_block_submit(self):  # I2
+		frappe.db.set_value("Answer Script Bundle Question", {"parent": fx.BUNDLE}, "course_outcome", "")
+		doc = self.co_run()
+		self.assertTrue(doc.ese_untagged)
+		self.assertEqual({r.ese_students for r in doc.results}, {0})
+		with self.assertRaisesRegex(frappe.ValidationError, "CO tag"):
+			doc.submit()
+
+	def test_an_unanswered_choice_question_counts_in_neither_marks_nor_maximum(self):  # I3
+		row = frappe.db.get_value("Curriculum Course", {"parent": fx.curriculum(), "course": fx.course()})
+		frappe.db.set_value("Curriculum Course", row, {"exam_type": "Theory", "practical_periods": 0, "ese_max": 70})
+		for idx, question in ((6, "Q6a"), (7, "Q6b")):  # either / or, CO1; the paper now adds up to 90 > 70
+			frappe.get_doc({"doctype": "Answer Script Bundle Question", "parent": fx.BUNDLE, "parenttype": "Answer Script Bundle",
+				"parentfield": "questions", "idx": idx, "question": question, "max_marks": 10, "course_outcome": "CO1"}).db_insert()  # fmt: skip
+		for entry, mark in (("VE-ATT-1-1", 9), ("VE-ATT-1-2", 7)):  # s1 answered Q6a only
+			frappe.get_doc({"doctype": "Valuation Entry Mark", "parent": entry, "parenttype": "Valuation Entry", "parentfield": "marks",
+				"idx": 9, "question": "Q6a", "marks": mark}).db_insert()  # fmt: skip
+		doc = self.co_run()
+		self.assertTrue(doc.ese_choice_paper)
+		ese = frappe.parse_json(doc.input_snapshot)["cos"]["CO1"]["ese"]["students"]
+		self.assertEqual(ese[S[0]], [22, 30, 1])  # Q1 14/20 + Q6a 8/10; Q6b left out
+		self.assertEqual(ese[S[1]], [14, 20, 1])  # answered neither: both left out
+		self.assertEqual(self.levels(doc)["CO1"][2], 55.56)
+
+	def test_the_exit_survey_must_be_of_the_programme(self):  # I4
+		for rule in (None, "ATT-AR-ECE"):
+			if rule:
+				fx.insert({"doctype": "Audience Rule", "name": rule, "rule_name": rule, "company": ENGINEERING,
+					"rule_type": "Program and Semester", "program": "B.E. ECE"})  # fmt: skip
+			frappe.db.set_value("Feedback Campaign", fx.EXIT_CAMPAIGN, "audience_rule", rule)
+			with self.assertRaisesRegex(frappe.ValidationError, "exit survey of programme"):
+				frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH, "exit_survey": fx.EXIT_CAMPAIGN}).insert()
+
+	def test_a_course_in_several_sections_weighs_once_in_a_po(self):  # I5
+		run = self.submitted_co_run()
+		section = run.as_dict()
+		section.update({"name": "COAR-ATT-B", "course_offering": "ATT-DS-2022-B", "students": 30})
+		section["results"] = [
+			{**row, "name": frappe.generate_hash(length=10), "parent": "COAR-ATT-B", "final_level": 3, "assessed": 1} for row in section["results"]
+		]
+		fx.insert(section)
+		rows = self.po_levels(self.po_run())
+		self.assertEqual(rows["PO1"][0], 2.8)  # CO1 (2.4*10 + 3*30)/40 = 2.85, CO2 2.72: (2.85*3 + 2.72*2)/5
+		self.assertEqual(rows["PO2"][0], 2.68)  # (2.72*3 + 2.55*1)/4
+		self.assertEqual(rows["PO1"][4], 1)  # one course
+
+	def test_a_failed_computation_leaves_the_run_failed_with_the_error(self):  # never stuck at Queued
+		doc = frappe.get_doc({"doctype": "CO Attainment Run", "course_offering": fx.OFFERING}).insert()
+		attainment.queue_co_runs([doc.name])
+		frappe.db.delete("Course Outcome", {"course": fx.course(), "curriculum": fx.curriculum()})
+		attainment.compute_co_item(doc.name)
+		status, error = frappe.db.get_value("CO Attainment Run", doc.name, ["status", "error"])
+		self.assertEqual(status, "Failed")
+		self.assertIn("course outcomes", error)
+
+	def test_po_run_lists_co_runs_without_a_matrix(self):
+		run = self.submitted_co_run()
+		frappe.db.set_value("CO Attainment Run", run.name, "matrix", None)
+		po = self.po_run()
+		self.assertIn(run.name, po.warnings)

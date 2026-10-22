@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "PO Attainment Run",
@@ -16,19 +16,21 @@
  "permissions": [
   {
    "role": "System Manager",
+   "permlevel": 0,
    "read": 1,
    "report": 1,
    "export": 1,
    "print": 1,
+   "delete": 1,
    "write": 1,
    "create": 1,
-   "delete": 1,
    "submit": 1,
    "cancel": 1,
    "amend": 1
   },
   {
    "role": "Dean Academics",
+   "permlevel": 0,
    "read": 1,
    "report": 1,
    "export": 1,
@@ -41,6 +43,7 @@
   },
   {
    "role": "HOD",
+   "permlevel": 0,
    "read": 1,
    "report": 1,
    "export": 1,
@@ -52,23 +55,16 @@
    "amend": 1
   },
   {
-   "role": "IQAC Coordinator",
-   "read": 1,
-   "report": 1,
-   "export": 1,
-   "print": 1,
-   "write": 1,
-   "create": 1
-  },
-  {
-   "role": "Instructor",
+   "role": "COE",
+   "permlevel": 0,
    "read": 1,
    "report": 1,
    "export": 1,
    "print": 1
   },
   {
-   "role": "Academics User",
+   "role": "IQAC Coordinator",
+   "permlevel": 0,
    "read": 1,
    "report": 1,
    "export": 1,
@@ -134,7 +130,7 @@
    "fieldtype": "Select",
    "label": "Status",
    "read_only": 1,
-   "options": "Draft\nQueued\nComputed",
+   "options": "Draft\nQueued\nComputed\nFailed",
    "default": "Draft",
    "in_list_view": 1,
    "no_copy": 1
@@ -160,6 +156,21 @@
    "read_only": 1,
    "options": "Bulk Run",
    "no_copy": 1
+  },
+  {
+   "fieldname": "warnings",
+   "fieldtype": "Small Text",
+   "label": "Warnings",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "eval:doc.status=='Failed'"
   },
   {
    "fieldname": "amended_from",
@@ -210,6 +221,12 @@
    "read_only": 1
   },
   {
+   "fieldname": "survey_scale",
+   "fieldtype": "Int",
+   "label": "Survey Rating Scale",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_snapshot",
    "fieldtype": "Section Break",
    "label": "Input Snapshot",
@@ -236,6 +253,8 @@
   "computed_on",
   "co_runs",
   "bulk_run",
+  "warnings",
+  "error",
   "amended_from",
   "section_results",
   "results",
@@ -243,6 +262,7 @@
   "policy",
   "po_indirect_weight",
   "po_target_level",
+  "survey_scale",
   "section_snapshot",
   "input_snapshot"
  ],

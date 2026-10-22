@@ -5,7 +5,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Attainment Policy",
@@ -62,7 +62,6 @@
    "label": "Regulation",
    "options": "Regulation",
    "reqd": 1,
-   "unique": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "set_only_once": 1
@@ -95,6 +94,12 @@
    "label": "PO / PSO Target Level",
    "reqd": 1,
    "non_negative": 1
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled",
+   "description": "A policy a submitted run used cannot be changed: disable it and create a new policy for the regulation. One active policy per regulation."
   },
   {
    "fieldname": "section_weights",
@@ -152,6 +157,15 @@
    "description": "A student attains a CO in a tool (CIA or ESE) when scoring at least this % of the marks of the questions tagged with it."
   },
   {
+   "fieldname": "survey_scale",
+   "fieldtype": "Int",
+   "label": "Survey Rating Scale",
+   "reqd": 1,
+   "default": "5",
+   "non_negative": 1,
+   "description": "The highest rating of the exit surveys' Likert scale (the feedback forms rate 1-5): the mean rating over this, times the top level, is the indirect level."
+  },
+  {
    "fieldname": "section_bands",
    "fieldtype": "Section Break",
    "label": "Level Bands",
@@ -171,6 +185,7 @@
   "column_break_scope",
   "target_level",
   "po_target_level",
+  "disabled",
   "section_weights",
   "direct_weight",
   "indirect_weight",
@@ -179,10 +194,11 @@
   "cia_weight",
   "ese_weight",
   "student_threshold",
+  "survey_scale",
   "section_bands",
   "level_bands"
  ],
- "autoname": "format:ATP-{regulation}",
+ "autoname": "format:ATP-{regulation}-{##}",
  "naming_rule": "Expression",
  "title_field": "regulation",
  "search_fields": "regulation",

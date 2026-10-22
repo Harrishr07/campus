@@ -522,6 +522,10 @@ doc_events["Project Update"] = {"validate": "campus.research.progress.validate_p
 for _dt in ("CIA Schedule", "Question Bank Item", "Answer Script Bundle"):
 	_validate = doc_events.setdefault(_dt, {}).get("validate")
 	doc_events[_dt]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate or []), "campus.curriculum.outcomes.validate_co_tags"]
+# P3-T10: attainment runs are read by their programme's HOD and the offering's instructors (per-student marks: permlevel 1)
+for _dt, _kind in (("CO Attainment Run", "co_run"), ("PO Attainment Run", "po_run")):
+	permission_query_conditions[_dt] = f"campus.curriculum.attainment_access.{_kind}_query"
+	has_permission[_dt] = f"campus.curriculum.attainment_access.{_kind}_has_permission"
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.

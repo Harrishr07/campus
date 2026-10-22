@@ -2,12 +2,14 @@
 examinations.api.offering_assessment).
 
 Students: those whose latest, ratified Student Result of a released Exam Session (coe_reports.released_sessions) has a
-row for the offering, from their earliest such session; a row that is SA (shortage), WD (withdrawn) or Pending was not
+row for the offering, from their earliest such session (by publication time); a row that is SA (shortage), WD (withdrawn) or Pending was not
 assessed and leaves the student out. AB (absent) students stay in; they simply have no ESE script.
 - CIA: the Mark Sheet CIA Mark rows of the offering's mark sheet for that session (question, maximum, CO tag, absent).
 - ESE: the student's finalised, not void script of the course in that session; each question's mark is the average of
   the two valuation rounds that decide the final mark (valuation_rules.deciding_rounds, the Exam Rule Set's method),
-  with the maximum and CO tag of the Answer Script Bundle question pattern. Moderation, grace and revaluation change the
+  with the maximum and CO tag of the Answer Script Bundle question pattern. A question with no mark in either deciding
+  round was not answered (a choice question) and counts in neither marks nor maximum; a pattern whose maxima add up
+  to more than the course's ESE maximum is reported as a choice paper. Moderation, grace and revaluation change the
   final ESE total, not the question marks, so they are not reflected here.
 Dummy numbers never leave this module.
 """
@@ -17,32 +19,36 @@ from frappe.utils import flt
 
 from campus.campus_platform.api import get_rule
 from campus.examinations import coe_reports, valuation_rules
+from campus.examinations.courses import offering_course, student_limits
 from campus.examinations.valuation_access import DUMMY_NUMBER_MAP
 
 NOT_ASSESSED = ("SA", "WD", "Pending")
 
 
 def offering_assessment(offering):
-	"""{exam_sessions, students, cia: [rows], ese: [rows]}; a row is {student, question, max_marks, marks, course_outcome,
-	absent}."""
+	"""{exam_sessions, students, cia: [rows], ese: [rows], choice_paper}; a row is {student, question, max_marks, marks,
+	course_outcome, absent}."""
 	group = frappe.db.get_value("Student Group", offering, ["course", "oc_company"], as_dict=True)
 	sessions = [s.name for s in coe_reports.released_sessions(group.oc_company)] if group else []
 	cohort = cohort_of(offering, sessions)
+	ese, patterns = ese_marks(group.course, cohort) if group else ([], {})
 	return frappe._dict(
-		exam_sessions=sorted(set(cohort.values())), students=sorted(cohort),
-		cia=cia_marks(offering, cohort), ese=ese_marks(group.course, cohort) if group else [],
+		exam_sessions=sorted(set(cohort.values())), students=sorted(cohort), cia=cia_marks(offering, cohort), ese=ese,
+		choice_paper=is_choice_paper(offering, cohort, patterns),
 	)  # fmt: skip
 
 
 def cohort_of(offering, sessions):
 	"""{student: exam session} of the offering's assessed students (see the module docstring)."""
-	result, row = frappe.qb.DocType("Student Result"), frappe.qb.DocType("Student Result Course")
+	result, row, session = frappe.qb.DocType("Student Result"), frappe.qb.DocType("Student Result Course"), frappe.qb.DocType("Exam Session")
 	rows = (
 		frappe.qb.from_(row)
 		.join(result).on(result.name == row.parent)
+		.join(session).on(session.name == result.exam_session)
 		.select(result.student, result.exam_session, row.result)
 		.where((row.parenttype == "Student Result") & (row.course_offering == offering))
 		.where(result.exam_session.isin(sessions or [""]) & (result.is_latest == 1) & (result.pending_ratification == 0))
+		.orderby(session.publish_at)
 		.orderby(result.exam_session)
 		.run(as_dict=True)
 	)  # fmt: skip
@@ -92,18 +98,45 @@ def ese_marks(course, cohort):
 	rounds = {}
 	for entry in entries:
 		rounds.setdefault((entry.dummy_number, entry.exam_session), {})[int(entry.valuation_round)] = entry
+	methods = valuation_methods([s.student for s in scripts])
 	rows = []
 	for script in scripts:
 		by_round = rounds.get((script.dummy_number, script.exam_session), {})
 		if len(by_round) < 2:
 			continue
-		method = get_rule(script.student, "Exam Rule Set").final_valuation_method
+		method = methods[script.student]
 		deciding = [by_round[r] for r in valuation_rules.deciding_rounds({r: flt(e.total) for r, e in by_round.items()}, method)]
 		for question in patterns.get(deciding[0].bundle, []):
-			mark = sum(marks.get(e.name, {}).get(question.question, 0) for e in deciding) / len(deciding)
+			given = [marks[e.name][question.question] for e in deciding if question.question in marks.get(e.name, {})]
 			rows.append({"student": script.student, "question": question.question, "max_marks": flt(question.max_marks),
-				"marks": flt(mark, 2), "course_outcome": question.course_outcome, "absent": 0})  # fmt: skip
-	return rows
+				"marks": flt(sum(given) / len(given), 2) if given else 0, "course_outcome": question.course_outcome,
+				"absent": int(not given)})  # fmt: skip
+	return rows, patterns
+
+
+def valuation_methods(students):
+	"""{student: final valuation method} with one Exam Rule Set lookup per regulation."""
+	regulations = dict(frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_regulation"], as_list=True))
+	by_regulation, methods = {}, {}
+	for student in students:
+		regulation = regulations.get(student)
+		if regulation not in by_regulation:
+			by_regulation[regulation] = get_rule(student, "Exam Rule Set").final_valuation_method
+		methods[student] = by_regulation[regulation]
+	return methods
+
+
+def is_choice_paper(offering, cohort, patterns):
+	"""True when a question pattern's maxima add up to more than the course's ESE maximum (students choose questions);
+	False when they don't or the maximum is not configured."""
+	if not cohort or not patterns:
+		return False
+	try:
+		ese_max = student_limits(next(iter(sorted(cohort))), offering_course(offering))["ese_max"]
+	except frappe.ValidationError:
+		frappe.clear_messages()
+		return False
+	return bool(ese_max) and any(sum(flt(q.max_marks) for q in pattern) > flt(ese_max) for pattern in patterns.values())
 
 
 def bundle_patterns(bundles):
