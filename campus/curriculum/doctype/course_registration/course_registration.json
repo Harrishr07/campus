@@ -15,10 +15,14 @@
   "class_group",
   "regulation",
   "curriculum",
+  "program_enrollment",
   "courses_section",
   "items",
   "totals_section",
   "total_credits",
+  "late_section",
+  "late_reason",
+  "late_approved_by",
   "amended_from"
  ],
  "fields": [
@@ -104,6 +108,16 @@
    "read_only": 1
   },
   {
+   "fieldname": "program_enrollment",
+   "fieldtype": "Link",
+   "label": "Program Enrollment",
+   "options": "Program Enrollment",
+   "read_only": 1,
+   "set_only_once": 1,
+   "search_index": 1,
+   "description": "The enrollment this registration was made for; applying and cancelling it touch only this enrollment (M03-08)."
+  },
+  {
    "fieldname": "courses_section",
    "fieldtype": "Section Break",
    "label": "Courses"
@@ -127,6 +141,24 @@
    "read_only": 1
   },
   {
+   "fieldname": "late_section",
+   "fieldtype": "Section Break",
+   "label": "Late Registration",
+   "description": "Needed only when the registration window is not open. Authorised by Dean Academics or a System Manager (M03-08)."
+  },
+  {
+   "fieldname": "late_reason",
+   "fieldtype": "Small Text",
+   "label": "Late Registration Reason"
+  },
+  {
+   "fieldname": "late_approved_by",
+   "fieldtype": "Link",
+   "label": "Late Registration Authorised By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -138,7 +170,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Course Registration",

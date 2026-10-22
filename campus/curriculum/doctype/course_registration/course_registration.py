@@ -4,6 +4,10 @@ Credits come from the student's Effective curriculum. The limits come from the r
 Registration Rule (credit cap, drop, add, elective seat cap); the Registration Window gives the dates
 and may override the cap. Seats are counted from offering Student Group membership under a row lock
 on the Elective Group, and final approval enrolls the student exactly once.
+
+M03-08: a registration is bound to the Program Enrollment it was made for (apply and cancel use that one),
+the credit cap counts the student's other submitted registrations of the term, and the window deadline holds
+for every save of a draft; a late registration needs a reason and Dean Academics' authorisation.
 """
 
 from functools import cached_property
@@ -26,6 +30,7 @@ from campus.curriculum.enrollment import (
 )
 
 RULE = "Registration Rule"
+LATE_ROLES = {"Dean Academics", "System Manager"}
 
 
 class CourseRegistration(ApprovableDocument, Document):
@@ -43,7 +48,7 @@ class CourseRegistration(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		self.assign_offerings()
-		problems = self.seat_problems(lock=True)
+		problems = self.credit_problems(self.get_window(), lock=True) + self.seat_problems(lock=True)
 		if problems:
 			frappe.throw("<br>".join(problems), title=_("Registration Rules Not Met"))
 
@@ -63,9 +68,7 @@ class CourseRegistration(ApprovableDocument, Document):
 
 	def set_context(self):
 		student = frappe.db.get_value("Student", self.student, ["oc_company"], as_dict=True)
-		enrollment = latest_enrollment(self.student)
-		if not enrollment:
-			frappe.throw(_("Student {0} has no Program Enrollment.").format(frappe.bold(self.student)))
+		enrollment = self.bind_enrollment()
 		self.company = student.oc_company
 		if not has_user_permission(frappe.get_doc("Student", self.student)):  # Company User Permissions
 			frappe.throw(_("You are not permitted to register {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
@@ -81,6 +84,27 @@ class CourseRegistration(ApprovableDocument, Document):
 			)
 		if not self.class_group:
 			self.class_group = find_class_group(self.student, enrollment.program)
+
+	def bind_enrollment(self):
+		"""The Program Enrollment this registration is for: the stored (or given) one, else the student's latest.
+		Stored once at creation; the field is set-only-once."""
+		if self.program_enrollment:
+			enrollment = frappe.db.get_value(
+				"Program Enrollment",
+				{"name": self.program_enrollment, "student": self.student, "docstatus": ["<", 2]},
+				["program", "academic_year", "name"],
+				as_dict=True,
+			)
+			if not enrollment:
+				frappe.throw(
+					_("{0} is not an enrollment of {1}.").format(frappe.bold(self.program_enrollment), frappe.bold(self.student))
+				)
+			return enrollment
+		enrollment = latest_enrollment(self.student)
+		if not enrollment:
+			frappe.throw(_("Student {0} has no Program Enrollment.").format(frappe.bold(self.student)))
+		self.program_enrollment = enrollment.name
+		return enrollment
 
 	def fill_items(self):
 		by_course = {}
@@ -147,31 +171,75 @@ class CourseRegistration(ApprovableDocument, Document):
 		return windows[0] if windows else None
 
 	def check_window(self, window):
-		"""New registrations of courses need an open window; drops are governed by the drop deadline.
+		"""Registering courses needs an open window on the registration date, and again on the day of every
+		later save of the draft (amendments, re-saves). Drops are governed by the drop deadline.
 
-		Checked on creation only, by the registration date: approval may complete after the window closes.
+		Submitting is not checked: approval may complete after the window closes. A closed window is
+		overridden only by a late registration: a reason and Dean Academics' authorisation.
 		"""
-		if not self.is_new() or all(i.registration_type == "Dropped" for i in self.items):
+		if self.docstatus != 0 or all(i.registration_type == "Dropped" for i in self.items):
 			return
-		date = getdate(self.registration_date)
-		if not window or not getdate(window.opens_on) <= date <= getdate(window.closes_on):
-			frappe.throw(_("Registration for {0} is not open on {1}.").format(frappe.bold(self.academic_term), date))
+		dates = [getdate(self.registration_date)]
+		if not self.is_new() or self.amended_from:
+			dates.append(getdate())
+		closed = [d for d in dates if not window or not getdate(window.opens_on) <= d <= getdate(window.closes_on)]
+		if closed:
+			return self.authorise_late(closed[0])
+		if self.is_new():
+			self.late_approved_by = None
+
+	def authorise_late(self, date):
+		"""Keep the stored authorisation of a saved draft, else take the session user if they may authorise."""
+		kept = bool(self.late_approved_by) and not self.is_new() and not self.has_value_changed("late_approved_by")
+		if self.late_reason and (kept or LATE_ROLES & set(frappe.get_roles())):
+			self.late_approved_by = self.late_approved_by if kept else frappe.session.user
+			return
+		frappe.throw(
+			_(
+				"Registration for {0} is not open on {1}. A late registration needs a reason and the authorisation of Dean Academics."
+			).format(frappe.bold(self.academic_term), date)
+		)
 
 	def rule_problems(self, window):
 		rule = self.rule
 		rows = [(i.registration_type, i.credits) for i in self.items]
 		prefix = lambda field: rules.clause(self.regulation_code, rule.get(field))  # noqa: E731
 		excluded = rules.excluded_types(rule.excluded_types)
-		limit = (window and window.max_credits) or rule.max_credits_per_semester
 		self.total_credits = rules.counted_credits(rows, excluded)
 		term_start = frappe.db.get_value("Academic Term", self.academic_term, "term_start_date")
 		deadline = rules.drop_deadline(term_start, rule.drop_window_days, window and window.drop_until)
 		return (
-			rules.credit_limit_problems(rows, limit, excluded, prefix("max_credits_clause"))
+			self.credit_problems(window, lock=False)
 			+ rules.drop_problems(rows, self.registration_date, deadline, rule.max_drop_credits, prefix("drop_clause"))
 			+ rules.add_problems(rows, self.semester, rule, prefix("add_clause"))
 			+ self.choose_problems(prefix("elective_clause"))
 		)
+
+	def credit_problems(self, window, lock):
+		"""The credit cap over the student's other submitted registrations of the term plus this one.
+		With `lock` the Student row is locked and the others are read with locking reads, so two registrations
+		submitted at once cannot both pass."""
+		rule = self.rule
+		if lock:
+			frappe.db.get_value("Student", self.student, "name", for_update=True)
+		rows = self.registered_rows(lock) + [(i.registration_type, i.credits) for i in self.items]
+		limit = (window and window.max_credits) or rule.max_credits_per_semester
+		prefix = rules.clause(self.regulation_code, rule.max_credits_clause)
+		return rules.credit_limit_problems(rows, limit, rules.excluded_types(rule.excluded_types), prefix)
+
+	def registered_rows(self, lock):
+		"""(registration_type, credits) of the rows of the student's other active registrations of the term."""
+		registration = frappe.qb.DocType("Course Registration")
+		item = frappe.qb.DocType("Course Registration Item")
+		query = (
+			frappe.qb.from_(registration)
+			.join(item)
+			.on(item.parent == registration.name)
+			.select(item.registration_type, item.credits)
+			.where((registration.student == self.student) & (registration.academic_term == self.academic_term))
+			.where((registration.docstatus == 1) & (registration.name != (self.name or "")))
+		)
+		return [tuple(row) for row in (query.for_update() if lock else query).run()]
 
 	def choose_problems(self, prefix):
 		"""No more electives of one group than the group allows."""
@@ -227,12 +295,11 @@ class CourseRegistration(ApprovableDocument, Document):
 
 	def apply_rows(self, enrolling):
 		"""Enroll (or on cancel, reverse) every row; a drop does the opposite of a registration."""
-		program_enrollment = latest_enrollment(self.student).name
 		for item in self.items:
 			if (item.registration_type == "Dropped") == enrolling:
-				unenroll(self.student, item, program_enrollment)
+				unenroll(self.student, item, self.program_enrollment)
 			else:
-				enroll(self.student, item, program_enrollment, self.registration_date)
+				enroll(self.student, item, self.program_enrollment, self.registration_date)
 
 
 def find_class_group(student, program):
