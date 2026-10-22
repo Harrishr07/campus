@@ -4,7 +4,7 @@
 
 Builds, in order: trust and college companies, academic calendar, departments, programmes, the regulation with its
 rule records (exam rules from `campus.examinations.seed`), student categories, quotas and seat matrices, fee
-structures, approval policies, the shared service agreements, and one user per role with its company permission.
+structures, the selling price list, approval policies, the shared service agreements, and one user per role with its company permission.
 Re-running changes nothing: records are found by natural key and only differing values are updated (locked records
 -- an Effective regulation, a submitted fee structure -- are never edited). Returns what was created and updated.
 
@@ -40,6 +40,7 @@ def setup_college(profile="sxcce", test_passwords=None):
 	structure.ensure_programmes(profile, college, out)
 	structure.ensure_regulation(profile, college, out)
 	admission.ensure_admission(profile, college, out)
+	fees.ensure_selling_defaults()
 	fees.ensure_fees(profile, college, out)
 	employees = people.ensure_people(profile, {"college": college, "trust": trust}, out, use_test_passwords, result)
 	structure.ensure_institution_profile(profile, college, employees, out)

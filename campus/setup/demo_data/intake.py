@@ -17,7 +17,7 @@ from campus.admissions import allotment_import, applicant_upload, eligibility
 from campus.admissions.api import admit, confirm_joining
 from campus.admissions.enquiry import convert_lead_to_applicant
 from campus.campus_platform import bulk
-from campus.setup.demo_data.fees import ensure_selling_defaults
+from campus.setup import fees
 from campus.setup.records import upsert
 
 QUALIFYING_EXAM = "HSC (Class XII)"
@@ -59,7 +59,7 @@ def plan(ctx):
 
 
 def load(ctx):
-	ensure_selling_defaults()
+	fees.ensure_selling_defaults()
 	prepare_eligibility(ctx)
 	applicants = plan(ctx)
 	make_enquiries(ctx, applicants)

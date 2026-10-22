@@ -10,7 +10,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils.password import check_password
 
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
-from campus.setup import people
+from campus.setup import fees, people
 from campus.setup.admission import largest_remainder
 from campus.setup.pilot import setup_college
 from campus.setup.profile import PROFILE_DIR, load_profile, profile_errors
@@ -105,6 +105,18 @@ class TestPilotSetup(IntegrationTestCase):
 		self.assertEqual(len(structures), 12)
 		self.assertTrue(all(s.docstatus == 1 for s in structures))
 		self.assertEqual({s.oc_admission_quota for s in structures}, {None, "MQ"})
+
+	def test_a_fresh_site_gets_the_standard_selling_price_list_for_confirm_joining(self):
+		frappe.db.set_single_value("Selling Settings", "selling_price_list", "")
+		fees.ensure_selling_defaults()
+		self.assertEqual(frappe.db.get_single_value("Selling Settings", "selling_price_list"), "Standard Selling")
+		self.assertEqual(frappe.db.get_value("Price List", "Standard Selling", ["currency", "selling", "enabled"]), ("INR", 1, 1))
+
+	def test_a_price_list_the_college_already_chose_is_kept(self):
+		frappe.db.set_single_value("Selling Settings", "selling_price_list", "Standard Selling")
+		with patch.object(frappe.db, "set_single_value") as write:
+			fees.ensure_selling_defaults()
+		write.assert_not_called()
 
 	def test_trust_provides_hostel_and_transport(self):
 		for service in ("Hostel", "Transport"):

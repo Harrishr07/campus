@@ -1,20 +1,10 @@
-"""PR-03 Fees of the 2026 intake: the selling defaults a fresh site lacks, then the admission invoices paid in full, in
-part or not at all. The invoices themselves were raised by Confirm Joining; payments are ordinary Payment Entries made
+"""PR-03 Fees of the 2026 intake: the admission invoices paid in full, in part or not at all. The invoices themselves were raised by Confirm Joining; payments are ordinary Payment Entries made
 from them (`get_payment_entry`), so the receivable, the student's fee ledger and the dues check all read real vouchers."""
 
 import frappe
 from frappe.utils import flt, getdate
 
-PRICE_LIST = "Standard Selling"
 PAID_IN_FULL, PAID_IN_PART = 0.6, 0.1  # of the invoices, by position; the rest stays outstanding
-
-
-def ensure_selling_defaults():
-	"""Confirm Joining raises a Sales Invoice, which needs a selling price list; the ERPNext setup wizard sets it, the pilot kit does not."""
-	if not frappe.db.exists("Price List", PRICE_LIST):
-		frappe.get_doc({"doctype": "Price List", "price_list_name": PRICE_LIST, "currency": "INR", "selling": 1, "enabled": 1}).insert(ignore_permissions=True)
-	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
-		frappe.db.set_single_value("Selling Settings", "selling_price_list", PRICE_LIST)
 
 
 def load(ctx):

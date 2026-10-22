@@ -8,6 +8,15 @@ from frappe import _
 from campus.campus_finance.fee_heads import CAUTION_DEPOSIT, FEE_HEADS, seed_fee_categories, set_item_default
 
 DEPOSIT_ACCOUNT = "Caution Deposits"
+PRICE_LIST = "Standard Selling"
+
+
+def ensure_selling_defaults():
+	"""Confirm Joining raises a Sales Invoice, which needs a selling price list; the ERPNext setup wizard sets it, a bare site lacks it."""
+	if not frappe.db.exists("Price List", PRICE_LIST):
+		frappe.get_doc({"doctype": "Price List", "price_list_name": PRICE_LIST, "currency": "INR", "selling": 1, "enabled": 1}).insert(ignore_permissions=True)
+	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
+		frappe.db.set_single_value("Selling Settings", "selling_price_list", PRICE_LIST)
 
 
 def ensure_fees(profile, college, out):
