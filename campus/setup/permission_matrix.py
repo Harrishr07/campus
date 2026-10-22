@@ -28,7 +28,7 @@ OWNER = "System Manager"
 # does not depend on the flag. Any other role without desk access (a future Applicant or Alumni role) is student-facing too.
 STUDENT_FACING = ("Student", "Guardian", "Guest")
 # Test-fixture DocTypes: part of the app so tests can use them, but not a permission of the product.
-TEST_ONLY_DOCTYPES = ("Approval Test Document",)
+TEST_ONLY_DOCTYPES = ("Approval Test Document", "Campus Test Rule")  # Campus Test Rule: a stale test-site leftover, not in the app
 
 # Lifecycle, official documents, results, certificates and the financial / audit ledgers: kept as history.
 # Round Result (a placement round's shortlist) is deliberately not listed: the Placement Officer deletes a wrongly
