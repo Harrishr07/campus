@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "locked_fields",
+  "override_role"
+ ],
+ "fields": [
+  {
+   "fieldname": "locked_fields",
+   "fieldtype": "Small Text",
+   "label": "Locked Fields",
+   "default": "date_of_birth\noc_aadhaar\noc_register_no\noc_roll_no",
+   "description": "Student fields, one per line, that cannot be edited on the Student form: they change only through a Student Record Correction."
+  },
+  {
+   "fieldname": "override_role",
+   "fieldtype": "Link",
+   "label": "Override Role",
+   "options": "Role",
+   "default": "System Manager",
+   "description": "Holders of this role can still edit a locked field directly."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Student Correction Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

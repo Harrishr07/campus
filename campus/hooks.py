@@ -215,6 +215,7 @@ doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
 doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
+doc_events["Student"]["validate"].append("campus.student_services.corrections.guard_locked_fields")  # L-08
 _after_insert = doc_events["Student"].get("after_insert")
 doc_events["Student"]["after_insert"] = [
 	*([_after_insert] if isinstance(_after_insert, str) else _after_insert or []),
@@ -444,7 +445,12 @@ scheduler_events = {
 }
 
 # Delivery status webhooks (frappe_whatsapp updates WhatsApp Message) update the Message Log.
-doc_events["Approval Request"] = {"on_update": "campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status"}
+doc_events["Approval Request"] = {
+	"on_update": [
+		"campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status",
+		"campus.student_services.corrections.sync_status",  # L-08
+	]
+}
 doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
 app_include_js = ["/assets/campus/js/approvals.js", "/assets/campus/js/attach_evidence.js"]  # P3-T04 Attach as Evidence
@@ -532,7 +538,7 @@ for _dt, _kind in (("CO Attainment Run", "co_run"), ("PO Attainment Run", "po_ru
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.
-approval_final_actions = []
+approval_final_actions = ["campus.student_services.corrections.apply_correction"]  # L-08
 
 jinja = {
 	"methods": [
@@ -554,7 +560,7 @@ website_route_rules = [
 	{"from_route": "/campus-portal", "to_route": "campus_portal"},
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
-		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback")
+		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback", "corrections", "profile")
 	),
 	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
 	*(

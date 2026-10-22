@@ -1,0 +1,35 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("My record") }}</h2>
+<div class="cp-card">
+	<p><strong>{{ view.profile.student_name|e }}</strong> ({{ view.student|e }})</p>
+	<p>{{ _("Register No") }}: {{ (view.profile.oc_register_no or "-")|e }} | {{ _("Roll No") }}: {{ (view.profile.oc_roll_no or "-")|e }}</p>
+	<p>{{ _("Status") }}: <span class="cp-badge">{{ _(view.status or "-")|e }}</span></p>
+</div>
+<h3>{{ _("Status history") }}</h3>
+<ul class="cp-list">
+	{% for h in view.history %}<li>{{ _(h.to_status)|e }} &middot; {{ h.effective_date }}</li>{% endfor %}
+</ul>
+<h3>{{ _("Enrolments") }}</h3>
+<ul class="cp-list">
+	{% for e in view.enrollments %}<li>{{ e.program|e }} {{ (e.academic_year or "")|e }}</li>{% endfor %}
+	{% if not view.enrollments %}<li class="cp-empty">{{ _("None") }}</li>{% endif %}
+</ul>
+<h3>{{ _("Attendance, results and fees") }}</h3>
+<div class="cp-card">
+	<p>{{ _("Attendance") }}: {% if view.attendance.summary %}{{ view.attendance.summary.overall_pct }}%{% else %}-{% endif %}
+	| {{ _("CGPA") }}: {{ view.cgpa if view.cgpa is not none else "-" }}
+	| {{ _("Outstanding fees") }}: {{ view.total_outstanding }}</p>
+</div>
+<h3>{{ _("Certificates") }}</h3>
+<ul class="cp-list">
+	{% for c in view.certificates %}<li>{{ c.certificate_type|e }} <span class="cp-badge">{{ c.status|e }}</span></li>{% endfor %}
+	{% if not view.certificates %}<li class="cp-empty">{{ _("None") }}</li>{% endif %}
+</ul>
+<h3>{{ _("Corrections") }}</h3>
+<ul class="cp-list">
+	{% for c in view.corrections %}<li>{{ c.field_name|e }} <span class="cp-badge">{{ _(c.status)|e }}</span></li>{% endfor %}
+	{% if not view.corrections %}<li class="cp-empty">{{ _("None") }}</li>{% endif %}
+</ul>
+<p><a href="/campus-portal/corrections{% if students|length > 1 %}?student={{ student }}{% endif %}">{{ _("Ask for a correction") }}</a></p>
+{% endblock %}

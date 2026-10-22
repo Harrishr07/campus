@@ -19,6 +19,13 @@ LEVELS = [("HOD recommendation", "HOD", "department", 48), ("Principal approval"
 def setup_student_records():
 	create_custom_fields({"Exam Rule Set": exam_rule_set_fields()}, update=True)
 	seed_policies()
+	seed_correction_policies()
+
+
+def seed_correction_policies():
+	from campus.student_services import corrections  # L-08 (lazy: corrections imports admissions)
+
+	corrections.seed_policies()
 
 
 def exam_rule_set_fields():

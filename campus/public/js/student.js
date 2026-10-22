@@ -5,6 +5,10 @@ frappe.ui.form.on("Student", {
 		frm.add_custom_button(__("Student Onboarding"), () => {
 			frappe.set_route("List", "Student Onboarding", { student: frm.doc.name });
 		}, __("View"));
+		frm.add_custom_button(__("Student 360"), () => frappe.set_route("student-360", frm.doc.name), __("View"));
+		frm.add_custom_button(__("Correct Record"), () => {
+			frappe.new_doc("Student Record Correction", { student: frm.doc.name });
+		}, __("Create"));
 		frm.add_custom_button(__("Issue ID Card"), () => {
 			frappe.call({
 				method: "campus.student_services.api.issue_id_card",

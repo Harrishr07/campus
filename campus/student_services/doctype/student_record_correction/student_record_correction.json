@@ -1,0 +1,243 @@
+{
+ "actions": [],
+ "autoname": "SRC-.#####",
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "company",
+  "column_break_1",
+  "status",
+  "requested_via",
+  "section_change",
+  "category",
+  "guardian",
+  "field_name",
+  "column_break_2",
+  "old_value",
+  "new_value",
+  "new_secret",
+  "section_proof",
+  "reason",
+  "evidence",
+  "section_result",
+  "applied_on",
+  "applied_by",
+  "version"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending\nApproved\nRejected\nApplied",
+   "default": "Draft",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "requested_via",
+   "fieldtype": "Select",
+   "label": "Raised From",
+   "options": "Desk\nPortal",
+   "default": "Desk",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_change",
+   "fieldtype": "Section Break",
+   "label": "Correction"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "\nPersonal\nContact\nGuardian\nIdentity Document\nAcademic Identifier",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "guardian",
+   "fieldtype": "Link",
+   "label": "Guardian",
+   "options": "Guardian",
+   "depends_on": "eval:doc.category=='Guardian'",
+   "mandatory_depends_on": "eval:doc.category=='Guardian'"
+  },
+  {
+   "fieldname": "field_name",
+   "fieldtype": "Data",
+   "label": "Field",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The fieldname to correct, from the list allowed for the category."
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "old_value",
+   "fieldtype": "Small Text",
+   "label": "Current Value",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Captured when approval is requested; an Aadhaar number is shown masked."
+  },
+  {
+   "fieldname": "new_value",
+   "fieldtype": "Small Text",
+   "label": "Correct Value",
+   "reqd": 1
+  },
+  {
+   "fieldname": "new_secret",
+   "fieldtype": "Password",
+   "label": "Correct Value (secret)",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_proof",
+   "fieldtype": "Section Break",
+   "label": "Reason and Evidence"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Evidence",
+   "description": "A private file (certificate, ID proof). Required except for contact details."
+  },
+  {
+   "fieldname": "section_result",
+   "fieldtype": "Section Break",
+   "label": "Outcome",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "applied_on",
+   "fieldtype": "Datetime",
+   "label": "Applied On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "applied_by",
+   "fieldtype": "Link",
+   "label": "Applied By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Link",
+   "label": "Version",
+   "options": "Version",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The version of the record that holds the change."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Student Record Correction",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "submit": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "submit": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name",
+ "track_changes": 1,
+ "is_submittable": 1
+}
