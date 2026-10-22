@@ -14,7 +14,8 @@ COURSE_FIELDS = ["exam_type", "category", "credits", "cia_max", "ese_max", "prac
 
 
 def offering_course(offering):
-	"""{course, course_type, category, credits, cia_max, ese_max} of an offering; course_type None for Internal Only."""
+	"""{course, exam_type, course_type, category, credits, cia_max, ese_max} of an offering; course_type None for
+	Internal Only. `exam_type` is the curriculum row's own value: blank is unconfigured, not Internal Only (M06-12)."""
 	group = frappe.db.get_value(
 		"Student Group", offering, ["course", "oc_curriculum", "oc_semester"], as_dict=True
 	)
@@ -28,6 +29,7 @@ def offering_course(offering):
 		frappe.throw(_("Offering {0} has no curriculum course row.").format(frappe.bold(offering)))
 	return {
 		"course": group.course,
+		"exam_type": row.exam_type,
 		"course_type": course_type(row),
 		"category": row.category,
 		"credits": flt(row.credits),

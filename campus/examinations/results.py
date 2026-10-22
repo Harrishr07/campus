@@ -28,6 +28,10 @@ the mark sheet's (moderation and grace still apply on top).
 Versioned: before publication a re-run replaces the latest version in place. After publication a change makes one
 pending version with a change log, graded on the relative bands frozen at publication; the published version stays
 the latest (and the only one students and staff see) until a Result Ratification publishes the pending one.
+
+M06-12 pre-validation: a run starts only when every course offered to its students in the session's term has a
+course type (blank is never read as Internal Only or Theory) that each student's Exam Rule Set covers; otherwise it
+is refused listing the incomplete courses. Internal Only is the explicit exam type of a course with no ESE.
 """
 
 import json
@@ -41,7 +45,7 @@ from campus.campus_platform.api import get_regulation, get_rule
 from campus.examinations import result_rules, rules, seating
 from campus.examinations.access import COE_ROLE
 from campus.examinations.arrears import outstanding_arrears
-from campus.examinations.courses import offering_course, student_limits
+from campus.examinations.courses import COURSE_FIELDS, course_type, offering_course, student_limits
 from campus.examinations.doctype.mark_moderation.mark_moderation import approved_adjustments
 from campus.examinations.result_cohort import Cohorts
 from campus.examinations.revaluation import revised_ese
@@ -71,9 +75,9 @@ def start_run(exam_session, program):
 	session.check_permission("write")
 	if frappe.db.get_value("Program", program, "oc_company") != session.company:
 		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
-	return run_bulk(
-		RUN_TYPE, program_students(session, program), HANDLER, parameters={"exam_session": exam_session, "program": program}
-	)
+	students = program_students(session, program)
+	check_configuration(session, students)
+	return run_bulk(RUN_TYPE, students, HANDLER, parameters={"exam_session": exam_session, "program": program})
 
 
 def program_students(session, program):
@@ -86,6 +90,66 @@ def program_students(session, program):
 		distinct=True,
 	)
 	return sorted(set(students) - students_on_break(students))
+
+
+def check_configuration(session, students):
+	"""Refuse the run, listing every incomplete course, when an offering of the students in the session's term
+	has no curriculum row or course type, or a course type a student's Exam Rule Set does not cover (M06-12)."""
+	courses = offered_courses(session.academic_term, students)
+	regulations = {r for course in courses for r in course["regulations"] if r}
+	gaps = result_rules.configuration_gaps(courses, regulation_rule_types(regulations))
+	if gaps:
+		listed = "".join(f"<li>{frappe.bold(label)}: {reason}</li>" for label, reason in gaps)
+		frappe.throw(
+			_("The Result Run cannot start: these courses are not fully configured.") + f"<ul>{listed}</ul>",
+			title=_("Incomplete course configuration"),
+		)
+
+
+def offered_courses(term, students):
+	"""The term's course offerings of `students` as configuration_gaps courses (exam type of their curriculum row)."""
+	if not students:
+		return []
+	group, member = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Student")
+	members = (
+		frappe.qb.from_(group).join(member).on(member.parent == group.name)
+		.select(group.name, group.course, group.oc_curriculum, group.oc_semester, member.student)
+		.where((group.group_based_on == "Course") & (group.academic_term == term) & (member.active == 1))
+		.where(member.student.isin(students))
+		.orderby(group.name)
+		.run(as_dict=True)
+	)  # fmt: skip
+	regulations = {student: get_regulation(student) for student in {m.student for m in members}}
+	courses = {}
+	for m in members:
+		if m.name not in courses:
+			courses[m.name] = offered_course(m)
+		courses[m.name]["regulations"].add(regulations[m.student])
+	return list(courses.values())
+
+
+def offered_course(offering):
+	row = frappe.db.get_value(
+		"Curriculum Course",
+		{"parent": offering.oc_curriculum, "parenttype": "Curriculum", "course": offering.course, "semester": offering.oc_semester},
+		COURSE_FIELDS,
+		as_dict=True,
+	)  # fmt: skip
+	return {
+		"label": f"{offering.course} ({offering.name})", "has_row": bool(row), "exam_type": row and row.exam_type,
+		"course_type": row and row.exam_type and course_type(row), "regulations": set(),
+	}  # fmt: skip
+
+
+def regulation_rule_types(regulations):
+	"""{regulation: course types its Exam Rule Set covers} of those of `regulations` with an Exam Rule Set."""
+	rule_sets = dict(frappe.get_all("Exam Rule Set", {"regulation": ["in", list(regulations) or [""]]}, ["name", "regulation"], as_list=True))
+	types = {regulation: set() for regulation in rule_sets.values()}
+	for row in frappe.get_all(
+		"Exam Rule Set Type", {"parent": ["in", list(rule_sets) or [""]], "parenttype": "Exam Rule Set"}, ["parent", "course_type"]
+	):
+		types[rule_sets[row.parent]].add(row.course_type)
+	return types
 
 
 def run_student(student, run):
@@ -169,8 +233,10 @@ class StudentRun:
 
 	def course_row(self, course, kind):
 		"""The Student Result Course row of one course, or None for a course the Result Run does not grade."""
-		if not course["course_type"]:  # Internal Only: no end-semester exam
+		if course["exam_type"] == result_rules.INTERNAL_ONLY:  # no end-semester exam
 			return None
+		if not course["exam_type"]:  # unconfigured: refused, never graded on a guessed type (M06-12)
+			frappe.throw(_("Course {0} has no course type.").format(frappe.bold(course["course"])))
 		earlier = [r for r in self.history if r["course"] == course["course"]]
 		attempt = rules.attempt_number([r["result"] for r in earlier], cint(self.rule_set.absent_counts_as_attempt))
 		row = {

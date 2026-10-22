@@ -273,6 +273,62 @@ class TestResultRun(ExamFixture):
 			results.compute_student_result(self.s26.name, self.session.name)
 
 
+
+class TestRunPreValidation(ExamFixture):
+	"""M06-12 a Result Run starts only when every course offered has a course type its students' rule sets cover."""
+
+	def set_exam_type(self, course, exam_type):
+		for curriculum in (self.curriculum22, self.curriculum26):
+			frappe.db.set_value("Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", exam_type)
+
+	def start(self):
+		frappe.set_user(COE_USER)
+		with patch.object(bulk, "enqueue_run") as enqueue:
+			try:
+				return results.start_run(self.session.name, PROGRAM)
+			finally:
+				self.enqueued = enqueue.called
+				frappe.set_user("Administrator")
+
+	def test_a_blank_course_type_refuses_the_run_listing_the_course(self):
+		self.set_exam_type("EXM FA", "")
+		with self.assertRaises(frappe.ValidationError) as refused:
+			self.start()
+		self.assertIn("EXM FA", str(refused.exception))
+		self.assertNotIn("EXM TH", str(refused.exception))
+		self.assertFalse(self.enqueued)
+		self.assertFalse(frappe.db.exists("Bulk Run", {"run_type": results.RUN_TYPE, "parameters": ["like", f"%{self.session.name}%"]}))
+
+	def test_a_course_type_the_rule_set_lacks_refuses_the_run(self):
+		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": ["like", "R2026-EXM%"]})
+		frappe.db.delete("Exam Rule Set Type", {"parent": rule_set, "course_type": "Lab"})
+		with self.assertRaises(frappe.ValidationError) as refused:
+			self.start()
+		message = str(refused.exception)
+		self.assertIn("EXM LB", message)
+		self.assertIn("Lab", message)
+		self.assertNotIn("EXM TH", message)
+		self.assertFalse(self.enqueued)
+
+	def test_an_explicit_internal_only_course_runs_and_is_not_graded(self):
+		self.set_exam_type("EXM FA", "Internal Only")
+		self.assertTrue(self.start())
+		self.assertTrue(self.enqueued)
+		self.run_session()
+		self.assertNotIn("EXM FA", [c.course for c in self.result(self.s22).courses])
+		self.assertIn("EXM TH", [c.course for c in self.result(self.s22).courses])
+
+	def test_a_complete_configuration_runs(self):
+		self.assertTrue(self.start())
+		self.assertTrue(self.enqueued)
+
+	def test_a_blank_course_type_is_never_graded_by_a_guess(self):
+		self.set_exam_type("EXM FA", "")
+		with self.assertRaises(frappe.ValidationError) as refused:
+			results.compute_student_result(self.s22.name, self.session.name)
+		self.assertIn("EXM FA", str(refused.exception))
+
+
 class TestResultAccess(ExamFixture):
 	def visible(self, user):
 		frappe.set_user(user)

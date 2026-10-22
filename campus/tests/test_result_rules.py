@@ -9,6 +9,7 @@ from campus.examinations.result_rules import (
 	arrear_cia,
 	change_log,
 	combined_ese,
+	configuration_gaps,
 	grace_needed,
 	overall_result,
 )
@@ -134,3 +135,45 @@ class TestChangeLog(UnitTestCase):
 	def test_no_change_is_empty(self):
 		same = self.summary(8, 8, [("TH", "A", "Pass", 75)])
 		self.assertEqual(change_log(same, same), "")
+
+
+class TestConfigurationGaps(UnitTestCase):
+	"""M06-12 pre-validation of a Result Run: each offered course needs a course type its students' rule sets cover."""
+
+	RULES = {"R2022": {"Theory", "Lab"}, "R2026": {"Theory"}}
+
+	def course(self, exam_type="Theory", course_type="Theory", regulations=("R2022",), has_row=True):
+		return {"label": "TH (G1)", "has_row": has_row, "exam_type": exam_type, "course_type": course_type, "regulations": set(regulations)}
+
+	def gaps(self, *courses):
+		return [label for label, _reason in configuration_gaps(courses, self.RULES)]
+
+	def test_a_covered_course_has_no_gap(self):
+		self.assertEqual(self.gaps(self.course()), [])
+
+	def test_a_blank_course_type_is_a_gap(self):
+		self.assertEqual(self.gaps(self.course(exam_type="", course_type="Theory")), ["TH (G1)"])
+		self.assertEqual(self.gaps(self.course(exam_type=None, course_type="Theory")), ["TH (G1)"])
+
+	def test_an_explicit_internal_only_course_needs_no_rule(self):
+		self.assertEqual(self.gaps(self.course(exam_type="Internal Only", course_type=None, regulations=("R2030",))), [])
+
+	def test_an_offering_without_a_curriculum_row_is_a_gap(self):
+		self.assertEqual(self.gaps(self.course(has_row=False, exam_type=None, course_type=None)), ["TH (G1)"])
+
+	def test_a_course_type_missing_from_a_students_rule_set_is_a_gap(self):
+		found = configuration_gaps([self.course(exam_type="Practical", course_type="Lab", regulations=("R2022", "R2026"))], self.RULES)
+		self.assertEqual(len(found), 1)
+		self.assertIn("R2026", found[0][1])
+
+	def test_a_regulation_without_a_rule_set_is_a_gap(self):
+		found = configuration_gaps([self.course(regulations=("R2030",))], self.RULES)
+		self.assertEqual(len(found), 1)
+		self.assertIn("R2030", found[0][1])
+
+	def test_a_student_without_a_regulation_is_a_gap(self):
+		self.assertEqual(self.gaps(self.course(regulations=(None,))), ["TH (G1)"])
+
+	def test_every_gap_of_a_course_is_listed(self):
+		course = self.course(exam_type="Practical", course_type="Lab", regulations=("R2026", "R2030"))
+		self.assertEqual(len(configuration_gaps([course], self.RULES)), 2)

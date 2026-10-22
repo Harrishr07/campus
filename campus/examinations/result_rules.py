@@ -6,13 +6,18 @@ No database access: the Result Run (campus.examinations.results) passes plain nu
 moderation are ESE marks: grace is the fewest whole marks that make a failed course pass, given only when the
 student's Exam Rule Set allows it and within its per-course, per-student course-count and total limits (0 means
 no cap on a count or total).
+
+M06-12 pre-validation: the configuration gaps that stop a Result Run before it starts.
 """
 
 import math
 
+from frappe import _
+
 from campus.examinations.rules import EPSILON, PASS, attempt_cia
 
 REAPPEAR = "Reappear"
+INTERNAL_ONLY = "Internal Only"  # the explicit exam type of a course with no end-semester exam (never blank)
 
 
 def combined_ese(ese, moderation, grace, ese_max):
@@ -94,3 +99,31 @@ def outcome(row):
 
 def number(value):
 	return f"{value:g}"
+
+
+def configuration_gaps(courses, rule_types):
+	"""[(label, reason)] of the offered `courses` a Result Run cannot grade. Each course is a dict: label, has_row
+	(a curriculum course row exists), exam_type (blank is a gap, never a guess; Internal Only needs no rule),
+	course_type and regulations (of its students, None when a student has none). `rule_types` maps a regulation
+	with an Exam Rule Set to the course types it covers."""
+	gaps = []
+	for course in courses:
+		if not course["has_row"]:
+			gaps.append((course["label"], _("no curriculum course row")))
+		elif not course["exam_type"]:
+			gaps.append((course["label"], _("no course type")))
+		elif course["exam_type"] != INTERNAL_ONLY:
+			gaps.extend((course["label"], reason) for reason in rule_gaps(course["course_type"], course["regulations"], rule_types))
+	return gaps
+
+
+def rule_gaps(course_type, regulations, rule_types):
+	reasons = []
+	for regulation in sorted(regulations, key=lambda r: r or ""):
+		if not regulation:
+			reasons.append(_("a student has no regulation"))
+		elif regulation not in rule_types:
+			reasons.append(_("regulation {0} has no Exam Rule Set").format(regulation))
+		elif course_type not in rule_types[regulation]:
+			reasons.append(_("the Exam Rule Set of {0} has no {1} course type").format(regulation, _(course_type)))
+	return reasons
