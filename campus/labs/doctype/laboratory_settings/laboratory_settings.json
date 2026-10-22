@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "calibration_notice_days"
+ ],
+ "fields": [
+  {
+   "fieldname": "calibration_notice_days",
+   "fieldtype": "Int",
+   "label": "Calibration Notice Days",
+   "reqd": 1,
+   "default": "15",
+   "description": "Days ahead of a calibration due date from which the lab in-charge is notified, daily until it is recorded done."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Laboratory Settings",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ]
+}

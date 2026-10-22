@@ -1,0 +1,187 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Labs</b></span>\", \"col\": 12}}, {\"id\": \"sc0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Laboratory\", \"col\": 3}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Safety Inspection\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Incident\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Calibration and AMC Due\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Records\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-10-22 07:48:15.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "flask-conical",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Labs",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Laboratory",
+   "link_count": 0,
+   "link_to": "Laboratory",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Safety Checklist Template",
+   "link_count": 0,
+   "link_to": "Safety Checklist Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Records",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lab Safety Inspection",
+   "link_count": 0,
+   "link_to": "Lab Safety Inspection",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lab Incident",
+   "link_count": 0,
+   "link_to": "Lab Incident",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lab Equipment Register",
+   "link_count": 0,
+   "link_to": "Lab Equipment Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Calibration and AMC Due",
+   "link_count": 0,
+   "link_to": "Calibration and AMC Due",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lab Incident Register",
+   "link_count": 0,
+   "link_to": "Lab Incident Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Laboratory Settings",
+   "link_count": 0,
+   "link_to": "Laboratory Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-22 07:48:15.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Labs",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Lab In-charge"
+  },
+  {
+   "role": "IQAC Coordinator"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 61.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "label": "Laboratory",
+   "link_to": "Laboratory",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Lab Safety Inspection",
+   "link_to": "Lab Safety Inspection",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Lab Incident",
+   "link_to": "Lab Incident",
+   "type": "DocType",
+   "doc_view": "List"
+  },
+  {
+   "color": "Grey",
+   "label": "Calibration and AMC Due",
+   "link_to": "Calibration and AMC Due",
+   "type": "Report"
+  }
+ ]
+}

@@ -27,6 +27,7 @@ from campus.iqac.setup import (
 	seed_iqac_policies,
 	sync_data_points,
 )
+from campus.labs.setup import setup_labs
 from campus.research.setup import setup_research
 from campus.student_services.mentoring import ensure_mentoring_roles, setup_mentoring
 from campus.student_services.setup import ensure_grievance_role, setup_student_services
@@ -76,6 +77,7 @@ def after_install():
 	setup_feedback()
 	seed_regulator_templates()
 	seed_official_register()
+	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()
 	seed_mandatory_approval()  # once; a patch seeds existing sites, so the college's edits to the list stand
@@ -109,5 +111,6 @@ def after_migrate():
 	setup_feedback()
 	seed_regulator_templates()
 	seed_official_register()
+	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()

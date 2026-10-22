@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "check_point",
+  "critical",
+  "compliant",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "check_point",
+   "fieldtype": "Small Text",
+   "label": "Check Point",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "critical",
+   "fieldtype": "Check",
+   "label": "Critical",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "compliant",
+   "fieldtype": "Check",
+   "label": "Compliant",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Lab Safety Inspection Result",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1
+}
