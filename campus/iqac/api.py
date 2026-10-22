@@ -129,3 +129,9 @@ def indirect_co_scores(offering):
 	"""M03-03 Indirect CO attainment of a course offering from its exit-survey ratings: {CO: {responses, average (1-5),
 	percent (of 5), suppressed}}; a CO with fewer responses than the Campus Settings minimum group size is suppressed."""
 	return feedback.indirect_co_scores(offering)
+
+
+def campaign_outcome_scores(campaign):
+	"""M03-03 Indirect PO / PSO attainment from a closed programme exit survey: {tag: {responses, average, percent,
+	suppressed}} of its tagged Likert answers, small groups suppressed as in indirect_co_scores."""
+	return feedback.campaign_outcome_scores(campaign)

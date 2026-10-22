@@ -326,22 +326,39 @@ def indirect_co_scores(offering):
 	Each (campaign, CO) cell answered by fewer respondents than the minimum group size is dropped before the cells are
 	pooled, so no small campaign shows by difference. average is the mean rating (1-5), percent that mean as a share of
 	5; a CO with no cell left is suppressed (figures None)."""
+	return tag_scores(co_cells(offering))
+
+
+def campaign_outcome_scores(campaign):
+	"""M03-03 {tag: {responses, average, percent, suppressed}} from the tagged Likert answers of one closed campaign (a
+	programme exit survey tags its questions PO1, PSO1 ...), under the same minimum group rules as indirect_co_scores.
+	An open campaign gives nothing."""
+	return tag_scores(tagged_cells(frappe.qb.DocType(RESPONSE).campaign == campaign))
+
+
+def tag_scores(cells):
 	least = minimum_group_size()
 	scores = {}
-	for co, cells in co_cells(offering).items():
-		kept = [cell for cell in cells if cell.responses >= least]
+	for tag, tag_cells in cells.items():
+		kept = [cell for cell in tag_cells if cell.responses >= least]
 		if not kept:
-			scores[co] = {"responses": None, "average": None, "percent": None, "suppressed": 1}
+			scores[tag] = {"responses": None, "average": None, "percent": None, "suppressed": 1}
 			continue
 		average = flt(sum(c.total for c in kept) / sum(c.ratings for c in kept), 2)
-		scores[co] = {"responses": sum(c.responses for c in kept), "average": average, "percent": flt(average / 5 * 100, 2), "suppressed": 0}
+		scores[tag] = {"responses": sum(c.responses for c in kept), "average": average, "percent": flt(average / 5 * 100, 2), "suppressed": 0}
 	return scores
 
 
 def co_cells(offering):
-	"""{CO: [(campaign, responses, ratings, total)]} for the offering's closed student campaigns, from the ratings of
-	(campaign, question) cells with at least the minimum group size only: a CO tagged on an optional question answered by
-	a few would otherwise show them as the difference between the CO and its other questions."""
+	"""{CO: [(campaign, responses, ratings, total)]} for the offering's closed student campaigns."""
+	response, campaign = frappe.qb.DocType(RESPONSE), frappe.qb.DocType("Feedback Campaign")
+	return tagged_cells((response.course_offering == offering) & (campaign.audience == CO_AUDIENCE))
+
+
+def tagged_cells(condition):
+	"""{tag: [(campaign, responses, ratings, total)]} of the closed campaigns' responses matching `condition`, from the
+	ratings of (campaign, question) cells with at least the minimum group size only: a tag on an optional question
+	answered by a few would otherwise show them as the difference between the tag and its other questions."""
 	campaign, response, answer = frappe.qb.DocType("Feedback Campaign"), frappe.qb.DocType(RESPONSE), frappe.qb.DocType(ANSWER)
 	ratings = (
 		frappe.qb.from_(response)
@@ -350,7 +367,7 @@ def co_cells(offering):
 		.join(answer)
 		.on((answer.parent == response.name) & (answer.parenttype == RESPONSE))
 		.select(answer.course_outcome, response.campaign, answer.question_row, response.name.as_("response"), answer.rating)
-		.where((response.course_offering == offering) & (campaign.audience == CO_AUDIENCE) & (campaign.end_date < today()))
+		.where(condition & (campaign.end_date < today()))
 		.where((answer.question_type == "Likert") & answer.rating.isnotnull())
 		.where(answer.course_outcome.isnotnull() & (answer.course_outcome != ""))
 		.run(as_dict=True)
@@ -361,9 +378,9 @@ def co_cells(offering):
 		cell.responses.add(item.response)
 		cell.ratings += 1
 		cell.total += item.rating
-	cells = {item.course_outcome: [] for item in ratings}  # a CO left with no cell shows as suppressed
-	for (co, _campaign), cell in pooled.items():
-		cells.setdefault(co, []).append(frappe._dict(cell, responses=len(cell.responses)))
+	cells = {item.course_outcome: [] for item in ratings}  # a tag left with no cell shows as suppressed
+	for (tag, _campaign), cell in pooled.items():
+		cells.setdefault(tag, []).append(frappe._dict(cell, responses=len(cell.responses)))
 	return cells
 
 

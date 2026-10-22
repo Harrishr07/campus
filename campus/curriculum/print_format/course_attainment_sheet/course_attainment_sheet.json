@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Course Attainment Sheet",
+ "doc_type": "CO Attainment Run",
+ "module": "Curriculum",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "{%- set s = course_attainment_sheet(doc) -%}\n<h3 style=\"text-align:center\">{{ _(\"Course Attainment Sheet\") }}</h3>\n<p style=\"text-align:center\">{{ doc.course }} &middot; {{ doc.course_offering }} &middot; {{ doc.academic_term }} &middot; {{ _(\"Regulation\") }} {{ doc.regulation }}{% if doc.docstatus != 1 %} &middot; {{ _(\"Draft\") }}{% endif %}</p>\n<table class=\"table table-condensed\">\n  <tr><th>{{ _(\"Faculty\") }}</th><td>{{ s.instructors or \"-\" }}</td><th>{{ _(\"Students assessed\") }}</th><td>{{ doc.students or 0 }}</td></tr>\n  <tr><th>{{ _(\"Exam sessions\") }}</th><td>{{ s.sessions or \"-\" }}</td><th>{{ _(\"CO-PO Matrix\") }}</th><td>{{ doc.matrix or \"-\" }}</td></tr>\n  <tr><th>{{ _(\"CO final\") }}</th><td>{{ doc.direct_weight }}% {{ _(\"direct\") }} + {{ doc.indirect_weight }}% {{ _(\"indirect (course exit survey)\") }}</td>\n      <th>{{ _(\"Direct\") }}</th><td>{{ doc.ese_weight }}% {{ _(\"ESE\") }} + {{ doc.cia_weight }}% {{ _(\"CIA\") }}</td></tr>\n  <tr><th>{{ _(\"Student threshold\") }}</th><td>{{ doc.student_threshold }}% {{ _(\"of the CO's marks\") }}</td>\n      <th>{{ _(\"Level bands\") }}</th><td>{% for band in s.bands %}L{{ band[0] }} &ge; {{ band[1] }}%{% if not loop.last %}, {% endif %}{% endfor %} {{ _(\"of students\") }}</td></tr>\n</table>\n<table class=\"table table-bordered table-condensed\">\n  <thead><tr>\n    <th>{{ _(\"CO\") }}</th><th>{{ _(\"CIA questions\") }}</th><th class=\"text-center\">{{ _(\"CIA %\") }}</th><th class=\"text-center\">{{ _(\"CIA level\") }}</th>\n    <th>{{ _(\"ESE questions\") }}</th><th class=\"text-center\">{{ _(\"ESE %\") }}</th><th class=\"text-center\">{{ _(\"ESE level\") }}</th>\n    <th class=\"text-center\">{{ _(\"Direct\") }}</th><th class=\"text-center\">{{ _(\"Indirect\") }}</th><th class=\"text-center\">{{ _(\"Final\") }}</th>\n    <th class=\"text-center\">{{ _(\"Target\") }}</th><th class=\"text-center\">{{ _(\"Met\") }}</th>\n  </tr></thead>\n  <tbody>\n  {% for r in doc.results %}\n    {%- set q = s.questions.get(r.co_code, {}) -%}\n    <tr>\n      <td>{{ r.co_code }}</td><td>{{ q.get(\"cia\", \"-\") }}</td>\n      <td class=\"text-center\">{{ r.cia_percent if r.cia_students else \"-\" }}</td><td class=\"text-center\">{{ r.cia_level if r.cia_students else \"-\" }}</td>\n      <td>{{ q.get(\"ese\", \"-\") }}</td>\n      <td class=\"text-center\">{{ r.ese_percent if r.ese_students else \"-\" }}</td><td class=\"text-center\">{{ r.ese_level if r.ese_students else \"-\" }}</td>\n      <td class=\"text-center\">{{ r.direct_level if r.assessed else \"-\" }}</td>\n      <td class=\"text-center\">{{ r.indirect_level if r.has_indirect else \"-\" }}</td>\n      <td class=\"text-center\">{{ r.final_level if r.assessed else \"-\" }}</td>\n      <td class=\"text-center\">{{ r.target_level }}</td><td class=\"text-center\">{{ _(\"Yes\") if r.target_met else _(\"No\") }}</td>\n    </tr>\n  {% endfor %}\n  </tbody>\n</table>\n<p class=\"small\">{{ _(\"Levels: the highest band reached by the share of students scoring at least the threshold on the questions tagged with the CO. Indirect: the course exit survey mean rating as a share of 5, scaled to the top level; '-' where no closed survey or too few answers.\") }}</p>\n",
+ "creation": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

@@ -13,9 +13,10 @@ Academics area > Masters / Transactions / Reports.
 The CO tags already used elsewhere are Course Outcome codes:
 - CIA Schedule questions: checked against the COs of the offering's curriculum.
 - Question Bank Items: checked against the COs of the course in any curriculum.
+- Answer Script Bundle questions (the ESE pattern examiners mark against): checked against the COs of the course in any curriculum. Set the CO of each question here; CO attainment counts the valuation marks through it.
 - Feedback questions are generic forms. Their CO tag is matched to the offering's course outcome by code when scores are read.
 
-A course with no Course Outcomes yet keeps free tags.
+A course with no Course Outcomes yet keeps free tags. A tag is checked only when it is set or changed, so an old tag (for example "CO1, CO2") never blocks saving something else on the document.
 
 ## CO-PO Matrix
 
@@ -36,3 +37,30 @@ One per course and curriculum. A new matrix is filled with every CO against ever
 Filters: college and curriculum. For each PO and PSO it shows the number of courses mapping it and the total correlation, over the curriculum's approved matrices. An outcome with a zero total is shown as "Not mapped" and listed in the report message.
 
 Deferred: copying matrices into a new curriculum version, and a Bloom Level master (the six levels stay a fixed list, as on CIA questions).
+
+## Attainment (M03-03)
+
+**Attainment Policy** (Masters), one per regulation:
+- CO final = direct x **Direct Weight** + indirect x **Indirect Weight** (they add up to 100). Indirect is the course exit survey.
+- Direct = CIA level x **CIA Share** + ESE level x **ESE Share** (they add up to 100).
+- **Student Threshold**: a student attains a CO in a tool (CIA or ESE) when scoring at least this % of the marks of the questions tagged with it. Questions the student was absent for count in neither marks nor maximum.
+- **Level Bands**: the level of a tool is the highest band whose minimum share of students it reaches (0 below the first band). Levels rise with their minimums.
+- **CO Target Level**, **PO / PSO Target Level**, and **PO Indirect Weight**: a PO / PSO final is the mapped CO attainment x (100 - this) + the programme exit survey x this.
+- The survey level is the mean rating as a share of 5, scaled to the top level (4.0 of 5 is 80 %, so 2.4 with three levels).
+
+Example, the SXCCE rule: 80 / 20, direct 60 ESE + 40 CIA, threshold 60 %, bands L1 40 %, L2 50 %, L3 60 %.
+
+**CO Attainment Run** (Transactions), one per course offering. Create it for the offering and press **Compute**, or use **Compute for a Term** on the list (every offering of the term with an approved CO-PO Matrix and a policy). Both run on the bulk runner. The run uses the policy of the offering's curriculum regulation:
+- Students: those with the latest, ratified result of a released exam session for the offering. SA, WD and Pending rows are left out; an AB student counts in the CIA only.
+- CIA: the CO-tagged question marks of the offering's mark sheet. ESE: the question marks of the two valuations that decide the final mark, tagged by the bundle's question pattern.
+- Indirect: the closed course exit survey campaigns of the offering, with the minimum group size applied. A CO without a survey score gets its direct level as the final.
+- Each CO row shows the CIA and ESE % of students and levels, direct, indirect, final, target and whether it is met. "Assessed" off means no tagged question was answered; "Survey Score" off means no indirect level.
+- The run copies the policy values it used and keeps an **Input Snapshot**: the sessions, the students, and per CO and tool the questions and each student's marks, maximum and whether they attained. Submit it once computed; a submitted run never changes when the policy is edited. To recompute, cancel and amend it.
+
+**PO Attainment Run** (Transactions): a programme, a batch (admission year) and optionally one academic year. Optionally choose a closed **Programme Exit Survey**, a feedback campaign whose Likert questions are tagged PO1, PSO1 ... (small groups are hidden). Press **Compute** (bulk runner). The run uses the batch's regulation and policy and its submitted CO runs. Per PO / PSO it computes sum(CO final x correlation) / sum(correlation) through each run's approved CO-PO Matrix, then the exit survey at the PO indirect weight. "Mapped" off means no assessed CO maps to the outcome.
+
+**Reports**: CO Attainment by Course (filters: college, year, term, programme, course, faculty), PO Attainment by Program (programme, batch, year), and Attainment Target Gap (every CO, PO and PSO of submitted runs below its target, with the gap). **Print** on CO Attainment Run: **Course Attainment Sheet** (NBA course file): faculty, policy, and per CO the questions, % and levels.
+
+Demo data: `bench --site <site> execute campus.tests.attainment_fixtures.seed_outcome_demo` (after `make_demo`) adds B.E. CSE POs and PSOs, CO1-CO3 of Data Structures in the R2022 curriculum, its HOD-approved matrix, and the R2022 (SXCCE) and R2026 policies.
+
+Deferred: question choice ("answer any five") is not modelled, so an unanswered optional ESE question counts as 0; revaluation, moderation and grace change the ESE total, not the question marks; a Curriculum Settings default policy.

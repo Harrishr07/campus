@@ -240,3 +240,11 @@ def submit_revaluation(student, application):
 	from campus.examinations import student_revaluation
 
 	return student_revaluation.submit(student, application)
+
+
+def offering_assessment(offering):
+	"""M03-03 The offering's CO-attainment inputs: {exam_sessions, students, cia, ese} with question-wise rows
+	{student, question, max_marks, marks, course_outcome, absent}, from released, ratified results only (P3-T10)."""
+	from campus.examinations import attainment_marks
+
+	return attainment_marks.offering_assessment(offering)

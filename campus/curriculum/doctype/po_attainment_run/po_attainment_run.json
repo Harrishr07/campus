@@ -1,0 +1,254 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "PO Attainment Run",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "The admission year of the students."
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "in_standard_filter": 1,
+   "description": "Only the course attainment of this year's offerings; blank for every year of the batch."
+  },
+  {
+   "fieldname": "exit_survey",
+   "fieldtype": "Link",
+   "label": "Programme Exit Survey",
+   "options": "Feedback Campaign",
+   "description": "A closed campaign whose Likert questions are tagged with PO / PSO codes (PO1, PSO1 ...)."
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "read_only": 1,
+   "options": "Regulation"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "read_only": 1,
+   "options": "Company",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "read_only": 1,
+   "options": "Draft\nQueued\nComputed",
+   "default": "Draft",
+   "in_list_view": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "computed_on",
+   "fieldtype": "Datetime",
+   "label": "Computed On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "co_runs",
+   "fieldtype": "Int",
+   "label": "Course Attainment Runs Used",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "read_only": 1,
+   "options": "Bulk Run",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "PO Attainment Run",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_results",
+   "fieldtype": "Section Break",
+   "label": "Results"
+  },
+  {
+   "fieldname": "results",
+   "fieldtype": "Table",
+   "label": "Results",
+   "options": "PO Attainment Result",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_policy",
+   "fieldtype": "Section Break",
+   "label": "Policy Used",
+   "collapsible": 1,
+   "description": "Copied from the Attainment Policy at each computation; a submitted run keeps them."
+  },
+  {
+   "fieldname": "policy",
+   "fieldtype": "Link",
+   "label": "Attainment Policy",
+   "read_only": 1,
+   "options": "Attainment Policy"
+  },
+  {
+   "fieldname": "po_indirect_weight",
+   "fieldtype": "Percent",
+   "label": "PO Indirect Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "po_target_level",
+   "fieldtype": "Float",
+   "label": "PO / PSO Target Level",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Input Snapshot",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "input_snapshot",
+   "fieldtype": "JSON",
+   "label": "Input Snapshot",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The submitted CO Attainment Runs, the (CO, final, correlation) cells per PO / PSO, the survey scores and the policy values."
+  }
+ ],
+ "field_order": [
+  "program",
+  "batch",
+  "academic_year",
+  "exit_survey",
+  "column_break_scope",
+  "regulation",
+  "company",
+  "status",
+  "computed_on",
+  "co_runs",
+  "bulk_run",
+  "amended_from",
+  "section_results",
+  "results",
+  "section_policy",
+  "policy",
+  "po_indirect_weight",
+  "po_target_level",
+  "section_snapshot",
+  "input_snapshot"
+ ],
+ "is_submittable": 1,
+ "autoname": "POAR-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "program",
+ "search_fields": "program,batch"
+}

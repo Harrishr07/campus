@@ -1,0 +1,337 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "CO Attainment Run",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Instructor",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "read_only": 1,
+   "options": "Course",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "curriculum",
+   "fieldtype": "Link",
+   "label": "Curriculum",
+   "read_only": 1,
+   "options": "Curriculum"
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "read_only": 1,
+   "options": "Regulation",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "read_only": 1,
+   "options": "Program",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "read_only": 1,
+   "options": "Academic Year",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "read_only": 1,
+   "options": "Academic Term"
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "read_only": 1,
+   "options": "Academic Year",
+   "in_standard_filter": 1,
+   "description": "The admission year most of the assessed students share."
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "read_only": 1,
+   "options": "Department"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "read_only": 1,
+   "options": "Company",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "read_only": 1,
+   "options": "Draft\nQueued\nComputed",
+   "default": "Draft",
+   "in_list_view": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "computed_on",
+   "fieldtype": "Datetime",
+   "label": "Computed On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "students",
+   "fieldtype": "Int",
+   "label": "Students Assessed",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "matrix",
+   "fieldtype": "Link",
+   "label": "CO-PO Matrix",
+   "read_only": 1,
+   "options": "CO-PO Matrix",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "read_only": 1,
+   "options": "Bulk Run",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "CO Attainment Run",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_results",
+   "fieldtype": "Section Break",
+   "label": "Results"
+  },
+  {
+   "fieldname": "results",
+   "fieldtype": "Table",
+   "label": "Results",
+   "options": "CO Attainment Result",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_policy",
+   "fieldtype": "Section Break",
+   "label": "Policy Used",
+   "collapsible": 1,
+   "description": "Copied from the Attainment Policy at each computation; a submitted run keeps them."
+  },
+  {
+   "fieldname": "policy",
+   "fieldtype": "Link",
+   "label": "Attainment Policy",
+   "read_only": 1,
+   "options": "Attainment Policy"
+  },
+  {
+   "fieldname": "direct_weight",
+   "fieldtype": "Percent",
+   "label": "Direct Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "indirect_weight",
+   "fieldtype": "Percent",
+   "label": "Indirect Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_threshold",
+   "fieldtype": "Percent",
+   "label": "Student Threshold",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_policy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cia_weight",
+   "fieldtype": "Percent",
+   "label": "CIA Share of Direct",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ese_weight",
+   "fieldtype": "Percent",
+   "label": "ESE Share of Direct",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_level",
+   "fieldtype": "Float",
+   "label": "CO Target Level",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Input Snapshot",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "input_snapshot",
+   "fieldtype": "JSON",
+   "label": "Input Snapshot",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The released sessions, students, questions and per-student scores used per CO, and the policy values."
+  }
+ ],
+ "field_order": [
+  "course_offering",
+  "course",
+  "curriculum",
+  "regulation",
+  "program",
+  "column_break_scope",
+  "academic_year",
+  "academic_term",
+  "batch",
+  "department",
+  "company",
+  "column_break_status",
+  "status",
+  "computed_on",
+  "students",
+  "matrix",
+  "bulk_run",
+  "amended_from",
+  "section_results",
+  "results",
+  "section_policy",
+  "policy",
+  "direct_weight",
+  "indirect_weight",
+  "student_threshold",
+  "column_break_policy",
+  "cia_weight",
+  "ese_weight",
+  "target_level",
+  "section_snapshot",
+  "input_snapshot"
+ ],
+ "is_submittable": 1,
+ "autoname": "COAR-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "course_offering",
+ "search_fields": "course_offering,course"
+}

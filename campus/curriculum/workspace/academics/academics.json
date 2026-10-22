@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 13,
+   "link_count": 14,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -165,10 +165,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attainment Policy",
+   "link_count": 0,
+   "link_to": "Attainment Policy",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 5,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -228,10 +239,32 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CO Attainment Run",
+   "link_count": 0,
+   "link_to": "CO Attainment Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "PO Attainment Run",
+   "link_count": 0,
+   "link_to": "PO Attainment Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 2,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -256,9 +289,42 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "CO Attainment Run",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "CO Attainment by Course",
+   "link_count": 0,
+   "link_to": "CO Attainment by Course",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "PO Attainment Run",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "PO Attainment by Program",
+   "link_count": 0,
+   "link_to": "PO Attainment by Program",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "CO Attainment Run",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Attainment Target Gap",
+   "link_count": 0,
+   "link_to": "Attainment Target Gap",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-09 00:00:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Curriculum",
  "name": "Academics",
