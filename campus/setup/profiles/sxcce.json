@@ -416,6 +416,7 @@
 			"name": "Class Advisor",
 			"roles": [
 				"Class Advisor",
+				"Mentor",
 				"Instructor",
 				"Academics User"
 			],
@@ -492,6 +493,16 @@
 				"code": "IQAC-COORDINATOR",
 				"scope": "college"
 			}
+		},
+		{
+			"key": "placement",
+			"name": "Placement Officer",
+			"roles": [
+				"Placement Officer"
+			],
+			"companies": [
+				"college"
+			]
 		},
 		{
 			"key": "student",

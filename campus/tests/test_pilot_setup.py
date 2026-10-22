@@ -158,6 +158,16 @@ class TestPilotSetup(IntegrationTestCase):
 			portal_only = set(spec["roles"]) <= {"Student", "Guardian"}
 			self.assertEqual("UAT Tester" in frappe.get_roles(user), not portal_only, user)
 
+	def test_the_logins_the_role_guides_name_hold_what_their_paths_need(self):
+		domain = SXCCE["user_domain"]
+		self.assertTrue({"Accounts User", "Accounts Manager"} <= set(frappe.get_roles(f"accounts@{domain}")))
+		advisor = f"class_advisor@{domain}"  # faculty portal "My students" needs an active Employee; counselling notes need Mentor
+		self.assertTrue({"Class Advisor", "Mentor", "Instructor"} <= set(frappe.get_roles(advisor)))
+		self.assertTrue(frappe.db.exists("Employee", {"user_id": advisor, "status": "Active"}))
+		placement = f"placement@{domain}"
+		self.assertIn("Placement Officer", frappe.get_roles(placement))
+		self.assertEqual(frappe.get_all("User Permission", {"user": placement, "allow": "Company"}, pluck="for_value"), [self.college])
+
 	def test_position_holders_and_pilot_student(self):
 		domain = SXCCE["user_domain"]
 		hod_department = f"Computer Science and Engineering - {SXCCE['college']['abbr']}"

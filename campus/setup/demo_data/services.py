@@ -32,8 +32,8 @@ def position_user(ctx, key):
 
 
 def positions(ctx, group):
-	"""The class advisor advises the CSE 2025 class too; two faculty mentor it."""
-	for code, key in (("CLASS-ADVISOR", "class_advisor"), ("MENTOR", "faculty"), ("MENTOR", "hod")):
+	"""The class advisor advises the CSE 2025 class too; two faculty and the class advisor mentor it (so My students lists mentees for each)."""
+	for code, key in (("CLASS-ADVISOR", "class_advisor"), ("MENTOR", "faculty"), ("MENTOR", "hod"), ("MENTOR", "class_advisor")):
 		user = position_user(ctx, key)
 		employee = frappe.db.get_value("Employee", {"user_id": user})
 		upsert(
