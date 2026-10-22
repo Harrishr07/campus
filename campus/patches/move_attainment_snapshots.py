@@ -19,5 +19,5 @@ def execute():
 			frappe.get_doc(
 				{"doctype": SNAPSHOT, "co_attainment_run": row.name, "course_offering": row.course_offering, "company": row.company,
 				"snapshot": row.input_snapshot}
-			).insert(ignore_permissions=True)  # fmt: skip
+			).insert(ignore_permissions=True, ignore_links=True)  # fmt: skip; a deleted offering must not stop the migrate
 	frappe.db.sql("update `tabCO Attainment Run` set input_snapshot = null")
