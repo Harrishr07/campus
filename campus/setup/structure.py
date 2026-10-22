@@ -1,0 +1,134 @@
+"""PR-02 Pilot structure: companies, institution profile, academic calendar, departments, programmes, regulation
+with its rule records, and the trust's shared service agreements. All idempotent: see `records.upsert`."""
+
+import frappe
+
+from campus.campus_platform.doctype.regulation.regulation import regulation_name
+from campus.examinations.seed import seed_regulation
+from campus.setup.records import upsert
+
+DEFAULT_CURRENCY = "INR"
+
+
+def ensure_companies(profile, out):
+	"""(trust, college) company names; the trust is None when the profile has none."""
+	trust = profile.get("trust")
+	trust_name = trust and ensure_company(out, trust["name"], trust["abbr"], is_group=1)
+	college = profile["college"]
+	return trust_name, ensure_company(out, college["name"], college["abbr"], parent=trust_name)
+
+
+def ensure_company(out, name, abbr, is_group=0, parent=None):
+	if frappe.db.exists("Company", name):
+		return name
+	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults a set-up site requires
+	chart_flag = frappe.local.flags.ignore_chart_of_accounts
+	frappe.local.flags.ignore_chart_of_accounts = False  # a college needs its chart of accounts for fees
+	try:
+		frappe.get_doc(
+			{
+				"doctype": "Company", "company_name": name, "abbr": abbr, "default_currency": DEFAULT_CURRENCY,
+				"country": "India", "is_group": is_group, "parent_company": parent,
+			}
+		).insert(ignore_permissions=True)
+	finally:
+		frappe.flags.in_import = was_importing
+		frappe.local.flags.ignore_chart_of_accounts = chart_flag
+	out.created["Company"] += 1
+	return name
+
+
+def ensure_calendar(profile, out):
+	for year in profile.get("academic_years", []):
+		upsert(
+			out, "Academic Year", {"academic_year_name": year["name"]},
+			{"year_start_date": year["start"], "year_end_date": year["end"]},
+		)
+		for term in year.get("terms", []):
+			upsert(
+				out, "Academic Term", {"academic_year": year["name"], "term_name": term["name"]},
+				{"term_start_date": term["start"], "term_end_date": term["end"]},
+			)
+
+
+def department_name(department, company):
+	return f"{department} - {frappe.db.get_value('Company', company, 'abbr')}"
+
+
+def ensure_departments(profile, college, out):
+	for department in profile.get("departments", []):
+		upsert(
+			out, "Department", {"department_name": department, "company": college},
+			{"parent_department": "All Departments"},
+		)
+
+
+def ensure_programmes(profile, college, out):
+	for programme in profile["programmes"]:
+		upsert(
+			out, "Program", {"program_name": programme["name"]},
+			{
+				"oc_company": college, "program_abbreviation": programme.get("abbr"),
+				"department": department_name(programme["department"], college),
+				"oc_level": programme.get("level"), "oc_degree": programme.get("degree"),
+				"oc_discipline": programme.get("discipline"), "oc_duration_years": programme.get("duration_years"),
+				"oc_total_semesters": programme.get("total_semesters"), "oc_sanctioned_intake": programme.get("intake"),
+			},
+		)
+
+
+def ensure_regulation(profile, college, out):
+	"""The regulation (Effective, locked once saved) and, when absent, its credit, registration, attendance and exam
+	rules. Exam rules come from `campus.examinations.seed`, keyed by the regulation code."""
+	spec = profile.get("regulation")
+	if not spec:
+		return
+	name = regulation_name(spec["code"], college)
+	if not frappe.db.exists("Regulation", name):
+		frappe.get_doc(
+			{
+				"doctype": "Regulation", "code": spec["code"], "company": college, "status": "Effective",
+				"effective_from_year": spec["effective_from_year"],
+				"programs": [{"program": program} for program in spec["programmes"]],
+			}
+		).insert(ignore_permissions=True)
+		out.created["Regulation"] += 1
+	for doctype, key in (
+		("Curriculum Rule", "curriculum_rule"), ("Registration Rule", "registration_rule"), ("Attendance Rule", "attendance_rule"),
+	):
+		if spec.get(key) and not frappe.db.exists(doctype, {"regulation": name}):
+			frappe.get_doc({"doctype": doctype, "regulation": name, **spec[key]}).insert(ignore_permissions=True)
+			out.created[doctype] += 1
+	exam_rules_before = frappe.db.exists("Exam Rule Set", {"regulation": name})
+	seed_regulation(name, spec["code"])
+	if not exam_rules_before:
+		out.created["Exam Rule Set"] += 1
+
+
+def ensure_institution_profile(profile, college, employees, out):
+	spec = profile["college"]
+	people = {field: employees.get(user_key) for field, user_key in spec.get("leaders", {}).items()}
+	upsert(
+		out, "Institution Profile", {"company": college},
+		{**{k: v for k, v in spec.get("institution", {}).items()}, **{k: v for k, v in people.items() if v}},
+	)
+
+
+def ensure_service_agreements(profile, trust, college, out):
+	"""The trust provides each listed service to the college (a Shared Service Agreement per service)."""
+	for service in profile.get("shared_services", []):
+		filters = {"provider_company": trust, "service": service["service"]}
+		name = frappe.db.exists("Shared Service Agreement", filters)
+		if not name:
+			frappe.get_doc(
+				{
+					"doctype": "Shared Service Agreement", **filters, "invoicing_company": trust,
+					"from_date": service["from_date"], "members": [{"company": college}],
+				}
+			).insert(ignore_permissions=True)
+			out.created["Shared Service Agreement"] += 1
+		elif not frappe.db.exists("Shared Service Member", {"parent": name, "company": college}):
+			agreement = frappe.get_doc("Shared Service Agreement", name)
+			agreement.append("members", {"company": college})
+			agreement.save(ignore_permissions=True)
+			out.updated["Shared Service Agreement"] += 1

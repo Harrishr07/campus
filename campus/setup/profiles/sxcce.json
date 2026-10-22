@@ -1,0 +1,552 @@
+{
+	"name": "sxcce",
+	"trust": {
+		"name": "St. Xavier's Catholic Educational Trust",
+		"abbr": "SXCET"
+	},
+	"college": {
+		"name": "St. Xavier's Catholic College of Engineering",
+		"abbr": "SXCCE",
+		"institution": {
+			"segment": "Engineering",
+			"institution_status": "Autonomous",
+			"affiliating_university": "Anna University",
+			"examination_mode": "Autonomous"
+		},
+		"leaders": {
+			"principal": "principal",
+			"coe": "coe",
+			"iqac_coordinator": "iqac"
+		}
+	},
+	"shared_services": [
+		{
+			"service": "Hostel",
+			"from_date": "2022-06-01"
+		},
+		{
+			"service": "Transport",
+			"from_date": "2022-06-01"
+		}
+	],
+	"academic_years": [
+		{
+			"name": "2022-23",
+			"start": "2022-06-01",
+			"end": "2023-05-31",
+			"terms": [
+				{
+					"name": "Odd",
+					"start": "2022-06-01",
+					"end": "2022-11-30"
+				},
+				{
+					"name": "Even",
+					"start": "2023-01-01",
+					"end": "2023-05-31"
+				}
+			]
+		},
+		{
+			"name": "2023-24",
+			"start": "2023-06-01",
+			"end": "2024-05-31",
+			"terms": [
+				{
+					"name": "Odd",
+					"start": "2023-06-01",
+					"end": "2023-11-30"
+				},
+				{
+					"name": "Even",
+					"start": "2024-01-01",
+					"end": "2024-05-31"
+				}
+			]
+		},
+		{
+			"name": "2024-25",
+			"start": "2024-06-01",
+			"end": "2025-05-31",
+			"terms": [
+				{
+					"name": "Odd",
+					"start": "2024-06-01",
+					"end": "2024-11-30"
+				},
+				{
+					"name": "Even",
+					"start": "2025-01-01",
+					"end": "2025-05-31"
+				}
+			]
+		},
+		{
+			"name": "2025-26",
+			"start": "2025-06-01",
+			"end": "2026-05-31",
+			"terms": [
+				{
+					"name": "Odd",
+					"start": "2025-06-01",
+					"end": "2025-11-30"
+				},
+				{
+					"name": "Even",
+					"start": "2026-01-01",
+					"end": "2026-05-31"
+				}
+			]
+		},
+		{
+			"name": "2026-27",
+			"start": "2026-06-01",
+			"end": "2027-05-31",
+			"terms": [
+				{
+					"name": "Odd",
+					"start": "2026-06-01",
+					"end": "2026-11-30"
+				},
+				{
+					"name": "Even",
+					"start": "2027-01-01",
+					"end": "2027-05-31"
+				}
+			]
+		}
+	],
+	"departments": [
+		"Computer Science and Engineering",
+		"Electronics and Communication Engineering",
+		"Electrical and Electronics Engineering",
+		"Mechanical Engineering",
+		"Civil Engineering",
+		"Information Technology"
+	],
+	"programmes": [
+		{
+			"name": "B.E. CSE",
+			"abbr": "CSE",
+			"department": "Computer Science and Engineering",
+			"level": "UG",
+			"degree": "B.E.",
+			"discipline": "Computer Science and Engineering",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		},
+		{
+			"name": "B.E. ECE",
+			"abbr": "ECE",
+			"department": "Electronics and Communication Engineering",
+			"level": "UG",
+			"degree": "B.E.",
+			"discipline": "Electronics and Communication Engineering",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		},
+		{
+			"name": "B.E. EEE",
+			"abbr": "EEE",
+			"department": "Electrical and Electronics Engineering",
+			"level": "UG",
+			"degree": "B.E.",
+			"discipline": "Electrical and Electronics Engineering",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		},
+		{
+			"name": "B.E. MECH",
+			"abbr": "MECH",
+			"department": "Mechanical Engineering",
+			"level": "UG",
+			"degree": "B.E.",
+			"discipline": "Mechanical Engineering",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		},
+		{
+			"name": "B.E. CIVIL",
+			"abbr": "CIVIL",
+			"department": "Civil Engineering",
+			"level": "UG",
+			"degree": "B.E.",
+			"discipline": "Civil Engineering",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		},
+		{
+			"name": "B.Tech IT",
+			"abbr": "IT",
+			"department": "Information Technology",
+			"level": "UG",
+			"degree": "B.Tech",
+			"discipline": "Information Technology",
+			"duration_years": 4,
+			"total_semesters": 8,
+			"intake": 60
+		}
+	],
+	"regulation": {
+		"code": "R2022",
+		"effective_from_year": "2022-23",
+		"programmes": [
+			"B.E. CSE",
+			"B.E. ECE",
+			"B.E. EEE",
+			"B.E. MECH",
+			"B.E. CIVIL",
+			"B.Tech IT"
+		],
+		"curriculum_rule": {
+			"lecture_credit_per_period": 1,
+			"tutorial_credit_per_period": 1,
+			"practical_credit_per_period": 0.5,
+			"min_total_credits": 165,
+			"max_total_credits": 170
+		},
+		"registration_rule": {
+			"max_credits_per_semester": 36,
+			"excluded_types": "Arrear\nDropped",
+			"max_drop_credits": 6,
+			"drop_window_days": 30,
+			"add_from_semester": 5,
+			"max_add_credits": 6,
+			"max_add_courses": 2,
+			"elective_min_enrolment": 10,
+			"honours_min_cgpa": 7.5,
+			"honours_cgpa_upto_semester": 3,
+			"honours_no_arrears": 1
+		},
+		"attendance_rule": {
+			"formula": "sum_based",
+			"overall_min_pct": 75,
+			"medical_band_min_pct": 65,
+			"per_course_min_pct": 0,
+			"od_counts": 1,
+			"medical_counts": 1,
+			"condonation_fee": 500
+		}
+	},
+	"admission": {
+		"active_year": "2026-27",
+		"register_no_pattern": "{abbr}{yy}{program_code}{####}"
+	},
+	"seats": {
+		"academic_year": "2026-27",
+		"quotas": [
+			{
+				"code": "GQ",
+				"title": "Government Quota",
+				"share_pct": 65
+			},
+			{
+				"code": "MQ",
+				"title": "Management Quota",
+				"share_pct": 35
+			}
+		],
+		"categories": [
+			{
+				"category": "OC",
+				"reserved": 0
+			},
+			{
+				"category": "BC",
+				"reserved": 1
+			},
+			{
+				"category": "MBC",
+				"reserved": 1
+			},
+			{
+				"category": "SC",
+				"reserved": 1
+			},
+			{
+				"category": "ST",
+				"reserved": 1
+			}
+		],
+		"split": {
+			"GQ": {
+				"OC": 31,
+				"BC": 30,
+				"MBC": 20,
+				"SC": 18,
+				"ST": 1
+			},
+			"MQ": {
+				"OC": 100
+			}
+		}
+	},
+	"fees": {
+		"academic_year": "2026-27",
+		"programmes": [
+			"B.E. CSE",
+			"B.E. ECE",
+			"B.E. EEE",
+			"B.E. MECH",
+			"B.E. CIVIL",
+			"B.Tech IT"
+		],
+		"components": {
+			"default": {
+				"Tuition": 55000,
+				"Exam": 3000,
+				"Development": 10000,
+				"Library": 2000,
+				"Lab": 5000,
+				"Caution Deposit": 5000
+			},
+			"MQ": {
+				"Tuition": 125000,
+				"Exam": 3000,
+				"Development": 10000,
+				"Library": 2000,
+				"Lab": 5000,
+				"Caution Deposit": 5000
+			}
+		}
+	},
+	"approval_policies": [
+		{
+			"policy_name": "Certificate Request approval",
+			"document_type": "Certificate Request",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"limit_to_company": 1
+				}
+			],
+			"condition": "doc.needs_approval",
+			"on_final_action": "Submit"
+		},
+		{
+			"policy_name": "Result Ratification approval",
+			"document_type": "Result Ratification",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"limit_to_company": 1
+				}
+			]
+		},
+		{
+			"policy_name": "Rejoin Application approval",
+			"document_type": "Rejoin Application",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"limit_to_company": 1
+				}
+			]
+		},
+		{
+			"policy_name": "Examiner Remuneration Claim approval",
+			"document_type": "Examiner Remuneration Claim",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"limit_to_company": 1
+				}
+			]
+		}
+	],
+	"class_group": {
+		"name": "SXCCE B.E. CSE 2026-27 A",
+		"academic_year": "2026-27",
+		"programme": "B.E. CSE"
+	},
+	"user_domain": "sxcce.example.edu",
+	"test_password": "Campus@Pilot2026",
+	"people_defaults": {
+		"gender": "Female",
+		"date_of_birth": "1980-01-01",
+		"date_of_joining": "2015-06-01",
+		"positions_from": "2022-06-01"
+	},
+	"users": [
+		{
+			"key": "office",
+			"name": "Office Staff",
+			"roles": [
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			]
+		},
+		{
+			"key": "admissions",
+			"name": "Admission Officer",
+			"roles": [
+				"Admission Officer",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			]
+		},
+		{
+			"key": "faculty",
+			"name": "Faculty Member",
+			"roles": [
+				"Instructor",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"instructor": true,
+			"department": "Computer Science and Engineering"
+		},
+		{
+			"key": "hod",
+			"name": "Head of Department CSE",
+			"roles": [
+				"HOD",
+				"Instructor",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"instructor": true,
+			"department": "Computer Science and Engineering",
+			"position": {
+				"code": "HOD",
+				"scope": "department",
+				"department": "Computer Science and Engineering"
+			}
+		},
+		{
+			"key": "class_advisor",
+			"name": "Class Advisor",
+			"roles": [
+				"Class Advisor",
+				"Instructor",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"instructor": true,
+			"department": "Computer Science and Engineering",
+			"position": {
+				"code": "CLASS-ADVISOR",
+				"scope": "group"
+			}
+		},
+		{
+			"key": "coe",
+			"name": "Controller of Examinations",
+			"roles": [
+				"COE",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"department": "Computer Science and Engineering",
+			"position": {
+				"code": "COE",
+				"scope": "college"
+			}
+		},
+		{
+			"key": "accounts",
+			"name": "Accounts Officer",
+			"roles": [
+				"Accounts User",
+				"Accounts Manager"
+			],
+			"companies": [
+				"trust",
+				"college"
+			]
+		},
+		{
+			"key": "principal",
+			"name": "Principal",
+			"roles": [
+				"Principal",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"department": "Computer Science and Engineering",
+			"position": {
+				"code": "PRINCIPAL",
+				"scope": "college"
+			}
+		},
+		{
+			"key": "iqac",
+			"name": "IQAC Coordinator",
+			"roles": [
+				"IQAC Coordinator",
+				"Academics User"
+			],
+			"companies": [
+				"college"
+			],
+			"employee": true,
+			"department": "Computer Science and Engineering",
+			"position": {
+				"code": "IQAC-COORDINATOR",
+				"scope": "college"
+			}
+		},
+		{
+			"key": "student",
+			"name": "Pilot Student",
+			"roles": [
+				"Student"
+			],
+			"companies": [
+				"college"
+			],
+			"student": {
+				"joining_date": "2026-07-15"
+			}
+		},
+		{
+			"key": "guardian",
+			"name": "Pilot Guardian",
+			"roles": [
+				"Guardian"
+			],
+			"companies": [
+				"college"
+			],
+			"guardian": {
+				"relation": "Father"
+			}
+		}
+	]
+}

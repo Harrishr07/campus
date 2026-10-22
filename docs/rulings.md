@@ -186,3 +186,18 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 - **P3-T10 attainment access**: IQAC Coordinator reads CO/PO runs and their aggregate figures (needed for AQAR 2.6.2 and NBA); per-student marks behind a run are readable only by System Manager, Controller of Examinations and Dean Academics. Choice papers ("answer any N") are handled only by "no mark row = not attempted" plus a Choice Paper flag; full choice-group modelling is deferred.
 - **X-01 affiliated mode**: Examination Mode is an explicit Institution Profile field (override per Exam Rule Set); an affiliated exam is its own Exam Session (unique per company + term + mode); the Controller of Examinations is the exam-cell role; CIA counts as final once the offering's CIA Schedule is locked; imported results take grade points from our Grading Scheme. The Examinations workspace follows Examination Mode, so an affiliated college sees CIA and the university exchange (its internal result run stays refused). SXCCE (the pilot audience) is autonomous.
 - **X-03 completion**: a thin Credit Recognition register (waiver, transfer, equivalence; M03-09 cut) counts a cleared course once, and L-05 extends it later. Honours and Minor credits are shown but do not block the degree, which is then awarded without the variant. No Effective curriculum means the check is Incomplete. No disciplinary hold is checked until confidential cases (P4-T16) exist. Alumni follows graduation after 30 days by default (placeholder, Completion Settings).
+
+## PR-02 Pilot setup kit (2026-10-22)
+- Ruling: the kit is data-driven (campus/setup/profiles/<name>.json, validated before any write); a second college is a second file. Exam rules reuse `campus.examinations.seed` by regulation code; Curriculum, Registration and Attendance Rule values are the R2022 ones already used by the demo (research note section 3).
+- Ruling: passwords. A fixed TEST password is set only on developer-mode or `campus_demo_site` sites; on any other site no password is stored and each new user gets a one-time "password expired" reset link, so the first login sets their own. Cost if wrong: admins distribute links instead of one password.
+- Ruling: master-data import templates already exist (`legacy_import.TEMPLATES`); only a "Fee Structures" template was added. Course Offerings are generated from the curriculum, not imported.
+- Ruling: locked records (Effective regulation and its rules, submitted Fee Structure) are never edited by a re-run; a difference is reported in the run's notes.
+
+### Pending confirmation (PR-02 synthetic profile values)
+| # | Item | Seeded value |
+|---|------|--------------|
+| 1 | Programme intake | 60 per programme (B.E. CSE, ECE, EEE, MECH, CIVIL; B.Tech IT) |
+| 2 | Quota shares | Government 65%, Management 35% |
+| 3 | Government quota category split | OC 31, BC 30, MBC 20, SC 18, ST 1 (Tamil Nadu community reservation, grouped); Management all OC |
+| 4 | Fee amounts | Placeholders per quota; the college supplies its approved schedule |
+| 5 | Autonomy date of the college | not set |
