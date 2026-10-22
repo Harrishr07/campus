@@ -189,6 +189,7 @@ doc_events["Program Enrollment"]["validate"] = [
 doc_events["Student Applicant"]["validate"] += [
 	"campus.admissions.allotment_import.set_allotment_key",
 	"campus.admissions.documents.validate_applicant",
+	"campus.admissions.duplicates.validate_applicant",
 ]
 doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"

@@ -9,6 +9,7 @@ MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 OVERRIDE_ROLE = "Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
 SEAT_COUNT_INDEX = "oc_seat_count_index"
+CANDIDATE_INDEX = "oc_candidate_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
 OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
 
@@ -113,7 +114,14 @@ def setup_admission_fields():
 		field("oc_marks_section", "Section Break", "Qualifying Marks", "oc_differently_abled"),
 		field("oc_qualifying_marks", "Table", "Qualifying Marks", "oc_marks_section",
 			options="Applicant Qualifying Mark"),
-		field("oc_eligibility_status", "Select", "Eligibility", "oc_qualifying_marks",
+		field("oc_qualifying_exam", "Data", "Qualifying Exam / Board", "oc_qualifying_marks"),
+		field("oc_qualifying_register_no", "Data", "Qualifying Exam Register No", "oc_qualifying_exam", search_index=1,
+			description="Stored as letters and digits only; used to detect duplicate candidates."),
+		field("oc_candidate_key", "Data", "Candidate Key", "oc_qualifying_register_no", unique=1, hidden=1, read_only=1,
+			no_copy=1, description="Register no, date of birth, program and year: one applicant per upload row."),
+		field("oc_duplicate_review", "Link", "Duplicate Review", "oc_candidate_key", options="Candidate Duplicate Review",
+			read_only=1, no_copy=1, description="The review that cleared this applicant as not a duplicate."),
+		field("oc_eligibility_status", "Select", "Eligibility", "oc_duplicate_review",
 			options="Pending\nEligible\nIneligible", default="Pending", read_only=1, no_copy=1,
 			in_standard_filter=1),
 		field("oc_eligibility_reasons", "Small Text", "Eligibility Reasons", "oc_eligibility_status",
@@ -150,6 +158,9 @@ def setup_admission_fields():
 	grant_officer_read_access()
 	# the seat count locks exactly this index range (submitted enrollments of one program and year)
 	frappe.db.add_index("Program Enrollment", ["oc_company", "program", "academic_year", "docstatus"], SEAT_COUNT_INDEX)
+	# the duplicate candidate check locks these ranges (M04-07)
+	for doctype in ("Student Applicant", "Student"):
+		frappe.db.add_index(doctype, ["oc_company", "date_of_birth"], CANDIDATE_INDEX)
 
 
 # Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item

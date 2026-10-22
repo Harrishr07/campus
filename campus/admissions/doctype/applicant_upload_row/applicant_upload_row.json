@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "applicant_upload",
+  "row_no",
+  "candidate",
+  "status",
+  "applicant",
+  "review",
+  "message",
+  "values_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "applicant_upload",
+   "fieldtype": "Link",
+   "label": "Upload",
+   "options": "Applicant Upload",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "row_no",
+   "fieldtype": "Int",
+   "label": "Row",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "candidate",
+   "fieldtype": "Data",
+   "label": "Candidate",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Valid\nInvalid\nPossible Duplicate\nAlready Imported\nCreated\nUnchanged\nHeld for Review\nError\nLinked",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Student Applicant"
+  },
+  {
+   "fieldname": "review",
+   "fieldtype": "Link",
+   "label": "Duplicate Review",
+   "options": "Candidate Duplicate Review"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message"
+  },
+  {
+   "fieldname": "values_json",
+   "fieldtype": "Long Text",
+   "label": "Values",
+   "hidden": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Applicant Upload Row",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "row_no",
+ "sort_order": "ASC",
+ "states": [],
+ "autoname": "hash",
+ "read_only": 1
+}

@@ -93,8 +93,8 @@ def read_file(file_url):
 	return get_file(file_url)[1]
 
 
-def make_private(file_url):
-	"""Allotment files carry personal data: the attached File is made private; returns its (new) url.
+def make_private(file_url, doctype="Allotment Import", fieldname="import_file"):
+	"""Allotment (and applicant upload) files carry personal data: the attached File is made private; returns its (new) url.
 
 	When a private file of the same name already exists, the content is stored as a new, uniquely named
 	private File and the public one is deleted, so a name clash never blocks the import.
@@ -120,7 +120,7 @@ def make_private(file_url):
 		file.is_private = 1
 		file.save(ignore_permissions=True)
 		new_url = file.file_url
-	frappe.db.set_value("Allotment Import", {"import_file": file_url}, "import_file", new_url, update_modified=False)
+	frappe.db.set_value(doctype, {fieldname: file_url}, fieldname, new_url, update_modified=False)
 	return new_url
 
 
