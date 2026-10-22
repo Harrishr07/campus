@@ -13,7 +13,7 @@ import frappe
 from frappe.utils import add_days, get_first_day, get_last_day, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
-from campus.research.budget_control import BUDGET_HEAD_FIELD, validate_payment_deductions
+from campus.research.budget_control import BUDGET_HEAD_FIELD, refuse_payment_cancel_on_closed, validate_payment_deductions
 from campus.research.setup import PROJECT_STAFF, seed_research
 from campus.research.utilisation import recheck_queued, utilisation_figures
 from campus.tests.factories import make_user
@@ -146,10 +146,12 @@ class ProjectFixtures(SanctionFixtures):
 		return receipt, entry
 
 	def recognise(self, sanction, to_date):
-		frappe.get_doc(
+		recognition = frappe.get_doc(
 			{"doctype": "Grant Income Recognition", "company": COLLEGE, "from_date": sanction.start_date, "to_date": to_date,
 			 "sanctions": [{"sanction": sanction.name}]}
-		).insert().submit()  # fmt: skip
+		).insert()  # fmt: skip
+		recognition.submit()
+		return recognition
 
 	def approve_all(self, uc):
 		request = request_approval(UC, uc.name)
@@ -500,3 +502,66 @@ class TestProjectClosure(ProjectFixtures):
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Completed")
 		closure.cancel()
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Cancelled")
+
+	# fix round 2
+	def test_no_grant_income_recognition_cancel_on_a_closed_sanction(self):
+		sanction = self.project_sanction()
+		self.funded(sanction)
+		uc = self.final_uc(sanction)
+		recognition = frappe.get_all(
+			"Grant Income Recognition Sanction", {"sanction": sanction.name, "docstatus": 1}, pluck="parent"
+		)[0]  # fmt: skip
+		self.closure(sanction, uc).insert().submit()
+		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
+			frappe.get_doc("Grant Income Recognition", recognition).cancel()
+		self.assertEqual(frappe.db.get_value("Grant Income Recognition", recognition, "docstatus"), 1)
+		self.assertEqual(self.liability_balance(sanction), 0)
+
+	def test_payment_entry_cancel_with_a_deduction_on_a_closed_sanction_is_refused(self):
+		before_cancel = frappe.get_hooks("doc_events")["Payment Entry"]["before_cancel"]
+		self.assertIn("campus.research.pfms.refuse_exported_cancel", before_cancel)
+		self.assertIn("campus.research.budget_control.refuse_payment_cancel_on_closed", before_cancel)
+		sanction = self.project_sanction()
+		self.funded(sanction)
+		payment = frappe.get_doc(
+			{"doctype": "Payment Entry", "company": COLLEGE, "docstatus": 1,
+			 "deductions": [{"account": self.consumables_account, "cost_center": sanction.cost_center, "amount": 10}]}
+		)  # fmt: skip
+		refuse_payment_cancel_on_closed(payment)  # an open sanction: allowed
+		self.closure(sanction, self.final_uc(sanction)).insert().submit()
+		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
+			refuse_payment_cancel_on_closed(payment)
+
+	def test_closure_names_a_recognition_posted_after_the_final_uc(self):
+		sanction = self.project_sanction()
+		self.funded(sanction)
+		uc = self.final_uc(sanction, to_date=add_days(today(), -1))
+		self.spend(sanction, self.travel_account, 500, self.travel)
+		later = self.recognise(sanction, today())
+		with self.assertRaisesRegex(frappe.ValidationError, f"Grant Income Recognition {later.name}"):
+			self.closure(sanction, uc).insert().submit()
+		self.assertFalse(frappe.db.get_value("Sanction", sanction.name, "project_closure"))
+
+
+class TestProjectStaffFix2(ProjectFixtures):
+	def sanction_for(self, start_date, end_date, fiscal_year):
+		sanction = self.sanction(
+			heads=[(self.manpower, fiscal_year, 300000)], scheme=self.project_scheme, start_date=start_date, end_date=end_date
+		)
+		sanction.submit()
+		return sanction.reload()
+
+	def test_cancelling_an_earlier_appointment_leaves_a_later_appointment_on_the_employee(self):
+		first = self.sanction_for(self.year1.start, self.year1.end, self.year1.name)
+		second = self.sanction_for(self.year2.start, self.year2.end, self.year2.name)
+		employee = self.project_staff()
+		frappe.db.set_value("Employee", employee, {"contract_end_date": "2030-01-01", "designation": "Project Assistant"})
+		earlier = self.appointment(first, employee)
+		earlier.submit()
+		later = self.appointment(second, employee, from_date=second.start_date, designation="Senior Research Fellow")
+		later.submit()
+		earlier.cancel()
+		self.assertEqual(
+			frappe.db.get_value("Employee", employee, ["contract_end_date", "designation", "relieving_date"]),
+			(getdate(second.end_date), "Senior Research Fellow", getdate(second.end_date)),
+		)

@@ -111,9 +111,18 @@ class ProjectClosure(Document):
 		"""Locking reads on the indexed liability account and cost centre: a voucher committed while we waited is seen."""
 		for field, value in (("account", sanction.liability_account), ("cost_center", sanction.cost_center)):
 			entry = frappe.db.get_value(
-				"GL Entry", {field: value, "is_cancelled": 0, "posting_date": [">", to_date]}, ["voucher_type", "voucher_no"],
-				as_dict=True, for_update=True,
+				"GL Entry", {field: value, "is_cancelled": 0, "posting_date": [">", to_date]},
+				["voucher_type", "voucher_no", "posting_date"], as_dict=True, for_update=True,
 			)  # fmt: skip
+			recognition = entry and entry.voucher_type == "Journal Entry" and frappe.db.get_value(
+				"Grant Income Recognition", {"journal_entry": entry.voucher_no, "docstatus": 1}, "name"
+			)
+			if recognition:
+				frappe.throw(
+					_("Sanction {0} has Grant Income Recognition {1} posted on {2}, after the final UC's period end {3}: cancel it and recognise to {3}, or certify the later period in a final UC first.").format(
+						self.sanction, recognition, frappe.format(entry.posting_date, "Date"), frappe.format(to_date, "Date")
+					)
+				)
 			if entry:
 				frappe.throw(
 					_("Sanction {0} has ledger entries after the final UC's period end {1} ({2} {3}): certify them in a final UC first.").format(

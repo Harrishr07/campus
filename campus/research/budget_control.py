@@ -102,6 +102,13 @@ def validate_payment_deductions(doc, method=None):
 		check_sanction_open(name, closure)
 
 
+def refuse_payment_cancel_on_closed(doc, method=None):
+	"""before_cancel of Payment Entry: its deductions on a closed sanction's project or cost centre stay (the sanctions
+	locked in name order first)."""
+	for name, closure in locked_closures(doc, doc.get("deductions") or []).items():
+		check_sanction_open(name, closure)
+
+
 class Line:
 	def __init__(self, doc, row, sanctions):
 		self.doc, self.row, self.sanctions = doc, row, sanctions

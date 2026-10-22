@@ -8,14 +8,14 @@ with nothing to recognise, is dropped; when none is left the run is refused, so 
 
 Each sanction is locked while its amounts are re-read with locking reads, and its row carries the unique key
 (sanction, period end). Cancelling reverses the entry and frees the key; only a sanction's latest recognition can be
-cancelled."""
+cancelled, and none of a closed sanction (P3-T19)."""
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
-from campus.research.api import get_research_settings
+from campus.research.api import check_sanction_open, get_research_settings
 from campus.research.grant_recognition import journal_rows, lock_sanction, recognised, recognition_amounts, spent_to
 
 AMOUNT_FIELDS = {"revenue": "revenue_amount", "capital": "capital_amount", "release": "release_amount"}
@@ -49,6 +49,11 @@ class GrantIncomeRecognition(Document):
 			)
 		self.set("sanctions", [row for row, _sanction in kept])
 		self.journal_entry = self.make_journal_entry(kept)
+
+	def before_cancel(self):
+		"""A closed sanction's ledger doesn't change: its recognition stays (each sanction locked in name order)."""
+		for row in sorted(self.sanctions, key=lambda r: r.sanction):
+			check_sanction_open(row.sanction, frappe.db.get_value("Sanction", row.sanction, "project_closure", for_update=True))
 
 	def on_cancel(self):
 		for row in sorted(self.sanctions, key=lambda r: r.sanction):

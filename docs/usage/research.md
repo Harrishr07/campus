@@ -261,7 +261,7 @@ Once per college:
 A **Project Staff Appointment** (sanction, employee, designation, from date, salary structure, base) checks the
 employee, the period and that the salary posts to a head of the sanction. On submit it:
 - sets the Employee's contract end date and relieving date to the sanction end, and their designation (cancelling
-  the appointment restores all three). Payroll prorates the last month and pays nothing after the sanction end;
+  the appointment restores all three, unless a later appointment of the employee has set them since). Payroll prorates the last month and pays nothing after the sanction end;
 - submits a Salary Structure Assignment from the from date, with the sanction's cost centre as the only (100%)
   payroll cost centre.
 
@@ -277,7 +277,8 @@ cancels the assignment.
 Source Changed, and the sanction's latest UC. Its posting date must be after the UC's period end. On submit, under a
 lock on the sanction:
 - It is refused while any ledger entry on the sanction's liability or cost centre is dated after the final UC's
-  period end. Certify that spending in a final UC first.
+  period end. Certify that spending in a final UC first. When it is a Grant Income Recognition run past that date,
+  the message names it: cancel it and recognise to the UC's period end.
 - It is refused while the final UC's figures no longer match the ledger. Revise the UC first.
 - It is refused until Grant Income Recognition has run to the final UC's period end: the liability must hold exactly
   the unspent balance, so the closure leaves it at zero.
@@ -291,7 +292,8 @@ lock on the sanction:
 A closed sanction refuses:
 - new spending lines (purchase, journal, expense claim, payroll) and Payment Entry deductions on its project or cost
   centre;
-- cancelling its purchase orders, invoices, journal entries, expense claims, Grant Receipts and Grant Interest;
+- cancelling its purchase orders, invoices, journal entries, expense claims, Grant Receipts, Grant Interest, Grant
+  Income Recognitions, and Payment Entries with a deduction on its project or cost centre;
 - Grant Receipts, Grant Interest, project staff appointments, extensions, re-appropriations and new UCs.
 
 A voucher's submit or cancel locks the sanctions it touches (in name order) and re-reads the closure, so a closure and a

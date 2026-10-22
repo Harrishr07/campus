@@ -2,7 +2,7 @@
 
 The appointee is an Employee of the college with employment type "Project Staff". Submitting the appointment sets the
 Employee's contract end date and relieving date to the sanction end (payroll prorates the last month and pays nothing
-after it) and their designation (all restored on cancel), and submits a Salary Structure Assignment of
+after it) and their designation (restored on cancel unless a later appointment of the employee holds them), and submits a Salary Structure Assignment of
 the fellowship structure from the appointment date with the sanction's cost centre as the only payroll cost centre.
 Payroll then accrues the salary on that cost centre; the accrual's salary rows take the sanction head their account
 maps to (campus.research.budget_control), so they count against the head's Budget and in the Utilisation Certificate.
@@ -50,11 +50,22 @@ class ProjectStaffAppointment(Document):
 			assignment = frappe.get_doc("Salary Structure Assignment", name)
 			assignment.flags.ignore_permissions = True
 			assignment.cancel()
+		if self.has_later_appointment():
+			return  # the employee's contract end, relieving date and designation are the later appointment's
 		frappe.db.set_value(
 			"Employee", self.employee,
 			{"contract_end_date": self.previous_contract_end_date, "relieving_date": self.previous_relieving_date,
 			 "designation": self.previous_designation},
 		)  # fmt: skip
+
+	def has_later_appointment(self):
+		return bool(
+			frappe.db.get_value(
+				self.doctype,
+				{"employee": self.employee, "docstatus": 1, "name": ["!=", self.name], "from_date": [">", self.from_date]},
+				"name", for_update=True,
+			)  # fmt: skip
+		)
 
 	def get_sanction(self, for_update=False):
 		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)

@@ -275,6 +275,7 @@ for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Clai
 	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), f"{_budget_control}.refuse_cancel_on_closed"]
 _validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
 doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
+doc_events["Payment Entry"]["before_cancel"].append(f"{_budget_control}.refuse_payment_cancel_on_closed")  # P3-T19: its deductions stay
 
 # Scheduled Tasks
 # ---------------
