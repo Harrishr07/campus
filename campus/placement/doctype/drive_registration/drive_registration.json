@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "drive",
+  "student",
+  "student_name",
+  "company",
+  "column_break_1",
+  "status",
+  "registered_on",
+  "snapshot_section",
+  "cgpa",
+  "standing_arrears",
+  "had_arrears"
+ ],
+ "fields": [
+  {
+   "fieldname": "drive",
+   "fieldtype": "Link",
+   "label": "Drive",
+   "options": "Placement Drive",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "fetch_from": "drive.company"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Registered\nWithdrawn",
+   "default": "Registered",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "registered_on",
+   "fieldtype": "Datetime",
+   "label": "Registered On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "snapshot_section",
+   "fieldtype": "Section Break",
+   "label": "Standing when registered"
+  },
+  {
+   "fieldname": "cgpa",
+   "fieldtype": "Float",
+   "label": "CGPA",
+   "precision": "2",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "standing_arrears",
+   "fieldtype": "Int",
+   "label": "Standing Arrears",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "had_arrears",
+   "fieldtype": "Check",
+   "label": "History of Arrears",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Drive Registration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Placement Officer",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:{drive}-{student}",
+ "search_fields": "student_name"
+}

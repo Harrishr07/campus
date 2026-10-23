@@ -67,6 +67,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "Degree Awarding Authority",
+   "link_to": "Degree Awarding Authority",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "Progression Rule",
    "link_to": "Progression Rule",
    "link_type": "DocType",
@@ -113,6 +124,17 @@
    "keep_closed": 0,
    "label": "Remuneration Rate",
    "link_to": "Remuneration Rate",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "University Exam Format",
+   "link_to": "University Exam Format",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -230,6 +252,28 @@
   {
    "child": 1,
    "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Completion Check",
+   "link_to": "Completion Check",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Credit Recognition",
+   "link_to": "Credit Recognition",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "filters": "[[\"Bulk Run\",\"run_type\",\"=\",\"Result Run\"]]",
    "indent": 0,
    "keep_closed": 0,
@@ -268,6 +312,39 @@
    "keep_closed": 0,
    "label": "Exam Registration",
    "link_to": "Exam Registration",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "University Exam Registration Batch",
+   "link_to": "University Exam Registration Batch",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "University Result Import",
+   "link_to": "University Result Import",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "University Result Import Row",
+   "link_to": "University Result Import Row",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -319,14 +396,14 @@
   {
    "child": 1,
    "collapsible": 1,
+   "filters": "[[\"Hall Ticket\",\"status\",\"=\",\"Withheld\"]]",
    "indent": 0,
    "keep_closed": 0,
    "label": "Withheld Hall Tickets",
    "link_to": "Hall Ticket",
    "link_type": "DocType",
    "show_arrow": 0,
-   "type": "Link",
-   "filters": "[[\"Hall Ticket\",\"status\",\"=\",\"Withheld\"]]"
+   "type": "Link"
   },
   {
    "child": 1,
@@ -615,6 +692,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Completion Status",
+   "link_to": "Completion Status",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "settings",
@@ -635,9 +723,20 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Completion Settings",
+   "link_to": "Completion Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-10 00:30:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",

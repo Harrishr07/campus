@@ -4,7 +4,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-22 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "owner": "Administrator",
@@ -19,6 +19,10 @@
   "register_no_pattern",
   "roll_no_pattern",
   "strict_seat_matrix",
+  "reporting_section",
+  "reporting_deadline",
+  "no_show_grace_days",
+  "program_reporting_deadlines",
   "enquiry_section",
   "enquiry_ack_dedupe_hours",
   "enquiry_ack_hourly_cap"
@@ -51,6 +55,32 @@
    "label": "Strict Seat Matrix",
    "default": "1",
    "description": "When on, a program and year without a Seat Matrix, or a quota and category without a row in it, cannot be admitted into unless the user holds Admission Override (the override is logged). Supernumerary quotas and quotas not counted in the matrix are never checked."
+  },
+  {
+   "fieldname": "reporting_section",
+   "fieldtype": "Section Break",
+   "label": "Reporting (Joining)"
+  },
+  {
+   "fieldname": "reporting_deadline",
+   "fieldtype": "Date",
+   "label": "Reporting Deadline",
+   "description": "Last day to join for the students admitted in the current admission round. Each student keeps the deadline in force when admitted. A joining dated later needs an approved Late Joining Request."
+  },
+  {
+   "fieldname": "no_show_grace_days",
+   "fieldtype": "Int",
+   "label": "No-Show Grace (Days)",
+   "default": "0",
+   "non_negative": 1,
+   "description": "Days after the reporting deadline before an admitted student who has not joined is listed as a no-show and referred for cancellation (a draft Admission Cancellation; nothing is cancelled automatically)."
+  },
+  {
+   "fieldname": "program_reporting_deadlines",
+   "fieldtype": "Table",
+   "label": "Program Reporting Deadlines",
+   "options": "Program Reporting Deadline",
+   "description": "A program listed here uses its own deadline instead of the round's."
   },
   {
    "fieldname": "enquiry_section",

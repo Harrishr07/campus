@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 18:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Credit Recognition",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "student",
+  "student_name",
+  "company",
+  "regulation",
+  "column_break_1",
+  "course",
+  "kind",
+  "credits",
+  "section_1",
+  "source_course",
+  "source_institution",
+  "column_break_2",
+  "evidence",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "student.oc_company",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "fetch_from": "student.oc_regulation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The course of the student's curriculum this recognition clears. One course is cleared once only."
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Equivalence\nTransfer\nWaiver\nExternal Credit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "credits",
+   "fieldtype": "Float",
+   "label": "Credits Granted",
+   "non_negative": 1,
+   "description": "Credits counted toward the course's category (never more than the curriculum's credits for it). Required for every kind but a waiver; a waiver may grant 0 (cleared without credit).",
+   "mandatory_depends_on": "eval:doc.kind!='Waiver'"
+  },
+  {
+   "fieldname": "section_1",
+   "fieldtype": "Section Break",
+   "label": "Evidence"
+  },
+  {
+   "fieldname": "source_course",
+   "fieldtype": "Data",
+   "label": "Source Course",
+   "description": "The course passed elsewhere (e.g. the MOOC or NPTEL course)."
+  },
+  {
+   "fieldname": "source_institution",
+   "fieldtype": "Data",
+   "label": "Source Institution"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Evidence",
+   "reqd": 1,
+   "description": "A private file (the transcript, certificate or order)."
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Credit Recognition",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "module": "Curriculum",
+ "autoname": "CRR-.#####",
+ "is_submittable": 1,
+ "title_field": "student_name",
+ "description": "M03-09 thin cut: a course of a student's curriculum cleared by equivalence, transfer, waiver or external credit."
+}

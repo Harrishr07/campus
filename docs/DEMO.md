@@ -105,7 +105,7 @@ shortcuts at the top of each workspace page are the quickest route.
 
 | Min | Who | Do this | Show |
 | --- | --- | --- | --- |
-| 0-2 | `admissions` | `/desk/student-applicant`: open **slice-6 (Nithya Shree)**, note Approved and Eligible, with the checklist document Submitted. Click **Admit** (shown for Approved applicants to an Admission Officer) and confirm | the Student, register number (for example DCE26CSE0006), enrollment and fee invoice created in one step; the Seat Matrix (`/desk/seat-matrix`) counts the seat |
+| 0-2 | `admissions` | `/desk/student-applicant`: open **slice-6 (Nithya Shree)**, note Approved and Eligible, with the checklist document Submitted. Click **Admit** (shown for Approved applicants to an Admission Officer) and confirm; on the Student it opens, click **Confirm Joining** and keep today's date | Admit creates only the admitted Student (no enrollment, number or invoice: M04-09). Confirm Joining creates the enrollment, register number (for example DCE26CSE0006) and fee invoice in one step, and the Seat Matrix (`/desk/seat-matrix`) counts the seat |
 | 2-4 | `accounts` | `/desk/sales-invoice`: filter on the students; open the invoices | five paid or due fee invoices; Sanjay Prakash's Management-quota invoice of Rs 1,55,000 is the only one outstanding; `/desk/payment-entry` shows the four receipts |
 | 4-6 | `hod_cse` | `/desk/course-registration`: open one registration; `/desk/student-group`: open an offering | Effective R2026 curriculum, 14 credits, registration rules from the regulation, the student placed in the four offerings |
 | 6-8 | `hod_cse` | `/desk/query-report/Attendance Shortage`: Company = Demo College of Engineering, Academic Term = 2026-27 (Odd) | only Karthik Raja (Shortage, 58.33%) and Divya Bharathi (Medical band, 70.83%); the other three are eligible and not listed |
@@ -121,7 +121,7 @@ shortcuts at the top of each workspace page are the quickest route.
 Notes for the presenter:
 
 - If the live admission is done before a rehearsal, run the builder again: it does nothing to an admitted
-  applicant, and slice-6 stays Admitted. To reset completely use a fresh demo site.
+  applicant, and slice-6 stays Admitted (joined or not). To reset completely use a fresh demo site.
 - The 2.1.1 value counts every submitted Program Enrollment of the college in 2026-27: the 30 placeholder
   students of the "small" set, the five admitted applicants, and any applicant you admit live (35 before, 36 after).
 - The admission, the shortage report and the portal do not depend on the worker process. **Compute** and the

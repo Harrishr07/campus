@@ -1,0 +1,49 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "University Exam Format Code",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "code_type",
+   "fieldtype": "Select",
+   "label": "Code Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "Course\nGrade\nResult\nRegistration Type"
+  },
+  {
+   "fieldname": "our_code",
+   "fieldtype": "Data",
+   "label": "Our Code",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Course: our course; Grade: our grade letter; Result: Pass, Fail, AB, SA or WD; Registration Type: Current, Arrear, Dropped or Bridge."
+  },
+  {
+   "fieldname": "university_code",
+   "fieldtype": "Data",
+   "label": "University Code",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "field_order": [
+  "code_type",
+  "our_code",
+  "university_code"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

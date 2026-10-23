@@ -9,8 +9,11 @@ MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
 OVERRIDE_ROLE = "Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
 SEAT_COUNT_INDEX = "oc_seat_count_index"
+CANDIDATE_INDEX = "oc_candidate_index"
+APPLICANT_INDEX = "oc_student_applicant_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
-OFFICER_ROLE = "Admission Officer"  # may admit approved applicants and cancel admissions
+OFFICER_ROLE = "Admission Officer"  # may admit approved applicants, confirm their joining and cancel admissions
+LATE_REQUEST = "Late Joining Request"  # M04-10
 
 
 def setup_admissions():
@@ -18,6 +21,7 @@ def setup_admissions():
 	ensure_admission_roles()
 	setup_admission_fields()
 	seed_strict_seat_matrix()
+	seed_late_joining_policy()
 	from campus.admissions.enquiry_setup import setup_enquiry
 
 	setup_enquiry()
@@ -36,6 +40,20 @@ def seed_strict_seat_matrix():
 	)
 	if not stored:
 		frappe.db.set_single_value("Admission Settings", "strict_seat_matrix", 1)
+
+
+def seed_late_joining_policy():
+	"""M04-10: a late joining is approved by the Principal, unless the college has its own policy."""
+	if not frappe.db.exists("Position", "PRINCIPAL") or frappe.db.exists("Approval Policy", {"document_type": LATE_REQUEST}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": LATE_REQUEST, "document_type": LATE_REQUEST,
+			"levels": [
+				{"title": "Principal approval", "approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "sla_hours": 48}
+			],
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
 
 
 def ensure_aadhaar_role():
@@ -113,7 +131,14 @@ def setup_admission_fields():
 		field("oc_marks_section", "Section Break", "Qualifying Marks", "oc_differently_abled"),
 		field("oc_qualifying_marks", "Table", "Qualifying Marks", "oc_marks_section",
 			options="Applicant Qualifying Mark"),
-		field("oc_eligibility_status", "Select", "Eligibility", "oc_qualifying_marks",
+		field("oc_qualifying_exam", "Data", "Qualifying Exam / Board", "oc_qualifying_marks"),
+		field("oc_qualifying_register_no", "Data", "Qualifying Exam Register No", "oc_qualifying_exam", search_index=1,
+			description="Stored as letters and digits only; used to detect duplicate candidates."),
+		field("oc_candidate_key", "Data", "Candidate Key", "oc_qualifying_register_no", unique=1, hidden=1, read_only=1,
+			no_copy=1, description="Register no, date of birth, program and year: one applicant per upload row."),
+		field("oc_duplicate_review", "Link", "Duplicate Review", "oc_candidate_key", options="Candidate Duplicate Review",
+			read_only=1, no_copy=1, description="The review that cleared this applicant as not a duplicate."),
+		field("oc_eligibility_status", "Select", "Eligibility", "oc_duplicate_review",
 			options="Pending\nEligible\nIneligible", default="Pending", read_only=1, no_copy=1,
 			in_standard_filter=1),
 		field("oc_eligibility_reasons", "Small Text", "Eligibility Reasons", "oc_eligibility_status",
@@ -126,11 +151,17 @@ def setup_admission_fields():
 	enrollment = [
 		field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
 			in_standard_filter=1, description="Counted against the Seat Matrix when submitted."),
+		field("oc_attendance_start_date", "Date", "Attendance Start Date", "enrollment_date",
+			description="Set only by the joining confirmation (the joining date): attendance counts from this date. Blank (e.g. a legacy or promotion enrollment): the whole term counts."),
+		field("oc_joining_key", "Data", "Joining Key", "oc_attendance_start_date", unique=1, hidden=1, read_only=1,
+			no_copy=1, description="The applicant whose joining confirmation made this enrollment: one per applicant."),
 	]  # fmt: skip
 	student += [
 		field("oc_register_no", "Data", "Register No", "student_applicant", unique=1, read_only=1, no_copy=1,
-			in_standard_filter=1, description="Assigned at admission from the Admission Settings pattern."),
+			in_standard_filter=1, description="Assigned at the joining confirmation from the Admission Settings pattern."),
 		field("oc_roll_no", "Data", "Roll No", "oc_register_no", read_only=1, no_copy=1),
+		field("oc_reporting_deadline", "Date", "Reporting Deadline", "oc_roll_no", read_only=1, no_copy=1,
+			description="Last day to join, stamped at admission from Admission Settings (M04-10)."),
 	]  # fmt: skip
 	category = [
 		field("oc_is_reserved", "Check", "Reserved Category", "category", in_list_view=1,
@@ -138,18 +169,28 @@ def setup_admission_fields():
 	]  # fmt: skip
 	invoice = [
 		field("oc_program_enrollment", "Link", "Admission Enrollment", "student", options="Program Enrollment",
-			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at admission."),
+			read_only=1, no_copy=1, search_index=1, description="Set on the fee invoice raised at the joining confirmation."),
+	]  # fmt: skip
+	payment = [
+		field("oc_admission_cancellation", "Link", "Admission Cancellation", "reference_no", options="Admission Cancellation",
+			hidden=1, read_only=1, set_only_once=1, search_index=1,
+			description="The cancellation before joining whose advance this payment refunds (M04-10): paid out once. Copied with the entry, so a copy is checked too."),
 	]  # fmt: skip
 	create_custom_fields(
 		{
 			"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment,
-			"Student Category": category, "Sales Invoice": invoice,
+			"Student Category": category, "Sales Invoice": invoice, "Payment Entry": payment,
 		},
 		update=True,
 	)
 	grant_officer_read_access()
 	# the seat count locks exactly this index range (submitted enrollments of one program and year)
 	frappe.db.add_index("Program Enrollment", ["oc_company", "program", "academic_year", "docstatus"], SEAT_COUNT_INDEX)
+	# the duplicate candidate check locks these ranges (M04-07)
+	for doctype in ("Student Applicant", "Student"):
+		frappe.db.add_index(doctype, ["oc_company", "date_of_birth"], CANDIDATE_INDEX)
+	# the joining confirmation locks the applicant's Student by this column (M04-09): without it, every row
+	frappe.db.add_index("Student", ["student_applicant"], APPLICANT_INDEX)
 
 
 # Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item

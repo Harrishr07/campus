@@ -80,7 +80,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 9,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -184,10 +184,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bank Collection Row",
+   "link_count": 0,
+   "link_to": "Bank Collection Row",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 6,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -210,17 +221,6 @@
    "link_count": 0,
    "link_to": "Program wise Fee Collection",
    "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Bank Collection Row",
-   "link_count": 0,
-   "link_to": "Bank Collection Row",
-   "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   },
@@ -258,7 +258,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 10:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Finance",
  "name": "Fees and Finance",
@@ -279,6 +279,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Dean Student Affairs"
   }
  ],
  "sequence_id": 44.0,

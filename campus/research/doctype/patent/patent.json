@@ -1,0 +1,272 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "invention_disclosure",
+  "title",
+  "company",
+  "department",
+  "ipr_type",
+  "column_break_1",
+  "status",
+  "application_number",
+  "patent_number",
+  "jurisdiction",
+  "currency",
+  "dates_section",
+  "filed_date",
+  "published_date",
+  "column_break_2",
+  "examined_date",
+  "granted_date",
+  "costs_section",
+  "costs",
+  "total_cost",
+  "licence_section",
+  "institution_share_percent",
+  "licences",
+  "column_break_3",
+  "total_revenue",
+  "institution_revenue",
+  "inventors_revenue"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PAT-.YYYY.-",
+   "default": "PAT-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "invention_disclosure",
+   "fieldtype": "Link",
+   "label": "Invention Disclosure",
+   "options": "Invention Disclosure",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "description": "An approved (submitted) disclosure."
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "fetch_from": "invention_disclosure.title",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "College",
+   "options": "Company",
+   "fetch_from": "invention_disclosure.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "fetch_from": "invention_disclosure.department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ipr_type",
+   "fieldtype": "Link",
+   "label": "IPR Type",
+   "options": "IPR Type",
+   "fetch_from": "invention_disclosure.ipr_type",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Filed\nPublished\nExamined\nGranted\nLicensed",
+   "default": "Filed",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "application_number",
+   "fieldtype": "Data",
+   "label": "Application Number",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "patent_number",
+   "fieldtype": "Data",
+   "label": "Patent Number",
+   "depends_on": "eval:['Granted','Licensed'].includes(doc.status)",
+   "mandatory_depends_on": "eval:['Granted','Licensed'].includes(doc.status)"
+  },
+  {
+   "fieldname": "jurisdiction",
+   "fieldtype": "Data",
+   "label": "Office / Jurisdiction",
+   "default": "India"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "dates_section",
+   "fieldtype": "Section Break",
+   "label": "Lifecycle"
+  },
+  {
+   "fieldname": "filed_date",
+   "fieldtype": "Date",
+   "label": "Filed On",
+   "reqd": 1
+  },
+  {
+   "fieldname": "published_date",
+   "fieldtype": "Date",
+   "label": "Published On"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "examined_date",
+   "fieldtype": "Date",
+   "label": "Examined On"
+  },
+  {
+   "fieldname": "granted_date",
+   "fieldtype": "Date",
+   "label": "Granted On"
+  },
+  {
+   "fieldname": "costs_section",
+   "fieldtype": "Section Break",
+   "label": "Costs"
+  },
+  {
+   "fieldname": "costs",
+   "fieldtype": "Table",
+   "label": "Costs",
+   "options": "Patent Cost"
+  },
+  {
+   "fieldname": "total_cost",
+   "fieldtype": "Currency",
+   "label": "Total Cost",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "licence_section",
+   "fieldtype": "Section Break",
+   "label": "Licensing and Revenue Share"
+  },
+  {
+   "fieldname": "institution_share_percent",
+   "fieldtype": "Percent",
+   "label": "Institution Share %",
+   "reqd": 1,
+   "description": "The institution's part of licence revenue; the rest goes to the inventors by their shares on the disclosure."
+  },
+  {
+   "fieldname": "licences",
+   "fieldtype": "Table",
+   "label": "Licence Revenue",
+   "options": "Patent Licence"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_revenue",
+   "fieldtype": "Currency",
+   "label": "Total Revenue",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "institution_revenue",
+   "fieldtype": "Currency",
+   "label": "Institution Revenue",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "inventors_revenue",
+   "fieldtype": "Currency",
+   "label": "Inventors' Revenue",
+   "read_only": 1,
+   "options": "currency"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Patent",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "delete": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "autoname": "naming_series:",
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}

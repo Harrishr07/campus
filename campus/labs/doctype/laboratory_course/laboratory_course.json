@@ -1,0 +1,32 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "course"
+ ],
+ "fields": [
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Laboratory Course",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1
+}

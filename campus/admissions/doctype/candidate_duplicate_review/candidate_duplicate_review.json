@@ -1,0 +1,237 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "status",
+  "candidate_name",
+  "date_of_birth",
+  "qualifying_exam",
+  "qualifying_register_no",
+  "column_break_program",
+  "program",
+  "academic_year",
+  "applicant_upload",
+  "upload_row",
+  "match_section",
+  "existing_applicant",
+  "existing_student",
+  "match_summary",
+  "matches",
+  "candidate_values",
+  "decision_section",
+  "linked_applicant",
+  "linked_student",
+  "new_applicant",
+  "column_break_decision",
+  "decided_by",
+  "decided_on",
+  "note"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nLinked\nNot Duplicate",
+   "default": "Open",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "candidate_name",
+   "fieldtype": "Data",
+   "label": "Candidate",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qualifying_exam",
+   "fieldtype": "Data",
+   "label": "Qualifying Exam",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qualifying_register_no",
+   "fieldtype": "Data",
+   "label": "Qualifying Register No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_program",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "read_only": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "applicant_upload",
+   "fieldtype": "Link",
+   "label": "Applicant Upload",
+   "options": "Applicant Upload",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "upload_row",
+   "fieldtype": "Link",
+   "label": "Upload Row",
+   "options": "Applicant Upload Row",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "match_section",
+   "fieldtype": "Section Break",
+   "label": "Possible Duplicate Of"
+  },
+  {
+   "fieldname": "existing_applicant",
+   "fieldtype": "Link",
+   "label": "Existing Applicant",
+   "options": "Student Applicant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "existing_student",
+   "fieldtype": "Link",
+   "label": "Existing Student",
+   "options": "Student",
+   "read_only": 1
+  },
+  {
+   "fieldname": "match_summary",
+   "fieldtype": "Small Text",
+   "label": "Matches",
+   "read_only": 1
+  },
+  {
+   "fieldname": "matches",
+   "fieldtype": "Code",
+   "label": "Matched Records",
+   "options": "JSON",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "candidate_values",
+   "fieldtype": "Code",
+   "label": "Candidate Values",
+   "options": "JSON",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "decision_section",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "linked_applicant",
+   "fieldtype": "Link",
+   "label": "Linked To Applicant",
+   "options": "Student Applicant",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "linked_student",
+   "fieldtype": "Link",
+   "label": "Linked To Student",
+   "options": "Student",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "new_applicant",
+   "fieldtype": "Link",
+   "label": "New Applicant",
+   "options": "Student Applicant",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_decision",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "decided_by",
+   "fieldtype": "Link",
+   "label": "Decided By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "decided_on",
+   "fieldtype": "Datetime",
+   "label": "Decided On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admissions",
+ "name": "Candidate Duplicate Review",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:DUPREV-{#####}",
+ "naming_rule": "Expression",
+ "track_changes": 1,
+ "title_field": "candidate_name"
+}

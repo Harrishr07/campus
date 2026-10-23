@@ -1,21 +1,24 @@
-"""P1-T16 tests (M04-01, M04-04): Admit transaction, register numbers, cancellation refund, prints and reports."""
+"""P1-T16 tests (M04-01, M04-04, M04-09): Admit (approval) and joining confirmation, register numbers, cancellation
+refund, prints and reports."""
 
 import threading
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import frappe
-from frappe.utils import add_days, flt, today
+from frappe.utils import add_days, flt, getdate, today
 
 from campus.admissions import admit as admit_module
+from campus.admissions import joining as joining_module
 from campus.admissions import numbers, refund
-from campus.admissions.api import admit, check_seat_available
+from campus.admissions.api import admit, check_seat_available, confirm_joining
 from campus.admissions.report.admissions_by_quota_and_category import admissions_by_quota_and_category as quota_report
 from campus.admissions.report.refund_register import refund_register
-from campus.tests.approval_fixtures import approval_not_required
+from campus.tests.approval_fixtures import approval_not_required, drop_policies
 from campus.tests.factories import make_company, make_user
 from campus.tests.finance_factories import make_account, make_finance_company, make_fee_structure
 from campus.tests.test_admissions import VALID, delete_log_rows, log_rows, own_connection
+from campus.student_services import onboarding
 from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR = "Admit Flow College", "AFC"
@@ -188,6 +191,18 @@ class AdmitTestCase(CampusTestCase):
 		finally:
 			frappe.set_user("Administrator")
 
+	def join_as_officer(self, applicant, officer=OFFICER, **kwargs):
+		frappe.set_user(officer)
+		try:
+			return confirm_joining(applicant, **kwargs)
+		finally:
+			frappe.set_user("Administrator")
+
+	def admit_and_join(self, applicant, officer=OFFICER):
+		"""Both steps (approval, then joining today); returns the joining's result."""
+		self.admit_as_officer(applicant, officer)
+		return self.join_as_officer(applicant, officer)
+
 	def counts(self):
 		return {
 			dt: frappe.db.count(dt) for dt in ("Student", "Program Enrollment", "Sales Invoice", "Customer")
@@ -205,39 +220,33 @@ class AdmitTestCase(CampusTestCase):
 
 
 class TestAdmit(AdmitTestCase):
-	def test_admit_creates_student_enrollment_numbers_and_invoice(self):
+	"""M04-09: the admission approval makes an admitted Student and nothing billable, no enrollment and no ID."""
+
+	def test_admit_creates_an_admitted_student_and_nothing_billable(self):
 		self.matrix([(QUOTA, OC, 2)])
 		applicant = self.applicant()
+		before = self.counts()
 		result = self.admit_as_officer(applicant)
+		self.assertEqual(set(result), {"student"})
 		student = frappe.get_doc("Student", result["student"])
-		self.assertEqual(student.student_applicant, applicant)
-		self.assertEqual(student.oc_company, COLLEGE)
-		self.assertEqual(student.oc_register_no, f"{ABBR}{YEAR_YY}{CODE}0001")
-		self.assertTrue(student.customer)
-		enrollment = frappe.get_doc("Program Enrollment", result["program_enrollment"])
-		self.assertEqual(
-			(enrollment.docstatus, enrollment.oc_admission_quota, enrollment.student_category, enrollment.academic_year),
-			(1, QUOTA, OC, YEAR),
-		)
-		invoice = frappe.get_doc("Sales Invoice", result["invoice"])
-		self.assertEqual((invoice.docstatus, invoice.student, invoice.customer), (1, student.name, student.customer))
-		self.assertEqual(flt(invoice.grand_total), TUITION_FEE + EXAM_FEE)
-		self.assertEqual(invoice.oc_program_enrollment, enrollment.name)
+		self.assertEqual((student.student_applicant, student.oc_company, student.oc_admission_quota), (applicant, COLLEGE, QUOTA))
+		self.assertEqual(student.oc_academic_status, "Admitted")
+		self.assertTrue(student.customer)  # the customer an advance is taken against
+		self.assertFalse(student.oc_register_no)
+		self.assertFalse(student.oc_roll_no)
+		after = self.counts()
+		self.assertEqual((after["Program Enrollment"], after["Sales Invoice"]), (before["Program Enrollment"], before["Sales Invoice"]))
+		self.assertFalse(frappe.db.exists("Sales Invoice", {"customer": student.customer}))
+		self.assertFalse(frappe.db.exists("Student Onboarding", {"student": student.name}))
 		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
+		self.assertTrue(self.seat_free())  # no seat is held by the approval
 
-	def test_invoice_uses_the_category_fee_structure(self):
-		result = self.admit_as_officer(self.applicant(category=BC))
-		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", result["invoice"], "grand_total")), BC_TUITION + EXAM_FEE)
-
-	def test_admit_fills_the_seat(self):
-		self.matrix([(QUOTA, OC, 1)])
-		self.assertTrue(self.seat_free())
-		self.admit_as_officer(self.applicant())
-		self.assertFalse(self.seat_free())
-		second = self.applicant()
-		with self.assertRaises(frappe.ValidationError):
-			self.admit_as_officer(second)
-		self.assertEqual(frappe.db.get_value("Student Applicant", second, "application_status"), "Approved")
+	def test_strict_mode_does_not_stop_the_approval(self):
+		self.settings(strict_seat_matrix=1)
+		applicant = self.applicant()  # no Seat Matrix at all: the seat is checked at joining
+		self.admit_as_officer(applicant)
+		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
 
 	def test_aadhaar_is_copied_through_the_gate_and_logged(self):
 		result = self.admit_as_officer(self.applicant(aadhaar=VALID))
@@ -255,7 +264,7 @@ class TestAdmit(AdmitTestCase):
 
 	def test_incomplete_documents_block_admission(self):
 		applicant = self.applicant()
-		with patch.object(admit_module.documents, "documents_complete", return_value=False):
+		with patch.object(admit_module.documents, "uncleared_mandatory", return_value=["Transfer Certificate"]):
 			with self.assertRaises(frappe.ValidationError):
 				self.admit_as_officer(applicant)
 
@@ -268,86 +277,338 @@ class TestAdmit(AdmitTestCase):
 		self.admit_as_officer(applicant)
 		with self.assertRaises(frappe.ValidationError):
 			self.admit_as_officer(applicant)
+		self.assertEqual(frappe.db.count("Student", {"student_applicant": applicant}), 1)
 
-	def test_failure_leaves_nothing_half_created(self):
-		self.matrix([(QUOTA, OC, 1)])
+	def test_a_failed_admission_leaves_nothing_half_created(self):
 		applicant = self.applicant(aadhaar=VALID)
 		before = self.counts()
-		with patch.object(admit_module, "create_fee_invoice", side_effect=frappe.ValidationError("boom")):
+		real, writes = frappe.db.set_value, []
+
+		def fail_on_the_applicant_status(doctype, *args, **kwargs):
+			writes.append(doctype)
+			if doctype == "Student Applicant" and writes.count(doctype) == 2:  # admit's own write, after the Student insert
+				raise frappe.ValidationError("boom")
+			return real(doctype, *args, **kwargs)
+
+		with patch.object(frappe.db, "set_value", side_effect=fail_on_the_applicant_status):
 			with self.assertRaises(frappe.ValidationError):
 				self.admit_as_officer(applicant)
+		self.assertIn("Student", writes)  # the Student and its Customer were made before the failure
 		self.assertEqual(self.counts(), before)
 		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Approved")
 		self.assertFalse(frappe.db.exists("Student", {"student_applicant": applicant}))
+
+
+class TestJoining(AdmitTestCase):
+	"""M04-09: the joining confirmation makes the enrollment, ID, invoice and attendance start, once per applicant."""
+
+	def admitted(self, **kwargs):
+		applicant = self.applicant(**kwargs)
+		return applicant, self.admit_as_officer(applicant)["student"]
+
+	def test_joining_creates_enrollment_numbers_invoice_and_attendance_start(self):
+		self.matrix([(QUOTA, OC, 2)])
+		applicant, student_name = self.admitted()
+		result = self.join_as_officer(applicant)
+		student = frappe.get_doc("Student", result["student"])
+		self.assertEqual(student.name, student_name)
+		self.assertEqual(student.oc_register_no, f"{ABBR}{YEAR_YY}{CODE}0001")
+		self.assertEqual(result["register_no"], student.oc_register_no)
+		self.assertEqual(student.oc_academic_status, "Active")
+		enrollment = frappe.get_doc("Program Enrollment", result["program_enrollment"])
+		self.assertEqual(
+			(enrollment.docstatus, enrollment.oc_admission_quota, enrollment.student_category, enrollment.academic_year),
+			(1, QUOTA, OC, YEAR),
+		)
+		self.assertEqual((str(enrollment.enrollment_date), str(enrollment.oc_attendance_start_date)), (today(), today()))
+		self.assertEqual(enrollment.oc_joining_key, applicant)
+		invoice = frappe.get_doc("Sales Invoice", result["invoice"])
+		self.assertEqual((invoice.docstatus, invoice.student, invoice.customer), (1, student.name, student.customer))
+		self.assertEqual(flt(invoice.grand_total), TUITION_FEE + EXAM_FEE)
+		self.assertEqual(invoice.oc_program_enrollment, enrollment.name)
+		self.assertEqual(frappe.db.get_value("Seat Matrix Row", {"quota": QUOTA, "category": OC}, "filled"), 1)
+		self.assertEqual(
+			frappe.get_all("Lifecycle Transition", {"student": student.name}, ["to_status", "source_doctype"], order_by="creation, name"),
+			[{"to_status": "Admitted", "source_doctype": "Student Applicant"}, {"to_status": "Joined", "source_doctype": "Program Enrollment"},
+			 {"to_status": "Active", "source_doctype": "Program Enrollment"}],
+		)  # fmt: skip
+
+	def test_invoice_uses_the_category_fee_structure(self):
+		applicant, _student = self.admitted(category=BC)
+		result = self.join_as_officer(applicant)
+		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", result["invoice"], "grand_total")), BC_TUITION + EXAM_FEE)
+
+	def test_a_retry_returns_the_earlier_result_and_creates_nothing(self):
+		applicant, student = self.admitted()
+		first = self.join_as_officer(applicant)
+		before = self.counts()
+		transitions = frappe.db.count("Lifecycle Transition", {"student": student})
+		self.assertEqual(self.join_as_officer(applicant), first)
+		self.assertEqual(self.counts(), before)
+		self.assertEqual(frappe.db.count("Lifecycle Transition", {"student": student}), transitions)
+		self.assertEqual(frappe.db.count("Program Enrollment", {"student": student}), 1)
+		self.assertEqual(frappe.db.count("Sales Invoice", {"student": student}), 1)
+
+	def test_a_joining_that_stopped_part_way_resumes_without_a_second_enrollment_or_number(self):
+		from campus.student_services.api import JOINED, transition
+
+		onboarding.ensure_default_template(COLLEGE)
+		applicant, student = self.admitted()
+		state = admit_module.lock_applicant(applicant)
+		row = joining_module.lock_student(applicant)
+		joining_module.assign_numbers(row, state, YEAR)  # an earlier run got this far: numbers, enrollment, Joined
+		enrollment = joining_module.create_enrollment(applicant, row, state, YEAR, getdate(), None)
+		transition(student, JOINED, today(), "earlier run", ("Program Enrollment", enrollment), program_enrollment=enrollment)
+		number = frappe.db.get_value("Student", student, "oc_register_no")
+		result = self.join_as_officer(applicant)
+		self.assertEqual((result["program_enrollment"], result["register_no"]), (enrollment, number))
+		self.assertTrue(result["invoice"])
+		self.assertEqual(frappe.db.count("Program Enrollment", {"student": student}), 1)
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
+		self.assertTrue(frappe.db.exists("Student Onboarding", {"student": student}))
+
+	def test_joining_fills_the_seat(self):
+		self.matrix([(QUOTA, OC, 1)])
+		first, _first_student = self.admitted()
+		second, other = self.admitted()  # both approvals pass: the approval holds no seat
+		self.assertTrue(self.seat_free())
+		self.join_as_officer(first)
+		self.assertFalse(self.seat_free())
+		with self.assertRaises(frappe.ValidationError):
+			self.join_as_officer(second)
+		self.assertEqual(frappe.db.get_value("Student", other, "oc_academic_status"), "Admitted")
+		self.assertFalse(frappe.db.exists("Program Enrollment", {"student": other}))
+
+	def test_the_joining_date_dates_the_enrollment_attendance_and_lifecycle(self):
+		applicant, student = self.admitted()
+		earlier = add_days(today(), -3)
+		frappe.db.set_value("Lifecycle Transition", {"student": student}, "effective_date", add_days(today(), -5))  # admitted then
+		with self.assertRaisesRegex(frappe.ValidationError, "future"):
+			self.join_as_officer(applicant, joining_date=add_days(today(), 1))
+		with self.assertRaisesRegex(frappe.ValidationError, "before the last status change"):
+			self.join_as_officer(applicant, joining_date=add_days(today(), -6))  # before the admission
+		result = self.join_as_officer(applicant, joining_date=earlier)
+		enrollment = frappe.db.get_value(
+			"Program Enrollment", result["program_enrollment"], ["enrollment_date", "oc_attendance_start_date"], as_dict=True
+		)
+		self.assertEqual((str(enrollment.enrollment_date), str(enrollment.oc_attendance_start_date)), (earlier, earlier))
+		self.assertEqual(str(frappe.db.get_value("Student", student, "joining_date")), earlier)
+		dates = frappe.get_all("Lifecycle Transition", {"student": student, "to_status": ["in", ["Joined", "Active"]]}, pluck="effective_date")
+		self.assertEqual([str(d) for d in dates], [earlier, earlier])
+
+	def test_an_advance_paid_before_joining_is_allocated_to_the_invoice(self):
+		from campus.campus_finance.api import paid_by_student
+
+		applicant, student = self.admitted()
+		advance = self.advance(student, 10000)
+		result = self.join_as_officer(applicant)
+		invoice = frappe.get_doc("Sales Invoice", result["invoice"])
+		self.assertEqual([(r.reference_name, flt(r.allocated_amount)) for r in invoice.advances], [(advance, 10000)])
+		self.assertEqual(flt(invoice.outstanding_amount), TUITION_FEE + EXAM_FEE - 10000)
+		self.assertEqual(flt(frappe.db.get_value("Payment Entry", advance, "unallocated_amount")), 0)
+		self.assertEqual(paid_by_student(invoice.name), 10000)  # counted as paid, e.g. by a cancellation refund
+
+	def advance(self, student, amount):
+		"""Pre-joining money: a Payment Entry (Receive) against the student's customer, with no invoice to settle."""
+		ensure_customer_party_type()  # advances are found through its account type
+		receivable = self.structure.receivable_account
+		payment = frappe.get_doc(
+			{
+				"doctype": "Payment Entry", "payment_type": "Receive", "company": COLLEGE, "posting_date": today(),
+				"party_type": "Customer", "party": frappe.db.get_value("Student", student, "customer"),
+				"paid_from": receivable, "paid_to": self.accounts["bank"], "paid_amount": amount, "received_amount": amount,
+				"reference_no": "ADV-UTR", "reference_date": today(),
+			}
+		)  # fmt: skip
+		return payment.insert().submit().name
+
+	def test_only_officers_join_and_only_an_admitted_applicant(self):
+		applicant, student = self.admitted()
+		frappe.set_user(PLAIN)
+		with self.assertRaises(frappe.PermissionError):
+			confirm_joining(applicant)
+		frappe.set_user("Administrator")
+		with self.assertRaises(frappe.PermissionError):
+			self.join_as_officer(applicant, officer=OTHER_OFFICER)
+		approved = self.applicant()
+		with self.assertRaisesRegex(frappe.ValidationError, "not admitted yet"):
+			self.join_as_officer(approved)
+		self.assertFalse(frappe.db.exists("Program Enrollment", {"student": student}))
+
+	def test_clearances_are_checked_again_at_joining(self):
+		applicant, student = self.admitted()
+		with patch.object(admit_module.documents, "uncleared_mandatory", return_value=["Transfer Certificate"]):
+			with self.assertRaisesRegex(frappe.ValidationError, "incomplete mandatory documents"):
+				self.join_as_officer(applicant)
+		self.assertFalse(frappe.db.exists("Program Enrollment", {"student": student}))
+
+	def test_failure_leaves_nothing_half_created(self):
+		self.matrix([(QUOTA, OC, 1)])
+		applicant, student = self.admitted()
+		before = self.counts()
+		with patch.object(joining_module, "create_fee_invoice", side_effect=frappe.ValidationError("boom")):
+			with self.assertRaises(frappe.ValidationError):
+				self.join_as_officer(applicant)
+		self.assertEqual(self.counts(), before)
+		self.assertEqual(frappe.db.get_value("Student", student, ["oc_academic_status", "oc_register_no"]), ("Admitted", None))
 		self.assertTrue(self.seat_free())  # the seat is not consumed
-		self.assertEqual(self.admit_as_officer(applicant)["register_no"], f"{ABBR}{YEAR_YY}{CODE}0001")  # and neither is the number
+		self.assertEqual(self.join_as_officer(applicant)["register_no"], f"{ABBR}{YEAR_YY}{CODE}0001")  # and neither is the number
 
 	def test_missing_fee_structure_rolls_back_too(self):
-		applicant = self.applicant(quota=FREE_QUOTA, category=OC)
+		applicant, _student = self.admitted(quota=FREE_QUOTA, category=OC)
 		frappe.db.set_value("Fee Structure", self.structure.name, "docstatus", 2)
 		self.addCleanup(frappe.db.set_value, "Fee Structure", self.structure.name, "docstatus", 1)
 		before = self.counts()
 		with self.assertRaises(frappe.ValidationError):
-			self.admit_as_officer(applicant)
+			self.join_as_officer(applicant)
 		self.assertEqual(self.counts(), before)
 
 	def test_roll_numbers_follow_their_own_pattern(self):
 		self.settings(roll_no_pattern="R{yyyy}{program_code}-{###}")
-		first = frappe.get_doc("Student", self.admit_as_officer(self.applicant())["student"])
-		second = frappe.get_doc("Student", self.admit_as_officer(self.applicant())["student"])
+		first = frappe.get_doc("Student", self.admit_and_join(self.applicant())["student"])
+		second = frappe.get_doc("Student", self.admit_and_join(self.applicant())["student"])
 		self.assertEqual((first.oc_roll_no, second.oc_roll_no), (f"R{YEAR_FULL}{CODE}-001", f"R{YEAR_FULL}{CODE}-002"))
 		self.assertEqual(second.oc_register_no[-4:], "0002")
+
+	def test_the_id_card_is_issued_only_after_joining(self):
+		from campus.student_services import api as student_api
+
+		applicant, student = self.admitted()
+		with self.assertRaisesRegex(frappe.ValidationError, "has not joined yet"):
+			student_api.issue_id_card(student)
+		self.assertFalse(frappe.db.exists("Verifiable Document", {"reference_name": student}))
+
+	def test_a_program_enrollment_made_by_hand_is_refused_before_joining(self):
+		frappe.flags.in_import = False  # a desk or API insert (setUp restores the flag)
+		applicant, student = self.admitted()
+		by_hand = {
+			"doctype": "Program Enrollment", "student": student, "program": PROGRAM, "academic_year": YEAR,
+			"enrollment_date": today(), "student_category": OC, "oc_admission_quota": QUOTA,
+		}  # fmt: skip
+		with self.assertRaisesRegex(frappe.ValidationError, "has not joined yet"):
+			frappe.get_doc(by_hand).insert()
+		legacy = frappe.get_doc(by_hand)
+		legacy.flags.legacy_import = True
+		frappe.db.savepoint("legacy_enrollment")
+		legacy.insert()  # a legacy import may load it directly
+		self.assertIsNone(legacy.oc_attendance_start_date)  # only the joining confirmation sets it: the whole term counts
+		frappe.db.rollback(save_point="legacy_enrollment")
+		self.join_as_officer(applicant)
+		later = self.later_year()
+		frappe.get_doc({**by_hand, "academic_year": later, "enrollment_date": add_days(today(), 330)}).insert()  # promotion
+
+	def later_year(self):
+		name = "Admit Flow 2027"
+		if not frappe.db.exists("Academic Year", name):
+			frappe.get_doc(
+				{"doctype": "Academic Year", "academic_year_name": name, "year_start_date": add_days(today(), 331), "year_end_date": add_days(today(), 690)}
+			).insert()
+		return name
 
 
 YEAR_FULL = int(today()[:4])
 YEAR_YY = today()[2:4]
 
 
-class TestStrictAdmit(AdmitTestCase):
-	"""M04-08 on the Admit path: a missing matrix or row refuses admission unless the officer may override."""
+def ensure_customer_party_type():
+	if not frappe.db.exists("Party Type", "Customer"):  # the bare test site lacks ERPNext's party types
+		frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+
+
+class TestStrictJoining(AdmitTestCase):
+	"""M04-08 at the joining (where the enrollment is made): a missing matrix or row refuses unless an override is logged."""
 
 	def setUp(self):
 		super().setUp()
 		self.settings(strict_seat_matrix=1)
 
-	def test_admit_without_a_seat_matrix_is_refused_and_nothing_is_created(self):
+	def test_joining_without_a_seat_matrix_is_refused_and_nothing_is_created(self):
 		applicant = self.applicant()
+		student = self.admit_as_officer(applicant)["student"]
 		before = self.counts()
 		with self.assertRaisesRegex(frappe.ValidationError, "No Seat Matrix"):
-			self.admit_as_officer(applicant)
+			self.join_as_officer(applicant)
 		self.assertEqual(self.counts(), before)
-		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Approved")
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Admitted")
 		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
 
-	def test_admit_into_a_missing_row_is_refused(self):
+	def test_joining_into_a_missing_row_is_refused(self):
 		self.matrix([(QUOTA, OC, 5)])
 		applicant = self.applicant(category=BC)
+		student = self.admit_as_officer(applicant)["student"]
 		with self.assertRaisesRegex(frappe.ValidationError, "no row"):
-			self.admit_as_officer(applicant)
-		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Approved")
+			self.join_as_officer(applicant)
+		self.assertFalse(frappe.db.exists("Program Enrollment", {"student": student}))
 
-	def test_an_override_officer_admits_into_a_missing_row_and_it_is_logged(self):
+	def test_an_override_needs_the_officers_justification(self):
+		self.matrix([(QUOTA, OC, 5)])
+		applicant = self.applicant(category=BC)
+		self.admit_as_officer(applicant)
+		for blank in (None, "  "):
+			with self.assertRaisesRegex(frappe.ValidationError, "justification"):
+				self.join_as_officer(applicant, officer=OVERRIDE_OFFICER, override_justification=blank)
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
+
+	def test_an_override_officer_joins_into_a_missing_row_and_it_is_logged_with_the_justification(self):
 		matrix = self.matrix([(QUOTA, OC, 5)])
 		applicant = self.applicant(category=BC)
-		result = self.admit_as_officer(applicant, officer=OVERRIDE_OFFICER)
+		self.admit_as_officer(applicant)
+		result = self.join_as_officer(applicant, officer=OVERRIDE_OFFICER, override_justification=" University order 12/2026 ")
 		self.assertEqual(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "docstatus"), 1)
-		log = frappe.get_all("Seat Override Log", {"applicant": applicant}, ["user", "reason", "quota", "category"])
-		self.assertEqual([(r.user, r.reason, r.quota, r.category) for r in log], [(OVERRIDE_OFFICER, "No Seat Matrix Row", QUOTA, BC)])
+		log = frappe.get_all("Seat Override Log", {"applicant": applicant}, ["user", "reason", "quota", "category", "justification"])
+		self.assertEqual(
+			[(r.user, r.reason, r.quota, r.category, r.justification) for r in log],
+			[(OVERRIDE_OFFICER, "No Seat Matrix Row", QUOTA, BC, "University order 12/2026")],
+		)
 		rows = frappe.get_all("Seat Matrix Row", {"parent": matrix.name}, ["quota", "category", "sanctioned"])
 		self.assertEqual([(r.quota, r.category, r.sanctioned) for r in rows], [(QUOTA, OC, 5)])
+		self.join_as_officer(applicant, officer=OVERRIDE_OFFICER, override_justification="again")  # a retry logs nothing more
+		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 1)
 
-	def test_a_free_seat_in_a_configured_row_admits_without_a_log(self):
+	def test_a_free_seat_in_a_configured_row_joins_without_a_log(self):
 		self.matrix([(QUOTA, OC, 1)])
 		applicant = self.applicant()
-		self.admit_as_officer(applicant)
+		self.admit_and_join(applicant)
 		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
 
-	def test_non_strict_mode_admits_without_a_matrix_as_before(self):
+	def test_non_strict_mode_joins_without_a_matrix_as_before(self):
 		self.settings(strict_seat_matrix=0)
 		applicant = self.applicant()
-		self.admit_as_officer(applicant)
-		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
+		result = self.admit_and_join(applicant)
+		self.assertEqual(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "docstatus"), 1)
 		self.assertEqual(frappe.db.count("Seat Override Log", {"applicant": applicant}), 0)
+
+
+class TestJoiningGatePatch(AdmitTestCase):
+	"""campus.patches.joining_gate: a student admitted and enrolled before the gate counts as joined (its parts; the
+	patch's custom-field step is DDL and is not run in a test)."""
+
+	def test_an_enrolled_admitted_student_is_joined_on_the_enrollment_and_keyed_to_the_applicant(self):
+		from campus.patches import joining_gate
+
+		applicant = self.applicant()
+		student = self.admit_as_officer(applicant)["student"]
+		enrollment = frappe.get_doc(
+			{"doctype": "Program Enrollment", "student": student, "program": PROGRAM, "academic_year": YEAR, "enrollment_date": today(),
+			 "student_category": OC, "oc_admission_quota": QUOTA}
+		)  # fmt: skip
+		enrollment.flags.legacy_import = True  # made by the admission before the gate
+		enrollment.insert().submit()
+		for _run in range(2):  # idempotent
+			joining_gate.key_joining_enrollments()
+			joining_gate.mark_admitted_students_joined()
+		row = frappe.db.get_value("Program Enrollment", enrollment.name, ["oc_joining_key", "oc_attendance_start_date"], as_dict=True)
+		self.assertEqual((row.oc_joining_key, row.oc_attendance_start_date), (applicant, None))  # the gate fills no start date
+		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
+		changes = frappe.get_all(
+			"Lifecycle Transition", {"student": student, "kind": "Transition"}, ["to_status", "source_name", "effective_date"], order_by="creation, name"
+		)
+		self.assertEqual([(c.to_status, c.source_name, str(c.effective_date)) for c in changes], [
+			("Joined", enrollment.name, today()), ("Active", enrollment.name, today()),
+		])  # fmt: skip
+		result = self.join_as_officer(applicant)  # the joining confirmation returns it instead of enrolling again
+		self.assertEqual(result["program_enrollment"], enrollment.name)
+		self.assertEqual(frappe.db.count("Program Enrollment", {"student": student}), 1)
 
 
 class TestRegisterNumbers(AdmitTestCase):
@@ -360,7 +621,8 @@ class TestRegisterNumbers(AdmitTestCase):
 
 class TestCancellation(AdmitTestCase):
 	def admitted(self, **kwargs):
-		result = self.admit_as_officer(self.applicant(**kwargs))
+		"""An admission that has joined (enrollment and fee invoice exist): the admission a cancellation cancels."""
+		result = self.admit_and_join(self.applicant(**kwargs))
 		return SimpleNamespace(applicant=frappe.db.get_value("Student", result["student"], "student_applicant"), **result)
 
 	def cancel(self, admission, days, submit=True, user=OFFICER):
@@ -472,6 +734,7 @@ class TestCancellation(AdmitTestCase):
 		self.pay_in_full(admission.invoice)
 		earlier = add_days(today(), -2)
 		frappe.db.set_value("Program Enrollment", admission.program_enrollment, "enrollment_date", add_days(today(), -5))
+		frappe.db.set_value("Lifecycle Transition", {"student": admission.student}, "effective_date", add_days(today(), -5))  # admitted then
 		doc = self.cancel_on(admission, earlier)
 		self.assertEqual(str(frappe.db.get_value("Sales Invoice", doc.credit_note, "posting_date")), today())
 		self.assertEqual(str(frappe.db.get_value("Payment Entry", doc.payment_entry, "posting_date")), today())
@@ -480,7 +743,7 @@ class TestCancellation(AdmitTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.cancel(second, 5)  # an officer has no frozen-accounts modifier role: no bypass
 
-	def test_the_officer_session_survives_admit_and_cancellation(self):
+	def test_the_officer_session_survives_admit_joining_and_cancellation(self):
 		"""No user switching: sid, session data, csrf token, user and form_dict are exactly as the request had them."""
 		frappe.set_user(OFFICER)
 		session_data = frappe._dict(user=OFFICER, csrf_token="csrf-token", data=frappe._dict(user=OFFICER, session_expiry="06:00:00"))
@@ -491,7 +754,10 @@ class TestCancellation(AdmitTestCase):
 		)
 		before = snapshot()
 		try:
-			result = admit(self.applicant())
+			applicant = self.applicant()
+			admit(applicant)
+			self.assertEqual(snapshot(), before)
+			result = confirm_joining(applicant)
 			self.assertEqual(snapshot(), before)
 			self.cancel_with_current_user(result)
 			self.assertEqual(snapshot(), before)
@@ -512,8 +778,7 @@ class TestCancellation(AdmitTestCase):
 		from campus.campus_finance import scholarships
 
 		frappe.flags.in_import = False  # defaults apply (setUp restores the flag)
-		if not frappe.db.exists("Party Type", "Customer"):  # the bare test site lacks ERPNext's party types
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+		ensure_customer_party_type()
 		account = self.accounts["bank"] if scheme_type == "Government" else make_account(
 			COLLEGE, ABBR, "Scholarship Expense", "Indirect Expenses", root_type="Expense"
 		)
@@ -521,7 +786,8 @@ class TestCancellation(AdmitTestCase):
 			{"doctype": "Scholarship Scheme", "scheme_name": f"AF {scheme_type} Scheme", "company": COLLEGE,
 			 "scheme_type": scheme_type, "account": account, "amount_type": "Fixed", "amount": amount}
 		).insert()  # fmt: skip
-		with approval_not_required():  # sanctioned by submitting; test_mandatory_approval covers the approval list
+		drop_policies("Scholarship Application")  # sanctioned by submitting; test_mandatory_approval covers the approval list
+		with approval_not_required():
 			application = frappe.get_doc(
 				{"doctype": "Scholarship Application", "student": student, "scheme": scheme.name, "academic_year": YEAR}
 			).insert().submit()  # fmt: skip
@@ -572,8 +838,7 @@ class TestConcurrentNumbers(CampusTestCase):
 			try:
 				frappe.init(site, sites_path=sites_path)
 				frappe.connect()
-				with patch.object(numbers, "render_prefix", return_value=prefix):
-					drawn.append(numbers.next_number("X{####}", COLLEGE, PROGRAM, YEAR))
+				drawn.append(numbers.next_number("X{####}", COLLEGE, PROGRAM, YEAR))
 				frappe.db.commit()
 			except Exception as error:
 				errors.append(repr(error))
@@ -582,10 +847,12 @@ class TestConcurrentNumbers(CampusTestCase):
 
 		threads = [threading.Thread(target=worker) for _ in range(8)]
 		try:
-			for thread in threads:
-				thread.start()
-			for thread in threads:
-				thread.join()
+			# patched once for all threads: eight overlapping patch/unpatch pairs can leave the mock in place
+			with patch.object(numbers, "render_prefix", return_value=prefix):
+				for thread in threads:
+					thread.start()
+				for thread in threads:
+					thread.join()
 		finally:
 			connection = own_connection()
 			connection.sql("delete from `tabSeries` where name = %s", (prefix,))
@@ -608,13 +875,13 @@ class TestPrintsAndReports(AdmitTestCase):
 		receipt = frappe.get_print("Student Applicant", applicant, "Original Documents Receipt")
 		self.assertIn("HSC Marksheet", receipt)
 		self.assertNotIn("Photo", receipt)
-		student = self.admit_as_officer(applicant)["student"]
+		student = self.admit_and_join(applicant)["student"]
 		self.assertIn(frappe.db.get_value("Student", student, "oc_register_no"), frappe.get_print("Student", student, "Provisional Admission Letter Student"))
 
 	def test_admissions_report_counts_by_quota_category_gender_state(self):
 		self.matrix([(QUOTA, OC, 5), (QUOTA, BC, 5)])
 		for category in (OC, OC, BC):
-			self.admit_as_officer(self.applicant(category=category))
+			self.admit_and_join(self.applicant(category=category))
 		_columns, rows = quota_report.execute({"company": COLLEGE, "academic_year": YEAR})
 		table = {(r["grouping"], r["value"]): r["admitted"] for r in rows}
 		self.assertEqual(table[("Total", "")], 3)

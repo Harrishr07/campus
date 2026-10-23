@@ -125,6 +125,34 @@ def revoke_for(doc, reason):
 		record.save(ignore_permissions=True)
 
 
+def supersede_for(doc, replacement):
+	"""A replaced document stays on record: its valid Verifiable Documents become Superseded and name the code of
+	`replacement`'s current one (empty when the replacement is not verifiable). M05-14."""
+	current = frappe.db.get_value(
+		DOCTYPE, {"reference_doctype": replacement.doctype, "reference_name": replacement.name, "status": "Valid"}, "code",
+		order_by="creation desc, name desc",
+	)  # fmt: skip
+	for name in records_of(doc, "Valid"):
+		frappe.db.set_value(DOCTYPE, name, {"status": "Superseded", "superseded_by_code": current})
+
+
+def reinstate_for(doc):
+	"""The replacement was cancelled: the Superseded records of `doc` are Valid again."""
+	names = records_of(doc, "Superseded")
+	for name in names:
+		frappe.db.set_value(DOCTYPE, name, {"status": "Valid", "superseded_by_code": None})
+
+
+def records_of(doc, status):
+	"""Names of `doc`'s Verifiable Documents in `status`, read with a locking read."""
+	table = frappe.qb.DocType(DOCTYPE)
+	return (
+		frappe.qb.from_(table).select(table.name)
+		.where((table.reference_doctype == doc.doctype) & (table.reference_name == doc.name) & (table.status == status))
+		.for_update().run(pluck=True)
+	)  # fmt: skip
+
+
 def verify(code):
 	"""Pure lookup by code. Returns a dict of the verifiable facts, or None for an unknown code."""
 	name = frappe.db.get_value(DOCTYPE, {"code": normalize_code(code)}, "name")
@@ -142,6 +170,7 @@ def verify(code):
 			"status",
 			"revoked_on",
 			"revocation_reason",
+			"superseded_by_code",
 		],
 		as_dict=True,
 	)
@@ -194,7 +223,7 @@ def public_lookup(code):
 	"""Throttled per IP (30/min): raises RateLimitExceededError (HTTP 429) beyond that.
 
 	Returns the page data with the holder name masked and the document's `details`; None for an unknown code.
-	A revoked document shows no details: the referenced record may since hold what the public must not see.
+	A superseded document shows no details and the code of its replacement (M05-14). A revoked document shows no details: the referenced record may since hold what the public must not see.
 	"""
 	found = verify(code)
 	if found:

@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "University Exam Format Column",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "heading",
+   "fieldtype": "Data",
+   "label": "Heading",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "University Register No\nRegister No\nStudent Name\nDate of Birth\nProgram\nCourse Code\nCourse Name\nRegistration Type\nCIA\nCIA Max\nExam Session\nGrade\nResult\nESE\nTotal"
+  }
+ ],
+ "field_order": [
+  "heading",
+  "source"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

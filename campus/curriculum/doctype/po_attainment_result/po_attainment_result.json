@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "PO Attainment Result",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "outcome_type",
+   "fieldtype": "Select",
+   "label": "Outcome Type",
+   "read_only": 1,
+   "options": "Program Outcome\nProgram Specific Outcome"
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Dynamic Link",
+   "label": "Outcome",
+   "read_only": 1,
+   "options": "outcome_type"
+  },
+  {
+   "fieldname": "outcome_code",
+   "fieldtype": "Data",
+   "label": "PO / PSO",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Int",
+   "label": "Courses Mapping",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "total_correlation",
+   "fieldtype": "Float",
+   "label": "Total Correlation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapped",
+   "fieldtype": "Check",
+   "label": "Mapped",
+   "read_only": 1,
+   "description": "A CO with a final level maps to this outcome: its levels are figures."
+  },
+  {
+   "fieldname": "direct_level",
+   "fieldtype": "Float",
+   "label": "Direct",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "indirect_percent",
+   "fieldtype": "Percent",
+   "label": "Survey %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "has_indirect",
+   "fieldtype": "Check",
+   "label": "Survey Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "indirect_level",
+   "fieldtype": "Float",
+   "label": "Indirect",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "indirect_responses",
+   "fieldtype": "Int",
+   "label": "Survey Responses",
+   "read_only": 1
+  },
+  {
+   "fieldname": "indirect_suppressed",
+   "fieldtype": "Check",
+   "label": "Survey Hidden (small group)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_level",
+   "fieldtype": "Float",
+   "label": "Final",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "target_level",
+   "fieldtype": "Float",
+   "label": "Target",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_met",
+   "fieldtype": "Check",
+   "label": "Target Met",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes",
+   "read_only": 1
+  }
+ ],
+ "field_order": [
+  "outcome_type",
+  "outcome",
+  "outcome_code",
+  "courses",
+  "total_correlation",
+  "mapped",
+  "direct_level",
+  "indirect_percent",
+  "has_indirect",
+  "indirect_level",
+  "indirect_responses",
+  "indirect_suppressed",
+  "final_level",
+  "target_level",
+  "target_met",
+  "notes"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

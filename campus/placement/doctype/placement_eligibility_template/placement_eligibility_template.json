@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "template_name",
+  "company",
+  "disabled",
+  "criteria_section",
+  "min_cgpa",
+  "any_standing_arrears",
+  "max_standing_arrears",
+  "allow_arrear_history",
+  "criteria_column",
+  "gender",
+  "scope_section",
+  "programs",
+  "batches"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "label": "Template Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "criteria_section",
+   "fieldtype": "Section Break",
+   "label": "Eligibility"
+  },
+  {
+   "fieldname": "min_cgpa",
+   "fieldtype": "Float",
+   "label": "Minimum CGPA",
+   "precision": "2",
+   "description": "0 for no minimum. Read live from published results."
+  },
+  {
+   "fieldname": "any_standing_arrears",
+   "fieldtype": "Check",
+   "label": "Any Standing Arrears",
+   "description": "Tick for no limit on standing (uncleared) arrears."
+  },
+  {
+   "fieldname": "max_standing_arrears",
+   "fieldtype": "Int",
+   "label": "Max Standing Arrears",
+   "default": "0",
+   "depends_on": "eval:!doc.any_standing_arrears",
+   "description": "Uncleared arrears allowed at the time of registration."
+  },
+  {
+   "fieldname": "allow_arrear_history",
+   "fieldtype": "Check",
+   "label": "Allow History of Arrears",
+   "default": "1",
+   "description": "Untick to exclude students who ever failed a course at its first appearance, even if cleared since."
+  },
+  {
+   "fieldname": "criteria_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Link",
+   "label": "Gender",
+   "options": "Gender",
+   "description": "Leave blank when the drive is open to every gender."
+  },
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "Programs and batches"
+  },
+  {
+   "fieldname": "programs",
+   "fieldtype": "Table",
+   "label": "Programs (Branches)",
+   "options": "Placement Eligible Program",
+   "description": "Blank: every program of the company."
+  },
+  {
+   "fieldname": "batches",
+   "fieldtype": "Table",
+   "label": "Batches",
+   "options": "Placement Eligible Batch",
+   "description": "Blank: every batch."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Placement Eligibility Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Placement Officer",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:template_name"
+}

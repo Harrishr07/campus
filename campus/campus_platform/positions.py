@@ -13,7 +13,7 @@ SCOPE_DOCTYPES = {
 	"Institution": "Company",
 	"Department": "Department",
 	"Student Group": "Student Group",
-	"Hostel": None,  # no Hostel doctype yet
+	"Hostel": None,  # scope value is a free-text hostel name for now (P4-T01 added the Hostel doctype)
 	"Body": None,
 	"Lab": None,
 }

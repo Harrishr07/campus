@@ -11,6 +11,8 @@ keeps results from students, guardians and staff other than the COE, System Mana
 API and the portal alike. The scheduler (`notify_released_results`, every 15 minutes) queues, once per session and
 at release, a bulk run that sends each latest Student Result to the student and guardians through messaging send()
 (SMS / WhatsApp / email by the template and the recipient's consent).
+
+M06-10: an Affiliated session is refused here; its first University Result Import publishes it.
 """
 
 import json
@@ -22,6 +24,7 @@ from frappe.utils import get_datetime, getdate, now_datetime
 from campus.campus_messaging.api import send
 from campus.campus_platform.bulk import live_run, run_bulk
 from campus.examinations.access import MARKS_ROLES
+from campus.examinations.affiliation import refuse_affiliated_session
 from campus.examinations.result_cohort import band_key
 
 PASSING_BOARD = "Passing Board"
@@ -52,6 +55,7 @@ def publish_results(exam_session, release_at, passing_board_meeting, resolution_
 	frappe.db.get_value(SESSION, exam_session, "name", for_update=True)  # one publication at a time
 	session = frappe.get_doc(SESSION, exam_session)
 	session.check_permission("write")
+	refuse_affiliated_session(exam_session, _("Publish Results"))
 	if session.status == "Published":
 		frappe.throw(_("{0} is already published.").format(frappe.bold(exam_session)))
 	if not release_at:
@@ -184,11 +188,13 @@ def freeze_bands(exam_session):
 
 
 def notify_released_results():
-	"""Scheduler: queue the release notice of every session published through a Passing Board whose release time
-	has come and whose notice is not queued yet."""
+	"""Scheduler: queue the release notice of every session published through a Passing Board, or by its first
+	University Result Import (Affiliated, M06-10), whose release time has come and whose notice is not queued yet.
+	The notice goes once per session: results a later import adds are not announced again."""
 	due = frappe.get_all(
 		SESSION,
-		{"status": "Published", "publish_at": ["<=", now_datetime()], "passing_board_meeting": ["is", "set"], "results_notified_on": ["is", "not set"]},
+		{"status": "Published", "publish_at": ["<=", now_datetime()], "results_notified_on": ["is", "not set"]},
+		or_filters={"passing_board_meeting": ["is", "set"], "examination_mode": "Affiliated"},
 		pluck="name",
 	)
 	for name in due:

@@ -265,6 +265,12 @@
    "report": 1,
    "role": "Accounts User",
    "submit": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
   }
  ],
  "row_format": "Dynamic",

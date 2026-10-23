@@ -113,7 +113,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 4,
+   "link_count": 11,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -154,6 +154,28 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Applicant Upload",
+   "link_count": 0,
+   "link_to": "Applicant Upload",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Candidate Duplicate Review",
+   "link_count": 0,
+   "link_to": "Candidate Duplicate Review",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Admission Cancellation",
    "link_count": 0,
    "link_to": "Admission Cancellation",
@@ -162,10 +184,65 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Late Joining Request",
+   "link_count": 0,
+   "link_to": "Late Joining Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Allotment Import Row",
+   "link_count": 0,
+   "link_to": "Allotment Import Row",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Applicant Upload Row",
+   "link_count": 0,
+   "link_to": "Applicant Upload Row",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seat Override Log",
+   "link_count": 0,
+   "link_to": "Seat Override Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Aadhaar Access Log",
+   "link_count": 0,
+   "link_to": "Aadhaar Access Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 9,
+   "link_count": 8,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -176,6 +253,28 @@
    "label": "Live Seat Matrix",
    "link_count": 0,
    "link_to": "Live Seat Matrix",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Seat Matrix",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Programs without Seat Matrix",
+   "link_count": 0,
+   "link_to": "Programs without Seat Matrix",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "Student",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Admission No-Shows",
+   "link_count": 0,
+   "link_to": "Admission No-Shows",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -236,39 +335,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Allotment Import Row",
-   "link_count": 0,
-   "link_to": "Allotment Import Row",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Seat Override Log",
-   "link_count": 0,
-   "link_to": "Seat Override Log",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Aadhaar Access Log",
-   "link_count": 0,
-   "link_to": "Aadhaar Access Log",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
@@ -288,7 +354,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",
@@ -311,7 +377,7 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 40.0,
+ "sequence_id": 41.0,
  "shortcuts": [
   {
    "color": "Grey",

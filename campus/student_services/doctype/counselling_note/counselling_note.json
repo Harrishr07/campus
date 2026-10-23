@@ -1,0 +1,198 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "student",
+  "student_name",
+  "company",
+  "department",
+  "column_break_1",
+  "note_date",
+  "category",
+  "mentor",
+  "author",
+  "section_note",
+  "notes",
+  "section_confidential",
+  "is_confidential",
+  "counsellor",
+  "section_follow_up",
+  "actions",
+  "follow_up_date"
+ ],
+ "fields": [
+  {
+   "default": "MNT-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "MNT-.YYYY.-",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "search_index": 1,
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "student.student_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "note_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "Academic\nAttendance\nCareer\nPersonal\nHealth and Wellbeing\nFinancial\nOther",
+   "reqd": 1
+  },
+  {
+   "description": "The student's mentor when the note was written.",
+   "fieldname": "mentor",
+   "fieldtype": "Link",
+   "label": "Mentor",
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "fieldname": "author",
+   "fieldtype": "Link",
+   "label": "Author",
+   "options": "User",
+   "read_only": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "section_note",
+   "fieldtype": "Section Break",
+   "label": "Note"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text",
+   "label": "Notes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_confidential",
+   "fieldtype": "Section Break",
+   "label": "Confidentiality"
+  },
+  {
+   "description": "Read only by the author and the designated counsellor; the HOD, the Principal and the mentor do not see it.",
+   "fieldname": "is_confidential",
+   "fieldtype": "Check",
+   "label": "Confidential"
+  },
+  {
+   "description": "A user with the Student Counsellor role who may read this note.",
+   "fieldname": "counsellor",
+   "fieldtype": "Link",
+   "label": "Designated Counsellor",
+   "options": "User"
+  },
+  {
+   "fieldname": "section_follow_up",
+   "fieldtype": "Section Break",
+   "label": "Agreed Actions and Follow-up"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Agreed Actions",
+   "options": "Counselling Note Action"
+  },
+  {
+   "description": "The author is reminded on this date.",
+   "fieldname": "follow_up_date",
+   "fieldtype": "Date",
+   "label": "Follow-up Date"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Counselling Note",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Mentor",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Student Counsellor",
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Principal"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name",
+ "track_changes": 0
+}

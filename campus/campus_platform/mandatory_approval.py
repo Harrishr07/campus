@@ -5,10 +5,18 @@ Unlisted document types keep the engine's default (no matching policy: the docum
 is seeded once (after_install, and a patch on existing sites) with the sensitive document types that use the
 approval engine; the college edits it afterwards. Certificate Request is not listed: its Certificate Type's
 Needs Approval already refuses issue without an approval, and types that need none are issued directly.
+
+A refusal is flagged for configuration: the throw rolls the transaction back, so an after_rollback callback writes an
+Error Log naming the document type and user, and alerts the System Managers; once per document type per day.
 """
+
+from functools import partial
 
 import frappe
 from frappe import _
+from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+from frappe.utils import today
+from frappe.utils.user import get_users_with_role
 
 SETTINGS_FIELD = "approval_required_doctypes"
 ROW_DOCTYPE = "Approval Required Doctype"
@@ -21,6 +29,8 @@ MANDATORY_APPROVAL_DOCTYPES = (
 	"Rejoin Application",
 	"Examiner Remuneration Claim",
 	"Utilisation Certificate",
+	"Credit Recognition",  # X-03: clears a degree requirement (M03-09 / M05-15)
+	"Consultancy Revenue Share",  # P3-T20: pays faculty and staff from consultancy revenue
 )
 
 
@@ -35,10 +45,55 @@ def approval_required(doctype):
 def refuse_without_policy(doc):
 	"""Called when no Approval Policy matches `doc`: throws if its document type is on the mandatory list."""
 	if approval_required(doc.doctype):
+		frappe.db.after_rollback.add(partial(flag_for_configuration, doc.doctype, frappe.session.user))
 		frappe.throw(
 			_("No approval policy is configured for {0}; ask the administrator to set one up.").format(_(doc.doctype)),
 			title=_("Approval Policy Missing"),
 		)
+
+
+def flag_title(doctype):
+	return f"Approval policy missing for {doctype}"
+
+
+def flag_for_configuration(doctype, user):
+	"""After the refused transaction rolled back: an Error Log and a System Manager alert, unless flagged today.
+
+	Best effort: it runs inside frappe.db.rollback(), so any failure here is swallowed and must never replace
+	the refusal the user sees or stop the other rollback callbacks."""
+	try:
+		write_flag(doctype, user)
+	except Exception:
+		pass  # the alert is optional; the refusal already stands
+
+
+def write_flag(doctype, user):
+	title = flag_title(doctype)
+	if frappe.db.exists("Error Log", {"method": title, "creation": [">=", today()]}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Error Log",
+			"method": title,
+			"error": f"{doctype} was refused for {user}: it is on Campus Settings > Approval Required DocTypes "
+			"and no enabled Approval Policy matches it.",
+			"reference_doctype": "DocType",
+			"reference_name": doctype,
+		}
+	).insert(ignore_permissions=True)
+	enqueue_create_notification(
+		get_users_with_role("System Manager"),
+		{
+			"type": "Alert",
+			"subject": _("{0} needs an Approval Policy: a submission was refused.").format(_(doctype)),
+			"email_content": _(
+				"{0} is on Approval Required DocTypes but no Approval Policy matches it. {1} was refused today."
+			).format(_(doctype), user),
+			"document_type": "Campus Settings",
+			"document_name": "Campus Settings",
+		},
+	)
+	frappe.db.commit()
 
 
 def uses_approval_engine(doctype):

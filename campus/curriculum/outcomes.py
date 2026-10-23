@@ -148,15 +148,19 @@ def unmapped_codes(curriculum):
 
 
 def validate_co_tags(doc, method=None):
-	"""Doc event (CIA Schedule, Question Bank Item): once the course has Course Outcomes, a CO tag must be one of their
-	codes (in the offering's curriculum for a CIA Schedule, in any curriculum for a bank item)."""
+	"""Doc event (CIA Schedule, Question Bank Item, Answer Script Bundle): once the course has Course Outcomes, a CO tag
+	set or changed in this save must be one of their codes (in the offering's curriculum for a CIA Schedule, in any
+	curriculum otherwise) and is stored normalised. A tag left as it was is not checked, so a legacy tag never blocks
+	an unrelated save. The tag is changed by the saving user, so the document's own audit records it (CIA Schedule and
+	bundle versions, the bank item's editors)."""
+	changed = changed_tag_rows(doc)
+	if not changed:
+		return
 	course, curriculum = tag_scope(doc)
 	allowed = co_codes(course, curriculum)
 	if not allowed:
 		return
-	for row in doc.get("questions") if doc.doctype == "CIA Schedule" else [doc]:
-		if not row.course_outcome:
-			continue
+	for row in changed:
 		row.course_outcome = normalise_code(row.course_outcome)
 		if row.course_outcome not in allowed:
 			frappe.throw(
@@ -164,6 +168,16 @@ def validate_co_tags(doc, method=None):
 					frappe.bold(row.course_outcome), frappe.bold(course), ", ".join(sorted(allowed, key=code_order))
 				)
 			)
+
+
+def changed_tag_rows(doc):
+	"""The rows (the document itself for a bank item) whose CO tag is set and new or different from before the save."""
+	before = doc.get_doc_before_save()
+	if doc.doctype == "Question Bank Item":
+		rows, previous = [doc], {doc.name: before.course_outcome} if before else {}
+	else:
+		rows, previous = doc.get("questions"), {row.name: row.course_outcome for row in before.get("questions")} if before else {}
+	return [row for row in rows if row.course_outcome and (row.name not in previous or previous[row.name] != row.course_outcome)]
 
 
 def tag_scope(doc):

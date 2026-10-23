@@ -3,7 +3,7 @@
 import frappe
 
 from campus.campus_platform.api import request_approval
-from campus.iqac import compute, evidence, feedback, feedback_invites, metric_values, validation
+from campus.iqac import aishe, compute, evidence, feedback, feedback_invites, metric_values, validation
 from campus.iqac import export as exporter
 from campus.iqac.access import OWNER_ROLE, ROLES
 from campus.iqac.feedback import MINIMUM_GROUP_DEFAULT, MINIMUM_GROUP_FLOOR  # noqa: F401  (public API: Campus Settings)
@@ -111,6 +111,13 @@ def export_cycle(cycle, template):
 
 
 @frappe.whitelist(methods=["POST"])
+def export_aishe(company, academic_year, layout=None):
+	"""M01-09 Download the AISHE dataset of the company and year in an AISHE Layout (IQAC staff and the Principal, within their company)."""
+	filename, content = aishe.export_dataset(company, academic_year, layout)
+	frappe.response.update({"filename": filename, "filecontent": content, "type": "download"})
+
+
+@frappe.whitelist(methods=["POST"])
 def send_feedback_invitations(campaign):
 	"""M01-05 Invite the campaign's audience through messaging (bulk run); IQAC Coordinator / System Manager."""
 	frappe.only_for(ROLES)
@@ -122,3 +129,9 @@ def indirect_co_scores(offering):
 	"""M03-03 Indirect CO attainment of a course offering from its exit-survey ratings: {CO: {responses, average (1-5),
 	percent (of 5), suppressed}}; a CO with fewer responses than the Campus Settings minimum group size is suppressed."""
 	return feedback.indirect_co_scores(offering)
+
+
+def campaign_outcome_scores(campaign):
+	"""M03-03 Indirect PO / PSO attainment from a closed programme exit survey: {tag: {responses, average, percent,
+	suppressed}} of its tagged Likert answers, small groups suppressed as in indirect_co_scores."""
+	return feedback.campaign_outcome_scores(campaign)

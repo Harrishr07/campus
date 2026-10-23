@@ -18,6 +18,7 @@ def field(fieldname, fieldtype, label, insert_after, **kwargs):
 
 CONCESSION_POLICY = "Fee Concession Approval"
 REFUND_POLICY = "Fee Refund Approval"
+SCHOLARSHIP_POLICY = "Scholarship Sanction Approval"
 
 
 def setup_finance():
@@ -26,6 +27,7 @@ def setup_finance():
 	seed_office_roles()
 	seed_concession_policy()
 	seed_refund_policy()
+	seed_scholarship_policy()
 
 
 def seed_concession_policy():
@@ -35,6 +37,19 @@ def seed_concession_policy():
 	frappe.get_doc(
 		{
 			"doctype": "Approval Policy", "policy_name": CONCESSION_POLICY, "document_type": "Fee Concession",
+			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "sla_hours": 72}],
+		}
+	).insert(ignore_permissions=True)
+
+
+def seed_scholarship_policy():
+	"""A single Principal level for sanctioning Scholarship Applications (on the mandatory approval list), unless the
+	college has its own policy for them; upgraded sites thus keep sanctioning with separation of duties."""
+	if frappe.db.exists("Approval Policy", {"document_type": "Scholarship Application"}) or not frappe.db.exists("Position", "PRINCIPAL"):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Approval Policy", "policy_name": SCHOLARSHIP_POLICY, "document_type": "Scholarship Application",
 			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "sla_hours": 72}],
 		}
 	).insert(ignore_permissions=True)

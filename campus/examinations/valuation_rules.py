@@ -18,23 +18,28 @@ def needs_third_valuation(first, second, ese_max, threshold_pct):
 
 
 def final_mark(marks, method):
-	"""Final ESE mark from {round: mark}, rounded half up to a whole mark.
+	"""Final ESE mark from {round: mark}, rounded half up to a whole mark: the average of the deciding rounds."""
+	return round_half_up(sum(marks[r] for r in deciding_rounds(marks, method)) / 2)
 
-	Two valuations: their average. Three: the closest pair (Average of Closest Two) or the third with the nearer
-	of the first two (Average of Third and Nearer). A tie goes to the higher pair, in the student's favour.
+
+def deciding_rounds(marks, method):
+	"""The two valuation rounds (ascending) whose average is the final mark, from {round: mark}.
+
+	Two valuations: both. Three: the closest pair (Average of Closest Two) or the third with the nearer of the first
+	two (Average of Third and Nearer). A tie goes to the higher pair, in the student's favour.
 	"""
 	if method not in FINAL_METHODS:
 		raise ValueError(f"Unknown final valuation method: {method}")
 	if len(marks) < 2:
 		raise ValueError("A final mark needs at least two valuations.")
 	if len(marks) == 2:
-		pair = tuple(marks.values())
-	elif method == AVERAGE_OF_CLOSEST_TWO:
-		pair = min(combinations(marks.values(), 2), key=lambda p: (abs(p[0] - p[1]), -sum(p)))
-	else:
-		third = marks[3]
-		pair = (third, min((marks[1], marks[2]), key=lambda m: (abs(m - third), -m)))
-	return round_half_up(sum(pair) / 2)
+		return tuple(sorted(marks))
+	if method == AVERAGE_OF_CLOSEST_TWO:
+		pair = min(combinations(sorted(marks), 2), key=lambda p: (abs(marks[p[0]] - marks[p[1]]), -(marks[p[0]] + marks[p[1]])))
+		return tuple(pair)
+	third = marks[3]
+	nearer = min((1, 2), key=lambda r: (abs(marks[r] - third), -marks[r]))
+	return tuple(sorted((nearer, 3)))
 
 
 def missing_scripts(expected_count, received_flags):

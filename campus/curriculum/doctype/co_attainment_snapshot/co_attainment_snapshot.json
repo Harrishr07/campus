@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "CO Attainment Snapshot",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "co_attainment_run",
+   "fieldtype": "Link",
+   "label": "CO Attainment Run",
+   "options": "CO Attainment Run",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Input Snapshot"
+  },
+  {
+   "fieldname": "snapshot",
+   "fieldtype": "JSON",
+   "label": "Input Snapshot",
+   "read_only": 1,
+   "description": "Per CO and tool, each student's marks, maximum and whether they attained, with the sessions, students, batches and policy values of the run."
+  }
+ ],
+ "field_order": [
+  "co_attainment_run",
+  "course_offering",
+  "company",
+  "section_snapshot",
+  "snapshot"
+ ],
+ "autoname": "field:co_attainment_run",
+ "naming_rule": "By fieldname",
+ "track_changes": 0,
+ "title_field": "co_attainment_run",
+ "in_create": 1,
+ "description": "The per-student marks behind a CO Attainment Run (System Manager, COE and Dean Academics only; written by the computation)."
+}

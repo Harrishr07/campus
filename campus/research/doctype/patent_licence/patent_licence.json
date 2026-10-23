@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "licensee",
+  "licence_date",
+  "amount_received",
+  "institution_amount",
+  "inventors_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "licensee",
+   "fieldtype": "Data",
+   "label": "Licensee",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "licence_date",
+   "fieldtype": "Date",
+   "label": "Date Received",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The date the licence revenue was received."
+  },
+  {
+   "fieldname": "amount_received",
+   "fieldtype": "Currency",
+   "label": "Revenue Received",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "institution_amount",
+   "fieldtype": "Currency",
+   "label": "Institution",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "inventors_amount",
+   "fieldtype": "Currency",
+   "label": "Inventors",
+   "read_only": 1,
+   "in_list_view": 1,
+   "options": "currency"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Patent Licence",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "istable": 1,
+ "editable_grid": 1
+}

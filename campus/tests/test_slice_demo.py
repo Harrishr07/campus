@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 
-from campus.admissions.api import admit
+from campus.admissions.api import admit, confirm_joining
 from campus.admissions.report.live_seat_matrix import live_seat_matrix
 from campus.examinations.report.result_analysis.result_analysis import execute as result_analysis
 from campus.examinations.report.days_exam_end_to_result.days_exam_end_to_result import execute as days_report
@@ -66,7 +66,9 @@ class TestSliceDemo(CampusTestCase):
 		frappe.set_user(demo.email("admissions"))
 		admitted = admit(applicant)
 		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
-		self.assertEqual(frappe.db.get_value("Sales Invoice", admitted["invoice"], "grand_total"), 65000)
+		self.assertFalse(frappe.db.exists("Sales Invoice", {"student": admitted["student"]}))  # nothing billable before joining
+		joined = confirm_joining(applicant)
+		self.assertEqual(frappe.db.get_value("Sales Invoice", joined["invoice"], "grand_total"), 65000)
 
 	def test_fees_invoiced_for_all_and_four_paid(self):
 		invoices = frappe.get_all(

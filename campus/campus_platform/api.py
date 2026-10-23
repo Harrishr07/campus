@@ -6,8 +6,11 @@ from frappe.utils import today
 from campus.campus_platform.approval_access import pending_approvals  # noqa: F401  (public API)
 from campus.campus_platform.approval_engine import find_policy, latest_request, start_request  # noqa: F401  (public API)
 from campus.campus_platform.approvals import ApprovableDocument, request_approval  # noqa: F401  (public API)
+from campus.campus_platform.bulk import live_run, run_bulk  # noqa: F401  (public API)
+from campus.campus_platform.company_scope import permitted_companies  # noqa: F401  (public API)
 from campus.campus_platform.pack_rules import effective_status, status_allows_pack
 from campus.campus_platform.positions import resolve_position  # noqa: F401  (public API)
+from campus.campus_platform.regulation_setup import DEAN_ROLE  # noqa: F401  (public API)
 from campus.campus_platform.regulation_rules import (  # noqa: F401  (public API)
 	apply_regulation_change,
 	get_regulation,
@@ -50,19 +53,32 @@ def get_institution(company):
 
 def service_provider(service, company):
 	"""Provider company of `service` for member `company` under the agreement in force today, or None."""
-	agreements = frappe.get_all(
-		"Shared Service Agreement",
-		filters={
-			"service": service,
-			"from_date": ["<=", today()],
-			"name": ["in", _agreements_with_member(company)],
-		},
-		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", today()]],
-		fields=["provider_company"],
-		order_by="from_date desc",
-		limit=1,
+	agreements = _agreements_in_force(
+		service, name=["in", _agreements_with_member(company)], fields=["provider_company"], order_by="from_date desc", limit=1
 	)
 	return agreements[0].provider_company if agreements else None
+
+
+def _agreements_in_force(service, pluck=None, fields=None, order_by=None, limit=None, **filters):
+	"""Shared Service Agreements of `service` whose dates cover today, narrowed by `filters`."""
+	return frappe.get_all(
+		"Shared Service Agreement",
+		filters={"service": service, "from_date": ["<=", today()], **filters},
+		or_filters=[["to_date", "is", "not set"], ["to_date", ">=", today()]],
+		pluck=pluck,
+		fields=fields,
+		order_by=order_by,
+		limit=limit,
+	)
+
+
+def served_companies(service, provider_company):
+	"""Member companies served with `service` by `provider_company` under the agreements in force today."""
+	agreements = _agreements_in_force(service, provider_company=provider_company, pluck="name")
+	if not agreements:
+		return []
+	members = frappe.get_all("Shared Service Member", filters={"parent": ["in", agreements]}, pluck="company")
+	return sorted(set(members))
 
 
 def _agreements_with_member(company):

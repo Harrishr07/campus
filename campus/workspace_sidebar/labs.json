@@ -1,0 +1,161 @@
+{
+ "app": "campus",
+ "creation": "2026-10-22 07:48:15.000000",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "flask-conical",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_to": "Labs",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "database",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Masters",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Laboratory",
+   "link_to": "Laboratory",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Safety Checklist Template",
+   "link_to": "Safety Checklist Template",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "clipboard-list",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Transactions",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Lab Safety Inspection",
+   "link_to": "Lab Safety Inspection",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Lab Incident",
+   "link_to": "Lab Incident",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "bar-chart",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Reports",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Lab Equipment Register",
+   "link_to": "Lab Equipment Register",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Calibration and AMC Due",
+   "link_to": "Calibration and AMC Due",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Lab Incident Register",
+   "link_to": "Lab Incident Register",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "settings",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Laboratory Settings",
+   "link_to": "Laboratory Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-22 21:46:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Labs",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Labs"
+}

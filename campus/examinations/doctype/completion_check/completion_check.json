@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Completion Check",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "student",
+  "student_name",
+  "company",
+  "program",
+  "batch",
+  "column_break_1",
+  "regulation",
+  "curriculum",
+  "checked_on",
+  "result",
+  "bulk_run",
+  "section_1",
+  "categories",
+  "missing_courses",
+  "reasons",
+  "fingerprint"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Program",
+   "options": "Program",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "Academic Year",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "curriculum",
+   "fieldtype": "Link",
+   "label": "Curriculum",
+   "options": "Curriculum",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checked_on",
+   "fieldtype": "Datetime",
+   "label": "Checked On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "label": "Result",
+   "options": "Complete\nIncomplete",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "bulk_run",
+   "fieldtype": "Link",
+   "label": "Bulk Run",
+   "options": "Bulk Run",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_1",
+   "fieldtype": "Section Break",
+   "label": "Credits"
+  },
+  {
+   "fieldname": "categories",
+   "fieldtype": "Table",
+   "label": "Categories",
+   "options": "Completion Check Category",
+   "read_only": 1
+  },
+  {
+   "fieldname": "missing_courses",
+   "fieldtype": "Small Text",
+   "label": "Mandatory Courses Not Cleared",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reasons",
+   "fieldtype": "Small Text",
+   "label": "Reasons",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fingerprint",
+   "fieldtype": "Data",
+   "label": "Fingerprint",
+   "hidden": 1,
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "COE",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "module": "Examinations",
+ "autoname": "CMP-.#######",
+ "in_create": 1,
+ "title_field": "student_name",
+ "description": "A credit completion check of a student against the curriculum (M05-15). Recorded by the completion service only; kept for audit."
+}

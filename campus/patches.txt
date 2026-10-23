@@ -31,3 +31,13 @@ campus.patches.bind_course_registrations_to_enrollment
 campus.patches.seed_mandatory_approval_doctypes
 campus.patches.enable_strict_seat_matrix
 campus.patches.report_blank_exam_types
+campus.patches.student_lifecycle_status
+campus.patches.map_break_previous_statuses
+campus.patches.move_attainment_snapshots
+campus.patches.require_consultancy_share_approval
+campus.patches.require_credit_recognition_approval
+campus.patches.joining_gate
+campus.patches.coe_pack_for_affiliated
+campus.patches.repair_joining_keys
+campus.patches.clear_legacy_attendance_start_dates
+campus.patches.document_reminder_due_date

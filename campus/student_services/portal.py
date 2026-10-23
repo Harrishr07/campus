@@ -212,6 +212,8 @@ def certificate_row(request):
 	approval = latest_request(request) if request.docstatus == 0 else None
 	if approval:  # Pending, Rejected, Returned
 		state = _(approval.status)
+	if issued and request.superseded_by:
+		state = _("Superseded")
 	return {
 		"name": request.name, "certificate_type": request.certificate_type, "purpose": request.purpose, "status": state,
 		"certificate_number": request.certificate_number, "issued_on": request.issued_on, "fee_amount": request.fee_amount,

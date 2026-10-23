@@ -5,6 +5,12 @@
 	<h2>{{ _("Document verification") }}</h2>
 	{% if record.status == "Valid" %}
 	<div class="alert alert-success" role="status"><strong>{{ _("Valid") }}</strong></div>
+	{% elif record.status == "Superseded" %}
+	<div class="alert alert-warning" role="status">
+		<strong>{{ _("Superseded") }}</strong>
+		{{ _("This certificate has been replaced by a newer one.") }}
+		{% if record.superseded_by_code %}<a href="/verify/{{ record.superseded_by_code|e }}">{{ _("Verify the current certificate") }}</a>{% endif %}
+	</div>
 	{% else %}
 	<div class="alert alert-danger" role="status">
 		<strong>{{ _("Revoked") }}</strong>

@@ -1,0 +1,79 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "template_name",
+  "company",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "label": "Template Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Safety Checklist Item",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Safety Checklist Template",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:template_name",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "Lab In-charge",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ]
+}

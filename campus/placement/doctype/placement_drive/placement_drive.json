@@ -1,0 +1,258 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "drive_title",
+  "company",
+  "academic_year",
+  "recruiter",
+  "column_break_1",
+  "status",
+  "drive_type",
+  "drive_date",
+  "registration_deadline",
+  "venue",
+  "roles_section",
+  "roles",
+  "eligibility_section",
+  "eligibility_template",
+  "min_cgpa",
+  "any_standing_arrears",
+  "max_standing_arrears",
+  "allow_arrear_history",
+  "criteria_column",
+  "gender",
+  "scope_section",
+  "programs",
+  "batches",
+  "rounds_section",
+  "rounds",
+  "notice_section",
+  "job_description"
+ ],
+ "fields": [
+  {
+   "fieldname": "drive_title",
+   "fieldtype": "Data",
+   "label": "Drive Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "recruiter",
+   "fieldtype": "Link",
+   "label": "Recruiter",
+   "options": "Recruiter",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nOpen\nClosed\nCompleted\nCancelled",
+   "default": "Draft",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "drive_type",
+   "fieldtype": "Select",
+   "label": "Drive Type",
+   "options": "On Campus\nOff Campus\nPool Campus\nVirtual",
+   "default": "On Campus"
+  },
+  {
+   "fieldname": "drive_date",
+   "fieldtype": "Date",
+   "label": "Drive Date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "registration_deadline",
+   "fieldtype": "Datetime",
+   "label": "Registration Deadline",
+   "description": "Students register until this time. Blank: until the drive is closed."
+  },
+  {
+   "fieldname": "venue",
+   "fieldtype": "Data",
+   "label": "Venue"
+  },
+  {
+   "fieldname": "roles_section",
+   "fieldtype": "Section Break",
+   "label": "Roles and CTC"
+  },
+  {
+   "fieldname": "roles",
+   "fieldtype": "Table",
+   "label": "Roles",
+   "options": "Placement Drive Role"
+  },
+  {
+   "fieldname": "eligibility_section",
+   "fieldtype": "Section Break",
+   "label": "Eligibility"
+  },
+  {
+   "fieldname": "eligibility_template",
+   "fieldtype": "Link",
+   "label": "Eligibility Template",
+   "options": "Placement Eligibility Template",
+   "description": "Choosing a template copies its criteria; edit them below for this drive."
+  },
+  {
+   "fieldname": "min_cgpa",
+   "fieldtype": "Float",
+   "label": "Minimum CGPA",
+   "precision": "2",
+   "description": "0 for no minimum. Read live from published results."
+  },
+  {
+   "fieldname": "any_standing_arrears",
+   "fieldtype": "Check",
+   "label": "Any Standing Arrears",
+   "description": "Tick for no limit on standing (uncleared) arrears."
+  },
+  {
+   "fieldname": "max_standing_arrears",
+   "fieldtype": "Int",
+   "label": "Max Standing Arrears",
+   "default": "0",
+   "depends_on": "eval:!doc.any_standing_arrears",
+   "description": "Uncleared arrears allowed at the time of registration."
+  },
+  {
+   "fieldname": "allow_arrear_history",
+   "fieldtype": "Check",
+   "label": "Allow History of Arrears",
+   "default": "1",
+   "description": "Untick to exclude students who ever failed a course at its first appearance, even if cleared since."
+  },
+  {
+   "fieldname": "criteria_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Link",
+   "label": "Gender",
+   "options": "Gender",
+   "description": "Leave blank when the drive is open to every gender."
+  },
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "Programs and batches"
+  },
+  {
+   "fieldname": "programs",
+   "fieldtype": "Table",
+   "label": "Programs (Branches)",
+   "options": "Placement Eligible Program",
+   "description": "Blank: every program of the company."
+  },
+  {
+   "fieldname": "batches",
+   "fieldtype": "Table",
+   "label": "Batches",
+   "options": "Placement Eligible Batch",
+   "description": "Blank: every batch."
+  },
+  {
+   "fieldname": "rounds_section",
+   "fieldtype": "Section Break",
+   "label": "Rounds"
+  },
+  {
+   "fieldname": "rounds",
+   "fieldtype": "Table",
+   "label": "Rounds",
+   "options": "Placement Drive Round"
+  },
+  {
+   "fieldname": "notice_section",
+   "fieldtype": "Section Break",
+   "label": "Notice"
+  },
+  {
+   "fieldname": "job_description",
+   "fieldtype": "Text Editor",
+   "label": "Job Description"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Placement Drive",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Placement Officer",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:DRV-{YY}-{####}",
+ "title_field": "drive_title",
+ "search_fields": "drive_title,recruiter",
+ "track_changes": 1
+}

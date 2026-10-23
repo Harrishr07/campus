@@ -20,8 +20,10 @@ amended_from to the first version). Once a payment has a live exported row in an
 exported as such, for the same amount, counts as exported; any other line of it (changed, new, moved to another
 sanction, or left after a line was removed) is excluded for review, never exported automatically. One exception: a
 line of a sanction none of whose batches has the payment, while every exported line of it elsewhere is unchanged, is
-exported (a payment of two sanctions' invoices goes once in each). A voucher with live exported rows can't be
-cancelled (`refuse_exported_cancel`) until PFMS reports them failed or their batch is cancelled."""
+exported (a payment of two sanctions' invoices goes once in each). An Accounts Manager may release a held line after
+review (`release_after_review`, logged as a PFMS Export Release): the next batch exports it, unless that would take the
+payment's exported total past the payment itself. A voucher with live exported rows can't be cancelled
+(`refuse_exported_cancel`) until PFMS reports them failed or their batch is cancelled."""
 
 import frappe
 from frappe import _
@@ -55,17 +57,22 @@ class PaymentSelection:
 		self.sanction, self.export_type, self.lock = sanction, export_type, lock
 		self.from_date, self.to_date = from_date, to_date
 		self.exclusions = []
+		self.unchanged_payments = {}  # payment_key: its exported rows are unchanged (one look per payment and run)
 
 	def run(self):
 		payments = self.payments()
 		exported = self.exported_rows(payments)
+		releases = self.releases([p for p in payments if p.payment_key in exported])
 		rows, already_exported = [], 0
 		for payment in (p for p in payments if p.export_type == self.export_type):
 			history = exported.get(payment.payment_key)
 			if history and self.exported_as_is(payment, history):
 				already_exported += 1
 				continue
-			reason = (history and self.held_for_review(payment, history)) or payment.get("reason") or self.vendor_problem(payment)
+			held = history and self.held_for_review(payment, history)
+			if held and self.released(payment, history, rows, releases):
+				held = None
+			reason = held or payment.get("reason") or self.vendor_problem(payment)
 			if reason:
 				self.exclude(payment, reason)
 			else:
@@ -97,6 +104,7 @@ class PaymentSelection:
 				& (ref.allocated_amount > 0)
 			)
 		)  # fmt: skip
+		lines = one_line_per_reference(lines)
 		documents = {}
 		for doctype in ("Purchase Invoice", "Purchase Order"):
 			documents[doctype] = self.on_sanction(doctype, {line.reference_name for line in lines if line.reference_doctype == doctype})
@@ -222,7 +230,7 @@ class PaymentSelection:
 		of a sanction no batch of which has the payment, while every exported line of it is unchanged."""
 		exported_here = any(row.sanction == self.sanction.name for row in history)
 		line_exported = any(row.export_key == payment.export_key for row in history)  # for another amount
-		if not exported_here and not line_exported and self.unchanged(history):
+		if not exported_here and not line_exported and self.unchanged(payment.payment_key, history):
 			return None
 		batches = ", ".join(sorted({row.batch for row in history}))
 		return _(
@@ -238,27 +246,74 @@ class PaymentSelection:
 		if not keys:
 			return {}
 		row, batch = frappe.qb.DocType("PFMS Export Batch Row"), frappe.qb.DocType("PFMS Export Batch")
-		rows = self.read(
+		query = (
 			frappe.qb.from_(row).join(batch).on(batch.name == row.parent)
 			.select(
-				row.export_key, row.payment_key, row.amount, row.voucher_type, row.voucher_no, row.reference_doctype,
-				row.reference_name, row.parent.as_("batch"), batch.sanction,
+				row.name, row.export_key, row.payment_key, row.amount, row.voucher_type, row.voucher_no,
+				row.reference_doctype, row.reference_name, row.parent.as_("batch"), batch.sanction,
 			)
-			.where(
-				row.export_key.isnotnull() & (row.parenttype == "PFMS Export Batch")
-				& (row.payment_key.isin(list(keys)) | row.export_key.isin(list(by_export_key)))
-			)
+			.where(row.export_key.isnotnull() & (row.parenttype == "PFMS Export Batch"))
 		)  # fmt: skip
+		rows = {}  # two reads, each on its own index (an OR would lock a wide range)
+		for condition in (row.payment_key.isin(list(keys)), row.export_key.isin(list(by_export_key))):
+			rows.update((exported.name, exported) for exported in self.read(query.where(condition)))
 		history = {}
-		for exported in rows:
+		for exported in rows.values():
 			key = exported.payment_key if exported.payment_key in keys else by_export_key[exported.export_key]
 			history.setdefault(key, []).append(exported)
 		return history
 
-	def unchanged(self, rows):
-		"""Every exported row is still a line of its voucher, for the amount exported."""
-		current = self.current_amounts(rows)
-		return all(current.get(row.export_key) == flt(row.amount, 2) for row in rows)
+	def unchanged(self, key, rows):
+		"""Every exported row of the payment `key` is still a line of its voucher, for the amount exported."""
+		if key not in self.unchanged_payments:
+			current = self.current_amounts(rows)
+			self.unchanged_payments[key] = all(current.get(row.export_key) == flt(row.amount, 2) for row in rows)
+		return self.unchanged_payments[key]
+
+	# release after review
+	def releases(self, payments):
+		"""{export_key: released amounts} of PFMS Export Releases of these lines."""
+		if not payments:
+			return {}
+		release = frappe.qb.DocType("PFMS Export Release")
+		found = self.read(
+			frappe.qb.from_(release).select(release.export_key, release.amount)
+			.where(release.export_key.isin(list({p.export_key for p in payments})))
+		)  # fmt: skip
+		amounts = {}
+		for row in found:
+			amounts.setdefault(row.export_key, set()).add(flt(row.amount, 2))
+		return amounts
+
+	def released(self, payment, history, rows, releases):
+		"""A held line released after review for its current amount, which still fits the payment."""
+		return flt(payment.amount, 2) in releases.get(payment.export_key, ()) and not self.release_problem(payment, history, rows)
+
+	def release_problem(self, payment, history, rows=()):
+		"""Why the held line can't be exported even after review: its own key is live (for another amount), or the
+		payment's exported rows, this run's rows of it and the line would add up to more than the payment."""
+		if any(row.export_key == payment.export_key for row in history):
+			return _("{0} {1}: this line is itself exported to PFMS for another amount; withdraw that row from PFMS first (failed status or batch cancel).").format(
+				_(payment.voucher_type), payment.voucher_no
+			)
+		exported = sum(flt(row.amount) for row in history) + sum(flt(row.amount) for row in rows if row.payment_key == payment.payment_key)
+		total = voucher_total(payment.voucher_type, payment.voucher_no, self.lock)
+		if flt(exported + flt(payment.amount), 2) > flt(total, 2):
+			return _("{0} {1}: {2} of its {3} is already exported to PFMS, so the money of this line ({4}) is already exported in full.").format(
+				_(payment.voucher_type), payment.voucher_no, frappe.format(flt(exported, 2), "Currency"),
+				frappe.format(flt(total, 2), "Currency"), frappe.format(flt(payment.amount, 2), "Currency"),
+			)  # fmt: skip
+		return None
+
+	def held_line(self, key):
+		"""(line, history) of the line `key` of this selection, held for review now, else (None, problem)."""
+		payment = next((p for p in self.payments() if p.export_key == key and p.export_type == self.export_type), None)
+		if not payment:
+			return None, _("The line is no longer a {0} payment of Sanction {1} in the period.").format(_(self.export_type).lower(), self.sanction.name)
+		history = self.exported_rows([payment]).get(payment.payment_key)
+		if not history or self.exported_as_is(payment, history) or not self.held_for_review(payment, history):
+			return None, _("{0} {1} is not held for review.").format(_(payment.voucher_type), payment.voucher_no)
+		return (payment, history), None
 
 	def current_amounts(self, rows):
 		"""{export_key: what the exported rows' lines amount to now} (submitted vouchers only)."""
@@ -303,11 +358,71 @@ def payment_key(voucher_type, voucher_no):
 	return f"{voucher_type}|{voucher_no}"
 
 
+ADVANCE_VOUCHERS = ("Payment Entry", "Journal Entry")  # vouchers that carry money; an order (PO/SO) carries none
+
+
 def payment_voucher(payment):
-	"""The voucher whose money a line is: the advance it allocates, else its own voucher."""
-	if payment.get("advance_voucher_no"):
-		return (payment.advance_voucher_type or "Payment Entry", payment.advance_voucher_no)
+	"""The voucher whose money a line is: its own voucher, unless the line allocates an advance paid by another
+	payment voucher. ERPNext also sets advance_voucher_no to the Purchase Order an advance was paid against when an
+	invoice takes it; the money is still the paying Payment Entry's."""
+	if payment.get("advance_voucher_no") and payment.get("advance_voucher_type") in ADVANCE_VOUCHERS:
+		return (payment.advance_voucher_type, payment.advance_voucher_no)
 	return (payment.voucher_type, payment.voucher_no)
+
+
+def one_line_per_reference(lines):
+	"""Payment Entry Reference rows of one voucher and document (a reconcile can add a second row) as one line."""
+	merged = {}
+	for line in lines:
+		key = (line.voucher_no, line.reference_doctype, line.reference_name)
+		if key in merged:
+			merged[key].amount = flt(merged[key].amount) + flt(line.amount)
+		else:
+			merged[key] = line
+	return list(merged.values())
+
+
+def voucher_total(voucher_type, voucher_no, lock=False):
+	"""What a payment voucher paid: a Payment Entry's paid amount, a paid Purchase Invoice's paid amount."""
+	return flt(frappe.db.get_value(voucher_type, voucher_no, "paid_amount", for_update=lock))
+
+
+def release_after_review(batch, exclusion, reason):
+	"""An Accounts Manager releases a line of `batch` held for review (the exclusion row's name) with a reason: the next
+	batch exports it. Checked again under the sanction lock, and again when that batch is submitted."""
+	from campus.research.grant_recognition import lock_sanction
+
+	frappe.only_for("Accounts Manager")
+	batch.check_permission("read")
+	frappe.has_permission("Sanction", "read", batch.sanction, throw=True)
+	reason = (reason or "").strip()
+	if not reason:
+		frappe.throw(_("Give the reason for releasing the line after review."))
+	held = next((row for row in batch.exclusions if row.name == exclusion), None)
+	if not held:
+		frappe.throw(_("{0} is not an excluded line of {1}.").format(exclusion, batch.name))
+	key = export_key(held.voucher_type, held.voucher_no, held.reference_doctype, held.reference_name)
+	selection = PaymentSelection(lock_sanction(batch.sanction), batch.export_type, batch.from_date, batch.to_date, lock=True)
+	found, problem = selection.held_line(key)
+	if found and flt(found[0].amount, 2) != flt(held.amount, 2):
+		problem = _("{0} {1} has changed since the batch was built; rebuild it and review the line again.").format(_(held.voucher_type), held.voucher_no)
+	problem = problem or selection.release_problem(*found)
+	if problem:
+		frappe.throw(problem)
+	release = frappe.get_doc(
+		{
+			"doctype": "PFMS Export Release", "batch": batch.name, "sanction": batch.sanction, "export_type": batch.export_type,
+			"voucher_type": held.voucher_type, "voucher_no": held.voucher_no, "reference_doctype": held.reference_doctype,
+			"reference_name": held.reference_name, "amount": flt(held.amount, 2), "export_key": key, "reason": reason,
+			"released_by": frappe.session.user, "released_on": frappe.utils.now_datetime(),
+		}  # fmt: skip
+	).insert(ignore_permissions=True)
+	batch.add_comment(
+		"Info", _("{0} {1} ({2}) released after review by {3} ({4}): {5}").format(
+			_(held.voucher_type), held.voucher_no, frappe.format(flt(held.amount, 2), "Currency"), frappe.session.user, release.name, reason
+		),
+	)  # fmt: skip
+	return release.name
 
 
 def first_versions(payments):

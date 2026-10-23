@@ -4,9 +4,10 @@ the outstanding arrears and CGPA of their published results (campus.examinations
 
 Bulk: one item per student through campus_platform.bulk.run_bulk. The handler is DB-only and idempotent: a student's
 outcome row is written once per run and updated on a re-run, and the semester moves from the row's from_semester,
-so re-running never promotes twice. Promote and Probation set the next semester (status Active); Detain sets the
-academic status Detained and keeps the semester. A re-run also takes the students this run detained, so a later
-revaluation that clears their arrears promotes them.
+so re-running never promotes twice. Promote and Probation set the next semester and clear Student.oc_detained;
+Detain sets oc_detained and keeps the semester. Detention is not a lifecycle status (M05-09): a detained student
+stays Active, and the run never changes the lifecycle status. Detained students are left out of other runs; a
+re-run also takes the students this run detained, so a later revaluation that clears their arrears promotes them.
 """
 
 import frappe
@@ -18,11 +19,11 @@ from campus.examinations import graduation_rules
 from campus.examinations.access import COE_ROLE
 from campus.examinations.graduation import graduate_record
 from campus.examinations.results import program_students
+from campus.student_services.api import ACTIVE
 
 RUN_TYPE = "Progression Run"
 HANDLER = "campus.examinations.progression.progress_student"
 ROW = "Progression Run Student"
-ACTIVE, DETAINED = "Active", "Detained"
 
 
 def start(run_doc):
@@ -47,11 +48,15 @@ def rerun(progression_run):
 def active_students(run_doc):
 	"""The run's students: Active ones, plus those this run detained (a re-run after a revaluation can promote them)."""
 	students = program_students(frappe._dict(academic_term=run_doc.academic_term, company=run_doc.company), run_doc.program)
-	statuses = dict(frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_academic_status"], as_list=True))
+	rows = frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_academic_status", "oc_detained"])
+	standing = {row.name: row for row in rows}
 	detained_here = set(
 		frappe.get_all(ROW, {"parent": run_doc.name, "parenttype": RUN_TYPE, "outcome": graduation_rules.DETAIN}, pluck="student")
 	)
-	return [s for s in students if (statuses.get(s) or ACTIVE) == ACTIVE or (statuses.get(s) == DETAINED and s in detained_here)]
+	return [
+		s for s in students
+		if s in standing and (standing[s].oc_academic_status or ACTIVE) == ACTIVE and (not standing[s].oc_detained or s in detained_here)
+	]  # fmt: skip
 
 
 def progress_student(student, run):
@@ -76,7 +81,7 @@ def progress_student(student, run):
 			"idx": frappe.db.count(ROW, {"parent": run_name, "parenttype": RUN_TYPE}) + 1, **values}
 		).db_insert()  # fmt: skip
 	if outcome == graduation_rules.DETAIN:
-		frappe.db.set_value("Student", student, {"oc_academic_status": DETAINED, "oc_current_semester": from_semester})
+		frappe.db.set_value("Student", student, {"oc_detained": 1, "oc_current_semester": from_semester})
 	else:
-		frappe.db.set_value("Student", student, {"oc_academic_status": ACTIVE, "oc_current_semester": from_semester + 1})
+		frappe.db.set_value("Student", student, {"oc_detained": 0, "oc_current_semester": from_semester + 1})
 	return outcome

@@ -184,13 +184,27 @@ doc_events["Student Applicant"]["validate"] = [doc_events["Student Applicant"]["
 doc_events["Program Enrollment"]["validate"] = [
 	doc_events["Program Enrollment"]["validate"],
 	f"{_regulation_rules}.assign_regulation_on_enrollment",
+	"campus.admissions.joining.validate_enrollment",  # L-02: the first enrollment follows the joining confirmation
 ]
 
 doc_events["Student Applicant"]["validate"] += [
 	"campus.admissions.allotment_import.set_allotment_key",
 	"campus.admissions.documents.validate_applicant",
+	"campus.admissions.duplicates.validate_applicant",
 ]
-doc_events["Program Enrollment"]["on_submit"] = "campus.admissions.seat_matrix.refresh_cache_of"
+doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
+	doc_events["Course Schedule"]["validate"],
+	"campus.faculty.session_states.validate_session",
+]
+doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
+doc_events["Student Attendance"] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
+	"validate": "campus.faculty.attendance_corrections.guard_record",
+	"before_cancel": "campus.faculty.attendance_corrections.guard_cancel",
+}
+doc_events["Program Enrollment"]["on_submit"] = [
+	"campus.admissions.seat_matrix.refresh_cache_of",
+	"campus.admissions.joining.carry_joining_key",  # L-03: an amended joining enrollment keeps the joining
+]
 doc_events["Program Enrollment"]["on_cancel"] = "campus.admissions.seat_matrix.refresh_cache_of"
 
 doc_events["Lead"] = {
@@ -213,6 +227,14 @@ doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.
 doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
+doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
+doc_events["Student"]["validate"].append("campus.student_services.corrections.guard_locked_fields")  # L-08
+doc_events["Student"]["validate"].append("campus.examinations.affiliation.validate_university_register_no")  # M06-10
+_after_insert = doc_events["Student"].get("after_insert")
+doc_events["Student"]["after_insert"] = [
+	*([_after_insert] if isinstance(_after_insert, str) else _after_insert or []),
+	"campus.student_services.lifecycle.log_initial_status",
+]
 doc_events["Fee Category"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_category"}
 doc_events["Fee Structure"] = {"validate": "campus.campus_finance.fee_heads.validate_fee_structure"}
 doc_events["Sales Invoice"] = {
@@ -231,6 +253,10 @@ doc_events["Payment Entry"] = {
 	],
 }
 doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
+doc_events["Payment Entry"]["before_submit"] = [  # L-03: a no-show's advance refund is paid once
+	doc_events["Payment Entry"]["before_submit"],
+	"campus.admissions.doctype.admission_cancellation.admission_cancellation.check_advance_refund",
+]
 doc_events["Journal Entry"] = {
 	"validate": "campus.campus_finance.scholarships.block_amend",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
@@ -276,6 +302,13 @@ for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Clai
 _validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
 doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
 doc_events["Payment Entry"]["before_cancel"].append(f"{_budget_control}.refuse_payment_cancel_on_closed")  # P3-T19: its deductions stay
+_consultancy = "campus.research.consultancy"  # P3-T20: consultancy invoices within the agreement; a shared invoice stays paid
+for _event, _method in (("before_submit", "check_invoice"), ("before_cancel", "refuse_invoice_cancel")):
+	_before = doc_events["Sales Invoice"].get(_event)
+	doc_events["Sales Invoice"][_event] = [*([_before] if isinstance(_before, str) else _before or []), f"{_consultancy}.{_method}"]
+for _dt in ("Payment Entry", "Journal Entry"):
+	doc_events[_dt]["before_cancel"].append(f"{_consultancy}.refuse_payment_cancel")
+doc_events.setdefault("Unreconcile Payment", {})["before_submit"] = f"{_consultancy}.refuse_unreconcile"
 
 # Scheduled Tasks
 # ---------------
@@ -406,12 +439,19 @@ scheduler_events = {
 		"campus.research.proposals.send_deadline_reminders",
 		"campus.iqac.feedback_invites.send_reminders",
 		"campus.iqac.regulator.send_reminders",
+		"campus.iqac.official_documents.send_expiry_alerts",
+		"campus.examinations.completion.move_graduates_to_alumni",  # M05-15
+		"campus.labs.calibration.send_calibration_notices",  # M12-05
+		"campus.admissions.reporting.refer_no_shows",  # M04-10
 	],
 	"hourly": [
 		"campus.campus_platform.approval_escalation.escalate_overdue",
 		"campus.student_services.grievances.escalate_overdue",
 		"campus.admissions.allotment_import.reconcile_finished_imports",
+		"campus.admissions.applicant_upload.reconcile_finished_uploads",
 		"campus.examinations.cia.lock_due_schedules",
+		"campus.examinations.university_import.reconcile_finished_imports",  # M06-10
+		"campus.examinations.university_export.reconcile_building",  # M06-10
 	],
 	"weekly": [
 		"campus.academic_governance.actions.notify_overdue",
@@ -427,7 +467,12 @@ scheduler_events = {
 }
 
 # Delivery status webhooks (frappe_whatsapp updates WhatsApp Message) update the Message Log.
-doc_events["Approval Request"] = {"on_update": "campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status"}
+doc_events["Approval Request"] = {
+	"on_update": [
+		"campus.campus_messaging.doctype.broadcast.broadcast.sync_approval_status",
+		"campus.student_services.corrections.sync_status",  # L-08
+	]
+}
 doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
 app_include_js = ["/assets/campus/js/approvals.js", "/assets/campus/js/attach_evidence.js"]  # P3-T04 Attach as Evidence
@@ -438,6 +483,7 @@ doctype_js = {
 	"Student Result": "public/js/student_result.js",
 }
 
+doctype_js["Lead"] = "public/js/lead_convert.js"  # M04-01 Convert to Applicant button
 doctype_js["Employee"] = "public/js/employee_faculty.js"  # P2-T09 self-appraisal button
 doctype_js["Appraisal"] = "public/js/appraisal_review.js"  # P2-T09 request HOD review
 doctype_js["Exam Session"] = "public/js/exam_session_question_paper.js"  # P2-T17 withdraw a course's paper
@@ -503,19 +549,27 @@ permission_query_conditions["Utilisation Certificate"] = "campus.research.utilis
 has_permission["Utilisation Certificate"] = "campus.research.utilisation.has_permission"
 # P3-T19: a sanctioned project's Project Update is its progress report / mid-term review
 doc_events["Project Update"] = {"validate": "campus.research.progress.validate_project_update"}
-# P3-T09: CO tags of CIA questions and bank items are codes of the course's Course Outcomes once it has any
-for _dt in ("CIA Schedule", "Question Bank Item"):
-	doc_events.setdefault(_dt, {})["validate"] = "campus.curriculum.outcomes.validate_co_tags"
+# P3-T09 / P3-T10: CO tags of CIA questions, bank items and valuation question patterns are codes of the course's
+# Course Outcomes once it has any
+for _dt in ("CIA Schedule", "Question Bank Item", "Answer Script Bundle"):
+	_validate = doc_events.setdefault(_dt, {}).get("validate")
+	doc_events[_dt]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate or []), "campus.curriculum.outcomes.validate_co_tags"]
+# P3-T10: attainment runs are read by their programme's HOD and the offering's instructors (per-student marks: permlevel 1)
+for _dt, _kind in (("CO Attainment Run", "co_run"), ("PO Attainment Run", "po_run")):
+	permission_query_conditions[_dt] = f"campus.curriculum.attainment_access.{_kind}_query"
+	has_permission[_dt] = f"campus.curriculum.attainment_access.{_kind}_has_permission"
 
 # Dotted paths an Approval Policy may run as its "Call Service" final action: method(doc, request).
 # Any app may add its own; nothing else can be called.
-approval_final_actions = []
+approval_final_actions = ["campus.student_services.corrections.apply_correction"]  # L-08
 
 jinja = {
 	"methods": [
 		"campus.campus_platform.verification.oc_qr_block",
+		"campus.student_services.certificate_reissue.oc_reissue_mark",
 		"campus.curriculum.structure.curriculum_structure",
 		"campus.curriculum.outcomes.co_po_grid",
+		"campus.curriculum.attainment.course_attainment_sheet",
 		"campus.campus_finance.challan.challan_details",
 		"campus.faculty.cv.faculty_cv_sections",
 		"campus.examinations.exam_certificates.oc_graduate_record",
@@ -529,7 +583,7 @@ website_route_rules = [
 	{"from_route": "/campus-portal", "to_route": "campus_portal"},
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
-		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback")
+		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback", "corrections", "profile")
 	),
 	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
 	*(
@@ -540,3 +594,26 @@ website_route_rules = [
 
 # Message Logs are an audit trail: they must not block deleting the documents they refer to.
 ignore_links_on_delete = ["Message Log"]
+
+# L-09 (M05-13): mentoring records are read per campus.student_services.mentoring_access and never shared
+_mentoring = "campus.student_services.mentoring_access"
+permission_query_conditions["Counselling Note"] = f"{_mentoring}.note_permission_query"
+has_permission["Counselling Note"] = f"{_mentoring}.note_has_permission"
+permission_query_conditions["Parent Interaction"] = f"{_mentoring}.interaction_permission_query"
+has_permission["Parent Interaction"] = f"{_mentoring}.interaction_has_permission"
+scheduler_events["daily"].append("campus.student_services.mentoring.send_follow_up_reminders")
+
+# L-09 fix: restricted records - DocTypes read only through their own permission hooks. Their Comments, attached Files
+# (always private), shares, Connections and dashboard counts follow the same rule (campus.campus_platform.restricted_records).
+restricted_record_doctypes = ["Counselling Note", "Parent Interaction"]
+_restricted = "campus.campus_platform.restricted_records"
+permission_query_conditions["Comment"] = f"{_restricted}.comment_permission_query"
+has_permission["Comment"] = f"{_restricted}.comment_has_permission"
+permission_query_conditions["File"] = f"{_restricted}.file_permission_query"
+has_permission["File"] = [has_permission["File"], f"{_restricted}.file_has_permission"]
+extend_doctype_class["File"] = [f"{_restricted}.PrivateAttachmentMixin"]
+override_whitelisted_methods["frappe.desk.form.linked_with.get"] = f"{_restricted}.get_linked_docs"
+override_whitelisted_methods["frappe.desk.notifications.get_open_count"] = f"{_restricted}.get_open_count"
+for _zip in ("frappe.core.api.file.zip_files", "frappe.core.doctype.file.file.zip_files"):
+	override_whitelisted_methods[_zip] = f"{_restricted}.zip_files"
+doc_events["DocShare"]["validate"].append(f"{_restricted}.block_share")

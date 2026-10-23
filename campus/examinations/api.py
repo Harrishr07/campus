@@ -5,8 +5,8 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
-from campus.examinations.access import instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
-from campus.examinations.arrears import arrear_courses, has_passed  # noqa: F401  (public API)
+from campus.examinations.access import held_scopes, instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
+from campus.examinations.arrears import arrear_courses, has_passed, passed_courses  # noqa: F401  (public API)
 from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
 
@@ -52,6 +52,15 @@ def download_convocation_list(convocation_list):
 	from campus.examinations import convocation
 
 	convocation.download(convocation_list)
+
+
+@frappe.whitelist(methods=["POST"])
+def graduate_convocation_list(convocation_list):
+	"""Record the list's Award Eligible graduates as Graduated from its convocation date (COE); returns {graduated,
+	refused: [{student, reason}]} (L-01)."""
+	from campus.examinations import convocation
+
+	return convocation.graduate(convocation_list)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -149,7 +158,12 @@ def student_registrations(student):
 
 def refresh_student_result(student, exam_session):
 	"""Recompute the student's Student Result of the session when the Result Run has made one (an approved or
-	cancelled exam withdrawal changes a course's code). After publication this makes a new result version."""
+	cancelled exam withdrawal changes a course's code). After publication this makes a new result version. An
+	Affiliated session's results are the university's (M06-10): nothing is recomputed."""
+	from campus.examinations.affiliation import AFFILIATED, session_mode
+
+	if session_mode(exam_session) == AFFILIATED:
+		return
 	if frappe.db.exists(results.RESULT, {"student": student, "exam_session": exam_session}):
 		results.compute_student_result(student, exam_session)
 
@@ -197,6 +211,13 @@ def cgpa(student, courses=None):
 	return graduation.cgpa(student, courses)
 
 
+def had_arrears(student):
+	"""Whether the student ever failed or missed a course at its first appearance (published results), cleared or not."""
+	from campus.examinations import graduation
+
+	return graduation.had_arrears(student)
+
+
 def released_sessions(company, academic_year=None, final_year=False):
 	"""Names of the company's released Exam Sessions (Published, publish_at passed), optionally of one academic year
 	and final-year only: the session reader every examination report and data point shares (P2-T24 fix 1)."""
@@ -232,3 +253,20 @@ def submit_revaluation(student, application):
 	from campus.examinations import student_revaluation
 
 	return student_revaluation.submit(student, application)
+
+
+def offering_assessment(offering):
+	"""M03-03 The offering's CO-attainment inputs: {exam_sessions, students, cia, ese} with question-wise rows
+	{student, question, max_marks, marks, course_outcome, absent}, from released, ratified results only (P3-T10)."""
+	from campus.examinations import attainment_marks
+
+	return attainment_marks.offering_assessment(offering)
+
+
+def next_payroll_date(employee, company, posting_date):
+	"""The payroll date of a one-off earning posted on `posting_date`: that date, or the day after the employee's last
+	submitted Salary Slip of `company` if later (as examiner remuneration). A drafted slip of the month picks the earning
+	up only when it is recalculated. Used by consultancy revenue shares (P3-T20)."""
+	from campus.examinations import remuneration_payment, remuneration_rules
+
+	return remuneration_rules.next_payroll_date(posting_date, remuneration_payment.last_processed_slip_end(employee, company))

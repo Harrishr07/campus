@@ -4,9 +4,10 @@ All of the student's approved breaks together may last at most the Exam Rule Set
 exceptional years when this break is marked exceptional (with a reason). Breaks never overlap, and a student
 already on a break cannot start another. Approval runs through the approval engine (seeded policy: HOD
 recommendation, then Principal approval); with no policy the break is never submitted (fail closed). Final
-approval submits it, keeps the student's academic status in `previous_status` and sets it to Break of Study;
-exam registration and the Result Run then skip the student. Cancelling restores the previous status; so does
-the student's Rejoin Application.
+approval submits it, keeps the student's lifecycle status in `previous_status` and moves the student to On Break
+from the break's start (campus.student_services.lifecycle, M05-09); exam registration and the Result Run then skip
+the student. Cancelling reverses that transition while it is still the student's latest; the student's Rejoin
+Application restores the previous status.
 """
 
 import frappe
@@ -16,7 +17,7 @@ from frappe.permissions import has_user_permission
 from frappe.utils import cint, getdate
 
 from campus.campus_platform.api import ApprovableDocument, latest_enrollment
-from campus.student_services import student_records, withdrawal_rules
+from campus.student_services import lifecycle, lifecycle_rules, student_records, withdrawal_rules
 
 DOCTYPE = "Break of Study"
 ON_BREAK, ACTIVE = student_records.ON_BREAK, "Active"
@@ -42,11 +43,12 @@ class BreakofStudy(ApprovableDocument, Document):
 		self.previous_status = status or ACTIVE
 
 	def on_submit(self):
-		frappe.db.set_value("Student", self.student, "oc_academic_status", ON_BREAK)
+		lifecycle.transition(self.student, ON_BREAK, self.from_date, self.reason, self)
 
 	def on_cancel(self):
-		if frappe.db.get_value("Student", self.student, "oc_academic_status") == ON_BREAK:
-			frappe.db.set_value("Student", self.student, "oc_academic_status", self.previous_status or ACTIVE)
+		# a break migrated from before L-01 is undone to its previous status mapped onto the lifecycle statuses
+		previous = lifecycle_rules.migrated_status(self.previous_status)
+		lifecycle.revert(self, _("Break of Study {0} cancelled").format(self.name), legacy_status=previous)
 
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)

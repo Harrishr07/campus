@@ -1,0 +1,138 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "lab_name",
+  "company",
+  "department",
+  "room",
+  "column_break_1",
+  "in_charge",
+  "technician",
+  "disabled",
+  "asset_location",
+  "courses_section",
+  "courses"
+ ],
+ "fields": [
+  {
+   "fieldname": "lab_name",
+   "fieldtype": "Data",
+   "label": "Lab Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "room",
+   "fieldtype": "Link",
+   "label": "Room",
+   "options": "Room"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "in_charge",
+   "fieldtype": "Link",
+   "label": "In-charge",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Gets the calibration notices."
+  },
+  {
+   "fieldname": "technician",
+   "fieldtype": "Link",
+   "label": "Technician",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "asset_location",
+   "fieldtype": "Link",
+   "label": "Asset Location",
+   "options": "Location",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Made when the laboratory is saved; its equipment is the Assets whose Location is this."
+  },
+  {
+   "fieldname": "courses_section",
+   "fieldtype": "Section Break",
+   "label": "Courses"
+  },
+  {
+   "fieldname": "courses",
+   "fieldtype": "Table",
+   "label": "Courses",
+   "options": "Laboratory Course"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Laboratory",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:lab_name",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "Lab In-charge",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ]
+}

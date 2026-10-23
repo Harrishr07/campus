@@ -340,6 +340,8 @@ class TestBodies(CampusTestCase):
 	def test_existing_pan_moves_to_the_supplier_once(self):
 		from campus.academic_governance.external_member_pan import move_stored_pan_to_suppliers
 
+		if not frappe.db.has_column("External Member", "pan"):  # a test cannot add it (DDL commits)
+			self.skipTest("only sites created before PAN became virtual (7123735) have the stored pan column to move")
 		linked, supplier = self.supplier_member("Linked Person")
 		blocked, other_supplier = self.supplier_member("Filled Person", pan="ZZZZZ9999Z")
 		unlinked = frappe.get_doc("External Member", self.external("Unlinked Person"))

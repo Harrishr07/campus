@@ -1,6 +1,6 @@
 """S5 Demo builder: the whole thin-slice path on top of the "small" demo data (`make_demo("slice")`).
 
-    admit -> fees (4 of 5 paid) -> Effective R2026 curriculum -> offerings -> course registration
+    admit, join -> fees (4 of 5 paid) -> Effective R2026 curriculum -> offerings -> course registration
     -> 8 weeks of schedules and attendance -> CIA + ESE marks -> Result Run -> publish -> Grade Sheet
     -> portal users -> AQAR cycle computed.
 
@@ -21,13 +21,14 @@ from frappe.utils import add_days, getdate, now_datetime
 from frappe.utils.password import update_password
 
 from campus.admissions import eligibility
-from campus.admissions.api import admit
+from campus.admissions.api import admit, confirm_joining
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.campus_platform.verification import issue
 from campus.curriculum.offerings import generate_offerings
-from campus.examinations import results
+from campus.curriculum.rule_seed import CREDIT_PER_PERIOD, REGISTRATION
 from campus.iqac import compute
 from campus.iqac.setup import FRAMEWORK, seed_framework
+from campus.setup.demo_data.shortcuts import publish_results  # the demo's one skipped control, owned there
 from campus.tests import demo
 from campus.tests.finance_factories import make_fee_structure, make_finance_company
 
@@ -188,7 +189,7 @@ def make_fee_structures():
 
 
 def admit_applicants():
-	"""Create the five Approved, Eligible applicants and admit them; returns the Student names in order.
+	"""Create the five Approved, Eligible applicants, admit them and confirm their joining; returns the Student names in order.
 
 	A sixth applicant is created Approved and Eligible but not admitted, so the demo can show the Admit button."""
 	live = LIVE_APPLICANT
@@ -200,6 +201,8 @@ def admit_applicants():
 			applicant = make_applicant(slug, first, last, category, quota)
 		if applicant.application_status != "Admitted":
 			admit(applicant.name)
+		if frappe.db.get_value("Student", {"student_applicant": applicant.name}, "oc_academic_status") in ("Admitted", "Joined"):
+			confirm_joining(applicant.name)
 	return slice_students()
 
 
@@ -242,13 +245,11 @@ def make_curriculum():
 	regulation = regulation_name(REGULATION_CODE, demo.ENGINEERING)
 	demo.get_or_insert(
 		"Curriculum Rule", {"regulation": regulation},
-		{"lecture_credit_per_period": 1, "tutorial_credit_per_period": 1, "practical_credit_per_period": 0.5,
-		"min_total_credits": 0, "max_total_credits": 170},
+		{**CREDIT_PER_PERIOD, "min_total_credits": 0, "max_total_credits": 170},
 	)  # fmt: skip
 	demo.get_or_insert(
 		"Registration Rule", {"regulation": regulation},
-		{"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6, "drop_window_days": 30,
-		"add_from_semester": 5, "max_add_credits": 6, "max_add_courses": 2, "elective_min_enrolment": 10},
+		REGISTRATION,
 	)  # fmt: skip
 	existing = frappe.db.get_value("Curriculum", {"program": PROGRAM, "regulation": regulation, "version": 1})
 	if existing:
@@ -321,6 +322,7 @@ def make_attendance(students, offerings):
 	term = frappe.db.get_value("Student Group", offerings[0], "academic_term")
 	room = demo.get_or_insert("Room", {"room_name": ROOM}, {"room_number": "101", "seating_capacity": "60", "oc_company": demo.ENGINEERING})
 	dates = session_dates(term)
+	attend_from_term_start(students, term)
 	leave = make_medical_leave(students[MEDICAL_STUDENT], dates[MEDICAL_SESSIONS[0]], dates[MEDICAL_SESSIONS[-1]])
 	for course_number, offering in enumerate(offerings):
 		if frappe.db.count("Course Schedule", {"student_group": offering}):
@@ -330,6 +332,14 @@ def make_attendance(students, offerings):
 			schedule = make_schedule(offering, instructor, room, date, course_number)
 			for number, student in enumerate(students):
 				mark_attendance(student, offering, schedule, date, status_for(number, n, course_number), leave)
+
+
+def attend_from_term_start(students, term):
+	"""The demo students join today (the joining date cannot be backdated) but attend from the term start: their
+	attendance start date (M05-12) is moved back so the seeded sessions count."""
+	start = frappe.db.get_value("Academic Term", term, "term_start_date")
+	for student in students:
+		frappe.db.set_value("Program Enrollment", {"student": student, "docstatus": 1}, "oc_attendance_start_date", start)
 
 
 def status_for(number, session, course_number):
@@ -405,20 +415,6 @@ def enter_marks(session, students, offerings):
 		frappe.get_doc(
 			{"doctype": "Mark Sheet Entry", "exam_session": session, "course_offering": offering, "marks": rows}
 		).insert(ignore_permissions=True)
-
-
-def publish_results(session, students):
-	"""Run the results for the five students (as the queued Result Run would), then publish with publish_at in the past."""
-	doc = frappe.get_doc("Exam Session", session)
-	if doc.status == "Published":
-		return
-	for student in students:
-		results.compute_student_result(student, session)
-	doc.status = "Published"
-	doc.publish_at = add_days(now_datetime(), -1)
-	doc.exam_end = doc.exam_end or getdate(add_days(now_datetime(), -21))  # results 20 days after the last exam (AQAR 2.5.1)
-	doc.flags.passing_board_approval = True  # the thin-slice demo has no Passing Board meeting (P2-T19 publish_results)
-	doc.save(ignore_permissions=True)
 
 
 def issue_grade_sheet(session, student):

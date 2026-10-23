@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Masters",
-   "link_count": 8,
+   "link_count": 10,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -50,6 +50,17 @@
    "label": "Classification Rule",
    "link_count": 0,
    "link_to": "Classification Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Degree Awarding Authority",
+   "link_count": 0,
+   "link_to": "Degree Awarding Authority",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -110,10 +121,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "University Exam Format",
+   "link_count": 0,
+   "link_to": "University Exam Format",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Transactions",
-   "link_count": 25,
+   "link_count": 30,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -220,6 +242,28 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Completion Check",
+   "link_count": 0,
+   "link_to": "Completion Check",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Credit Recognition",
+   "link_count": 0,
+   "link_to": "Credit Recognition",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Result Runs",
    "link_count": 0,
    "link_to": "Bulk Run",
@@ -256,6 +300,39 @@
    "label": "Exam Registration",
    "link_count": 0,
    "link_to": "Exam Registration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "University Exam Registration Batch",
+   "link_count": 0,
+   "link_to": "University Exam Registration Batch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "University Result Import",
+   "link_count": 0,
+   "link_to": "University Result Import",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "University Result Import Row",
+   "link_count": 0,
+   "link_to": "University Result Import Row",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -396,7 +473,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 17,
+   "link_count": 18,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -588,10 +665,21 @@
    "type": "Link"
   },
   {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Completion Status",
+   "link_count": 0,
+   "link_to": "Completion Status",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Settings",
-   "link_count": 1,
+   "link_count": 2,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -605,9 +693,20 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Completion Settings",
+   "link_count": 0,
+   "link_to": "Completion Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-10 00:30:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Examinations",
@@ -637,6 +736,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Examiner"
+  },
+  {
+   "role": "Exam Confidential"
   }
  ],
  "sequence_id": 43.0,

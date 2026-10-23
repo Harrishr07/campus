@@ -10,11 +10,18 @@ from campus.curriculum.outcomes import (  # noqa: F401  (public API, M03-02)
 )
 
 
-def unmet_prerequisites(student, prerequisites):
+def unmet_prerequisites(student, prerequisites, cache=None):
 	"""M03-07 The courses of `prerequisites` (a curriculum row's text) that `student` has not passed in a published
-	result (examinations.api.has_passed). Transfers, equivalences and waivers have no records yet (M03-09), so they
-	satisfy nothing here; a row with an unmet prerequisite is held for review, never passed."""
+	result (examinations.api.passed_courses; a `cache` dict kept across the rows of one registration reads them once).
+	Transfers, equivalences and waivers have no records yet (M03-09), so they satisfy nothing here; a row with an unmet
+	prerequisite is held for review, never passed."""
 	from campus.curriculum.registration_rules import prerequisite_codes
-	from campus.examinations.api import has_passed  # lazy: examinations.api pulls in the finance stack
+	from campus.examinations.api import passed_courses  # lazy: examinations.api pulls in the finance stack
 
-	return [course for course in prerequisite_codes(prerequisites) if not has_passed(student, course)]
+	codes = prerequisite_codes(prerequisites)
+	if not codes:
+		return []
+	cache = {} if cache is None else cache
+	if student not in cache:
+		cache[student] = passed_courses(student)
+	return [course for course in codes if course not in cache[student]]

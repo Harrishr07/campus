@@ -12,6 +12,8 @@ from campus.student_services.attendance_rules import (
 	bucket,
 	eligibility,
 	overall_percentage,
+	session_counts,
+	session_mark,
 )
 
 COUNTING = {"od_counts": 1, "medical_counts": 1}
@@ -96,3 +98,41 @@ class TestLeaveKindsAndMarks(UnitTestCase):
 
 	def test_no_bands_means_no_marks(self):
 		self.assertEqual(attendance_marks([], 100), 0)
+
+
+class TestSessionStates(UnitTestCase):
+	"""M05-12 which class sessions are conducted, and how a covering leave marks one."""
+
+	def test_only_held_sessions_count(self):
+		cases = [  # state, replaced by a makeup, counts
+			("Scheduled", False, True), (None, False, True), ("", False, True), ("Conducted", False, True), ("Makeup", False, True),
+			("Cancelled", False, False), ("Rescheduled", False, False), ("Conducted", True, False), ("Scheduled", True, False),
+		]  # fmt: skip
+		for state, replaced, counts in cases:
+			with self.subTest(state=state, replaced=replaced):
+				self.assertEqual(session_counts(state, replaced), counts)
+
+	def test_a_covering_leave_marks_anything_but_present(self):
+		cases = [  # record status, record leave kind, covering leave kind, result
+			("Present", None, "Medical", ("Present", None)),
+			("Absent", None, "On Duty", ("Leave", "On Duty")),
+			(None, None, "Medical", ("Leave", "Medical")),
+			("Leave", None, "Medical", ("Leave", "Medical")),
+			("Leave", "On Duty", "Medical", ("Leave", "On Duty")),
+			("Absent", None, None, ("Absent", None)),
+			(None, None, None, (None, None)),
+		]
+		for status, kind, covering, result in cases:
+			with self.subTest(status=status, kind=kind, covering=covering):
+				self.assertEqual(session_mark(status, kind, covering), result)
+
+	def test_a_covering_leave_marked_as_present_makes_the_session_present(self):
+		cases = [  # record status, record leave kind, covering leave kind, result
+			("Absent", None, "On Duty", ("Present", None)),
+			(None, None, None, ("Present", None)),
+			("Leave", "Medical", "On Duty", ("Leave", "Medical")),  # its own application stands
+			("Present", None, "Medical", ("Present", None)),
+		]
+		for status, kind, covering, result in cases:
+			with self.subTest(status=status, kind=kind, covering=covering):
+				self.assertEqual(session_mark(status, kind, covering, covering_present=True), result)

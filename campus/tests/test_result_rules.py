@@ -171,8 +171,19 @@ class TestConfigurationGaps(UnitTestCase):
 		self.assertEqual(len(found), 1)
 		self.assertIn("R2030", found[0][1])
 
-	def test_a_student_without_a_regulation_is_a_gap(self):
-		self.assertEqual(self.gaps(self.course(regulations=(None,))), ["TH (G1)"])
+	def test_a_student_without_a_regulation_is_a_gap_naming_the_student(self):
+		course = {**self.course(regulations=()), "unregulated": {"STU-2", "STU-1"}}
+		found = configuration_gaps([course], self.RULES)
+		self.assertEqual([reason for _label, reason in found], ["student STU-1 has no regulation", "student STU-2 has no regulation"])
+
+	def test_a_regulation_with_more_than_one_rule_set_is_a_gap(self):
+		found = configuration_gaps([self.course()], self.RULES, duplicated={"R2022"})
+		self.assertEqual(len(found), 1)
+		self.assertIn("more than one Exam Rule Set", found[0][1])
+
+	def test_an_internal_only_course_needs_no_regulation(self):
+		course = {**self.course(exam_type="Internal Only", course_type=None, regulations=()), "unregulated": {"STU-1"}}
+		self.assertEqual(configuration_gaps([course], self.RULES), [])
 
 	def test_every_gap_of_a_course_is_listed(self):
 		course = self.course(exam_type="Practical", course_type="Lab", regulations=("R2026", "R2030"))

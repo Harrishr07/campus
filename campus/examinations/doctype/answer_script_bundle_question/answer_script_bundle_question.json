@@ -5,7 +5,8 @@
  "engine": "InnoDB",
  "field_order": [
   "question",
-  "max_marks"
+  "max_marks",
+  "course_outcome"
  ],
  "fields": [
   {
@@ -21,11 +22,18 @@
    "label": "Max Marks",
    "reqd": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "course_outcome",
+   "fieldtype": "Data",
+   "label": "CO",
+   "in_list_view": 1,
+   "description": "The Course Outcome code (CO1, CO2 ...) this question assesses; CO attainment counts its marks."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 23:30:00.000000",
+ "modified": "2026-10-22 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Examinations",
  "name": "Answer Script Bundle Question",

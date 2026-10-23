@@ -6,7 +6,7 @@ cia_max / ese_max falls back to the student's Exam Rule Set.
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import escape_html, flt
 
 from campus.campus_platform.api import get_rule
 
@@ -14,8 +14,9 @@ COURSE_FIELDS = ["exam_type", "category", "credits", "cia_max", "ese_max", "prac
 
 
 def offering_course(offering):
-	"""{course, exam_type, course_type, category, credits, cia_max, ese_max} of an offering; course_type None for
-	Internal Only. `exam_type` is the curriculum row's own value: blank is unconfigured, not Internal Only (M06-12)."""
+	"""{course, exam_type, configured, course_type, category, credits, cia_max, ese_max} of an offering. `exam_type`
+	is the curriculum row's own value: blank is unconfigured (configured False), never read as Internal Only or Theory
+	(M06-12); course_type is None for both a blank and Internal Only."""
 	group = frappe.db.get_value(
 		"Student Group", offering, ["course", "oc_curriculum", "oc_semester"], as_dict=True
 	)
@@ -30,6 +31,7 @@ def offering_course(offering):
 	return {
 		"course": group.course,
 		"exam_type": row.exam_type,
+		"configured": bool(row.exam_type),
 		"course_type": course_type(row),
 		"category": row.category,
 		"credits": flt(row.credits),
@@ -39,7 +41,7 @@ def offering_course(offering):
 
 
 def course_type(row):
-	if row.exam_type == "Internal Only":
+	if not row.exam_type or row.exam_type == "Internal Only":  # blank: unconfigured, never a guessed Theory
 		return None
 	if row.exam_type == "Practical":
 		return "Lab"
@@ -55,6 +57,8 @@ def student_limits(student, course):
 
 def rule_limits(rule_set, course, student=None):
 	"""Values of `rule_set` (an Exam Rule Set) for `course`: maxima resolved, pass thresholds, the attempt rule and revaluation eligibility."""
+	if not course["course_type"]:  # blank or Internal Only: no ESE rule applies, never a guessed Theory (M06-12)
+		frappe.throw(_("Course {0} has no exam type with an end-semester exam.").format(frappe.bold(escape_html(course["course"]))))
 	for row in rule_set.types:
 		if row.course_type == course["course_type"]:
 			return {

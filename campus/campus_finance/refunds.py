@@ -1,5 +1,5 @@
 """M09-01 Refund builders shared by Admission Cancellation and Fee Refund: what the student paid, the Credit Note and the
-draft refund Payment Entry.
+draft refund Payment Entry; for an admission cancelled before joining (M04-10), the advance paid and its draft refund.
 
 Both are built here rather than with ERPNext's make_return_doc / get_payment_entry, which check the officer's own
 rights on documents (the invoice, Payment Entry) the officer does not hold. Callers resolve every input on the server.
@@ -131,6 +131,41 @@ def make_refund_payment(credit_note, amount, reference_no, remarks):
 					"allocated_amount": -flt(amount),
 				}
 			],
+		}
+	)  # fmt: skip
+	payment.flags.ignore_permissions = True
+	return payment.insert()
+
+
+def unallocated_advance(customer, company, locking=False):
+	"""Money `customer` paid `company` that nothing settles yet: unallocated amounts of submitted Payment Entries
+	(Receive) less those of refunds already paid out to them (Pay), never below zero. Scholarship disbursements are
+	not the student's money and never count. Read FOR UPDATE when `locking`."""
+	rows = frappe.db.sql(
+		"select pe.payment_type, sum(pe.unallocated_amount) from `tabPayment Entry` pe"
+		" where pe.docstatus = 1 and pe.party_type = 'Customer' and pe.party = %s and pe.company = %s"
+		" and pe.payment_type in ('Receive', 'Pay') and pe.unallocated_amount > 0"
+		f" and not exists ({DISBURSED.format('pe')}) group by pe.payment_type" + (" for update" if locking else ""),
+		(customer, company, "Payment Entry"),
+	)
+	totals = {payment_type: flt(amount) for payment_type, amount in rows}
+	return flt(max(totals.get("Receive", 0) - totals.get("Pay", 0), 0), 2)
+
+
+def make_advance_refund(customer, company, amount, reference_no, remarks, **fields):
+	"""Draft Payment Entry (Pay) of `amount` to `customer`, against no invoice: the refund of an advance, for accounts
+	to review and submit (and reconcile with the advance). Dated today (GL date); `fields` are set on it as well."""
+	from erpnext.accounts.party import get_party_account
+
+	bank = frappe.db.get_value("Company", company, "default_bank_account")
+	if not bank:
+		frappe.throw(_("Set a default bank account for {0} to draft the refund payment.").format(company))
+	payment = frappe.get_doc(
+		{
+			"doctype": "Payment Entry", "payment_type": "Pay", "company": company, "posting_date": today(),
+			"party_type": "Customer", "party": customer, "paid_from": bank,
+			"paid_to": get_party_account("Customer", customer, company), "paid_amount": amount, "received_amount": amount,
+			"reference_no": reference_no, "reference_date": today(), "remarks": remarks, **fields,
 		}
 	)  # fmt: skip
 	payment.flags.ignore_permissions = True

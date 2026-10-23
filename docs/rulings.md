@@ -174,3 +174,47 @@ Retained (sourced): Governing Body 5-year term, 2 meetings a year, quorum 50%, a
 | 2 | Photocopy and justification before revaluation | R2022 only (cl. 16.4); AU-R2021 and R2026 go straight to revaluation |
 | 3 | Review window | the same window from the release, so a revaluation finished late leaves no time for a review |
 | 4 | Fees | none seeded: each college sets them on its Exam Fee Rate |
+
+## Roadmap rulings (2026-10-22, delegated by the user)
+- **Scope**: our BRD stays the scope; section 16 (v0.2) adds requirements taken from an external team's review. Plan: docs/phases/roadmap-2026-10.md (Waves 0-5 complete the project).
+- **L-02 joining gate**: adopted. Admission approval no longer creates Program Enrollment, tuition invoice or ID; Joining Confirmation does, and sets the attendance start date. Pre-joining money is an advance (Payment Entry against the applicant's customer), not an invoice. Existing admitted records are left as they are; a patch marks them joined on their enrollment date.
+- **P4-T18 concession model v2**: built configurable. Seeded default: one of each concession sub-type per admission, fee subhead and semester; combined cap 100% of the subhead; order = fixed-amount sub-types first, then percentages on the remainder. Pending confirmation by the pilot college.
+- **Pending values** in this file stay as seeded defaults and stay marked "Pending confirmation"; no new work waits for them.
+- **Test sites**: four lanes, campus-test, campus-test2, campus-test3 and the new campus-test4. campus-test is rebuilt from scratch (stale payroll seed and leaked fee structures). All test runs go through the shared test guard.
+- **L-01 lifecycle statuses** (accepted after review): Detained is no longer a status; it is the flag Student.oc_detained and the student stays Active. Long Absent migrates to Active. A TC moves the student to Withdrawn, only while on roll. Convocation List gives Study Completed then Award Eligible; the COE's Mark Graduated gives Graduated. One status per student, not per enrollment; each transition records its Program Enrollment.
+- **Test sites, update**: campus-test5 added (lane E) so the L-01 fix round does not wait for a lane.
+- **P3-T10 attainment access**: IQAC Coordinator reads CO/PO runs and their aggregate figures (needed for AQAR 2.6.2 and NBA); per-student marks behind a run are readable only by System Manager, Controller of Examinations and Dean Academics. Choice papers ("answer any N") are handled only by "no mark row = not attempted" plus a Choice Paper flag; full choice-group modelling is deferred.
+- **X-01 affiliated mode**: Examination Mode is an explicit Institution Profile field (override per Exam Rule Set); an affiliated exam is its own Exam Session (unique per company + term + mode); the Controller of Examinations is the exam-cell role; CIA counts as final once the offering's CIA Schedule is locked; imported results take grade points from our Grading Scheme. The Examinations workspace follows Examination Mode, so an affiliated college sees CIA and the university exchange (its internal result run stays refused). SXCCE (the pilot audience) is autonomous.
+- **X-03 completion**: a thin Credit Recognition register (waiver, transfer, equivalence; M03-09 cut) counts a cleared course once, and L-05 extends it later. Honours and Minor credits are shown but do not block the degree, which is then awarded without the variant. No Effective curriculum means the check is Incomplete. No disciplinary hold is checked until confidential cases (P4-T16) exist. Alumni follows graduation after 30 days by default (placeholder, Completion Settings).
+
+## PR-02 Pilot setup kit (2026-10-22)
+- Ruling: the kit is data-driven (campus/setup/profiles/<name>.json, validated before any write); a second college is a second file. Exam rules reuse `campus.examinations.seed` by regulation code; Curriculum, Registration and Attendance Rule values are the R2022 ones already used by the demo (research note section 3).
+- Ruling: passwords. A fixed TEST password is set only on developer-mode or `campus_demo_site` sites; on any other site no password is stored and each new user gets a one-time "password expired" reset link, so the first login sets their own. Cost if wrong: admins distribute links instead of one password.
+- Ruling: master-data import templates already exist (`legacy_import.TEMPLATES`); only a "Fee Structures" template was added. Course Offerings are generated from the curriculum, not imported.
+- Ruling: locked records (Effective regulation and its rules, submitted Fee Structure) are never edited by a re-run; a difference is reported in the run's notes.
+
+### Pending confirmation (PR-02 synthetic profile values)
+| # | Item | Seeded value |
+|---|------|--------------|
+| 1 | Programme intake | 60 per programme (B.E. CSE, ECE, EEE, MECH, CIVIL; B.Tech IT) |
+| 2 | Quota shares | Government 65%, Management 35% |
+| 3 | Government quota category split | OC 31, BC 30, MBC 20, SC 18, ST 1 (Tamil Nadu community reservation, grouped); Management all OC |
+| 4 | Fee amounts | Placeholders per quota; the college supplies its approved schedule |
+| 5 | Autonomy date of the college | not set |
+| 6 | Attendance Rule R2022: condonation fee | Rs 500; unsourced |
+| 7 | Attendance Rule R2022: OD and medical leave count towards attendance | both count (od_counts, medical_counts = 1); unsourced |
+| 8 | Attendance Rule R2022: per-course minimum | 0 (none); the note gives only the overall 75% and the 65% medical band |
+| 9 | Registration Rule R2022: Honours | CGPA 7.5 up to semester 3, no arrears (sourced for 7.5; the semester and arrears rule are the college's to confirm) |
+| 10 | Registration Rule R2022: windows and caps | drop window 30 days, add from semester 5, add up to 6 credits / 2 courses, drop up to 6 credits, elective minimum enrolment 10, 36 credits a semester; unsourced except 36 |
+| 11 | Curriculum Rule R2022 | 165-170 total credits, L 1 / T 1 / P 0.5 credit per period |
+
+Rule values of Curriculum, Registration and Attendance Rule now live in one module (`campus/curriculum/rule_seed.py`), used by the demo data and by the pilot kit.
+
+- **X-04 certificate reissue**: the duplicate fee applies to Damaged, Lost and Duplicate reissues; a correction of particulars is free. Damaged, Lost and Duplicate print DUPLICATE; a correction prints REISSUED; both print "In place of No. ...". A duplicate reprints the original record; a correction freezes the current one. Reissue is requested at the desk only. A reissued TC never runs the lifecycle change again.
+- **L-08 record corrections**: one field per correction request. Locked against direct edit by default: date of birth, Aadhaar, register number, roll number (configurable in Student Correction Settings, override role System Manager). Identity and academic-identifier corrections need COE then Principal; other categories COE. Students and guardians may raise Personal, Contact and Guardian corrections from the portal; Contact needs no evidence. A new Aadhaar number is stored encrypted and only masked values appear in history.
+- **PR-05 permissions**: Placement Officers keep delete on Round Result so shortlists can be corrected before results are final.
+- **L-07 attendance**: a past session still in Scheduled counts as held (only Cancelled, Rescheduled-away and Makeup-replaced sessions drop out; marking sets Conducted). The attendance start date is the earliest of the student's submitted Program Enrollments and applies only inside the term's counted window. On Duty counts as present and Medical counts only in the medical band, per the Attendance Rule; covering leave is applied when counting, without writing attendance rows. The 48-hour correction cut-off runs from the period's first marking. Session states are changed at the desk.
+- **Approvers can read what they approve**: the approval engine drops approvers who cannot read the record (with their company User Permissions) and refuses a level only when too few readable approvers remain. The Principal gets company-scoped read on Examiner Remuneration Claim and Certificate Request, as on Scholarship Application, because the Principal approves them.
+- **L-03 reporting and no-shows**: a no-show gets the whole unallocated pre-joining advance back (net of refunds already paid, excluding scholarship disbursements), with no Refund Rule deduction because nothing was invoiced; the refund is a draft payment for Accounts to submit. Joining after the reporting deadline needs an approved late-joining request for that exact date. Admit stamps the deadline on the Student so each round keeps its own; a programme can override it. A temporary clearance for pending documents is granted before Admit. A no-show is referred as a draft Admission Cancellation; nothing is cancelled until an officer submits it.
+- **Desk navigation**: every campus area is restricted to the roles that work in it; Approvals is for staff roles only. Students and guardians use the campus portal and have no desk access (Role.desk_access = 0 for Student and Guardian).
+- **Pilot roles, least privilege**: teachers, HODs, the class advisor and the COE do not hold the office role Academics User; each gets only the rights its work needs (campus/faculty/setup.py grant_teaching_staff_rights). Staff may read the college's student list across departments (teaching crosses departments); confidential records keep their own scoping. HOD and class advisor read college-wide attendance for shortage reporting.

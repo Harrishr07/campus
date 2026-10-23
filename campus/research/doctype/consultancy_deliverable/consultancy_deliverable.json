@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "deliverable",
+  "due_date",
+  "status",
+  "delivered_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "deliverable",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Deliverable",
+   "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Due Date"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nDelivered",
+   "reqd": 1
+  },
+  {
+   "fieldname": "delivered_on",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Delivered On",
+   "mandatory_depends_on": "eval:doc.status=='Delivered'"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-22 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Research",
+ "name": "Consultancy Deliverable",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -94,6 +94,14 @@ def offering_of(doc):
 PORTAL_ROLES = ("Student", "Guardian")
 MENTOR_ROLE = "Mentor"  # read right on Student only, narrowed to the user's mentees below
 SCOPED_ROLES = (*PORTAL_ROLES, MENTOR_ROLE)
+CLASS_ADVISOR_ROLE = "Class Advisor"
+# A Class Advisor reads these only for the students they advise (Student.oc_class_advisor, from the CLASS-ADVISOR
+# Position Holder of the student's group): condonation evidence is medical or on-duty proof, not a college-wide record.
+ADVISOR_SCOPED = ("Condonation Request",)
+
+
+def scoped_roles(doctype):
+	return (*SCOPED_ROLES, CLASS_ADVISOR_ROLE) if doctype in ADVISOR_SCOPED else SCOPED_ROLES
 
 
 def students_of(user):
@@ -114,6 +122,11 @@ def mentees_of(user):
 		return set()
 	employees = frappe.get_all("Employee", {"user_id": user}, pluck="name")
 	return set(frappe.get_all("Student", {"oc_mentor": ["in", employees]}, pluck="name")) if employees else set()
+
+
+def advised_students(user):
+	"""Students whose class advisor (Student.oc_class_advisor) is the user."""
+	return set(frappe.get_all("Student", {"oc_class_advisor": user}, pluck="name")) if user else set()
 
 
 def visible_students(user):
@@ -208,6 +221,8 @@ def may_see_confidential(doc, user):
 		return False
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return True
+	if frappe.flags.approval_candidate == user:  # being appointed its approver right now: the same as having handled it
+		return True
 	handled = frappe.db.sql(f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}")
 	department = doc.get("department")
 	return bool(handled) or bool(department and department in held_scopes(user, HANDLER_POSITION))
@@ -218,20 +233,22 @@ def own_students(user):
 
 
 def sees_all_students(user, doctype="Student"):
-	"""True when a role other than Student/Guardian/Mentor gives the user level-0 read access to the doctype."""
+	"""True when a role other than Student/Guardian/Mentor (and Class Advisor on ADVISOR_SCOPED) gives the user level-0
+	read access to the doctype."""
 	if user == "Administrator":
 		return True
-	roles = set(frappe.get_roles(user)) - set(SCOPED_ROLES)
+	roles = set(frappe.get_roles(user)) - set(scoped_roles(doctype))
 	return any(p.role in roles and p.read and not p.permlevel for p in frappe.get_meta(doctype).permissions)
 
 
 def portal_permission_query(user=None, doctype="Student"):
-	"""Narrow the Student, Guardian and Mentor roles to rows of their own / linked / mentored students."""
+	"""Narrow the Student, Guardian and Mentor roles to rows of their own / linked / mentored students (and the Class
+	Advisor role on ADVISOR_SCOPED to their advised students)."""
 	user = user or frappe.session.user
 	if sees_all_students(user, doctype):
 		return confidential_clause(user, doctype)
-	field, keys_of = PORTAL_SCOPES[doctype]
-	names = ", ".join(frappe.db.escape(k) for k in keys_of(user)) or "''"
+	field = PORTAL_SCOPES[doctype][0]
+	names = ", ".join(frappe.db.escape(k) for k in scope_keys(user, doctype)) or "''"
 	clause = f"`tab{doctype}`.`{field}` in ({names})"
 	if doctype in CONFIDENTIAL_FIELDS:  # a guardian reads the ordinary rows of their ward, not the confidential ones
 		own = ", ".join(frappe.db.escape(k) for k in own_students(user)) or "''"
@@ -244,10 +261,18 @@ def portal_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if sees_all_students(user, doc.doctype):
 		return may_see_confidential(doc, user)
-	field, keys_of = PORTAL_SCOPES[doc.doctype]
+	field = PORTAL_SCOPES[doc.doctype][0]
 	if doc.doctype in CONFIDENTIAL_FIELDS and doc.get(CONFIDENTIAL_FIELDS[doc.doctype]):
 		return doc.get(field) in own_students(user)
-	return doc.get(field) in keys_of(user)
+	return doc.get(field) in scope_keys(user, doc.doctype)
+
+
+def scope_keys(user, doctype):
+	"""The keys a scoped user may read rows of: the portal scope, plus the advised students on ADVISOR_SCOPED."""
+	keys = set(PORTAL_SCOPES[doctype][1](user))
+	if doctype in ADVISOR_SCOPED and CLASS_ADVISOR_ROLE in frappe.get_roles(user):
+		keys |= advised_students(user)
+	return keys
 
 
 # ---- Student Result -----------------------------------------------------------------------

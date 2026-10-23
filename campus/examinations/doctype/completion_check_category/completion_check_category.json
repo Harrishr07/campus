@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "states": [],
+ "name": "Completion Check Category",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "category",
+  "required_credits",
+  "earned_credits",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "label": "Category",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "required_credits",
+   "fieldtype": "Float",
+   "label": "Required",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "earned_credits",
+   "fieldtype": "Float",
+   "label": "Earned",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Met\nShort\nNot Required",
+   "in_list_view": 1,
+   "read_only": 1
+  }
+ ],
+ "permissions": [],
+ "module": "Examinations",
+ "istable": 1,
+ "editable_grid": 0
+}

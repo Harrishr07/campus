@@ -1,0 +1,48 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Record corrections") }}</h2>
+<p>{{ _("Ask the college office to correct a detail of your record. A change is made only after approval; your lifecycle status cannot be changed here.") }}</p>
+<form class="cp-card cp-form" data-method="campus.student_services.corrections.raise_correction">
+	<input type="hidden" name="student" value="{{ student|e }}">
+	<label for="cp-field">{{ _("What needs correcting") }}</label>
+	<select id="cp-field" name="field_name" required>
+		{% for group in fields %}
+		<optgroup label="{{ _(group.category)|e }}">
+			{% for f in group.fields %}<option value="{{ f.fieldname|e }}" data-category="{{ group.category|e }}">{{ f.label|e }}</option>{% endfor %}
+		</optgroup>
+		{% endfor %}
+	</select>
+	<input type="hidden" name="category" value="">
+	<label for="cp-guardian">{{ _("Guardian (for guardian details)") }}</label>
+	<select id="cp-guardian" name="guardian">
+		<option value="">-</option>
+		{% for g in guardians %}<option value="{{ g.name|e }}">{{ g.guardian_name|e }}</option>{% endfor %}
+	</select>
+	<label for="cp-new-value">{{ _("Correct value") }}</label>
+	<input id="cp-new-value" name="new_value" type="text" required>
+	<label for="cp-reason">{{ _("Reason") }}</label>
+	<textarea id="cp-reason" name="reason" rows="3" required></textarea>
+	<label for="cp-file">{{ _("Evidence (PDF, JPG or PNG; required except for contact details; kept private)") }}</label>
+	<input id="cp-file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png">
+	<button class="cp-btn" type="submit">{{ _("Submit") }}</button>
+	<p class="cp-message" role="alert"></p>
+</form>
+<script>
+	(function () {
+		var form = document.querySelector("form[data-method$='raise_correction']");
+		var select = form.querySelector("#cp-field");
+		function sync() { form.querySelector("input[name=category]").value = select.selectedOptions[0].dataset.category; }
+		select.addEventListener("change", sync);
+		sync();
+	})();
+</script>
+{% if not corrections %}<p class="cp-empty">{{ _("No corrections raised.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for c in corrections %}
+	<li>
+		<strong>{{ c.field_name|e }}</strong> <span class="cp-badge">{{ _(c.status)|e }}</span><br>
+		{{ c.old_value|e }} &rarr; {{ c.new_value|e }}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

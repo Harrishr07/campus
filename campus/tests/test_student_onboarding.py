@@ -6,7 +6,7 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform.verification import verify
-from campus.student_services import api, onboarding
+from campus.student_services import api, lifecycle_rules, onboarding
 from campus.student_services.doctype.student_onboarding.student_onboarding import completion_percent
 from campus.tests.test_admission_flow import COLLEGE, OC, OTHER_COLLEGE, PROGRAM, QUOTA, YEAR, AdmitTestCase
 
@@ -73,10 +73,7 @@ class TestStudentFields(AdmitTestCase):
 			"oc_lateral_entry", "oc_onboarding_completion",
 		):
 			self.assertTrue(meta.has_field(fieldname), fieldname)
-		self.assertEqual(
-			meta.get_field("oc_academic_status").options.split("\n"),
-			["Active", "Detained", "Discontinued", "Completed", "Long Absent", "Break of Study"],
-		)
+		self.assertEqual(meta.get_field("oc_academic_status").options.split("\n"), lifecycle_rules.STATUSES)  # L-01
 
 	def test_admit_sets_quota_and_lateral_entry(self):
 		self.matrix([(QUOTA, OC, 2)])
@@ -115,10 +112,16 @@ class TestOnboarding(AdmitTestCase):
 		onboarding.ensure_default_template(COLLEGE)
 
 	def admitted_student(self):
+		"""Admitted and joined: the onboarding checklist follows the joining confirmation (M04-09)."""
 		self.matrix([(QUOTA, OC, 5)])
-		return self.admit_as_officer(self.applicant())["student"]
+		return self.admit_and_join(self.applicant())["student"]
 
-	def test_admission_creates_checklist_from_template(self):
+	def test_approval_alone_makes_no_checklist(self):
+		self.ensure_template()
+		student = self.admit_as_officer(self.applicant())["student"]
+		self.assertFalse(frappe.db.exists("Student Onboarding", {"student": student}))
+
+	def test_joining_creates_checklist_from_template(self):
 		self.ensure_template()
 		student = self.admitted_student()
 		checklist = frappe.get_doc("Student Onboarding", {"student": student})
@@ -371,8 +374,8 @@ class TestMyOnboarding(AdmitTestCase):
 
 		onboarding.ensure_default_template(COLLEGE)
 		self.matrix([(QUOTA, OC, 5)])
-		mine = self.admit_as_officer(self.applicant())["student"]
-		other = self.admit_as_officer(self.applicant())["student"]
+		mine = self.admit_and_join(self.applicant())["student"]
+		other = self.admit_and_join(self.applicant())["student"]
 		make_role_user("t18-student@example.com", "Student")
 		self.addCleanup(frappe.clear_cache, user="t18-student@example.com")
 		frappe.db.set_value("Student", mine, "user", "t18-student@example.com")
@@ -400,7 +403,7 @@ class TestIdCardEscaping(AdmitTestCase):
 	def test_name_and_photo_are_escaped_on_the_card(self):
 		onboarding.ensure_default_template(COLLEGE)
 		self.matrix([(QUOTA, OC, 2)])
-		student = self.admit_as_officer(self.applicant())["student"]
+		student = self.admit_and_join(self.applicant())["student"]
 		frappe.db.set_value("Student", student, {"student_name": "<script>alert(1)</script>", "image": '/x.png" onerror="y'})
 		html = frappe.get_print("Student", student, "Student ID Card")
 		self.assertNotIn("<script>alert(1)</script>", html)
@@ -420,7 +423,7 @@ class TestIdCard(AdmitTestCase):
 	def test_id_card_prints_photo_and_verifiable_qr(self):
 		onboarding.ensure_default_template(COLLEGE)
 		self.matrix([(QUOTA, OC, 2)])
-		student = self.admit_as_officer(self.applicant())["student"]
+		student = self.admit_and_join(self.applicant())["student"]
 		frappe.db.set_value("Student", student, {"image": "/files/t18-photo.png", "blood_group": "B+"})
 		before = frappe.get_print("Student", student, "Student ID Card")
 		self.assertIn("/files/t18-photo.png", before)

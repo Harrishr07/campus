@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "Attainment Policy",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Link",
+   "label": "Regulation",
+   "options": "Regulation",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "read_only": 1,
+   "options": "Company",
+   "fetch_from": "regulation.company",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_level",
+   "fieldtype": "Float",
+   "label": "CO Target Level",
+   "reqd": 1,
+   "in_list_view": 1,
+   "non_negative": 1,
+   "description": "A CO meets its target when its final level is at least this."
+  },
+  {
+   "fieldname": "po_target_level",
+   "fieldtype": "Float",
+   "label": "PO / PSO Target Level",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled",
+   "description": "A policy a submitted run used cannot be changed: disable it and create a new policy for the regulation. One active policy per regulation."
+  },
+  {
+   "fieldname": "section_weights",
+   "fieldtype": "Section Break",
+   "label": "Weights"
+  },
+  {
+   "fieldname": "direct_weight",
+   "fieldtype": "Percent",
+   "label": "Direct Weight",
+   "reqd": 1,
+   "default": "80",
+   "in_list_view": 1,
+   "description": "CO final = direct x this + indirect (course exit survey) x Indirect Weight."
+  },
+  {
+   "fieldname": "indirect_weight",
+   "fieldtype": "Percent",
+   "label": "Indirect Weight",
+   "reqd": 1,
+   "default": "20"
+  },
+  {
+   "fieldname": "po_indirect_weight",
+   "fieldtype": "Percent",
+   "label": "PO Indirect Weight",
+   "reqd": 1,
+   "default": "20",
+   "description": "PO / PSO final = mapped CO attainment x (100 - this) + programme exit survey x this."
+  },
+  {
+   "fieldname": "column_break_weights",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cia_weight",
+   "fieldtype": "Percent",
+   "label": "CIA Share of Direct",
+   "reqd": 1,
+   "default": "40"
+  },
+  {
+   "fieldname": "ese_weight",
+   "fieldtype": "Percent",
+   "label": "ESE Share of Direct",
+   "reqd": 1,
+   "default": "60"
+  },
+  {
+   "fieldname": "student_threshold",
+   "fieldtype": "Percent",
+   "label": "Student Threshold",
+   "reqd": 1,
+   "default": "60",
+   "description": "A student attains a CO in a tool (CIA or ESE) when scoring at least this % of the marks of the questions tagged with it."
+  },
+  {
+   "fieldname": "survey_scale",
+   "fieldtype": "Int",
+   "label": "Survey Rating Scale",
+   "reqd": 1,
+   "default": "5",
+   "non_negative": 1,
+   "description": "The highest rating of the exit surveys' Likert scale (the feedback forms rate 1-5): the mean rating over this, times the top level, is the indirect level."
+  },
+  {
+   "fieldname": "section_bands",
+   "fieldtype": "Section Break",
+   "label": "Level Bands",
+   "description": "The level of a tool is the highest band whose minimum share of students it reaches (0 below the first). The survey's mean rating, as a share of 5, is scaled to the top level."
+  },
+  {
+   "fieldname": "level_bands",
+   "fieldtype": "Table",
+   "label": "Level Bands",
+   "options": "Attainment Level Band",
+   "reqd": 1
+  }
+ ],
+ "field_order": [
+  "regulation",
+  "company",
+  "column_break_scope",
+  "target_level",
+  "po_target_level",
+  "disabled",
+  "section_weights",
+  "direct_weight",
+  "indirect_weight",
+  "po_indirect_weight",
+  "column_break_weights",
+  "cia_weight",
+  "ese_weight",
+  "student_threshold",
+  "survey_scale",
+  "section_bands",
+  "level_bands"
+ ],
+ "autoname": "format:ATP-{regulation}-{##}",
+ "naming_rule": "Expression",
+ "title_field": "regulation",
+ "search_fields": "regulation",
+ "track_changes": 1
+}

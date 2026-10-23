@@ -7,7 +7,8 @@ child-table row (a second guardian, a second curriculum course) sits on the foll
 cells blank.
 
 Sheets and the order to load them
-1. Programs, Courses, Employees, Instructors, then Curriculum Rows (Curriculum plus its courses).
+1. Programs, Courses, Employees, Instructors, then Curriculum Rows (Curriculum plus its courses). Fee Structures
+   (one per programme and quota, a component per line) load on their own; the pilot kit's fee step makes the same.
 2. Students: Register No, name, e-mail, Company, Batch, Regulation, Aadhaar and the Guardians rows. The
    Guardian masters must exist (Guardian is imported on its own or created at enquiry).
 3. Student Enrolments: Program Enrollment rows carrying the Category and the Admission Quota. The Student
@@ -189,6 +190,21 @@ TEMPLATES = {
 		"doctype": "Instructor",
 		"fields": {"Instructor": ["instructor_name", "employee", "department", "status", "gender"]},
 		"required": ["instructor_name", "employee"],
+	},
+	"Fee Structures": {
+		"doctype": "Fee Structure",
+		"fields": {
+			"Fee Structure": [
+				"company",
+				"program",
+				"academic_year",
+				"oc_admission_quota",
+				"receivable_account",
+				"cost_center",
+			],
+			"components": ["fees_category", "amount"],
+		},
+		"required": ["company", "program", "academic_year", "receivable_account", "cost_center", "fees_category", "amount"],
 	},
 	"Opening Fee Balances": {
 		"doctype": "Sales Invoice",

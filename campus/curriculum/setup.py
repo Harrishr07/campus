@@ -21,8 +21,11 @@ COURSE_CATEGORIES = {
 
 
 def setup_curriculum():
+	from campus.curriculum.recognitions import seed_recognition_policy
+
 	setup_curriculum_fields()
 	seed_course_categories()
+	seed_recognition_policy()  # M03-09: Credit Recognition is approved by a Dean Academics
 
 
 def setup_curriculum_fields():

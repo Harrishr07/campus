@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Curriculum",
+ "name": "CO Attainment Result",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "course_outcome",
+   "fieldtype": "Link",
+   "label": "Course Outcome",
+   "read_only": 1,
+   "options": "Course Outcome"
+  },
+  {
+   "fieldname": "co_code",
+   "fieldtype": "Data",
+   "label": "CO",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "cia_students",
+   "fieldtype": "Int",
+   "label": "CIA Students",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cia_attained",
+   "fieldtype": "Int",
+   "label": "CIA Attained",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cia_percent",
+   "fieldtype": "Percent",
+   "label": "CIA %",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "cia_level",
+   "fieldtype": "Float",
+   "label": "CIA Level",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "ese_students",
+   "fieldtype": "Int",
+   "label": "ESE Students",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ese_attained",
+   "fieldtype": "Int",
+   "label": "ESE Attained",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ese_percent",
+   "fieldtype": "Percent",
+   "label": "ESE %",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "ese_level",
+   "fieldtype": "Float",
+   "label": "ESE Level",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "assessed",
+   "fieldtype": "Check",
+   "label": "Assessed",
+   "read_only": 1,
+   "description": "A tagged CIA or ESE question was answered: the direct and final levels are figures (else not assessed)."
+  },
+  {
+   "fieldname": "direct_level",
+   "fieldtype": "Float",
+   "label": "Direct",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "indirect_percent",
+   "fieldtype": "Percent",
+   "label": "Survey %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "has_indirect",
+   "fieldtype": "Check",
+   "label": "Survey Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "indirect_level",
+   "fieldtype": "Float",
+   "label": "Indirect",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "indirect_responses",
+   "fieldtype": "Int",
+   "label": "Survey Responses",
+   "read_only": 1
+  },
+  {
+   "fieldname": "indirect_suppressed",
+   "fieldtype": "Check",
+   "label": "Survey Hidden (small group)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_level",
+   "fieldtype": "Float",
+   "label": "Final",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "target_level",
+   "fieldtype": "Float",
+   "label": "Target",
+   "read_only": 1
+  },
+  {
+   "fieldname": "target_met",
+   "fieldtype": "Check",
+   "label": "Target Met",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes",
+   "read_only": 1
+  }
+ ],
+ "field_order": [
+  "course_outcome",
+  "co_code",
+  "cia_students",
+  "cia_attained",
+  "cia_percent",
+  "cia_level",
+  "ese_students",
+  "ese_attained",
+  "ese_percent",
+  "ese_level",
+  "assessed",
+  "direct_level",
+  "indirect_percent",
+  "has_indirect",
+  "indirect_level",
+  "indirect_responses",
+  "indirect_suppressed",
+  "final_level",
+  "target_level",
+  "target_met",
+  "notes"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

@@ -4,7 +4,7 @@
  "engine": "InnoDB",
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 00:00:00.000000",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "owner": "Administrator",
@@ -65,7 +65,7 @@
    "fieldtype": "Link",
    "label": "Program Enrollment",
    "options": "Program Enrollment",
-   "reqd": 1
+   "description": "The joined admission to cancel. Leave blank for an admitted student who has not joined (a no-show): their advance is refunded."
   },
   {
    "fieldname": "company",

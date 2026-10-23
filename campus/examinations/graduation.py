@@ -62,6 +62,16 @@ def cgpa(student, courses=None):
 	return graduation_rules.consolidate(attempts, registration_types(student))["cgpa"]
 
 
+def had_arrears(student):
+	"""Whether `student` failed, missed or fell short in any course at its first appearance in a published result,
+	cleared since or not (the placement "history of arrears" criterion, M14-01)."""
+	history = {}
+	for row in published_attempts(student):
+		history.setdefault(row.course, []).append(row.result)
+	appeared = {course: found for course, found in history.items() if any(r not in rules.NOT_SAT for r in found)}
+	return not rules.passed_at_first_appearance(appeared)  # a course only ever withdrawn from was never sat
+
+
 def required_credits(regulation):
 	"""The regulation's credit total for the degree (Curriculum Rule min_total_credits), or 0 when none is set."""
 	return regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits") or 0

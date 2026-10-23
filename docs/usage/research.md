@@ -221,7 +221,16 @@ changed, a new line, money moved to another sanction, what is left after a line 
 payment that paid an invoice and kept an unallocated advance) is **excluded for review**, with a reason naming the
 batches it was exported in; it is never exported automatically. Check it against the exported rows and settle it with
 PFMS by hand. The one exception: a payment that pays invoices of two sanctions is exported once in each, provided its
-lines already exported for the other sanction are unchanged. An unallocated payment naming one sanction's project and another's cost centre is
+lines already exported for the other sanction are unchanged. A Payment Entry's lines are always that Payment Entry's
+money, also when an invoice later takes an advance paid against a purchase order (ERPNext then names the order as the
+line's advance voucher). Two reference rows of one payment to the same invoice are one line.
+
+**Release After Review** (on the batch, Accounts Manager only): pick a line held for review and give the reason (what
+you checked). The next batch of the sanction, type and period exports it. Each release is logged as a **PFMS Export
+Release** (who, when, amount, reason) and as a comment on the batch. A release is refused, and is checked again when
+the next batch is submitted, when the line itself is already exported for another amount (withdraw that row from PFMS
+first) or when the payment's exported rows plus this line would come to more than the payment, that is, when its money
+is already exported in full. A release holds for that amount only: if the line changes again it is held again. An unallocated payment naming one sanction's project and another's cost centre is
 excluded until it is corrected.
 
 **Cancelling an exported payment**: a Payment Entry or Purchase Invoice in a submitted batch can't be cancelled

@@ -8,7 +8,8 @@ hall tickets (exam_fee.exam_dues_block).
 
 The confirmation and fee fields and each course row's course, offering and kind are server-owned: only
 registration.confirm (flags.server_fields) sets the former, and only the bulk job sets the latter (on a new row).
-A hand edit of either is refused.
+A hand edit of either is refused. A new registration is refused for a student whose examination mode (Autonomous /
+Affiliated, M06-10) is not the session's.
 """
 
 import frappe
@@ -17,6 +18,7 @@ from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
 from campus.examinations import registration_rules as rules
+from campus.examinations.affiliation import AUTONOMOUS, examination_mode
 
 
 SERVER_FIELDS = ("confirmed", "confirmed_on", "late_days", "exam_fee", "late_fee", "fee_total", "fee_invoice")
@@ -32,10 +34,12 @@ class ExamRegistration(Document):
 		self.name = registration_name(self.exam_session, self.student)
 
 	def validate(self):
-		session = frappe.db.get_value("Exam Session", self.exam_session, ["company", "academic_term"], as_dict=True)
+		session = frappe.db.get_value("Exam Session", self.exam_session, ["company", "academic_term", "examination_mode"], as_dict=True)
 		self.company, self.academic_term = session.company, session.academic_term
 		if frappe.db.get_value("Student", self.student, "oc_company") != self.company:
 			frappe.throw(_("Student {0} does not belong to {1}.").format(frappe.bold(self.student), frappe.bold(self.company)))
+		if self.is_new():
+			self.check_mode(session.examination_mode or AUTONOMOUS)
 		if self.detained and not (self.detention_reason or "").strip():
 			frappe.throw(_("Give the reason for the detention."))
 		if self.debarred and not (self.debarment_reason or "").strip():
@@ -43,6 +47,16 @@ class ExamRegistration(Document):
 		self.guard_server_fields()
 		self.validate_courses()
 		self.set_eligibility()
+
+	def check_mode(self, session_mode):
+		"""M06-10: a student is registered only in a session of their own examination mode."""
+		mode = examination_mode(self.student)
+		if mode != session_mode:
+			frappe.throw(
+				_("{0} writes {1} examinations; {2} is an {3} session.").format(
+					frappe.bold(self.student), _(mode), frappe.bold(self.exam_session), _(session_mode)
+				)
+			)
 
 	def guard_server_fields(self):
 		if self.flags.server_fields:

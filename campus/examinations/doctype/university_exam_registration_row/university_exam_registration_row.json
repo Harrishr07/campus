@@ -1,0 +1,138 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Examinations",
+ "name": "University Exam Registration Row",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "university_register_no",
+   "fieldtype": "Data",
+   "label": "University Register No",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "label": "Course Offering",
+   "options": "Student Group",
+   "read_only": 1
+  },
+  {
+   "fieldname": "university_course_code",
+   "fieldtype": "Data",
+   "label": "University Course Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Data",
+   "label": "Kind",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registration_type",
+   "fieldtype": "Data",
+   "label": "Registration Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cia",
+   "fieldtype": "Float",
+   "label": "CIA",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cia_max",
+   "fieldtype": "Float",
+   "label": "CIA Max",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Ready\nRefused\nExported\nAccepted\nRejected",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Why the row cannot be exported."
+  },
+  {
+   "fieldname": "export_no",
+   "fieldtype": "Int",
+   "label": "Export No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "University Rejection Reason",
+   "description": "Enter the university's reason for a row it rejected before Record Acknowledgement."
+  },
+  {
+   "fieldname": "corrected",
+   "fieldtype": "Check",
+   "label": "Corrected",
+   "description": "Tick a rejected row once corrected; Re-export Corrections sends it again."
+  }
+ ],
+ "field_order": [
+  "student",
+  "student_name",
+  "university_register_no",
+  "course",
+  "course_offering",
+  "university_course_code",
+  "kind",
+  "registration_type",
+  "cia",
+  "cia_max",
+  "status",
+  "reason",
+  "export_no",
+  "rejection_reason",
+  "corrected"
+ ],
+ "istable": 1,
+ "editable_grid": 1
+}

@@ -436,3 +436,50 @@ Note: earlier internal estimates (months of effort, rupee cost per module) were 
 - Competitors: oncampuserp.com, unityedu.ai, cyborgerp.com, edumerge.com, iitms.co.in, databus.co/campusally, docs.samarth.ac.in, zerosuite.in
 - Autonomous-college process references: srcas.ac.in COE manual; nasccbe.ac.in regulations; gcoej.ac.in autonomy rules; jct.ac.in COE
 - IRINS: wii.gov.in IRINS page (INFLIBNET)
+
+## 16. Requirement Additions v0.2 (22 October 2026)
+
+Source: review of an external team's "BRD for Campus" (not adopted as scope). Only points that strengthen this BRD are taken. IDs continue the module numbering above; P-levels use the same scale.
+
+### 16.1 Functional additions
+
+| ID | Requirement | Priority |
+|---|---|---|
+| M03-07 | Prerequisites evaluated from published results, recognised transfers and approved waivers; missing evidence sends the registration to review, never auto-passes | P0 |
+| M03-08 | Course registration: cumulative term credit limits across all registrations; deadlines enforced on amendments; every apply/cancel bound to the exact Program Enrollment it was made for | P0 |
+| M03-09 | Subject equivalence and waiver register (source/target course, regulation, credit treatment, evidence); one credit can satisfy one requirement only, including external MOOC/NPTEL credit | P1 |
+| M04-06 | Staff bulk upload of candidates with validation preview, row-level outcomes and idempotent retry; same rules as manual entry and API | P0 |
+| M04-07 | Duplicate candidate detection on name + DOB + qualifying-exam identifiers, with reviewer link/keep decision; shared phone or email alone is not a duplicate | P0 |
+| M04-08 | Seat matrix strict mode: a missing program/quota/category row blocks admission unless an authorised override is logged; overrides never raise approved intake | P0 |
+| M04-09 | Admission approval separate from joining confirmation; Program Enrollment, tuition invoice, ID issue and attendance start follow joining; pre-joining money is an advance, not an invoice | P0 |
+| M04-10 | Reporting dates, temporary clearance, late joining (with effective date) and no-show referral to cancellation and refund | P1 |
+| M04-11 | Lateral entry per program: accepted qualifications, separate intake, permitted entry semester, curriculum mapping, waivers and bridge courses, remaining credits and duration | P0 |
+| M05-09 | Student lifecycle state model with configurable transitions and effective dates: applicant, admitted, joined, active, on break, discontinued, withdrawn, cancelled, readmitted, study completed, award eligible, graduated, alumni | P0 |
+| M05-10 | Discontinuation, readmission and semester reallocation/repeat: placement by academic review, curriculum matching, outstanding subjects, fee adjustment, history preserved, no duplicate enrollment or charge on retry | P0 |
+| M05-11 | Student record correction workflow: old and new values, evidence, approver, effective date | P1 |
+| M05-12 | Attendance from each enrollment's attendance start date over sessions actually conducted; session states scheduled/conducted/cancelled/rescheduled/makeup; configurable on-duty and leave treatment; corrections after the deadline need approval | P0 |
+| M05-13 | Mentoring: counselling notes visible only to the mentor and designated staff; parent interaction records with follow-up owners | P1 |
+| M05-14 | Certificates: correction, supersession and reissue linked to the original; certificates that imply a status change (TC) route the status change through the lifecycle approval | P1 |
+| M05-15 | Completion: credit completion check against the curriculum, separate study-completed and award-eligible states, degree-awarding authority validated per institution and program | P0 |
+| M06-10 | Affiliated mode: university exam registration export and result import in agreed file formats, row validation, rejected rows, transmission and acknowledgement references | P0 |
+| M06-11 | Improvement examinations; former students may register for arrear examinations within attempt and duration rules | P1 |
+| M06-12 | Result run pre-validation: every course has a course type and applicable rules; incomplete configuration blocks the run instead of leaving courses ungraded | P0 |
+| M09-07 | Concessions per fee subhead and semester with sub-types, calculation order and caps; one of each sub-type per admission, subhead and semester; bulk uses the same rules (values to be confirmed with the pilot college) | P1 |
+| M14-07 | Student projects: teams, guide allocation, reviews, submission, viva, marks transfer to assessment; industrial visits with evidence | P1 |
+| M05-08a | Activities (clubs, NSS/NCC, sports, events) feed achievements; external credit recognition only through M03-09 | P2 |
+| M01-08 | Official document register: approval, affiliation and accreditation documents with authority, reference, academic year, validity and expiry alerts | P1 |
+| M01-09 | AISHE dataset export from verified records | P1 |
+| M17-08 | ABC/NAD academic-record export file with identifier mapping, validation and correction tracking (API remains P2) | P1 |
+| M01-06a | Confidential cases (anti-ragging, internal complaints, disciplinary): case assignment by committee, restricted evidence, higher-level review, decisions applied through controlled processes | P1 |
+
+### 16.2 Non-functional additions
+
+| Category | Requirement |
+|---|---|
+| Idempotency | Every bulk job, import and retryable action has a stable key; a retry returns the earlier result and never creates a second student, enrollment, invoice or charge |
+| Consistent validation | Business rules run server-side and identically for desk forms, bulk jobs and permitted APIs, and are re-checked at commit |
+| Mandatory approval | A configurable list of sensitive document types cannot be submitted when no approval policy matches; the attempt is blocked and flagged for configuration |
+| Separation of duties | System administration does not confer business approval; entry, verification, approval and publication are separately assignable |
+| History preservation | Amendments and reversals carry reason and source reference; historical enrollments, marks, attendance and posted transactions are never deleted |
+| Attachment and export security | Attachments, reports and exports obey the same company and record permissions as their source documents |
+| Operational readiness | Backup with a tested restore, migration reconciliation report, role-permission matrix review and acceptance testing before each pilot go-live |

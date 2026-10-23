@@ -9,7 +9,7 @@ each sheet once more after its deadline, so attendance marks are taken as at the
 
 import frappe
 from frappe import _
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import escape_html, get_datetime, now_datetime
 
 from campus.examinations import cia_rules
 from campus.examinations.courses import offering_course
@@ -42,7 +42,10 @@ def template_for(offering):
 	"""The CIA Component Template of the offering's curriculum regulation and course type."""
 	curriculum = frappe.db.get_value("Student Group", offering, "oc_curriculum")
 	regulation = curriculum and frappe.db.get_value("Curriculum", curriculum, "regulation")
-	course_type = offering_course(offering)["course_type"]
+	course = offering_course(offering)
+	if not course["configured"]:  # blank: refused, never a guessed Theory (R-08)
+		frappe.throw(_("Course {0} has no exam type; set it on the curriculum first.").format(frappe.bold(escape_html(course["course"]))))
+	course_type = course["course_type"]
 	template = frappe.db.get_value(TEMPLATE, {"regulation": regulation, "course_type": course_type})
 	if not template:
 		frappe.throw(

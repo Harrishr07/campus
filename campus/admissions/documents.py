@@ -8,13 +8,17 @@
 - Only an Admission Verifier may mark a row Verified or Rejected, or move a Verified row to another status; the verifier and time are stamped.
 - An applicant cannot be set Admitted while a mandatory document is incomplete.
 - The daily job reminds applicants with incomplete mandatory documents, once a day, until cleared.
+- M04-10 Temporary clearance: an Admission Officer lists pending mandatory documents with a due date and a reason
+  (`grant_temporary_clearance`; the rows' `cleared_until`, which nothing else may change). Until that date the
+  applicant may be admitted and join without them (`uncleared_mandatory`). The daily reminder also covers an admitted
+  applicant's documents under a clearance, with the due date, until they are complete.
 """
 
 import frappe
 from frappe import _
-from frappe.utils import cint, now_datetime, nowdate
+from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from campus.admissions.setup import VERIFIER_ROLE
+from campus.admissions.setup import OFFICER_ROLE, VERIFIER_ROLE
 from campus.campus_messaging.api import send
 from campus.campus_platform.bulk import run_bulk
 
@@ -24,6 +28,7 @@ REMINDER_HANDLER = "campus.admissions.documents.send_reminder"
 REMINDER_RUN_TYPE = "Admission Document Reminders"
 VERIFIER_STATUSES = ("Verified", "Rejected")
 OPEN_STATUSES = ("Applied", "Approved")  # applicants still in the pipeline
+ADMITTED = "Admitted"  # reminded only of documents under a temporary clearance
 
 
 def applicable_rules(applicant):
@@ -81,6 +86,15 @@ def row_complete(row):
 	return row.status == "Submitted" and not row.verification_needed
 
 
+def uncleared_mandatory(applicant, on_date=None):
+	"""Incomplete mandatory documents (document types) without a temporary clearance running on `on_date` (today)."""
+	day = getdate(on_date or nowdate())
+	return [
+		row.document_type for row in applicant.oc_documents
+		if row.mandatory and not row_complete(row) and not (row.cleared_until and getdate(row.cleared_until) >= day)
+	]  # fmt: skip
+
+
 def documents_complete(applicant):
 	"""True when every mandatory document of the applicant (name or document) is complete."""
 	doc = frappe.get_doc("Student Applicant", applicant) if isinstance(applicant, str) else applicant
@@ -92,6 +106,7 @@ def validate_applicant(doc, method=None):
 	build_checklist(doc)
 	before = doc.get_doc_before_save()
 	previous = {r.name: r.status for r in before.oc_documents} if before else {}
+	guard_clearance(doc, before)
 	kept = {r.name for r in doc.oc_documents}
 	if before and VERIFIER_ROLE not in frappe.get_roles():
 		for row in before.oc_documents:
@@ -100,9 +115,53 @@ def validate_applicant(doc, method=None):
 	for row in doc.oc_documents:
 		stamp_verifier(row, previous.get(row.name))
 	if doc.application_status == "Admitted" and (not before or before.application_status != "Admitted"):
-		missing = incomplete_mandatory(doc)
+		missing = uncleared_mandatory(doc)
 		if missing:
 			frappe.throw(_("Cannot admit: mandatory documents are not complete: {0}").format(", ".join(missing)))
+
+
+def guard_clearance(doc, before):
+	"""A temporary clearance is set only by grant_temporary_clearance, never by editing the checklist."""
+	if doc.flags.campus_clearance:
+		return
+	cleared = {r.name: r.cleared_until for r in before.oc_documents} if before else {}
+	for row in doc.oc_documents:
+		if str(row.cleared_until or "") != str(cleared.get(row.name) or ""):
+			frappe.throw(_("{0}: a temporary clearance is granted with Temporary Clearance, not by editing the checklist.").format(row.document_type))
+
+
+def grant_temporary_clearance(applicant, documents, due_date, reason):
+	"""Officer action (M04-10): the applicant may be admitted and join while `documents` (pending mandatory document
+	types) are outstanding, until `due_date`. The reason is kept as a comment. Granting again moves the due date."""
+	frappe.only_for(OFFICER_ROLE)
+	documents = frappe.parse_json(documents) if isinstance(documents, str) else list(documents or [])
+	if not (reason or "").strip():
+		frappe.throw(_("Enter the reason for the temporary clearance."))
+	if not documents:
+		frappe.throw(_("List the pending documents the temporary clearance covers."))
+	due = getdate(due_date)
+	if due < getdate(nowdate()):
+		frappe.throw(_("The due date of a temporary clearance cannot be in the past."))
+	from campus.admissions.admit import check_company_access  # lazy: admit imports this module
+
+	doc = frappe.get_doc("Student Applicant", applicant, for_update=True)
+	check_company_access(doc.oc_company)
+	if doc.application_status not in (*OPEN_STATUSES, ADMITTED):
+		frappe.throw(_("{0} is {1}: no clearance can be granted.").format(applicant, _(doc.application_status)))
+	pending = set(incomplete_mandatory(doc))
+	for document_type in documents:
+		if document_type not in pending:
+			frappe.throw(_("{0} is not a pending mandatory document of {1}.").format(document_type, applicant))
+	for row in doc.oc_documents:
+		if row.document_type in documents:
+			row.cleared_until = due
+	doc.flags.campus_clearance = True
+	doc.flags.ignore_permissions = True  # the officer's role and company were checked; every input is checked above
+	doc.save()
+	doc.add_comment(
+		"Comment", _("Temporary clearance until {0} for {1}: {2}").format(frappe.format(due, "Date"), ", ".join(documents), reason.strip())
+	)
+	return {"cleared_until": str(due), "documents": documents}
 
 
 def stamp_verifier(row, previous_status):
@@ -139,22 +198,34 @@ def set_document_status(applicant, document_type, status, remarks=None, original
 
 # Daily reminders
 def reminder_items():
-	"""[{applicant, mobile, documents}] for open applicants with an incomplete mandatory document and a mobile number."""
-	names = frappe.get_all(
-		"Student Applicant", {"application_status": ("in", OPEN_STATUSES), "student_mobile_number": ("is", "set")}, pluck="name", limit=0
+	"""[{applicant, mobile, documents[, due_date]}] for open applicants with an incomplete mandatory document and a
+	mobile number, and admitted ones with an incomplete document under a temporary clearance (due_date: the earliest
+	clearance due date of the documents listed)."""
+	applicants = frappe.get_all(
+		"Student Applicant",
+		{"application_status": ("in", (*OPEN_STATUSES, ADMITTED)), "student_mobile_number": ("is", "set")},
+		["name", "application_status", "student_mobile_number"],
+		limit=0,
 	)
+	by_name = {a.name: a for a in applicants}
 	incomplete = frappe.get_all(
 		"Applicant Document",
-		{"parent": ("in", names or [""]), "parenttype": "Student Applicant", "mandatory": 1, "status": ("in", ("Pending", "Rejected"))},
-		["parent", "document_type", "status"],
+		{"parent": ("in", list(by_name) or [""]), "parenttype": "Student Applicant", "mandatory": 1, "status": ("in", ("Pending", "Rejected"))},
+		["parent", "document_type", "status", "cleared_until"],
 		order_by="parent, idx",
 		limit=0,
 	)
-	pending = {}
+	pending, due = {}, {}
 	for row in incomplete:
+		if by_name[row.parent].application_status == ADMITTED and not row.cleared_until:
+			continue
 		pending.setdefault(row.parent, []).append(row.document_type)
-	mobiles = dict(frappe.get_all("Student Applicant", {"name": ("in", list(pending) or [""])}, ["name", "student_mobile_number"], as_list=True))
-	return [{"applicant": a, "mobile": mobiles[a], "documents": docs} for a, docs in sorted(pending.items())]
+		if row.cleared_until:
+			due[row.parent] = min(getdate(row.cleared_until), due.get(row.parent, getdate(row.cleared_until)))
+	return [
+		{"applicant": a, "mobile": by_name[a].student_mobile_number, "documents": docs, **({"due_date": str(due[a])} if a in due else {})}
+		for a, docs in sorted(pending.items())
+	]
 
 
 def send_daily_reminders(as_of=None):
@@ -177,5 +248,5 @@ def send_reminder(item, run):
 		REMINDER_EVENT,
 		doc,
 		[f"phone:{item['mobile']}"],
-		context={"documents": ", ".join(item["documents"]), "dedupe_token": day},
+		context={"documents": ", ".join(item["documents"]), "dedupe_token": day, **({"due_date": item["due_date"]} if item.get("due_date") else {})},
 	)

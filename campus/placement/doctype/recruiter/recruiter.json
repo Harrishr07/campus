@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "recruiter_name",
+  "company",
+  "industry",
+  "column_break_1",
+  "website",
+  "mou",
+  "disabled",
+  "contacts_section",
+  "contacts"
+ ],
+ "fields": [
+  {
+   "fieldname": "recruiter_name",
+   "fieldtype": "Data",
+   "label": "Recruiter Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "The college (or trust) that keeps this recruiter."
+  },
+  {
+   "fieldname": "industry",
+   "fieldtype": "Link",
+   "label": "Industry",
+   "options": "Industry Type",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "website",
+   "fieldtype": "Data",
+   "label": "Website",
+   "options": "URL"
+  },
+  {
+   "fieldname": "mou",
+   "fieldtype": "Link",
+   "label": "MoU",
+   "options": "Institutional MoU",
+   "description": "The Institutional MoU with this recruiter (same company)."
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "contacts_section",
+   "fieldtype": "Section Break",
+   "label": "Contacts"
+  },
+  {
+   "fieldname": "contacts",
+   "fieldtype": "Table",
+   "label": "Contacts",
+   "options": "Recruiter Contact"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Recruiter",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Placement Officer",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "share": 1
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:REC-{#####}",
+ "title_field": "recruiter_name",
+ "search_fields": "recruiter_name,industry",
+ "track_changes": 1
+}

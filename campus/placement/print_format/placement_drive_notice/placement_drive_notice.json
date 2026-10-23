@@ -1,0 +1,19 @@
+{
+ "doctype": "Print Format",
+ "name": "Placement Drive Notice",
+ "doc_type": "Placement Drive",
+ "module": "Placement",
+ "standard": "Yes",
+ "custom_format": 1,
+ "print_format_type": "Jinja",
+ "disabled": 0,
+ "default_print_language": "en",
+ "font_size": 14,
+ "html": "<div class=\"oc-notice\">\n<h2 style=\"text-align:center\">{{ doc.company }}</h2>\n<h3 style=\"text-align:center\">{{ _(\"Placement Drive Notice\") }}</h3>\n<p>{{ _(\"Drive\") }}: <strong>{{ doc.drive_title }}</strong> ({{ doc.name }})<br>\n{{ _(\"Recruiter\") }}: {{ frappe.db.get_value(\"Recruiter\", doc.recruiter, \"recruiter_name\") }}<br>\n{{ _(\"Date\") }}: {{ frappe.format(doc.drive_date, {\"fieldtype\": \"Date\"}) }}{% if doc.venue %}, {{ doc.venue }}{% endif %}<br>\n{% if doc.registration_deadline %}{{ _(\"Register before\") }}: {{ frappe.format(doc.registration_deadline, {\"fieldtype\": \"Datetime\"}) }}{% endif %}</p>\n{% if doc.roles %}<table class=\"table table-bordered\"><thead><tr><th>{{ _(\"Role\") }}</th><th>{{ _(\"Openings\") }}</th><th>{{ _(\"CTC\") }}</th></tr></thead><tbody>\n{% for r in doc.roles %}<tr><td>{{ r.role_title }}</td><td>{{ r.openings or \"\" }}</td><td>{{ frappe.format(r.ctc, {\"fieldtype\": \"Currency\"}) if r.ctc else \"\" }}</td></tr>{% endfor %}\n</tbody></table>{% endif %}\n<h4>{{ _(\"Eligibility\") }}</h4>\n<ul>\n{% if doc.min_cgpa %}<li>{{ _(\"Minimum CGPA\") }}: {{ doc.min_cgpa }}</li>{% endif %}\n<li>{% if doc.any_standing_arrears %}{{ _(\"Any number of standing arrears\") }}{% else %}{{ _(\"Standing arrears allowed\") }}: {{ doc.max_standing_arrears or 0 }}{% endif %}</li>\n{% if not doc.allow_arrear_history %}<li>{{ _(\"No history of arrears\") }}</li>{% endif %}\n{% if doc.gender %}<li>{{ _(\"Open to\") }} {{ doc.gender }}</li>{% endif %}\n{% if doc.programs %}<li>{{ _(\"Programs\") }}: {{ doc.programs | map(attribute=\"program\") | join(\", \") }}</li>{% endif %}\n{% if doc.batches %}<li>{{ _(\"Batches\") }}: {{ doc.batches | map(attribute=\"batch\") | join(\", \") }}</li>{% endif %}\n</ul>\n{% if doc.rounds %}<h4>{{ _(\"Rounds\") }}</h4><ol>\n{% for r in doc.rounds %}<li>{{ r.round_name }}{% if r.round_type %} ({{ r.round_type }}){% endif %}{% if r.scheduled_on %}, {{ frappe.format(r.scheduled_on, {\"fieldtype\": \"Datetime\"}) }}{% endif %}{% if r.venue %}, {{ r.venue }}{% endif %}</li>{% endfor %}\n</ol>{% endif %}\n{% if doc.job_description %}<div>{{ doc.job_description }}</div>{% endif %}\n<p style=\"text-align:right;margin-top:60px\">{{ _(\"Training and Placement Officer\") }}</p>\n</div>\n",
+ "creation": "2026-10-22 16:00:00.000000",
+ "modified": "2026-10-22 16:00:00.000000",
+ "owner": "Administrator",
+ "modified_by": "Administrator",
+ "docstatus": 0,
+ "idx": 0
+}

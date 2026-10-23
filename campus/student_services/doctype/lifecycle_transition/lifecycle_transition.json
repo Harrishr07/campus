@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "autoname": "LCT-.#######",
+ "creation": "2026-10-22 00:00:00.000000",
+ "description": "A change of a student's lifecycle status. Recorded by the lifecycle service only; never edited or deleted.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "company",
+  "program_enrollment",
+  "column_break_1",
+  "from_status",
+  "to_status",
+  "effective_date",
+  "kind",
+  "section_source",
+  "reason",
+  "source_doctype",
+  "source_name",
+  "column_break_2",
+  "approved_by",
+  "reverses"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "fetch_from": "student.student_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "program_enrollment",
+   "fieldtype": "Link",
+   "label": "Program Enrollment",
+   "options": "Program Enrollment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_status",
+   "fieldtype": "Data",
+   "label": "From Status",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Blank for a new record; a migrated record keeps its earlier academic status."
+  },
+  {
+   "fieldname": "to_status",
+   "fieldtype": "Select",
+   "label": "To Status",
+   "options": "Admitted\nJoined\nActive\nOn Break\nDiscontinued\nWithdrawn\nCancelled\nReadmitted\nStudy Completed\nAward Eligible\nGraduated\nAlumni",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "effective_date",
+   "fieldtype": "Date",
+   "label": "Effective Date",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Transition\nInitial\nMigrated\nReversal",
+   "reqd": 1,
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "section_source",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "label": "Source Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Source Document",
+   "options": "source_doctype",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reverses",
+   "fieldtype": "Link",
+   "label": "Reverses",
+   "options": "Lifecycle Transition",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Student Services",
+ "name": "Lifecycle Transition",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Dean Academics",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 0
+  },
+  {
+   "role": "Principal",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 0
+  },
+  {
+   "role": "HOD",
+   "read": 1,
+   "report": 1,
+   "export": 0,
+   "print": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name"
+}

@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "round_no",
+  "round_name",
+  "round_type",
+  "scheduled_on",
+  "venue"
+ ],
+ "fields": [
+  {
+   "fieldname": "round_no",
+   "fieldtype": "Int",
+   "label": "Round",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "round_name",
+   "fieldtype": "Data",
+   "label": "Round Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "round_type",
+   "fieldtype": "Select",
+   "label": "Round Type",
+   "options": "Aptitude Test\nGroup Discussion\nTechnical Interview\nHR Interview\nCoding Test\nOther",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "scheduled_on",
+   "fieldtype": "Datetime",
+   "label": "Scheduled On",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "venue",
+   "fieldtype": "Data",
+   "label": "Venue"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Placement Drive Round",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "editable_grid": 1
+}

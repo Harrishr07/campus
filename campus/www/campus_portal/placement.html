@@ -1,0 +1,38 @@
+{% extends "campus/www/campus_portal/_base.html" %}
+{% block portal_body %}
+<h2>{{ _("Placement drives") }}</h2>
+{% if not placement.drives %}<p class="cp-empty">{{ _("No placement drive is open for registration.") }}</p>{% endif %}
+<ul class="cp-list">
+	{% for d in placement.drives %}
+	<li>
+		<strong>{{ d.drive_title|e }}</strong> ({{ d.recruiter|e }}) {{ frappe.utils.formatdate(d.drive_date) }}
+		{% if d.registration %}<span class="cp-badge">{{ _(d.registration)|e }}</span>{% endif %}
+		<ul>
+			{% for r in d.roles %}<li>{{ r.role_title|e }}{% if r.ctc %}: {{ frappe.utils.fmt_money(r.ctc, currency="INR") }}{% endif %}</li>{% endfor %}
+		</ul>
+		{% if d.deadline %}<p>{{ _("Register before {0}").format(frappe.utils.format_datetime(d.deadline))|e }}</p>{% endif %}
+		{% if d.eligible %}
+		<p>{{ _("You meet the criteria today.") }}</p>
+		{% else %}
+		<p>{{ _("You do not meet the criteria today:") }}</p>
+		<ul>{% for reason in d.reasons %}<li>{{ reason|e }}</li>{% endfor %}</ul>
+		{% endif %}
+		{% if placement.can_act and d.can_register %}
+		<form class="cp-form" data-method="campus.placement.portal.register">
+			<input type="hidden" name="student" value="{{ student|e }}">
+			<input type="hidden" name="drive" value="{{ d.name|e }}">
+			<button class="cp-btn" type="submit">{{ _("Register") }}</button>
+			<p class="cp-message" role="alert"></p>
+		</form>
+		{% elif placement.can_act and d.registration == "Registered" %}
+		<form class="cp-form" data-method="campus.placement.portal.withdraw">
+			<input type="hidden" name="student" value="{{ student|e }}">
+			<input type="hidden" name="drive" value="{{ d.name|e }}">
+			<button class="cp-btn" type="submit">{{ _("Withdraw") }}</button>
+			<p class="cp-message" role="alert"></p>
+		</form>
+		{% endif %}
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

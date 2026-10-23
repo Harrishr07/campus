@@ -15,6 +15,16 @@ LANGUAGE_FIELD = {
 # doctype -> field to insert the language after
 LANGUAGE_ANCHORS = {"Student": "student_mobile_number", "Guardian": "mobile_number", "Employee": "cell_number"}
 
+# M04-10: a temporary clearance's reminder prints its due date
+DOCUMENT_PENDING_EN = (
+	"Your admission is waiting for these documents: {{ context.documents or '' }}."
+	"{% if context.due_date %} Due by {{ context.due_date }}.{% endif %} Please submit them to the college office."
+)
+DOCUMENT_PENDING_TA = (
+	"உங்கள் சேர்க்கைக்கு இந்த ஆவணங்கள் தேவை: {{ context.documents or '' }}."
+	"{% if context.due_date %} கடைசி நாள்: {{ context.due_date }}.{% endif %} கல்லூரி அலுவலகத்தில் சமர்ப்பிக்கவும்."
+)
+
 SEED_TEMPLATES = [
 	{
 		"event_key": "fees.due",
@@ -52,8 +62,8 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms"],
 		"bodies": {
-			"en": ("Admission documents pending", "Your admission is waiting for these documents: {{ context.documents or '' }}. Please submit them to the college office."),
-			"ta": ("சேர்க்கை ஆவணங்கள் நிலுவை", "உங்கள் சேர்க்கைக்கு இந்த ஆவணங்கள் தேவை: {{ context.documents or '' }}. கல்லூரி அலுவலகத்தில் சமர்ப்பிக்கவும்."),
+			"en": ("Admission documents pending", DOCUMENT_PENDING_EN),
+			"ta": ("சேர்க்கை ஆவணங்கள் நிலுவை", DOCUMENT_PENDING_TA),
 		},
 	},
 	{

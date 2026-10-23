@@ -1,8 +1,12 @@
 """M08-01 Research API: whether a Funding Scheme can be used by a college, budget head accounts, Research Settings
-and the D9 interest treatment. Other modules call research only through these functions."""
+and the D9 interest treatment; the publication and patent data points and the faculty research profile (M08-11, M08-12);
+the consultancy revenue data points (M08-10).
+Other modules call research only through these functions."""
 
 import frappe
 from frappe import _
+
+from campus.research import consultancy, patents, publications
 
 DEFAULT_INTEREST_TREATMENT = "Grant Liability"
 
@@ -99,3 +103,93 @@ def check_sanction_open(sanction, project_closure):
 			),
 			title=_("Sanction Closed"),
 		)
+
+
+# ---- M08-11 / M08-12 IPR and publication data points: all take (company, academic_year, department=None) and return
+# {"value", "records"} for the IQAC registry (campus/iqac/datapoints.py). Counting rules: campus/research/publications.py.
+
+
+def publications_published(company, academic_year, department=None):
+	"""NIRF publications: distinct publications dated in the academic year."""
+	return _publication_result(publications.publications_in_year(company, academic_year, department))
+
+
+def ugc_care_papers(company, academic_year, department=None):
+	"""AQAR 3.4.3: journal articles of the year in UGC-CARE listed journals."""
+	rows = publications.publications_in_year(company, academic_year, department)
+	return _publication_result([r for r in rows if publications.is_ugc_care_paper(r)])
+
+
+def books_and_chapters(company, academic_year, department=None):
+	"""AQAR 3.4.4: books, book chapters and conference papers of the year."""
+	rows = publications.publications_in_year(company, academic_year, department)
+	return _publication_result([r for r in rows if r.publication_type in publications.BOOK_TYPES])
+
+
+def publication_citations(company, academic_year, department=None):
+	"""AQAR 3.4.5: citations of the publications of the window of academic years ending with `academic_year`."""
+	rows = publications.publications_in_window(company, academic_year, department)
+	return {"value": sum(r.citations or 0 for r in rows), "records": _refs("Publication", rows)}
+
+
+def publication_h_index(company, academic_year, department=None):
+	"""AQAR 3.4.6: h-index of the publications of the window of academic years ending with `academic_year`."""
+	rows = publications.publications_in_window(company, academic_year, department)
+	return {"value": publications.hindex(r.citations for r in rows), "records": _refs("Publication", rows)}
+
+
+def patents_filed(company, academic_year, department=None):
+	"""AQAR 3.3 / NIRF IPR: patents filed in the academic year."""
+	return _patent_result(patents.patents_in_year(company, academic_year, "Filed", department))
+
+
+def patents_published(company, academic_year, department=None):
+	"""NIRF IPR: patents published in the academic year."""
+	return _patent_result(patents.patents_in_year(company, academic_year, "Published", department))
+
+
+def patents_granted(company, academic_year, department=None):
+	"""AQAR 3.3 / NIRF IPR: patents granted in the academic year."""
+	return _patent_result(patents.patents_in_year(company, academic_year, "Granted", department))
+
+
+def consultancy_revenue(company, academic_year, department=None):
+	"""AQAR 3.5.1: taxable value (before GST) of consultancy invoices posted in the academic year, net of credit notes."""
+	value, rows = consultancy.consultancy_revenue(company, academic_year, department)
+	return {"value": value, "records": _refs("Sales Invoice", rows)}
+
+
+def consultancy_received(company, academic_year, department=None):
+	"""NIRF consultancy: amount received (before GST) in the financial year holding the academic year's start."""
+	value, invoices = consultancy.consultancy_received(company, academic_year, department)
+	return {"value": value, "records": [{"doctype": "Sales Invoice", "name": name} for name in invoices]}
+
+
+def consultancy_projects(company, academic_year, department=None):
+	"""Projects with consultancy revenue (net of credit notes) in the academic year."""
+	projects = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "oc_consultancy_project")
+	return {"value": len(projects), "records": [{"doctype": consultancy.PROJECT, "name": name} for name in projects]}
+
+
+def consultancy_clients(company, academic_year, department=None):
+	"""Distinct client organisations with consultancy revenue (net of credit notes) in the academic year."""
+	clients = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "customer")
+	return {"value": len(clients), "records": [{"doctype": "Customer", "name": name} for name in clients]}
+
+
+def faculty_research_profile(employee):
+	"""Faculty profile aggregation: an Employee's publications (with citations and h-index) and patents, as the user may read them."""
+	frappe.has_permission("Employee", "read", employee, throw=True)
+	return {**publications.employee_profile(employee), "patents": patents.employee_patents(employee)}
+
+
+def _refs(doctype, rows):
+	return [{"doctype": doctype, "name": row.name} for row in rows]
+
+
+def _publication_result(rows):
+	return {"value": len(rows), "records": _refs("Publication", rows)}
+
+
+def _patent_result(rows):
+	return {"value": len(rows), "records": _refs("Patent", rows)}

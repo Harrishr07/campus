@@ -53,6 +53,8 @@ make_credit_note = refunds.make_credit_note
 paid_by_student = refunds.paid_by_student
 scholarship_vouchers = refunds.scholarship_vouchers
 make_refund_payment = refunds.make_refund_payment
+unallocated_advance = refunds.unallocated_advance
+make_advance_refund = refunds.make_advance_refund
 fee_payment_link = gateways.fee_payment_link
 
 

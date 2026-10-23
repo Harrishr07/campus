@@ -1,22 +1,42 @@
-"""M05-02 Student Services service API. Other modules call these, never the controllers (D7)."""
+"""M05-02, M05-12 Student Services service API. Other modules call these, never the controllers (D7)."""
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Min
 from frappe.utils import flt, getdate, today
 
 from campus.campus_platform.api import get_rule
 from campus.student_services.attendance_rules import (
 	ATTENDED,
 	ELIGIBLE,
+	MAKEUP,
 	MEDICAL_BAND,
 	MEDICAL_LEAVE,
 	bucket,
 	eligibility,
 	overall_percentage,
 	percentage,
+	session_counts,
+	session_mark,
 )
 from campus.student_services.attendance_rules import attendance_marks as marks_for_pct
 from campus.student_services import mentors as allocation
+from campus.student_services.certificate_reissue import keeps_original_record  # noqa: F401  (public API)
+from campus.student_services.lifecycle import current_status as lifecycle_status  # noqa: F401  (public API)
+from campus.student_services.lifecycle import last_change_date  # noqa: F401  (public API)
+from campus.student_services.lifecycle import revert as revert_transition  # noqa: F401  (public API)
+from campus.student_services.lifecycle import transition  # noqa: F401  (public API)
+from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API: lifecycle statuses)
+	ACTIVE,
+	ADMITTED,
+	ALUMNI,
+	AWARD_ELIGIBLE,
+	CANCELLED,
+	GRADUATED,
+	JOINED,
+	ON_ROLL,
+	STUDY_COMPLETED,
+)
 from campus.student_services.onboarding import create_for_student as create_onboarding  # noqa: F401  (public API)
 from campus.student_services.onboarding import mark_item_done
 from campus.student_services.student_records import (  # noqa: F401  (public API)
@@ -38,11 +58,15 @@ def attendance_summary(student, academic_term):
 	Returns {"offerings": [{offering, course, conducted, attended, leave, pct}], "overall_pct",
 	"per_course_min_pct", "status", "band_status", "condoned"}. `band_status` is the status before an
 	approved Condonation Request is applied; `condoned` says one turned the Medical band into Eligible.
-	conducted = Course Schedules of the offering dated in the term up to today; when the offering has no
-	schedules, the distinct dates on which any student of it was marked. attended = the student's
-	submitted Present records plus On Duty leave when the rule counts it; leave = Leave records backed by
-	a submitted Medical Student Leave Application when the rule counts it, which count only in the medical
-	band decision (see attendance_rules).
+	The student's counting starts on their attendance start date (M05-12, `attendance_start`) when it falls
+	inside the counted window (`student_window`): earlier sessions are in neither the conducted nor the attended count.
+	conducted = held Course Schedules of the offering (attendance_rules.session_counts) dated in that window;
+	when the offering has no schedules there, the distinct dates on which any student of it was marked.
+	attended = Present sessions plus On Duty leave when the rule counts it; leave = sessions on Medical leave
+	(a submitted Student Leave Application) when the rule counts it, which count only in the medical band
+	decision (see attendance_rules). With schedules, each held session counts once for the student: their
+	record of it, or a leave covering it (attendance_rules.session_mark); records of sessions that were not
+	held do not count.
 	"""
 	frappe.has_permission("Student", "read", student, throw=True)
 	return summarise(student, academic_term, term_window(academic_term), {})
@@ -95,13 +119,17 @@ def attendance_marks(student, offering):
 	"""
 	term = frappe.db.get_value("Student Group", offering, "academic_term")
 	rule = rule_values(student)
-	row = offering_row(student, frappe._dict(name=offering, course=None), term_window(term), {}, rule)
+	window = student_window(student, term_window(term))
+	row = offering_row(student, frappe._dict(name=offering, course=None), window, {}, rule)
 	row["marks"] = marks_for_pct(rule["bands"], row["pct"])
 	return {key: row[key] for key in ("offering", "conducted", "attended", "pct", "marks")}
 
 
 def summarise(student, academic_term, window, conducted_cache):
+	"""The attendance summary (see attendance_summary) over the term `window`, narrowed to the student's own start.
+	`conducted_cache` may be shared between students of a term (keyed by offering and window)."""
 	rule = rule_values(student)
+	window = student_window(student, window)
 	offerings = [
 		offering_row(student, offering, window, conducted_cache, rule)
 		for offering in student_offerings(student, academic_term)
@@ -177,6 +205,27 @@ def term_window(academic_term):
 	return getdate(start), min(getdate(end), getdate(today()))
 
 
+def attendance_start(student):
+	"""M05-12 The student's attendance start date: the earliest of their submitted Program Enrollments (the joining
+	date for an admission, L-02), or None."""
+	enrollment = frappe.qb.DocType("Program Enrollment")
+	start = (
+		frappe.qb.from_(enrollment)
+		.select(Min(enrollment.oc_attendance_start_date))
+		.where((enrollment.student == student) & (enrollment.docstatus == 1))
+		.run()
+	)[0][0]
+	return getdate(start) if start else None
+
+
+def student_window(student, window):
+	"""The term `window` from the student's attendance start date on, when that date falls inside the window. A start
+	after the window is not this term's joining (an enrollment recorded later, e.g. a legacy import): the whole window
+	counts."""
+	start = attendance_start(student)
+	return (start, window[1]) if start and window[0] < start <= window[1] else window
+
+
 def student_offerings(student, academic_term):
 	"""Course-based Student Groups of the term in which the student is an active member."""
 	group, member = frappe.qb.DocType("Student Group"), frappe.qb.DocType("Student Group Student")
@@ -195,10 +244,16 @@ def student_offerings(student, academic_term):
 
 
 def offering_row(student, offering, window, conducted_cache, rule):
-	if offering.name not in conducted_cache:
-		conducted_cache[offering.name] = conducted_periods(offering.name, window)
-	conducted = conducted_cache[offering.name]
-	attended, leave = marked_counts(student, offering.name, window, rule)
+	key = (offering.name, *window)
+	if key not in conducted_cache:
+		conducted_cache[key] = held_sessions(offering.name, window)
+	sessions = conducted_cache[key]
+	if sessions is None:
+		conducted = marked_dates(offering.name, window)
+		attended, leave = marked_counts(student, offering.name, window, rule)
+	else:
+		conducted = len(sessions)
+		attended, leave = session_counts_of(student, offering.name, sessions, window, rule)
 	return {
 		"offering": offering.name,
 		"course": offering.course,
@@ -210,33 +265,104 @@ def offering_row(student, offering, window, conducted_cache, rule):
 
 
 def conducted_periods(offering, window):
-	scheduled = frappe.db.count(
-		"Course Schedule", {"student_group": offering, "schedule_date": ["between", window]}
+	sessions = held_sessions(offering, window)
+	return marked_dates(offering, window) if sessions is None else len(sessions)
+
+
+def held_sessions(offering, window):
+	"""{Course Schedule: date} of the offering's held sessions in the window (attendance_rules.session_counts), or
+	None when the offering has no Course Schedule there at all (attendance is then counted by marked date)."""
+	schedules = frappe.get_all(
+		"Course Schedule",
+		filters={"student_group": offering, "schedule_date": ["between", window]},
+		fields=["name", "schedule_date", "oc_session_state"],
+		order_by="schedule_date, from_time, name",
 	)
-	if scheduled:
-		return scheduled
-	marked_dates = frappe.get_all(
+	if not schedules:
+		return None
+	replaced = set(
+		frappe.get_all(
+			"Course Schedule",
+			{"student_group": offering, "oc_session_state": MAKEUP, "oc_makeup_for": ["is", "set"], "schedule_date": ["<=", window[1]]},
+			pluck="oc_makeup_for",
+		)
+	)  # a Makeup replaces its session once it is held (dated in the window), not while it is still to come
+	return {s.name: s.schedule_date for s in schedules if session_counts(s.oc_session_state, s.name in replaced)}
+
+
+def marked_dates(offering, window):
+	dates = frappe.get_all(
 		"Student Attendance",
 		filters={"student_group": offering, "docstatus": 1, "date": ["between", window]},
 		pluck="date",
 	)
-	return len(set(marked_dates))
+	return len(set(dates))
 
 
-def marked_counts(student, offering, window, rule):
-	"""(attended, medical-leave) counts of the student's submitted records for the offering, per the rule."""
+def session_counts_of(student, offering, sessions, window, rule):
+	"""(attended, medical-leave) over the held `sessions` ({name: date}, in day and time order): per session the
+	student's record of it and any approved leave covering it. A record without a session stands for one period only:
+	the first held session of its date."""
+	by_session, by_date = {}, {}
+	for row in student_records(student, offering, window):
+		if row.course_schedule:
+			by_session[row.course_schedule] = (row.status, row.oc_leave_kind)
+		else:
+			by_date.setdefault(getdate(row.date), (row.status, row.oc_leave_kind))
+	leaves = approved_leaves(student, window)
+	buckets, days_seen = [], set()
+	for name, date in sessions.items():
+		day = getdate(date)
+		status, kind = by_session.get(name) or (by_date.get(day) if day not in days_seen else None) or (None, None)
+		days_seen.add(day)
+		leave = covering_leave(leaves, name, offering, day)
+		status, kind = session_mark(status, kind, leave and leave.oc_leave_kind, bool(leave and leave.mark_as_present))
+		buckets.append(bucket(status, kind, rule))
+	return buckets.count(ATTENDED), buckets.count(MEDICAL_LEAVE)
+
+
+def approved_leaves(student, window):
+	"""The student's submitted Student Leave Applications overlapping the window."""
+	return frappe.get_all(
+		"Student Leave Application",
+		filters={"student": student, "docstatus": 1, "from_date": ["<=", window[1]], "to_date": [">=", window[0]]},
+		fields=["from_date", "to_date", "oc_leave_kind", "attendance_based_on", "student_group", "course_schedule", "mark_as_present"],
+	)
+
+
+def covering_leave(leaves, session, offering, date):
+	"""The first leave covering the session: its dates hold the session's date and its scope holds the session (a
+	leave for one Course Schedule covers only that one, a leave for one Student Group only that group's sessions)."""
+	for leave in leaves:
+		if not getdate(leave.from_date) <= date <= getdate(leave.to_date):
+			continue
+		if leave.course_schedule not in (None, "", session):
+			continue
+		if leave.attendance_based_on == "Student Group" and leave.student_group not in (None, "", offering):
+			continue
+		return leave
+	return None
+
+
+def student_records(student, offering, window):
 	attendance, leave = frappe.qb.DocType("Student Attendance"), frappe.qb.DocType("Student Leave Application")
-	rows = (
+	return (
 		frappe.qb.from_(attendance)
 		.left_join(leave)
 		.on((leave.name == attendance.leave_application) & (leave.docstatus == 1))
-		.select(attendance.status, leave.oc_leave_kind)
+		.select(attendance.course_schedule, attendance.date, attendance.status, leave.oc_leave_kind)
 		.where(attendance.student == student)
 		.where(attendance.student_group == offering)
 		.where(attendance.docstatus == 1)
 		.where(attendance.date[window[0] : window[1]])
 		.run(as_dict=True)
 	)
+
+
+def marked_counts(student, offering, window, rule):
+	"""(attended, medical-leave) counts of the student's submitted records for the offering, per the rule (an
+	offering without Course Schedules)."""
+	rows = student_records(student, offering, window)
 	buckets = [bucket(row.status, row.oc_leave_kind, rule) for row in rows]
 	return buckets.count(ATTENDED), buckets.count(MEDICAL_LEAVE)
 
@@ -262,6 +388,22 @@ def issue_id_card(student):
 	from campus.campus_platform import verification
 
 	frappe.has_permission("Student", "write", student, throw=True)
+	if lifecycle_status(student) == ADMITTED:  # M04-09: the ID follows the joining confirmation
+		frappe.throw(_("{0} has not joined yet: the ID card is issued after the joining confirmation.").format(frappe.bold(student)))
 	record = verification.issue(frappe.get_doc("Student", student), ID_CARD_FORMAT)
 	mark_item_done(student, "ID-CARD")
 	return {"code": record.code, "url": verification.verification_url(record.code)}
+
+
+def resolve_student(student=None):
+	"""The student the session user may act on (own student, or a guardian's ward); see portal.resolve_student."""
+	from campus.student_services import portal
+
+	return portal.resolve_student(student)
+
+
+def is_the_student(student):
+	"""Whether the session user is the student themself (a guardian may view, only the student acts)."""
+	from campus.student_services import portal
+
+	return portal.is_the_student(student)

@@ -18,7 +18,7 @@ sheet's course as an Arrear; the Result Run grades that row with the CIA the reg
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import escape_html, flt
 
 from campus.examinations import cia
 from campus.examinations.arrears import arrear_writers
@@ -47,6 +47,8 @@ class MarkSheetEntry(Document):
 			frappe.throw(_("Marks cannot be changed once the Exam Session is published."))
 		self.validate_offering(session)
 		course = offering_course(self.course_offering)
+		if not course["configured"]:  # blank: refused, never a guessed Theory (R-08)
+			frappe.throw(_("Course {0} has no exam type; set it on the curriculum first.").format(frappe.bold(escape_html(course["course"]))))
 		if not course["course_type"]:
 			frappe.throw(_("Internal Only courses are not graded by the Result Run."))
 		if session.status != MARKS_ENTRY:

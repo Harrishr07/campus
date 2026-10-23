@@ -5,6 +5,7 @@
  "engine": "InnoDB",
  "field_order": [
   "default_attendance_threshold",
+  "attendance_correction_hours",
   "approval_sla_check_interval",
   "verification_base_url",
   "data_retention_days",
@@ -26,6 +27,14 @@
    "label": "Default Attendance Threshold",
    "default": "75",
    "description": "Minimum attendance percentage; editable."
+  },
+  {
+   "fieldname": "attendance_correction_hours",
+   "fieldtype": "Int",
+   "label": "Attendance Correction Cut-off (hours)",
+   "default": "48",
+   "non_negative": 1,
+   "description": "Hours after a period is first marked during which its teacher may change the marks; later changes need an approved Attendance Correction Request."
   },
   {
    "fieldname": "approval_sla_check_interval",
@@ -112,7 +121,7 @@
  "issingle": 1,
  "istable": 0,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-22 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Platform",
  "name": "Campus Settings",

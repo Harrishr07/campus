@@ -1,0 +1,157 @@
+{
+ "actions": [],
+ "creation": "2026-10-22 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "laboratory",
+  "company",
+  "incident_time",
+  "incident_type",
+  "column_break_1",
+  "severity",
+  "reported_by",
+  "status",
+  "closed_on",
+  "details_section",
+  "description",
+  "persons_involved",
+  "action_taken"
+ ],
+ "fields": [
+  {
+   "fieldname": "laboratory",
+   "fieldtype": "Link",
+   "label": "Laboratory",
+   "options": "Laboratory",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "laboratory.company",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "incident_time",
+   "fieldtype": "Datetime",
+   "label": "Incident Time",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "incident_type",
+   "fieldtype": "Select",
+   "label": "Incident Type",
+   "options": "\nInjury\nFire\nChemical Spill\nEquipment Failure\nOther",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "options": "\nMinor\nMajor\nCritical",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "reported_by",
+   "fieldtype": "Link",
+   "label": "Reported By",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nClosed",
+   "default": "Open",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "closed_on",
+   "fieldtype": "Date",
+   "label": "Closed On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "persons_involved",
+   "fieldtype": "Small Text",
+   "label": "Persons Involved"
+  },
+  {
+   "fieldname": "action_taken",
+   "fieldtype": "Text",
+   "label": "Action Taken",
+   "description": "Needed to close the incident."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 0,
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-10-22 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Labs",
+ "name": "Lab Incident",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "LINC-.YYYY.-.#####",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "Lab In-charge",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "IQAC Coordinator",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ]
+}

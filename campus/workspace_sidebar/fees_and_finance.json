@@ -196,6 +196,17 @@
    "type": "Link"
   },
   {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Bank Collection Row",
+   "link_to": "Bank Collection Row",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
    "child": 0,
    "collapsible": 1,
    "icon": "sheet",
@@ -244,17 +255,6 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
-   "label": "Bank Collection Row",
-   "link_to": "Bank Collection Row",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "indent": 0,
-   "keep_closed": 0,
    "label": "Scholarship Beneficiaries",
    "link_to": "Scholarship Beneficiaries",
    "link_type": "Report",
@@ -273,7 +273,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-08 10:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Campus Finance",
  "name": "Fees and Finance",

@@ -1,0 +1,139 @@
+{
+ "app": "campus",
+ "charts": [],
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Placement</b></span>\", \"col\": 12}}, {\"id\": \"sc0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Placement Drive\", \"col\": 3}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Recruiter\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Drive Registration\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Round Result\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}]",
+ "creation": "2026-10-22 16:30:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "briefcase",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Placement",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Recruiter",
+   "link_count": 0,
+   "link_to": "Recruiter",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Placement Eligibility Template",
+   "link_count": 0,
+   "link_to": "Placement Eligibility Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transactions",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Placement Drive",
+   "link_count": 0,
+   "link_to": "Placement Drive",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Drive Registration",
+   "link_count": 0,
+   "link_to": "Drive Registration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Round Result",
+   "link_count": 0,
+   "link_to": "Round Result",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-22 21:46:00.000000",
+ "modified_by": "Administrator",
+ "module": "Placement",
+ "name": "Placement",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [
+  {
+   "role": "Placement Officer"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Principal"
+  }
+ ],
+ "sequence_id": 49.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Placement Drive",
+   "link_to": "Placement Drive",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Recruiter",
+   "link_to": "Recruiter",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Drive Registration",
+   "link_to": "Drive Registration",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Round Result",
+   "link_to": "Round Result",
+   "type": "DocType"
+  }
+ ]
+}

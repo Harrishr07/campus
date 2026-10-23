@@ -167,7 +167,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-10 10:00:00.000000",
+ "modified": "2026-10-22 21:46:00.000000",
  "modified_by": "Administrator",
  "module": "Academic Governance",
  "name": "Academic Governance",
@@ -196,49 +196,49 @@
    "role": "System Manager"
   }
  ],
- "sequence_id": 49.0,
+ "sequence_id": 51.0,
  "shortcuts": [
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Body Type",
    "link_to": "Body Type",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Body Meeting",
    "link_to": "Body Meeting",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Academic Proposal",
    "link_to": "Academic Proposal",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
+   "doc_view": "List",
    "label": "Meeting Action Item",
    "link_to": "Meeting Action Item",
-   "type": "DocType",
-   "doc_view": "List"
+   "type": "DocType"
   },
   {
    "color": "Grey",
    "label": "Body Composition Compliance",
    "link_to": "Body Composition Compliance",
-   "type": "Report",
-   "report_ref_doctype": "Body"
+   "report_ref_doctype": "Body",
+   "type": "Report"
   },
   {
    "color": "Grey",
    "label": "Proposal Tracker",
    "link_to": "Proposal Tracker",
-   "type": "Report",
-   "report_ref_doctype": "Academic Proposal"
+   "report_ref_doctype": "Academic Proposal",
+   "type": "Report"
   }
  ],
  "title": "Academic Governance"
