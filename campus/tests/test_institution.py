@@ -3,7 +3,7 @@
 import frappe
 from frappe.utils import add_days, today
 
-from campus.campus_platform.api import get_institution, pack_enabled, service_provider
+from campus.campus_platform.api import clear_pack_cache, get_institution, pack_enabled, service_provider
 from campus.campus_platform.module_packs import SEED_PACKS, seed_module_packs
 from campus.campus_platform.pack_visibility import boot_session, hidden_workspaces
 from campus.tests.factories import make_company, make_user
@@ -63,7 +63,7 @@ class TestInstitution(CampusTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		frappe.db.rollback(save_point="institution_test")
-		frappe.cache.delete_value("campus_pack_enabled")
+		clear_pack_cache()  # also the per-request hidden_workspaces answer, which the rollback made stale
 
 	# seed and defaults
 	def test_seed_packs_and_allowed_statuses(self):
@@ -236,25 +236,44 @@ class TestInstitution(CampusTestCase):
 		make_profile(DEMO)
 		self.assertEqual(hidden_test_workspaces(USER_DEMO), {WORKSPACE})
 
-	def test_boot_session_filters_pages_sidebars_and_icons(self):
+	def test_boot_session_filters_pages_sidebars_dock_and_icons(self):
 		self.make_workspace_pack()
 		make_profile(DEMO, packs=[{"pack": "HOSTEL", "enabled": 0}])
-		other = {"name": "Other", "type": "Link", "link_type": "Workspace", "link_to": "Other"}
+		hidden_link = {"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}
+		other = {"type": "Link", "link_type": "Workspace", "link_to": "Other"}
+		section = {"type": "Section Break", "label": "Setup"}
+		thing = {"type": "Link", "link_type": "DocType", "link_to": "Route Thing"}
 		bootinfo = frappe._dict(
 			workspaces={"pages": [{"name": WORKSPACE}, {"name": "Other"}], "private_pages": []},
-			workspace_sidebar_item={
-				"hostel": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}]},
-				"mixed": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}, other]},
-				"area": {"label": WORKSPACE, "items": [other]},  # the sidebar of the hidden workspace itself
+			module_sidebars={
+				# the hidden workspace's own sidebar (its Home)
+				"Area": {"module": "Campus Platform", "workspaces": [WORKSPACE], "items": [hidden_link, section, other]},
+				# the same module's sidebar as Frappe ships it to a user without the workspace role: Home gone
+				"Route Only": {"module": "Campus Platform", "workspaces": [], "items": [thing]},
+				"Mixed": {"module": "Other Module", "workspaces": ["Other"], "items": [other, hidden_link]},
 			},
+			entity_module={"Thing": "Area", "Route Thing": "Route Only", "Other Thing": "Mixed"},
+			canonical_shell={"DocType": {"Thing": "Area", "Route Thing": "Route Only", "Other Thing": "Mixed"}},
+			home_shell="Area",
+			dock={"campus": [
+				{"link_type": "Workspace", "link_to": WORKSPACE},
+				{"link_type": "Sidebar", "link_to": "Area"},
+				{"link_type": "Sidebar", "link_to": "Mixed"},
+			]},
+			app_data=[{"app_name": "campus", "dock": [{"link_type": "Workspace", "link_to": WORKSPACE}, other]}],
 			desktop_icons=[
-				{"label": "Hostel", "link_type": "Workspace Sidebar"},
-				{"label": "Mixed", "link_type": "Workspace Sidebar"},
-				{"label": "Direct", "link_type": "Workspace", "link_to": WORKSPACE},
+				{"label": "Direct", "link_type": "Workspace Sidebar", "link_to": WORKSPACE},
+				{"label": "Mixed", "link_type": "Workspace Sidebar", "link_to": "Other"},
 			],
 		)
 		frappe.set_user(USER_DEMO)
 		boot_session(bootinfo)
 		self.assertEqual([p["name"] for p in bootinfo.workspaces["pages"]], ["Other"])
-		self.assertEqual(list(bootinfo.workspace_sidebar_item), ["mixed"])
+		self.assertEqual(list(bootinfo.module_sidebars), ["Mixed"])
+		self.assertEqual(bootinfo.module_sidebars["Mixed"]["items"], [other])
+		self.assertEqual(bootinfo.entity_module, {"Other Thing": "Mixed"})
+		self.assertEqual(bootinfo.canonical_shell, {"DocType": {"Other Thing": "Mixed"}})
+		self.assertIsNone(bootinfo.home_shell)
+		self.assertEqual(bootinfo.dock["campus"], [{"link_type": "Sidebar", "link_to": "Mixed"}])
+		self.assertEqual(bootinfo.app_data[0]["dock"], [other])
 		self.assertEqual([i["label"] for i in bootinfo.desktop_icons], ["Mixed"])

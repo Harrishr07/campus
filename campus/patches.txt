@@ -41,3 +41,6 @@ campus.patches.coe_pack_for_affiliated
 campus.patches.repair_joining_keys
 campus.patches.clear_legacy_attendance_start_dates
 campus.patches.document_reminder_due_date
+campus.patches.drop_converted_sidebars
+campus.patches.link_area_pack_workspaces
+campus.patches.retire_officer_invoice_read

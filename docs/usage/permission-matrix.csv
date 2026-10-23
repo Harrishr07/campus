@@ -27,6 +27,7 @@ DocType,Admission Cancellation,,System Manager,0,1,1,1,1,1,0,0,1,0,0,1,0,0,0,0,1
 DocType,Admission Document Rule,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Admission Document Rule,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Admission Quota,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Admission Quota,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Admission Quota,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Admission Settings,,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DocType,Admission Settings,,System Manager,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -668,6 +669,7 @@ DocType,Scholarship Scheme,,Accounts User,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
 DocType,Scholarship Scheme,,Dean Student Affairs,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
 DocType,Scholarship Scheme,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,1,0,1,0,0,0
 DocType,Seat Matrix,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
+DocType,Seat Matrix,,Admission Officer,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Seat Matrix,,System Manager,0,1,1,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0
 DocType,Seat Override Log,,Academics User,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 DocType,Seat Override Log,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0
@@ -702,6 +704,8 @@ DocType,Student Result,,Academics User,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Student Result,,COE,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Student Result,,Dean Academics,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Student Result,,Guardian,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1
+DocType,Student Result,,HOD,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
+DocType,Student Result,,Principal,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0
 DocType,Student Result,,Student,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1
 DocType,Student Result,,System Manager,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0
 DocType,Substitution,,Academics User,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0
@@ -772,6 +776,8 @@ Report,Admissions by Quota and Category,Program Enrollment,Admission Officer,0,1
 Report,Admissions by Quota and Category,Program Enrollment,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Arrear List,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Arrear List,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Arrear List,Student Result,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Arrear List,Student Result,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Arrear List,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attainment Target Gap,CO Attainment Run,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Attainment Target Gap,CO Attainment Run,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -911,6 +917,7 @@ Report,IQAC Action Taken Report,Meeting Action Item,System Manager,0,1,0,0,0,0,0
 Report,IQAC Calendar,Body Meeting,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,IQAC Calendar,Body Meeting,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,IQAC Calendar,Body Meeting,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Import Check,Data Import,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Import Check,Data Import,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Lab Equipment Register,Laboratory,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Lab Equipment Register,Laboratory,Lab In-charge,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -921,12 +928,14 @@ Report,Lab Incident Register,Lab Incident,Lab In-charge,0,1,0,0,0,0,0,0,0,0,0,0,
 Report,Lab Incident Register,Lab Incident,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Lab Incident Register,Lab Incident,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Live Seat Matrix,Seat Matrix,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Live Seat Matrix,Seat Matrix,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Live Seat Matrix,Seat Matrix,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Malpractice Register,Malpractice Report,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Malpractice Register,Malpractice Report,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Malpractice Register,Malpractice Report,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Malpractice Register,Malpractice Report,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Mentoring Activity,Counselling Note,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Mentoring Activity,Counselling Note,Mentor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Mentoring Activity,Counselling Note,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Mentoring Activity,Counselling Note,Student Counsellor,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Metric Drill-down,Metric Value,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -942,6 +951,7 @@ Report,Patent Register,Patent,IQAC Coordinator,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Patent Register,Patent,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Patent Register,Patent,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Pending Documents,Student Applicant,Academics User,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Pending Documents,Student Applicant,Admission Officer,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Pending Documents,Student Applicant,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,PhD Faculty,Faculty Norm,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,PhD Faculty,Faculty Norm,HR Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -980,6 +990,8 @@ Report,Research Proposal Pipeline,Research Proposal,Principal,0,1,0,0,0,0,0,0,0,
 Report,Research Proposal Pipeline,Research Proposal,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Result Analysis,Student Result,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Result Analysis,Student Result,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Result Analysis,Student Result,HOD,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Report,Result Analysis,Student Result,Principal,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Result Analysis,Student Result,System Manager,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Revaluation Change Stats,Revaluation Outcome,COE,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 Report,Revaluation Change Stats,Revaluation Outcome,Dean Academics,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

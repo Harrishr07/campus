@@ -10,7 +10,6 @@ import json
 from unittest import mock
 
 import frappe
-from frappe.boot import get_bootinfo
 from frappe.desk import reportview
 from frappe.desk.query_report import get_report_doc
 from frappe.tests import IntegrationTestCase
@@ -28,6 +27,7 @@ from campus.tests import demo
 from campus.tests.test_faculty_portal import COLLEAGUE, TEACHER, FacultyPortalFixture
 from campus.tests.test_malpractice import INVIGILATOR, OTHER_INVIGILATOR, MalpracticeFixture
 from campus.tests.test_mentoring import MENTOR_A, MentoringFixture
+from campus.tests.test_navigation import desk_boot, dock_areas
 from campus.tests.test_timetable import CSE, employee
 
 OFFICE_ROLE = "Academics User"
@@ -39,17 +39,26 @@ CORRECTION = "Attendance Correction Request"
 BY_HAND = "Report Manager"  # a role the kit never gives
 # The desk areas each pilot role's guide (docs/usage/roles) names, and office areas it must not see.
 AREAS = {
-	"faculty": ({"Academics", "Examinations", "Student Services", "Faculty", "Approvals"}, {"Communication", "Academic Governance"}),
-	"hod": ({"Academic Governance", "Academics", "Communication", "Examinations", "Faculty", "Student Services", "Approvals"}, set()),
+	"faculty": ({"Academics", "Examinations", "Student Services", "Faculty", "Research", "Approvals"}, {"Communication", "Academic Governance"}),
+	"hod": ({"Academic Governance", "Academics", "Communication", "Examinations", "Faculty", "Research", "Student Services", "Approvals"}, set()),
 	"class_advisor": ({"Student Services", "Approvals"}, {"Communication", "Academic Governance"}),
 	"coe": ({"Examinations", "Academics", "Student Services", "Approvals"}, {"Communication", "Academic Governance", "Faculty"}),
 }
 REPORTS = {
 	"faculty": ("My Pending Approvals",),
-	"hod": ("My Pending Approvals", "Workload Balance", "Timetable Clash Checker", "Attendance Shortage", "CIA Status by Offering"),
-	"class_advisor": ("My Pending Approvals", "Attendance Shortage"),
+	"hod": (
+		"My Pending Approvals", "Workload Balance", "Timetable Clash Checker", "Attendance Shortage", "CIA Status by Offering",
+		"Result Analysis", "Arrear List",
+	),
+	"class_advisor": ("My Pending Approvals", "Attendance Shortage", "Mentoring Activity"),
 	"coe": ("My Pending Approvals", "Exam Eligibility Withheld", "CIA Status by Offering", "Result Analysis", "Rank List", "Arrear List"),
-}
+	"principal": ("My Pending Approvals", "Result Analysis", "Lab Equipment Register"),
+	"accounts": ("Student Fee Collection", "Student Fee Ledger"),
+	"admissions": (
+		"Import Check", "Live Seat Matrix", "Pending Documents", "Admission No-Shows", "Admissions by Quota and Category",
+		"Refund Register",
+	),
+}  # fmt: skip
 
 
 def as_user(user, fn, *args, **kwargs):
@@ -94,9 +103,9 @@ class TestKitRoleSets(IntegrationTestCase):
 		self.assertEqual(KIT_ROLES["coe"], ["COE"])
 
 	def test_only_teaching_specs_lose_the_retired_office_role(self):
-		for key in TEACHING_KEYS:
+		for key in (*TEACHING_KEYS, "admissions"):
 			self.assertEqual(people.retired_roles(KIT_ROLES[key]), {OFFICE_ROLE}, key)
-		for key in ("office", "admissions", "principal", "iqac", "accounts", "student"):
+		for key in ("office", "principal", "iqac", "accounts", "student"):
 			self.assertEqual(people.retired_roles(KIT_ROLES[key]), set(), key)
 
 	def test_a_sync_takes_away_only_the_retired_role(self):
@@ -140,11 +149,8 @@ class TestKitRoleSets(IntegrationTestCase):
 	def test_each_role_sees_its_desk_areas_and_no_office_area(self, _packs):
 		for key, (wanted, refused) in AREAS.items():
 			user = kit_login(key)
-			frappe.set_user(user)
 			try:  # module packs are per college (test_navigation); here only the roles decide
-				frappe.cache.hdel("desktop_icons", user)
-				frappe.cache.hdel("bootinfo", user)
-				areas = {i["label"] for i in get_bootinfo().desktop_icons if i.get("app") == "campus"}
+				areas = dock_areas(desk_boot(user))
 			finally:
 				frappe.set_user("Administrator")
 			self.assertTrue(wanted <= areas, f"{key}: missing {wanted - areas}")
@@ -156,6 +162,41 @@ class TestKitRoleSets(IntegrationTestCase):
 			user = kit_login(key)
 			for report in reports:
 				self.assertEqual(as_user(user, get_report_doc, report).name, report, f"{key}: {report}")
+
+	def test_the_office_reads_the_instructor_records_it_allocates(self):
+		user = kit_login("office")  # Faculty > Setup > Instructor; Course Allocation and Timetable name instructors
+		self.assertTrue(frappe.has_permission("Instructor", "read", user=user))
+		self.assertFalse(frappe.has_permission("Instructor", "write", user=user))
+
+	def test_the_admission_officer_works_its_applicants_without_the_office_role(self):
+		"""UAT admission-officer: convert, check and admit applicants, open the Student for Confirm Joining; no office,
+		invoice or exam rights (Confirm Joining raises the invoice on the officer's behalf)."""
+		user = kit_login("admissions")
+		self.assertEqual(KIT_ROLES["admissions"], ["Admission Officer"])
+		granted = (
+			("Student Applicant", "create"), ("Student Applicant", "write"), ("Student", "read"), ("Program Enrollment", "read"),
+			("Seat Matrix", "read"), ("Admission Quota", "read"), ("Program", "read"), ("Student Category", "read"), ("Lead", "write"),
+		)  # fmt: skip
+		for doctype, ptype in granted:
+			self.assertTrue(frappe.has_permission(doctype, ptype, user=user), f"{doctype} {ptype}")
+		refused = (
+			("Student", "create"), ("Student", "write"), ("Program Enrollment", "create"), ("Sales Invoice", "read"),
+			("Payment Entry", "read"), ("Student Result", "read"), ("Course Schedule", "read"),
+		)  # fmt: skip
+		for doctype, ptype in refused:
+			self.assertFalse(frappe.has_permission(doctype, ptype, user=user), f"{doctype} {ptype}")
+
+	@mock.patch("campus.campus_platform.pack_visibility.hidden_workspaces", return_value=set())
+	def test_the_admission_officer_docks_admissions_and_the_student_list_only(self, _packs):
+		user = kit_login("admissions")
+		try:
+			bootinfo = desk_boot(user)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(dock_areas(bootinfo), {"Admissions", "Student Services", "Approvals"})
+		links = [i["link_to"] for i in bootinfo.module_sidebars["Student Services"]["items"] if i["type"] == "Link"]
+		self.assertIn("Student", links)
+		self.assertNotIn("Student Attendance", links)
 
 	def test_no_teacher_creates_a_student_or_a_record_correction(self):
 		for key in TEACHING_KEYS:

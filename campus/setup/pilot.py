@@ -4,7 +4,7 @@
 
 Builds, in order: ERPNext's wizard fixtures if the site has none, trust and college companies, academic calendar, a holiday list, the site's default company (when unset), departments, programmes, the regulation with its
 rule records (exam rules from `campus.examinations.seed`), student categories, quotas and seat matrices, fee
-structures, the selling price list, approval policies, the shared service agreements, and one user per role with its company permission.
+structures, the selling price list, approval policies, the shared service agreements, and one user per role with its company permission and module profile.
 Re-running changes nothing: records are found by natural key and only differing values are updated (locked records
 -- an Effective regulation, a submitted fee structure -- are never edited). Returns what was created and updated.
 
@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 
 from campus.campus_platform.positions import ensure_seed_positions
-from campus.setup import admission, fees, people, policies, structure
+from campus.setup import admission, fees, module_profiles, people, policies, structure
 from campus.setup.profile import load_profile
 from campus.setup.records import Outcome
 
@@ -46,6 +46,7 @@ def setup_college(profile="sxcce", test_passwords=None):
 	fees.ensure_selling_defaults()
 	fees.ensure_fees(profile, college, out)
 	employees = people.ensure_people(profile, {"college": college, "trust": trust}, out, use_test_passwords, result)
+	module_profiles.ensure_module_profiles(profile, out)
 	structure.ensure_institution_profile(profile, college, employees, out)
 	if trust:
 		structure.ensure_service_agreements(profile, trust, college, out)

@@ -12,16 +12,15 @@ app_license = "gpl-3.0"
 
 required_apps = ["erpnext", "hrms", "education", "india_compliance", "frappe_whatsapp"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "campus",
-# 		"logo": "/assets/campus/logo.png",
-# 		"title": "OneBook Campus",
-# 		"route": "/campus",
-# 		"has_permission": "campus.api.permission.has_app_permission"
-# 	}
-# ]
+# The Apps screen tile; it opens the first Dock entry (campus/dock/campus) the user can reach
+add_to_apps_screen = [
+	{
+		"name": "campus",
+		"logo": "/assets/campus/images/campus-logo.svg",
+		"title": "OneBook Campus",
+		"has_permission": "campus.campus_platform.navigation.has_app_permission",
+	}
+]
 
 # Includes in <head>
 # ------------------
@@ -61,8 +60,8 @@ required_apps = ["erpnext", "hrms", "education", "india_compliance", "frappe_wha
 # application home page (will override Website Settings)
 # home_page = "login"
 
-# website user home page (by Role)
-role_home_page = {"Student": "campus-portal", "Guardian": "campus-portal"}
+# website user home page: students and guardians to the portal, desk users to desk (campus.student_services.portal)
+get_website_user_home_page = "campus.student_services.portal.home_page"
 
 # Generators
 # ----------

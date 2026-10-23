@@ -5,7 +5,7 @@ Project), cadre, funding mode (Aided / Self-financing), pay scale, AICTE faculty
 status and award date, NET / SET / SLET, teaching experience before joining, specialisation, research guide,
 ORCID, Scopus and Vidwan / IRINS IDs. An awarded PhD sets the highest qualification to Doctorate.
 
-## Faculty Norm (Faculty > Masters)
+## Faculty Norm (Faculty > Setup)
 One record per college and Effective From date. The version in force on a date is the latest one on or before it,
 so a new AICTE/UGC norm is a new record, not an edit. It holds the students-per-faculty figure and, per cadre, the
 cadre ratio share (1, 2, 6 for 1:2:6), minimum qualification, PhD required, NET/SET/SLET or PhD required, and
@@ -19,7 +19,7 @@ minimum teaching experience.
   only updates the shortfall text on the next save.
 - **Job Applicant:** cadre and qualification fields; the shortfall is shown, nothing is blocked.
 
-## Sanctioned Post (Faculty > Masters)
+## Sanctioned Post (Faculty > Setup)
 Department, cadre, academic year and the sanctioned count; one record per department, cadre and year.
 
 ## Reports (filters: company, academic year, department)
@@ -40,7 +40,7 @@ and the four demo instructors as CSE Professor, Associate Professor and two Assi
 ## Course allocation and workload (M07-02)
 - **Workload norm** is part of the Faculty Norm: each cadre row has Min and Max Teaching Hours / Week, and the norm
   has an Overload Block Margin (default 2 hours).
-- **Course Allocation** (Faculty > Transactions): one per department and term, covering the course offerings
+- **Course Allocation** (Faculty > Teaching & Timetable): one per department and term, covering the course offerings
   (course-based Student Groups) of the department's programs. Rows give the offering, the faculty and the weekly
   Lecture / Tutorial / Practical hours. The faculty must be an active Employee with an Instructor record.
 - A teacher's weekly total counts this allocation plus every other submitted allocation of the term. Above the cadre
@@ -69,7 +69,7 @@ Not yet: electives of a group in parallel, cross-timetable clash checks (educati
 ## Leave and substitution (M07-03)
 
 1. When a Leave Application is approved (submitted as Approved), a Substitution is proposed for every published Course Schedule of that teacher in the leave dates. The proposed substitute is a free teacher of the same department (no class or other substitution at that time, not on approved leave), the one covering least so far. If nobody is free the substitute is left blank.
-2. Open the Substitution (Faculty > Substitution): Suggest Substitutes lists the free teachers; set the Substitute and change Status to Confirmed. Confirming sends the substitute the `substitution.assigned` message. A manual choice is checked for clashes and leave. A Cancelled substitution stays cancelled; cancelling the leave cancels its substitutions.
+2. Open the Substitution (Faculty > Teaching & Timetable > Substitution): Suggest Substitutes lists the free teachers; set the Substitute and change Status to Confirmed. Confirming sends the substitute the `substitution.assigned` message. A manual choice is checked for clashes and leave. A Cancelled substitution stays cancelled; cancelling the leave cancels its substitutions.
 3. Print format Substitution Order gives the order for the period.
 4. The confirmed substitute opens the Substitution and uses Mark Attendance. The Confirmed Substitution is the permission: it covers that Course Schedule only, for students of its Student Group, and the user's roles do not change. The Instructor role alone sees only their own substitutions, read-only.
 
@@ -80,7 +80,7 @@ Not yet: feeding approved leave into Timetable faculty unavailability (that tabl
 1. Teaching staff with a login need the HRMS **Employee** role to open their Appraisal. Saving an Employee with Staff Type Teaching and a User ID grants it (`campus.faculty.setup.grant_employee_role`); Appraisal permissions stay HRMS's (no Custom DocPerm on Appraisal).
 2. Faculty Achievement (conference, resource person, award, membership, certification) takes private evidence (so it cannot be made public as IQAC evidence, which needs a public file); HR verifies it. A change to a verified achievement by anyone but HR clears the verification. FDP attendance is not entered here: create the HRMS Training Event, tick Faculty Development Programme and mark attendance.
 3. API Score Rule (one version per company and Effective From) holds points, annual caps, KRA weightages and targets. A version used by a submitted Appraisal is locked: add a new version.
-4. Employee > Faculty > Self-Appraisal computes the score for an Appraisal Cycle into an HRMS Appraisal. Request HOD Review sends it to the HOD, or to the Principal when the appraisee is an HOD. Scores are frozen while the review is open or approved; a rejected review releases them. Approval submits the Appraisal. HR can submit directly only with an override reason (HR Override Reason on the Appraisal).
+4. On the teacher's Employee (Faculty > Staff > Employee), **Faculty > Self-Appraisal** computes the score for an Appraisal Cycle into an HRMS Appraisal. Request HOD Review sends it to the HOD, or to the Principal when the appraisee is an HOD. Scores are frozen while the review is open or approved; a rejected review releases them. Approval submits the Appraisal. HR can submit directly only with an override reason (HR Override Reason on the Appraisal).
 5. Reports FDP Participation (6.3.4) and Conference Financial Support (6.3.2); print format Faculty CV on Employee.
 
 Not yet: scoping the reports to a department through User Permissions (they use the user's Employee permissions), publications and student feedback (Phase 3).

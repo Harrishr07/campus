@@ -338,6 +338,22 @@ class TestMentoringActivityReport(MentoringFixture):
 		with self.assertRaises(frappe.PermissionError):
 			self.as_user(HOD, mentoring_activity.execute, frappe._dict(company=demo.ARTS))
 
+	def test_a_mentor_sees_only_their_own_row(self):
+		self.add_note(MENTOR_A, self.a_student)
+		self.add_note(MENTOR_B, self.b_student)
+		_columns, rows = self.as_user(MENTOR_A, mentoring_activity.execute, frappe._dict(company=demo.ENGINEERING))
+		self.assertEqual([r["mentor"] for r in rows], [demo.employee_of("faculty_1")])
+		self.assertEqual(rows[0]["mentees"], frappe.db.count("Student", {"oc_mentor": demo.employee_of("faculty_1"), "oc_company": demo.ENGINEERING}))
+		self.assertEqual(rows[0]["note_count"], 1)
+
+	def test_a_class_advisor_without_the_mentor_role_is_refused(self):
+		"""Counselling Note is confidential (PR-05): the report is for its readers, the Class Advisor is not one."""
+		advisor = "campus-l09-advisor@example.com"
+		make_user(advisor, [demo.ENGINEERING])
+		frappe.get_doc("User", advisor).add_roles(mentoring.CLASS_ADVISOR_ROLE)
+		with self.assertRaises(frappe.PermissionError):
+			self.as_user(advisor, mentoring_activity.execute, frappe._dict(company=demo.ENGINEERING))
+
 
 class TestRestrictedRecordSideDoors(MentoringFixture):
 	"""Comments, attachments and Connections counts of mentoring records follow the records' own read rules."""

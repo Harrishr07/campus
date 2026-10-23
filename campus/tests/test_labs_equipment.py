@@ -260,6 +260,20 @@ class TestReportsAreCompanyScoped(LabCase):
 		self.assertEqual(register_report({"company": OTHER})[1], [])
 		self.assertEqual(due_report({"company": OTHER})[1], [])
 
+	def test_the_in_charge_reads_the_assets_of_their_college_only(self):
+		"""Labs > Equipment: a read-and-report rule for Lab In-charge, scoped by the company User Permission."""
+		other_lab = self.make_lab("Other Lab", company=OTHER, in_charge=self.make_employee("OtherInCharge", OTHER))
+		mine, theirs = self.make_asset(self.lab), self.make_asset(other_lab, company=OTHER)
+		ours = self.make_maintenance(mine, [("Cal", "Calibration", 5)])
+		self.make_maintenance(theirs, [("Cal", "Calibration", 5)])
+		frappe.set_user(READER)
+		assets, maintenance = frappe.get_list("Asset", pluck="name"), frappe.get_list("Asset Maintenance", pluck="name")
+		self.assertIn(mine.name, assets)
+		self.assertNotIn(theirs.name, assets)
+		self.assertIn(ours.name, maintenance)
+		self.assertEqual(set(frappe.get_all("Asset Maintenance", {"name": ["in", maintenance]}, pluck="company")), {COLLEGE})
+		self.assertFalse(frappe.has_permission("Asset", "write", mine.name))
+
 	def test_the_due_report_defaults_to_the_notice_window(self):
 		self.make_maintenance(self.make_asset(self.lab), [("Soon", "Calibration", 15), ("Far", "Calibration", 40)])
 		self.assertEqual([r["task"] for r in due_report({"laboratory": self.lab.name})[1]], ["Soon"])

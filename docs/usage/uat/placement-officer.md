@@ -3,7 +3,7 @@ Login `placement@sxcce.example.edu` (role Placement Officer, company SXCCE). Gui
 
 | # | Step | Expected |
 |---|---|---|
-| 1 | Placement > Transactions > Placement Drive | Demo drive with a future date |
+| 1 | Placement > Drives > Placement Drive | Demo drive with a future date |
 | 2 | Open Drive Registration list | Registrations of that drive |
 | 3 | Add a Round Result | Saved |
 | 4 | As `student@`, `/campus-portal/placement` | Drive visible (if eligible) |

@@ -9,6 +9,7 @@ from campus.campus_platform import bulk
 from campus.campus_platform.verification import verify
 from campus.examinations import api, results
 from campus.examinations.seed import seed_regulation
+from campus.tests.approval_fixtures import make_department
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.factories import make_company, make_user
 from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
@@ -19,6 +20,7 @@ PROGRAM = "Exam Test BE"
 PRE_TERM, TERM = "Exm Pre", "Exm Odd"
 COE_USER = "exam-coe@example.com"
 FACULTY, OTHER_FACULTY = "exam-faculty@example.com", "exam-other-faculty@example.com"
+PRINCIPAL_USER, HOD_USER, OTHER_HOD_USER = "exam-principal@example.com", "exam-hod@example.com", "exam-other-hod@example.com"
 STUDENT_22_USER, STUDENT_26_USER, GUARDIAN_USER = (
 	"exam-s22@example.com", "exam-s26@example.com", "exam-guardian@example.com",
 )  # fmt: skip
@@ -422,6 +424,30 @@ class TestResultAccess(ExamFixture):
 	def test_staff_read_regardless_of_publication(self):
 		self.run_session()
 		self.assertEqual(len(self.visible(COE_USER)), 5)  # four results of the session and the earlier one
+
+	def test_the_principal_reads_released_results_and_an_hod_their_departments_only(self):
+		"""The Result Analysis and Arrear List reports read through these rules (frappe.get_list)."""
+		self.run_session()
+		department, other = (make_department(name, COLLEGE) for name in ("Exam Test CSE", "Exam Test ECE"))
+		frappe.db.set_value("Program", PROGRAM, "department", department)
+		for user, role, scope in ((PRINCIPAL_USER, "Principal", None), (HOD_USER, "HOD", department), (OTHER_HOD_USER, "HOD", other)):
+			make_login(user, role)
+			if scope:
+				frappe.get_doc(
+					{"doctype": "Position Holder", "position": "HOD", "scope_value": scope, "user": user, "from_date": add_days(now_datetime(), -30)}
+				).insert()  # fmt: skip
+		for user in (PRINCIPAL_USER, HOD_USER):
+			self.assertEqual(self.visible(user), [], user)  # nothing before the release
+		self.publish(add_days(now_datetime(), -1))
+		released = sorted(s.name for s in (self.s22, self.s26, self.s_ab, self.s_sa))  # the earlier session is unpublished
+		self.assertEqual(self.visible(PRINCIPAL_USER), released)
+		self.assertEqual(self.visible(HOD_USER), released)
+		self.assertEqual(self.visible(OTHER_HOD_USER), [])
+		frappe.set_user("Administrator")
+		result = self.result(self.s22)
+		self.assertTrue(frappe.has_permission("Student Result", "read", result, user=HOD_USER))
+		self.assertFalse(frappe.has_permission("Student Result", "read", result, user=OTHER_HOD_USER))
+		self.assertFalse(frappe.has_permission("Student Result", "read", self.result(self.s22, self.pre_session), user=PRINCIPAL_USER))
 
 	def test_staff_roles_may_print_results(self):
 		for role in ("System Manager", "COE", "Dean Academics", "Academics User"):

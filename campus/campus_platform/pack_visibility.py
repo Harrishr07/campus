@@ -1,13 +1,14 @@
 """M17-01 Hide the workspaces of disabled module packs from desk navigation.
 
-Mechanism: the `boot_session` hook removes a pack's workspaces (pages, sidebar items, desktop icons)
-from a user's boot data when the pack is disabled for ALL companies the user can access, or when the
+Mechanism: the `boot_session` hook removes a pack's workspaces (pages, the area's sidebar, dock entries and
+grid icons) from a user's boot data when the pack is disabled for ALL companies the user can access, or when the
 pack lists roles and the user has none of them. System Manager and Administrator always see everything.
 This hides navigation only; data access stays governed by DocType permissions.
 """
 
 import frappe
 from frappe.core.doctype.user_permission.user_permission import get_user_permissions
+from frappe.utils.caching import request_cache
 
 from campus.campus_platform.api import pack_enabled
 
@@ -17,8 +18,10 @@ def accessible_companies(user):
 	return restricted or frappe.get_all("Institution Profile", pluck="name")
 
 
+@request_cache
 def hidden_workspaces(user):
-	"""Names of workspaces that belong to a pack the user may not see."""
+	"""Names of workspaces that belong to a pack the user may not see. Asked up to three times per boot (Apps tile,
+	grid App icon, boot_session), so it is computed once per request; `clear_pack_cache` forgets it."""
 	if user == "Administrator" or "System Manager" in frappe.get_roles(user):
 		return set()
 	user_roles = set(frappe.get_roles(user))
@@ -46,20 +49,50 @@ def filter_bootinfo(bootinfo, hidden):
 		if key in workspaces:
 			workspaces[key] = [p for p in workspaces[key] if p.get("name") not in hidden]
 
-	sidebars = bootinfo.get("workspace_sidebar_item") or {}
-	for title, sidebar in list(sidebars.items()):
-		if sidebar.get("label") in hidden:  # the sidebar of a hidden workspace goes with it
-			del sidebars[title]
+	dropped = filter_sidebars(bootinfo.get("module_sidebars") or {}, hidden)
+	if dropped:
+		forget_shells(bootinfo, dropped)
+
+	def reachable(row):
+		if row.get("link_type") == "Workspace":
+			return row.get("link_to") not in hidden
+		return not (row.get("link_type") == "Sidebar" and row.get("link_to") in dropped)
+
+	for app, rows in (bootinfo.get("dock") or {}).items():
+		bootinfo["dock"][app] = [r for r in rows if reachable(r)]
+	for app in bootinfo.get("app_data") or []:
+		app["dock"] = [r for r in app.get("dock") or [] if reachable(r)]
+
+	if "desktop_icons" in bootinfo:  # only the retiring icon grid carries these
+		bootinfo["desktop_icons"] = [i for i in bootinfo["desktop_icons"] if i.get("link_to") not in hidden]
+
+
+def filter_sidebars(sidebars, hidden):
+	"""Drop the sidebars of a hidden workspace's module and strip hidden workspace links from the others. Matched by
+	module, not by Home: Frappe already removed Home for a user without the workspace role, but keeps the shell when
+	the user can read any DocType in it. Returns the dropped shells."""
+	hidden_modules = set(frappe.get_all("Workspace", {"name": ["in", list(hidden)]}, pluck="module"))
+	dropped = set()
+	for shell, sidebar in list(sidebars.items()):
+		if sidebar.get("module") in hidden_modules or set(sidebar.get("workspaces") or ()) & hidden:
+			dropped.add(shell)
+			del sidebars[shell]
 			continue
 		sidebar["items"] = [
 			i for i in sidebar["items"] if not (i.get("link_type") == "Workspace" and i.get("link_to") in hidden)
 		]
-		if not any(i.get("type") != "Section Break" for i in sidebar["items"]):
-			del sidebars[title]
+	return dropped
 
-	bootinfo["desktop_icons"] = [
-		i
-		for i in bootinfo.get("desktop_icons") or []
-		if not (i.get("link_type") == "Workspace" and i.get("link_to") in hidden)
-		and not (i.get("link_type") == "Workspace Sidebar" and i.get("label", "").lower() not in sidebars)
-	]
+
+def forget_shells(bootinfo, dropped):
+	"""Routing maps must not send a route to a shell the user no longer has."""
+	entity_module = bootinfo.get("entity_module") or {}
+	for entity, shell in list(entity_module.items()):
+		if shell in dropped:
+			del entity_module[entity]
+	for by_name in (bootinfo.get("canonical_shell") or {}).values():
+		for name, shell in list(by_name.items()):
+			if shell in dropped:
+				del by_name[name]
+	if bootinfo.get("home_shell") in dropped:
+		bootinfo["home_shell"] = None

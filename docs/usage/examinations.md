@@ -44,7 +44,7 @@ COE reads and edits everything. Every change is versioned.
 
 ## Set up (COE)
 1. **Exam Session**: set Registration Opens, Registration Closes (the last day without a late fee), Exams Start / End and the Exam Schedule (one row per course: date, FN/AN).
-2. **Exam Fee Rate** (Examinations > Masters): fee per course for the company (or one program), and late fee slabs in days after the closing date, e.g. 1-7 days ₹100, 8-15 days ₹250. Past the last slab, registration is closed.
+2. **Exam Fee Rate** (Examinations > Setup): fee per course for the company (or one program), and late fee slabs in days after the closing date, e.g. 1-7 days ₹100, 8-15 days ₹250. Past the last slab, registration is closed.
 3. Lock the term's **Attendance Eligibility Run** (Student Services). Registration reads only locked runs.
 
 ## Create registrations
@@ -72,7 +72,7 @@ Exam dues do not stop registration. They block hall tickets (`campus.examination
 
 Running it again is safe. An unchanged ticket keeps its QR. A changed one (dates, courses, photo, status) has its QR revoked and a new one issued. A ticket that becomes withheld has its QR revoked.
 
-The withheld list is in Examinations > Transactions > **Withheld Hall Tickets**.
+The withheld list is in Examinations > Registration & Hall Tickets > **Withheld Hall Tickets**.
 
 ## Download (student)
 On /campus-portal, the exam registration card shows the hall ticket. A withheld student sees the reason. An issued ticket can be downloaded (PDF) once the release time has passed. Students and guardians can open only their own (or their ward's) issued, released tickets.

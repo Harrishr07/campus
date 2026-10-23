@@ -13,9 +13,11 @@ Staff go to `/app`; student and guardian go to `/campus-portal`. Use a separate 
 3. Negative checks (marked N) must fail or show nothing; if they succeed that is a **Critical** bug.
 4. Do not edit or delete demo records you did not create. Make your own test records.
 5. Scripts do not need developer tools; never use Administrator.
+6. A path such as **Admissions > Enquiries > Lead** means: the Admissions entry in the desk dock (open **OneBook Campus** from the Apps screen), then the **Enquiries** section of its sidebar, then **Lead**. Each area's sidebar starts with Home and ends with Reports and Setup. Every tester login also has **Administration**
+in its dock: on a demo site it holds only UAT Feedback (see Reporting), so the role guides do not list it.
 
 ## Reporting
-Every tester login (on a demo site) holds the **UAT Tester** role. Open **Administration > Transactions > UAT Feedback** (or `/app/uat-feedback`) and click **Add UAT Feedback** for each problem.
+Every tester login (on a demo site) holds the **UAT Tester** role. Open **Administration > UAT > UAT Feedback** (or `/app/uat-feedback`) and click **Add UAT Feedback** for each problem.
 The student and guardian logins are portal-only and cannot open the desk: report their findings from a staff login, naming `student.md` / `guardian.md` as the script.
 
 | Field | Content |

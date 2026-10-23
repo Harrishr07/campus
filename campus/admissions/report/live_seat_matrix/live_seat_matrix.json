@@ -29,7 +29,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2026-10-05 12:00:00.000000",
+ "modified": "2026-10-23 07:30:00.000000",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Live Seat Matrix",
@@ -44,6 +44,9 @@
   },
   {
    "role": "Academics User"
+  },
+  {
+   "role": "Admission Officer"
   }
  ]
 }

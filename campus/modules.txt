@@ -1,4 +1,5 @@
 Campus Platform
+Campus Approvals
 Campus Messaging
 Curriculum
 Admissions

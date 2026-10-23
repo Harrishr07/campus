@@ -16,6 +16,7 @@ from campus.setup.admission import largest_remainder
 from campus.setup.pilot import setup_college
 from campus.setup.profile import PROFILE_DIR, load_profile, profile_errors
 from campus.setup.records import Outcome
+from campus.tests.test_navigation import desk_boot
 
 SXCCE = json.loads((PROFILE_DIR / "sxcce.json").read_text())
 COUNTED = (
@@ -184,6 +185,70 @@ class TestPilotSetup(IntegrationTestCase):
 		frappe.get_doc("User", faculty).remove_roles("Instructor")
 		self.assertEqual(setup_college("sxcce", test_passwords=True)["updated"].get("User"), 1)
 		self.assertIn("Instructor", frappe.get_roles(faculty))
+
+	def test_every_desk_user_has_its_module_profile_with_the_campus_modules_unblocked(self):
+		campus = set(frappe.get_all("Module Def", {"app_name": "campus"}, pluck="name"))
+		profiles = {p["name"]: set(p["keep"]) for p in SXCCE["module_profiles"]}
+		for spec in SXCCE["users"]:
+			user = f"{spec['key']}@{SXCCE['user_domain']}"
+			expected = spec.get("module_profile")
+			self.assertEqual(frappe.db.get_value("User", user, "module_profile"), expected, user)
+			blocked = set(frappe.get_all("Block Module", {"parent": user, "parenttype": "User"}, pluck="module"))
+			if not expected:
+				self.assertEqual(blocked, set(), user)  # portal users are not given a profile
+				continue
+			self.assertFalse(blocked & campus, user)
+			self.assertFalse(blocked & profiles[expected], user)
+			self.assertTrue({"Selling", "Payroll", "Education", "Build"} <= blocked | profiles[expected], user)
+
+	def test_each_pilot_role_docks_only_campus_areas_and_the_modules_its_profile_keeps(self):
+		self.addCleanup(frappe.set_user, "Administrator")
+		profiles = {p["name"]: set(p["keep"]) for p in SXCCE["module_profiles"]}
+		for spec in SXCCE["users"]:
+			if not spec.get("module_profile"):
+				continue
+			dock = desk_boot(f"{spec['key']}@{SXCCE['user_domain']}").dock
+			outside = {row["link_to"] for app, rows in dock.items() if app != "campus" for row in rows if not row.get("hidden")}
+			self.assertEqual(outside, profiles[spec["module_profile"]], spec["key"])
+			self.assertTrue(dock.get("campus"), spec["key"])
+
+	def test_a_rerun_restores_a_hand_cleared_profile_and_a_drifted_profile_for_every_user(self):
+		faculty = f"faculty@{SXCCE['user_domain']}"
+		frappe.db.set_value("User", faculty, "module_profile", None)
+		frappe.db.delete("Block Module", {"parent": "Campus Accounts", "parenttype": "Module Profile", "module": "Selling"})
+		frappe.db.delete("Block Module", {"parent": faculty, "parenttype": "User"})
+		result = setup_college("sxcce", test_passwords=True)
+		self.assertEqual(result["updated"]["Module Profile"], 1)
+		self.assertEqual(frappe.db.get_value("User", faculty, "module_profile"), "Campus Teaching Staff")
+		self.assertIn("Selling", frappe.get_all("Block Module", {"parent": "Campus Accounts"}, pluck="module"))
+		self.assertIn("Selling", frappe.get_all("Block Module", {"parent": faculty, "parenttype": "User"}, pluck="module"))
+		self.assertEqual(setup_college("sxcce", test_passwords=True)["updated"], {})
+
+	def test_a_user_outside_the_kit_keeps_its_own_blocked_modules(self):
+		email = "bystander.modules@example.com"
+		frappe.get_doc({"doctype": "User", "email": email, "first_name": "By", "send_welcome_email": 0,
+			"block_modules": [{"module": "Selling"}]}).insert(ignore_permissions=True)
+		setup_college("sxcce", test_passwords=True)
+		self.assertIsNone(frappe.db.get_value("User", email, "module_profile"))
+		self.assertEqual(frappe.get_all("Block Module", {"parent": email, "parenttype": "User"}, pluck="module"), ["Selling"])
+
+	def test_a_user_naming_an_unknown_module_profile_is_refused(self):
+		profile = copy.deepcopy(SXCCE)
+		profile["users"][0]["module_profile"] = "Nope"
+		self.assertTrue(any("Nope" in message for message in profile_errors(profile)))
+
+	def test_the_admission_officer_holds_no_office_role_and_no_invoice_rights(self):
+		officer = f"admissions@{SXCCE['user_domain']}"
+		frappe.get_doc("User", officer).add_roles("Academics User")  # what the kit once gave
+		setup_college("sxcce", test_passwords=True)
+		self.assertNotIn("Academics User", frappe.get_roles(officer))
+		self.assertIn("Admission Officer", frappe.get_roles(officer))
+		for doctype in ("Sales Invoice", "Payment Entry"):
+			self.assertFalse(frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": "Admission Officer"}), doctype)
+			self.assertFalse(frappe.has_permission(doctype, "read", user=officer), doctype)
+		areas = {row["link_to"] for row in desk_boot(officer).dock["campus"]}
+		self.addCleanup(frappe.set_user, "Administrator")
+		self.assertTrue({"Examinations", "Fees and Finance", "Faculty"}.isdisjoint(areas), areas)
 
 	def test_position_holders_and_pilot_student(self):
 		domain = SXCCE["user_domain"]

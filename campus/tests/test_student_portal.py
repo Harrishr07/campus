@@ -215,5 +215,10 @@ class TestPortalPages(PortalFixture):
 		self.assertEqual(self.context(circulars_page, STUDENT_22_USER).circulars, [])
 
 	def test_students_and_guardians_land_on_the_portal(self):
-		self.assertEqual(frappe.get_hooks("role_home_page")["Student"][-1], "campus-portal")
-		self.assertEqual(frappe.get_hooks("role_home_page")["Guardian"][-1], "campus-portal")
+		self.assertEqual(frappe.get_hooks("get_website_user_home_page")[-1], "campus.student_services.portal.home_page")
+		self.assertEqual(portal.home_page(STUDENT_22_USER), "campus-portal")
+		self.assertEqual(portal.home_page(GUARDIAN_USER), "campus-portal")
+
+	def test_desk_users_holding_portal_roles_stay_on_desk(self):
+		# Administrator holds every role, Student included; a role-keyed home page sent it to the student portal
+		self.assertEqual(portal.home_page("Administrator"), "desk")

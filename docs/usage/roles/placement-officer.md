@@ -7,9 +7,9 @@
 **You see (desk):** Placement, Approvals.
 
 ## Daily tasks
-1. **Recruiters:** Placement > Masters > Recruiter.
+1. **Recruiters:** Placement > Recruiters > Recruiter.
 2. **Eligibility rules:** Placement Eligibility Template.
-3. **Create a drive:** Placement > Transactions > Placement Drive.
+3. **Create a drive:** Placement > Drives > Placement Drive.
 4. **Registrations:** Drive Registration for each drive.
 5. **Round results:** Round Result.
 6. **Students see the drive** in the portal under Placement.

@@ -23,6 +23,9 @@ SEED_PACKS = {
 PACK_WORKSPACES = {
 	"COE": ["Examinations"],
 	"GOVERNANCE": ["Academic Governance"],
+	"HOSTEL": ["Hostel"],
+	"LABS": ["Labs"],
+	"PLACEMENT": ["Placement"],
 	"IQAC": ["IQAC"],
 	"RESEARCH": ["Research"],
 }

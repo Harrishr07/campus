@@ -1,6 +1,6 @@
 # Student Services: exam withdrawal, break of study, rejoin (P2-T21)
 
-All three are in **Student Services > Transactions**. Each one goes through the approval engine. The seeded
+All three are in **Student Services > Status Changes**. Each one goes through the approval engine. The seeded
 policy has two levels: the HOD of the programme's department recommends, then the Principal approves. The
 person who requests approval, and the owner of the document, never approve it. Final approval submits the
 document.

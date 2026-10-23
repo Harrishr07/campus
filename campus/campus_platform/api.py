@@ -28,7 +28,10 @@ def pack_enabled(company, code):
 
 
 def clear_pack_cache():
+	from campus.campus_platform.pack_visibility import hidden_workspaces  # lazy: it imports this module
+
 	frappe.cache.delete_value(PACK_CACHE)
+	getattr(frappe.local, "request_cache", {}).pop(hidden_workspaces.__wrapped__, None)
 
 
 def _compute_pack_enabled(company, code):

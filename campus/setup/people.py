@@ -6,7 +6,7 @@ other site no password is stored: each new user gets a one-time reset link in th
 sets their own password. On a demo site every desk user also gets the UAT Tester role (campus.campus_platform.uat). The generated people are synthetic; no real personal data is used.
 
 Roles: a re-run gives each kit user the roles its spec lists. It takes away only a retired role (`RETIRED_ROLES`: Academics
-User, the office role the kit once gave teachers and the COE) from a kit user whose spec lists a role it was retired for and
+User, the office role the kit once gave teachers, the COE and the admission officer) from a kit user whose spec lists a role it was retired for and
 not the retired role itself, so a site set up before is corrected by re-running the kit. No other role is ever taken away:
 HRMS's Employee, any role granted by hand (even one the kit gives other users, such as Mentor to a teacher) and roles an
 active position gives stay.
@@ -36,7 +36,7 @@ def missing_roles(profile):
 
 
 # role the kit no longer gives -> the spec roles whose holders lose it on a re-run (PR-02 least privilege)
-RETIRED_ROLES = {"Academics User": {"Instructor", "HOD", "Class Advisor", "COE"}}
+RETIRED_ROLES = {"Academics User": {"Instructor", "HOD", "Class Advisor", "COE", "Admission Officer"}}
 
 
 def retired_roles(roles):

@@ -85,13 +85,13 @@ area's workspace page, and its sidebar lists the same masters, transactions, rep
 
 | Login | Area tiles shown | Where the demo step lives |
 | --- | --- | --- |
-| `admissions` | Admissions, Academics, Student Services, Examinations, Communication, Approvals | Admissions > Transactions > **Student Applicant**; Admissions > Masters > **Seat Matrix** |
-| `accounts` | Fees and Finance, Approvals | Fees and Finance > Transactions > **Sales Invoice** (student invoices) and **Payment Entry** |
-| `hod_cse`, `faculty_*` | Academics, Student Services, Examinations, Communication, Approvals | Academics > Transactions > **Course Registration**, **Student Group**; Student Services > Reports > **Attendance Shortage**; Examinations > Transactions > **Mark Sheet Entry** |
-| `coe` | Academics, Student Services, Examinations, Communication, Approvals | Examinations > Transactions > **Exam Session**, **Student Result** |
-| `iqac` | the same as `coe`, plus IQAC | IQAC > Transactions > **Accreditation Cycle**; IQAC > Reports > **Metric Drill-down** |
+| `admissions` | Admissions, Academics, Student Services, Examinations, Communication, Approvals | Admissions > Applications > **Student Applicant**; Admissions > Seats & Allotment > **Seat Matrix** |
+| `accounts` | Fees and Finance, Approvals | Fees and Finance > Billing > **Student Invoices**; Fees and Finance > Collections > **Payment Entry** |
+| `hod_cse`, `faculty_*` | Academics, Student Services, Examinations, Communication, Approvals | Academics > Registration > **Course Registration**, **Student Group**; Student Services > Reports > **Attendance Shortage**; Examinations > Internal Assessment > **Mark Sheet Entry** |
+| `coe` | Academics, Student Services, Examinations, Communication, Approvals | Examinations > Registration & Hall Tickets > **Exam Session**; Examinations > Results > **Student Result** |
+| `iqac` | the same as `coe`, plus IQAC | IQAC > Accreditation > **Accreditation Cycle**; IQAC > Reports > **Metric Drill-down** |
 | `principal` | every area except IQAC, plus Administration | read-only view of the college |
-| Administrator | all nine areas | Administration > Transactions > **Verifiable Document**, **Bulk Run** |
+| Administrator | all nine areas | Administration > Documents & Jobs > **Verifiable Document**, **Bulk Run** |
 
 (`hod_cse`, `coe`, `iqac` and `admissions` also hold Academics User, the general staff role, which is why they see
 the Academics, Student Services, Examinations and Communication tiles.) Students and guardians have no desk; they

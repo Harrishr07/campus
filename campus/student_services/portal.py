@@ -24,6 +24,16 @@ UPLOAD_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png")
 UPLOAD_MAX_BYTES = 5 * 1024 * 1024
 
 
+def home_page(user):
+	"""`get_website_user_home_page` hook: students and guardians land on the portal, desk users on desk even when
+	they hold a portal role (Administrator holds every role). It outranks every app's `role_home_page`, so
+	Education's edu-portal mapping no longer catches desk users either."""
+	if frappe.get_cached_value("User", user, "user_type") == "System User":
+		return "desk"
+	if {"Student", "Guardian"} & set(frappe.get_roles(user)):
+		return PORTAL_HOME.strip("/")
+
+
 def require_login():
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Log in to use the student portal."), frappe.PermissionError)

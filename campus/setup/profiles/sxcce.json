@@ -364,18 +364,19 @@
 			],
 			"companies": [
 				"college"
-			]
+			],
+			"module_profile": "Campus Office"
 		},
 		{
 			"key": "admissions",
 			"name": "Admission Officer",
 			"roles": [
-				"Admission Officer",
-				"Academics User"
+				"Admission Officer"
 			],
 			"companies": [
 				"college"
-			]
+			],
+			"module_profile": "Campus Office"
 		},
 		{
 			"key": "faculty",
@@ -388,7 +389,8 @@
 			],
 			"employee": true,
 			"instructor": true,
-			"department": "Computer Science and Engineering"
+			"department": "Computer Science and Engineering",
+			"module_profile": "Campus Teaching Staff"
 		},
 		{
 			"key": "hod",
@@ -407,7 +409,8 @@
 				"code": "HOD",
 				"scope": "department",
 				"department": "Computer Science and Engineering"
-			}
+			},
+			"module_profile": "Campus Teaching Staff"
 		},
 		{
 			"key": "class_advisor",
@@ -426,7 +429,8 @@
 			"position": {
 				"code": "CLASS-ADVISOR",
 				"scope": "group"
-			}
+			},
+			"module_profile": "Campus Teaching Staff"
 		},
 		{
 			"key": "coe",
@@ -442,7 +446,8 @@
 			"position": {
 				"code": "COE",
 				"scope": "college"
-			}
+			},
+			"module_profile": "Campus Teaching Staff"
 		},
 		{
 			"key": "accounts",
@@ -454,7 +459,8 @@
 			"companies": [
 				"trust",
 				"college"
-			]
+			],
+			"module_profile": "Campus Accounts"
 		},
 		{
 			"key": "principal",
@@ -471,7 +477,8 @@
 			"position": {
 				"code": "PRINCIPAL",
 				"scope": "college"
-			}
+			},
+			"module_profile": "Campus Principal"
 		},
 		{
 			"key": "iqac",
@@ -488,7 +495,8 @@
 			"position": {
 				"code": "IQAC-COORDINATOR",
 				"scope": "college"
-			}
+			},
+			"module_profile": "Campus IQAC"
 		},
 		{
 			"key": "placement",
@@ -498,7 +506,8 @@
 			],
 			"companies": [
 				"college"
-			]
+			],
+			"module_profile": "Campus Placement"
 		},
 		{
 			"key": "student",
@@ -525,6 +534,34 @@
 			"guardian": {
 				"relation": "Father"
 			}
+		}
+	],
+	"module_profiles": [
+		{
+			"name": "Campus Teaching Staff",
+			"keep": []
+		},
+		{
+			"name": "Campus Office",
+			"keep": []
+		},
+		{
+			"name": "Campus Accounts",
+			"keep": [
+				"Accounts"
+			]
+		},
+		{
+			"name": "Campus IQAC",
+			"keep": []
+		},
+		{
+			"name": "Campus Placement",
+			"keep": []
+		},
+		{
+			"name": "Campus Principal",
+			"keep": []
 		}
 	]
 }

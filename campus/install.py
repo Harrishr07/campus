@@ -1,11 +1,14 @@
 """Install and migrate hooks for OneBook Campus."""
 
+import frappe
+
 from campus.academic_governance.setup import setup_academic_governance
 from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
 from campus.campus_finance.setup import setup_finance
 from campus.campus_messaging.setup import setup_messaging
 from campus.campus_platform.company_scope import setup_company_fields
 from campus.campus_platform.mandatory_approval import seed_mandatory_approval
+from campus.campus_platform.module_map import refresh_module_map
 from campus.campus_platform.module_packs import seed_module_packs
 from campus.campus_platform.portal_roles import restrict_portal_roles
 from campus.campus_platform.positions import ensure_seed_positions
@@ -47,6 +50,7 @@ def before_install():
 
 
 def before_migrate():
+	refresh_module_map()  # before the doc sync, so a module added to modules.txt is imported by this migrate
 	ensure_coe_role()  # exam doctype permissions reference it during DocType sync
 	ensure_iqac_role()
 	ensure_grievance_role()
@@ -85,6 +89,7 @@ def after_install():
 	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()
+	repair_desk_home_page()
 	seed_mandatory_approval()  # once; a patch seeds existing sites, so the college's edits to the list stand
 
 
@@ -120,3 +125,11 @@ def after_migrate():
 	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()
+	repair_desk_home_page()
+
+
+def repair_desk_home_page():
+	"""Setup completed outside the wizard (seeded users, patches) leaves desk's home on the wizard, so /desk and
+	/setup-wizard redirect to each other forever. Point it at the workspace as the wizard itself would."""
+	if frappe.is_setup_complete() and frappe.db.get_default("desktop:home_page") == "setup-wizard":
+		frappe.db.set_default("desktop:home_page", "workspace")

@@ -28,6 +28,28 @@ def setup_finance():
 	seed_concession_policy()
 	seed_refund_policy()
 	seed_scholarship_policy()
+	open_fee_collection_report()
+
+
+# Education's Student Fee Collection report is for Academics User only; accounts staff run it too (UAT accounts step 4).
+# A Custom Role replaces the report's own roles, so it keeps those as well. Education's JSON is never edited.
+FEE_COLLECTION_REPORT = "Student Fee Collection"
+FEE_COLLECTION_ROLES = ("Accounts User", "Accounts Manager")
+
+
+def open_fee_collection_report():
+	"""Create the report's Custom Role once; a Custom Role the college already keeps for it is left as it is."""
+	if not frappe.db.exists("Report", FEE_COLLECTION_REPORT) or frappe.db.exists("Custom Role", {"report": FEE_COLLECTION_REPORT}):
+		return
+	own = frappe.get_all("Has Role", {"parent": FEE_COLLECTION_REPORT, "parenttype": "Report"}, pluck="role")
+	roles = dict.fromkeys([*own, *FEE_COLLECTION_ROLES])
+	frappe.get_doc(
+		{
+			"doctype": "Custom Role", "report": FEE_COLLECTION_REPORT,
+			"ref_doctype": frappe.db.get_value("Report", FEE_COLLECTION_REPORT, "ref_doctype"),
+			"roles": [{"role": role} for role in roles],
+		}
+	).insert(ignore_permissions=True)
 
 
 def seed_concession_policy():

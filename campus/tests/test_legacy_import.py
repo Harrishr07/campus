@@ -465,3 +465,28 @@ class TestOpeningBalances(LegacyFixture):
 		)
 		self.assertEqual(checks(issues), [(2, "missing_master")])
 		self.assertNotIn(frappe.db.get_value("Student", outsider, "customer"), repr(issues))
+
+
+class TestImportCheckAccess(CampusTestCase):
+	"""UAT admission-officer step 3: the Admission Officer opens Import Check on their own Data Imports only."""
+
+	def setUp(self):
+		frappe.db.savepoint("import_check_access")
+		self.addCleanup(frappe.db.rollback, save_point="import_check_access")
+		self.addCleanup(frappe.set_user, "Administrator")
+		self.officer, self.other = "legacy.import.officer@example.com", "legacy.import.other-officer@example.com"
+		for user in (self.officer, self.other):
+			frappe.get_doc(
+				{"doctype": "User", "email": user, "first_name": "officer", "send_welcome_email": 0, "roles": [{"role": legacy_import.IMPORT_CHECK_ROLE}]}
+			).insert()  # fmt: skip
+
+	def test_the_officer_opens_the_report_and_only_their_own_imports(self):
+		from frappe.desk.query_report import get_report_doc
+
+		frappe.set_user(self.officer)
+		self.assertEqual(get_report_doc("Import Check").name, "Import Check")
+		own = frappe.get_doc({"doctype": "Data Import", "reference_doctype": "Student", "import_type": "Insert New Records"}).insert()
+		self.assertTrue(frappe.has_permission("Data Import", "read", own.name))
+		frappe.set_user(self.other)
+		self.assertFalse(frappe.has_permission("Data Import", "read", own.name))
+		self.assertEqual(frappe.get_list("Data Import", pluck="name"), [])

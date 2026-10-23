@@ -3,7 +3,7 @@ Login `accounts@sxcce.example.edu`. Guide: roles/accounts.md.
 
 | # | Step | Expected |
 |---|---|---|
-| 1 | Fees and Finance > Transactions > Student Invoices | Paid, part paid and outstanding invoices |
+| 1 | Fees and Finance > Billing > Student Invoices | Paid, part paid and outstanding invoices |
 | 2 | Open an outstanding invoice, **Create > Payment**, submit | Payment Entry submitted; invoice shows paid |
 | 3 | Check the student's `/campus-portal/fees` as `student@` or the invoice's student | Outstanding reduced |
 | 4 | Fees and Finance > Reports > Student Fee Collection | Includes the new payment |

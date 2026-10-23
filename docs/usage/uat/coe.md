@@ -3,7 +3,7 @@ Login `coe@sxcce.example.edu`. Guide: roles/coe.md. Use a new Exam Session you c
 
 | # | Step | Expected |
 |---|---|---|
-| 1 | Examinations > Transactions > Exam Session, create one for the 2026-27 Odd term | Saved as draft |
+| 1 | Examinations > Registration & Hall Tickets > Exam Session, create one for the 2026-27 Odd term | Saved as draft |
 | 2 | Click **Create Exam Registrations** (one programme) | Job queued; Exam Registration records appear |
 | 3 | Click **Generate Hall Tickets** | Hall Tickets created for eligible students |
 | 4 | Examinations > Reports > Exam Eligibility Withheld | Students below attendance rule listed with reason |

@@ -1,7 +1,7 @@
 {
  "app": "campus",
  "charts": [],
- "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Student Services</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Attendance Tool\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Leave Application\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Program Enrollment\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schedule\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance Shortage\", \"col\": 3}}, {\"id\": \"sp0008\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Transactions\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0012\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Student Services</b></span>\", \"col\": 12}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Attendance Tool\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Leave Application\", \"col\": 3}}, {\"id\": \"sc0005\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Program Enrollment\", \"col\": 3}}, {\"id\": \"sc0006\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schedule\", \"col\": 3}}, {\"id\": \"sc0007\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance Shortage\", \"col\": 3}}, {\"id\": \"sp0008\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Records & Certificates\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Attendance\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Status Changes\", \"col\": 4}}, {\"id\": \"cd0012\", \"type\": \"card\", \"data\": {\"card_name\": \"Mentoring & Grievances\", \"col\": 4}}, {\"id\": \"cd0013\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0014\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}]",
  "creation": "2026-10-06 00:00:00.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,7 +16,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Masters",
+   "label": "Records & Certificates",
    "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
@@ -47,75 +47,64 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attendance Rule",
-   "link_count": 0,
-   "link_to": "Attendance Rule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Certificate Type",
-   "link_count": 0,
-   "link_to": "Certificate Type",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Onboarding Template",
-   "link_count": 0,
-   "link_to": "Student Onboarding Template",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Grievance Type",
-   "link_count": 0,
-   "link_to": "Grievance Type",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Lifecycle Transition Rule",
-   "link_count": 0,
-   "link_to": "Lifecycle Transition Rule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Transactions",
-   "link_count": 17,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Program Enrollment",
    "link_count": 0,
    "link_to": "Program Enrollment",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Onboarding",
+   "link_count": 0,
+   "link_to": "Student Onboarding",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Certificate Request",
+   "link_count": 0,
+   "link_to": "Certificate Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Record Correction",
+   "link_count": 0,
+   "link_to": "Student Record Correction",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student 360",
+   "link_count": 0,
+   "link_to": "student-360",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attendance",
+   "link_count": 6,
+   "onboard": 0,
+   "type": "Card Break"
   },
   {
    "dependencies": "",
@@ -132,9 +121,9 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Student Attendance",
+   "label": "Student Attendance Tool",
    "link_count": 0,
-   "link_to": "Student Attendance",
+   "link_to": "Student Attendance Tool",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -143,9 +132,9 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Student Attendance Tool",
+   "label": "Student Attendance",
    "link_count": 0,
-   "link_to": "Student Attendance Tool",
+   "link_to": "Student Attendance",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -184,48 +173,12 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Certificate Request",
-   "link_count": 0,
-   "link_to": "Certificate Request",
-   "link_type": "DocType",
+   "label": "Status Changes",
+   "link_count": 4,
    "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Onboarding",
-   "link_count": 0,
-   "link_to": "Student Onboarding",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Grievance",
-   "link_count": 0,
-   "link_to": "Student Grievance",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Exam Withdrawal Application",
-   "link_count": 0,
-   "link_to": "Exam Withdrawal Application",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
+   "type": "Card Break"
   },
   {
    "dependencies": "",
@@ -253,9 +206,9 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Student Record Correction",
+   "label": "Exam Withdrawal Application",
    "link_count": 0,
-   "link_to": "Student Record Correction",
+   "link_to": "Exam Withdrawal Application",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -270,6 +223,14 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Mentoring & Grievances",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
   },
   {
    "dependencies": "",
@@ -289,6 +250,17 @@
    "label": "Parent Interaction",
    "link_count": 0,
    "link_to": "Parent Interaction",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Grievance",
+   "link_count": 0,
+   "link_to": "Student Grievance",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -370,10 +342,65 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Settings",
-   "link_count": 1,
+   "label": "Setup",
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attendance Rule",
+   "link_count": 0,
+   "link_to": "Attendance Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Certificate Type",
+   "link_count": 0,
+   "link_to": "Certificate Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Onboarding Template",
+   "link_count": 0,
+   "link_to": "Student Onboarding Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grievance Type",
+   "link_count": 0,
+   "link_to": "Grievance Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Lifecycle Transition Rule",
+   "link_count": 0,
+   "link_to": "Lifecycle Transition Rule",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "dependencies": "",
@@ -387,7 +414,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-22 21:46:00.000000",
+ "modified": "2026-10-23 07:30:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",
@@ -432,6 +459,9 @@
   },
   {
    "role": "COE"
+  },
+  {
+   "role": "Admission Officer"
   }
  ],
  "sequence_id": 40.0,

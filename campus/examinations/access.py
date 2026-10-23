@@ -6,8 +6,8 @@ staff roles read all, an HOD reads the offerings of the department's programmes.
 hardening) is narrower: only COE, System Manager and Dean Academics read every sheet; Academics Users,
 instructors and HODs read the sheets of the offerings they teach or their department's. The session status and
 CIA lock rules are the controllers'. Results: COE, System Manager and Dean Academics at any time; the other staff
-roles, and the student and guardians linked to the student (latest version only), once the session is Published
-and now >= publish_at (the release).
+roles and the Principal, an HOD for the programmes of the departments they head, and the student and guardians linked
+to the student (latest version only), once the session is Published and now >= publish_at (the release).
 """
 
 import frappe
@@ -22,6 +22,9 @@ SHEET_READ_ALL_ROLES = (COE_ROLE, "System Manager", "Dean Academics")
 # Before release a Student Result (its ESE included) is read by these alone: other staff wait for publication, so
 # no examiner or teacher can tie marks to students early (P2-T18 anonymity). Dean Academics sits on the Passing Board.
 RESULT_PRE_RELEASE_ROLES = SHEET_READ_ALL_ROLES
+# Read every released result of their permitted companies (the Result Analysis and Arrear List reports among them).
+RESULT_RELEASED_ROLES = (*STAFF_ROLES, "Principal")
+HOD_ROLE = "HOD"  # reads the released results of the programmes of the departments they head
 
 
 def read_all_roles(doctype):
@@ -51,12 +54,17 @@ def employees_of(user):
 	return frappe.get_all("Employee", {"user_id": user}, pluck="name") or [""]
 
 
+def hod_programs(user):
+	"""Programmes whose department the user holds the HOD seat of."""
+	departments = held_scopes(user, HOD_POSITION)
+	return frappe.get_all("Program", {"department": ["in", departments]}, pluck="name") if departments else []
+
+
 def hod_offerings(user):
 	"""Course offerings of programmes whose department the user holds the HOD seat of."""
-	departments = held_scopes(user, HOD_POSITION)
-	if not departments:
+	programs = hod_programs(user)
+	if not programs:
 		return []
-	programs = frappe.get_all("Program", {"department": ["in", departments]}, pluck="name") or [""]
 	return frappe.get_all("Student Group", {"group_based_on": "Course", "program": ["in", programs]}, pluck="name")
 
 
@@ -285,8 +293,9 @@ def published_sessions():
 
 
 def result_permission_query(user=None):
-	"""Before release only RESULT_PRE_RELEASE_ROLES read results (every version); other staff read released sessions;
-	students and guardians the latest version of their own released results."""
+	"""Before release only RESULT_PRE_RELEASE_ROLES read results (every version); other staff and the Principal read
+	released sessions, an HOD those of the department's programmes; students and guardians the latest version of their
+	own released results."""
 	user = user or frappe.session.user
 	if has_any_role(user, RESULT_PRE_RELEASE_ROLES):
 		return ""
@@ -294,8 +303,12 @@ def result_permission_query(user=None):
 	if not sessions:
 		return "1=0"
 	released = "`tabStudent Result`.exam_session in ({})".format(", ".join(frappe.db.escape(s) for s in sessions))
-	if has_any_role(user, STAFF_ROLES):
-		return f"{released} and ifnull(`tabStudent Result`.pending_ratification, 0) = 0"
+	ratified = f"{released} and ifnull(`tabStudent Result`.pending_ratification, 0) = 0"
+	if has_any_role(user, RESULT_RELEASED_ROLES):
+		return ratified
+	programs = hod_programs(user) if has_any_role(user, (HOD_ROLE,)) else []
+	if programs:
+		return f"{ratified} and `tabStudent Result`.program in ({', '.join(frappe.db.escape(p) for p in programs)})"
 	students = students_of(user)
 	if not students:
 		return "1=0"
@@ -304,18 +317,21 @@ def result_permission_query(user=None):
 
 
 def result_has_permission(doc, ptype=None, user=None):
-	"""Deny-only: RESULT_PRE_RELEASE_ROLES keep their role permissions; other staff read released sessions; everyone
-	else reads the latest version of their own / guarded released results only.
+	"""Deny-only: RESULT_PRE_RELEASE_ROLES keep their role permissions; other staff and the Principal read released
+	sessions, an HOD the department's programmes; everyone else reads the latest version of their own / guarded
+	released results only.
 
 	A controller hook can only deny (a falsy result denies), so allowed users get True."""
 	user = user or frappe.session.user
 	if has_any_role(user, RESULT_PRE_RELEASE_ROLES):
 		return True
 	released = doc.exam_session in published_sessions() and not doc.get("pending_ratification")
-	if has_any_role(user, STAFF_ROLES):
+	if has_any_role(user, RESULT_RELEASED_ROLES):
 		return released
 	if ptype and ptype not in READ_TYPES:
 		return False
+	if has_any_role(user, (HOD_ROLE,)) and doc.program in hod_programs(user):
+		return released
 	return released and bool(doc.get("is_latest")) and doc.student in students_of(user)
 
 
