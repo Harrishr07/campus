@@ -1,5 +1,7 @@
 """Install and migrate hooks for OneBook Campus."""
 
+import frappe
+
 from campus.academic_governance.setup import setup_academic_governance
 from campus.admissions.setup import ensure_aadhaar_role, setup_admissions
 from campus.campus_finance.setup import setup_finance
@@ -87,6 +89,7 @@ def after_install():
 	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()
+	repair_desk_home_page()
 	seed_mandatory_approval()  # once; a patch seeds existing sites, so the college's edits to the list stand
 
 
@@ -122,3 +125,11 @@ def after_migrate():
 	setup_labs()  # M12-05
 	seed_evidence_sources()
 	setup_research()
+	repair_desk_home_page()
+
+
+def repair_desk_home_page():
+	"""Setup completed outside the wizard (seeded users, patches) leaves desk's home on the wizard, so /desk and
+	/setup-wizard redirect to each other forever. Point it at the workspace as the wizard itself would."""
+	if frappe.is_setup_complete() and frappe.db.get_default("desktop:home_page") == "setup-wizard":
+		frappe.db.set_default("desktop:home_page", "workspace")
