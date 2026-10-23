@@ -1,9 +1,8 @@
-"""M17-01 desk navigation: every area has a Workspace, a Workspace Sidebar and a Desktop Icon that agree, every
-link resolves, every campus DocType has exactly one home area, and icons follow the user's roles."""
+"""M17-01 desk navigation (Frappe 16.53 model): the campus Dock lists every area in order, each area has one standard
+Sidebar (sections by job) and a Workspace page that agree, every link resolves, every campus DocType and report has
+exactly one home, and the Dock follows the user's roles."""
 
-import glob
 import json
-import os
 from collections import Counter
 
 import frappe
@@ -15,65 +14,137 @@ from campus.setup.permission_matrix import TEST_ONLY_DOCTYPES
 from campus.tests.factories import make_company, make_user
 from campus.tests.utils import CampusTestCase
 
-APP_ICON = "OneBook Campus"
+AREAS = [
+	"Student Services", "Admissions", "Academics", "Examinations", "Fees and Finance", "IQAC", "Research", "Hostel",
+	"Labs", "Placement", "Faculty", "Academic Governance", "Communication", "Approvals", "Administration",
+]  # fmt: skip
 COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
 RESEARCH_USER = "campus-nav-research@example.com"
-SECTIONS = ["Masters", "Transactions", "Reports", "Settings"]
+LAST_SECTIONS = ["Reports", "Setup"]
 USERS = {
 	"accounts": ("campus-nav-accounts@example.com", ["Accounts User"]),
+	"accounts_manager": ("campus-nav-accounts-manager@example.com", ["Accounts Manager"]),
 	"coe": ("campus-nav-coe@example.com", ["COE"]),
+	"instructor": ("campus-nav-instructor@example.com", ["Instructor"]),
 	"officer": ("campus-nav-officer@example.com", ["Admission Officer"]),
+	"principal": ("campus-nav-principal@example.com", ["Principal"]),
 }
-
-
-def campus_sidebars():
-	return [frappe.get_doc("Workspace Sidebar", n) for n in frappe.get_all("Workspace Sidebar", {"app": "campus"}, pluck="name")]
-
-
-def campus_workspaces():
-	return [frappe.get_doc("Workspace", n) for n in frappe.get_all("Workspace", {"app": "campus", "public": 1}, pluck="name")]
-
-
-def link_items(sidebar):
-	return [i for i in sidebar.items if i.type == "Link"]
 
 
 def campus_modules():
 	return frappe.get_all("Module Def", {"app_name": "campus"}, pluck="name")
 
 
+def campus_sidebars():
+	names = frappe.get_all("Sidebar", {"module": ["in", campus_modules()], "standard": 1}, pluck="name")
+	return [frappe.get_doc("Sidebar", n) for n in names]
+
+
+def campus_workspaces():
+	names = frappe.get_all("Workspace", {"module": ["in", campus_modules()], "public": 1}, pluck="name")
+	return [frappe.get_doc("Workspace", n) for n in names]
+
+
+def sidebar_of(area):
+	"""The area's sidebar is the one whose first item (Home) opens the area's workspace."""
+	return next(s for s in campus_sidebars() if s.items[0].link_type == "Workspace" and s.items[0].link_to == area)
+
+
+def link_items(sidebar):
+	return [i for i in sidebar.items if i.type == "Link"]
+
+
+def sections(sidebar):
+	"""Section label -> its links, in order."""
+	out = {}
+	for item in sidebar.items[1:]:
+		if item.type == "Section Break":
+			out[item.label] = []
+		else:
+			out[list(out)[-1]].append(item)
+	return out
+
+
+def dock_areas(bootinfo):
+	"""The campus Dock entries a user gets, resolved the way the desk does (Sidebar.dock_entry): a Workspace row needs
+	the page in the user's workspaces and a sidebar holding it in module_sidebars."""
+	pages = {p["name"] for p in bootinfo.workspaces["pages"]}
+	sidebars = bootinfo.module_sidebars
+	areas = set()
+	for row in (bootinfo.get("dock") or {}).get("campus", []):
+		if row.get("hidden") or row["link_to"] not in pages:
+			continue
+		if any(row["link_to"] in s.get("workspaces", []) for s in sidebars.values()):
+			areas.add(row["title"])
+	return areas
+
+
+def desk_boot(email):
+	"""Boot as `email`. The workspace list is cached per request, so the previous user's must go."""
+	frappe.set_user(email)
+	frappe.cache.hdel("bootinfo", email)
+	if hasattr(frappe.local, "request_cache"):
+		frappe.local.request_cache.clear()
+	return get_bootinfo()
+
+
 class TestNavigation(CampusTestCase):
-	def test_areas_are_complete_and_agree(self):
-		sidebars = {s.name for s in campus_sidebars()}
-		icon_files = glob.glob(frappe.get_app_path("campus", "desktop_icon", "*.json"))
-		self.assertEqual(len(sidebars), len(icon_files) - 1)  # every icon file but the app tile is an area
-		self.assertGreaterEqual(len(sidebars), 12)
-		self.assertEqual(sidebars, {w.name for w in campus_workspaces()})
-		self.assertEqual(sidebars, set(frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name")))
-		self.assertTrue(frappe.db.exists("Desktop Icon", {"name": APP_ICON, "icon_type": "App", "app": "campus"}))
-		for name in sidebars:
-			icon = frappe.get_doc("Desktop Icon", name)
-			self.assertEqual((icon.parent_icon, icon.link_type, icon.link_to), (APP_ICON, "Workspace Sidebar", name))
-			self.assertTrue(icon.standard)
+	def test_dock_lists_every_area_in_order(self):
+		dock = frappe.get_doc("Dock", "campus")
+		self.assertTrue(dock.standard)
+		self.assertEqual([i.title for i in dock.items], AREAS)
+		self.assertEqual({w.name for w in campus_workspaces()}, set(AREAS))
+		for item in dock.items:
+			self.assertEqual((item.link_type, item.link_to), ("Workspace", item.title))
+			self.assertTrue(item.icon, item.title)
+			self.assertFalse(item.hidden, item.title)
+			self.assertEqual(sidebar_of(item.title).header_icon, item.icon, item.title)
+
+	def test_each_area_has_one_sidebar_in_its_workspace_module(self):
+		sidebars = campus_sidebars()
+		self.assertEqual(len(sidebars), len(AREAS))
+		self.assertEqual(sorted(s.items[0].link_to for s in sidebars), sorted(AREAS))
+		for workspace in campus_workspaces():
+			self.assertEqual(sidebar_of(workspace.name).module, workspace.module, workspace.name)
+		self.assertEqual(Counter(s.module for s in sidebars).most_common(1)[0][1], 1)  # one shell per module
+
+	def test_approvals_has_its_own_module(self):
+		self.assertEqual(frappe.db.get_value("Workspace", "Approvals", "module"), "Campus Approvals")
+		self.assertEqual(sidebar_of("Approvals").module, "Campus Approvals")
+		self.assertEqual(sidebar_of("Administration").module, "Campus Platform")
+
+	def test_communication_is_labelled_communication(self):
+		bootinfo = desk_boot("Administrator")
+		self.assertEqual(bootinfo.module_sidebars[sidebar_of("Communication").name]["label"], "Communication")
 
 	def test_no_area_is_open_to_every_desk_user(self):
-		for name in frappe.get_all("Desktop Icon", {"app": "campus", "icon_type": "Link"}, pluck="name"):
-			self.assertTrue(frappe.get_doc("Desktop Icon", name).roles, f"icon {name} has no roles")
 		for workspace in campus_workspaces():
 			self.assertTrue(workspace.roles, f"workspace {workspace.name} has no roles")
-			icon = frappe.get_doc("Desktop Icon", workspace.name)
+			icon = frappe.get_doc("Desktop Icon", workspace.name)  # the retiring icon grid, still on upgraded sites
 			self.assertEqual({r.role for r in icon.roles}, {r.role for r in workspace.roles}, workspace.name)
 
 	def test_students_and_guardians_have_no_desk_access(self):
 		for role in ("Student", "Guardian"):
 			self.assertEqual(frappe.db.get_value("Role", role, "desk_access"), 0, role)
 
-	def test_sidebar_sections_follow_the_standard_order(self):
+	def test_sidebar_sections_are_by_job_with_reports_and_setup_last(self):
 		for sidebar in campus_sidebars():
-			self.assertEqual((sidebar.items[0].type, sidebar.items[0].link_type, sidebar.items[0].link_to),
-				("Link", "Workspace", sidebar.name), sidebar.name)
-			sections = [i.label for i in sidebar.items if i.type == "Section Break"]
-			self.assertEqual(sections, [s for s in SECTIONS if s in sections], sidebar.name)
+			home = sidebar.items[0]
+			self.assertEqual((home.type, home.label, home.icon), ("Link", "Home", "house"), sidebar.name)
+			by_section = sections(sidebar)
+			self.assertGreaterEqual(len(by_section), 2, sidebar.name)
+			labels = list(by_section)
+			tail = [s for s in LAST_SECTIONS if s in labels]
+			self.assertEqual(labels[len(labels) - len(tail):], tail, sidebar.name)
+			self.assertTrue({"Masters", "Transactions", "Settings"}.isdisjoint(labels), sidebar.name)
+			for label, links in by_section.items():
+				self.assertTrue(links, f"{sidebar.name}: empty section {label}")
+				self.assertTrue(all(i.child for i in links), f"{sidebar.name}: {label}")
+				if label != "Reports":
+					self.assertFalse([i.label for i in links if i.link_type == "Report"], f"{sidebar.name}: {label}")
+			for item in sidebar.items:
+				if item.type == "Section Break":
+					self.assertTrue(item.icon, f"{sidebar.name}: {item.label}")
 
 	def test_every_link_target_exists(self):
 		for sidebar in campus_sidebars():
@@ -99,6 +170,8 @@ class TestNavigation(CampusTestCase):
 		)
 		self.assertTrue(doctypes)
 		self.assertEqual({d: homes.get(d, 0) for d in doctypes if homes.get(d, 0) != 1}, {})
+		self.assertEqual(homes["UAT Feedback"], 1)
+		self.assertIn("UAT Feedback", [i.link_to for i in link_items(sidebar_of("Administration"))])
 
 	def test_every_campus_report_has_exactly_one_home_area(self):
 		homes = Counter(i.link_to for s in campus_sidebars() for i in link_items(s) if i.link_type == "Report")
@@ -107,16 +180,17 @@ class TestNavigation(CampusTestCase):
 		self.assertEqual({r: homes.get(r, 0) for r in reports if homes.get(r, 0) != 1}, {})
 
 	def test_workspace_page_mirrors_the_sidebar(self):
-		workspaces = {w.name: w for w in campus_workspaces()}
-		for sidebar in campus_sidebars():
-			workspace = workspaces[sidebar.name]
+		for workspace in campus_workspaces():
+			sidebar = sidebar_of(workspace.name)
 			in_sidebar = {(i.link_type, i.link_to) for i in link_items(sidebar) if i.link_type in ("DocType", "Report")}
 			on_page = {(l.link_type, l.link_to) for l in workspace.links if l.type == "Link"}
-			self.assertEqual(on_page, in_sidebar, sidebar.name)
-			self.assertEqual([l.label for l in workspace.links if l.type == "Card Break"],
-				[i.label for i in sidebar.items if i.type == "Section Break"], sidebar.name)
+			self.assertEqual(on_page, in_sidebar, workspace.name)
+			self.assertEqual([l.label for l in workspace.links if l.type == "Card Break"], list(sections(sidebar)), workspace.name)
+			self.assertEqual(
+				[b["data"]["card_name"] for b in json.loads(workspace.content) if b["type"] == "card"], list(sections(sidebar))
+			)
 			shortcuts = [s.label for s in workspace.shortcuts]
-			self.assertTrue(4 <= len(shortcuts) <= 6, sidebar.name)
+			self.assertTrue(4 <= len(shortcuts) <= 6, workspace.name)
 			self.assertEqual(
 				[b["data"]["shortcut_name"] for b in json.loads(workspace.content) if b["type"] == "shortcut"], shortcuts
 			)
@@ -135,15 +209,14 @@ class TestNavigation(CampusTestCase):
 		profile.save()
 		clear_pack_cache()
 		self.assertIn("Research", hidden_workspaces(RESEARCH_USER))
+		bootinfo = desk_boot(RESEARCH_USER)
+		self.assertNotIn("Research", [r["link_to"] for r in bootinfo.dock.get("campus", [])])
+		self.assertNotIn("Research", bootinfo.module_sidebars)
 
 	# role mapping
 	def desk_areas(self, key):
-		email = USERS[key][0]
-		frappe.set_user(email)
-		frappe.cache.hdel("desktop_icons", email)
-		frappe.cache.hdel("bootinfo", email)
-		bootinfo = get_bootinfo()
-		return {i["label"] for i in bootinfo.desktop_icons if i.get("app") == "campus"}, bootinfo
+		bootinfo = desk_boot(USERS[key][0])
+		return dock_areas(bootinfo), bootinfo
 
 	@classmethod
 	def setUpClass(cls):
@@ -165,21 +238,34 @@ class TestNavigation(CampusTestCase):
 		frappe.set_user("Administrator")
 		frappe.db.rollback(save_point="navigation_test")
 
+	def assert_dock_follows_workspace_roles(self, key, areas):
+		roles = set(USERS[key][1])
+		allowed = {w.name for w in campus_workspaces() if roles & {r.role for r in w.roles}}
+		self.assertEqual(areas, allowed - hidden_workspaces(USERS[key][0]), key)
+
 	def test_accounts_user_sees_finance_but_not_examinations(self):
 		areas, bootinfo = self.desk_areas("accounts")
 		self.assertIn("Fees and Finance", areas)
-		self.assertIn(APP_ICON, areas)
 		self.assertTrue({"Examinations", "Admissions", "IQAC", "Administration"}.isdisjoint(areas), areas)
 		self.assertNotIn("Examinations", [p["name"] for p in bootinfo.workspaces["pages"]])
+		self.assert_dock_follows_workspace_roles("accounts", areas)
 
 	def test_coe_sees_examinations_only_of_the_campus_areas_it_is_for(self):
 		areas, bootinfo = self.desk_areas("coe")
 		self.assertIn("Examinations", areas)
 		self.assertTrue({"Fees and Finance", "Admissions", "IQAC"}.isdisjoint(areas), areas)
-		sidebar = bootinfo.workspace_sidebar_item["examinations"]
+		sidebar = bootinfo.module_sidebars["Examinations"]
 		self.assertIn("Student Result", [i["link_to"] for i in sidebar["items"]])
+		self.assert_dock_follows_workspace_roles("coe", areas)
 
 	def test_admission_officer_sees_admissions(self):
 		areas, _ = self.desk_areas("officer")
 		self.assertIn("Admissions", areas)
 		self.assertTrue({"Examinations", "Fees and Finance", "IQAC"}.isdisjoint(areas), areas)
+		self.assert_dock_follows_workspace_roles("officer", areas)
+
+	def test_instructor_accounts_manager_and_principal_get_only_their_dock_entries(self):
+		for key in ("instructor", "accounts_manager", "principal"):
+			areas, _ = self.desk_areas(key)
+			self.assertIn("Approvals", areas, key)  # every staff role reaches the approval inbox
+			self.assert_dock_follows_workspace_roles(key, areas)

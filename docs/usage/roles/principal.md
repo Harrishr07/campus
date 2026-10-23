@@ -11,6 +11,6 @@
 2. **Admissions status:** Admissions > Reports > Live Seat Matrix.
 3. **Fee collection:** Fees and Finance > Reports > Program wise Fee Collection.
 4. **Results:** Examinations > Reports > Result Analysis.
-5. **Governance:** Academic Governance > Transactions > Academic Proposal, Body Meeting.
-6. **Accreditation:** IQAC > Transactions > Accreditation Cycle.
-7. **Positions and settings:** Administration > Masters > Position, Institution Profile.
+5. **Governance:** Academic Governance > Proposals > Academic Proposal; Academic Governance > Meetings > Body Meeting.
+6. **Accreditation:** IQAC > Accreditation > Accreditation Cycle.
+7. **Positions and settings:** Administration > Positions > Position; Administration > Institution > Institution Profile.

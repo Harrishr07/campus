@@ -72,7 +72,7 @@ Exam dues do not stop registration. They block hall tickets (`campus.examination
 
 Running it again is safe. An unchanged ticket keeps its QR. A changed one (dates, courses, photo, status) has its QR revoked and a new one issued. A ticket that becomes withheld has its QR revoked.
 
-The withheld list is in Examinations > Transactions > **Withheld Hall Tickets**.
+The withheld list is in Examinations > Registration & Hall Tickets > **Withheld Hall Tickets**.
 
 ## Download (student)
 On /campus-portal, the exam registration card shows the hall ticket. A withheld student sees the reason. An issued ticket can be downloaded (PDF) once the release time has passed. Students and guardians can open only their own (or their ward's) issued, released tickets.

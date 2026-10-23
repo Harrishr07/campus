@@ -9,9 +9,9 @@
 ## Daily tasks
 1. **Your mentees:** `/campus-portal/faculty/mentees`; open a student.
 2. **Add a counselling note:** on that page fill Category, Notes, Agreed action, Action due, Follow-up date, click **Add note**. Tick Confidential if only you and a designated counsellor may read it.
-3. **Parent contact:** Student Services > Transactions > Parent Interaction.
+3. **Parent contact:** Student Services > Mentoring & Grievances > Parent Interaction.
 4. **Attendance shortage:** Student Services > Reports > Attendance Shortage and Mentoring Activity.
-5. **Student leave:** Student Services > Transactions > Student Leave Application (medical and on-duty leave with certificate).
-6. **Condonation / grievances raised for your class** (you see the condonation requests, and their evidence, of the students you advise only): Student Services > Transactions > Condonation Request, Student Grievance.
+5. **Student leave:** Student Services > Attendance > Student Leave Application (medical and on-duty leave with certificate).
+6. **Condonation / grievances raised for your class** (you see the condonation requests, and their evidence, of the students you advise only): Student Services > Attendance > Condonation Request; Student Services > Mentoring & Grievances > Student Grievance.
 
 You cannot open a student who is not your mentee in the portal.

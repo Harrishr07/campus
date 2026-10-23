@@ -10,7 +10,6 @@ import json
 from unittest import mock
 
 import frappe
-from frappe.boot import get_bootinfo
 from frappe.desk import reportview
 from frappe.desk.query_report import get_report_doc
 from frappe.tests import IntegrationTestCase
@@ -28,6 +27,7 @@ from campus.tests import demo
 from campus.tests.test_faculty_portal import COLLEAGUE, TEACHER, FacultyPortalFixture
 from campus.tests.test_malpractice import INVIGILATOR, OTHER_INVIGILATOR, MalpracticeFixture
 from campus.tests.test_mentoring import MENTOR_A, MentoringFixture
+from campus.tests.test_navigation import desk_boot, dock_areas
 from campus.tests.test_timetable import CSE, employee
 
 OFFICE_ROLE = "Academics User"
@@ -140,11 +140,8 @@ class TestKitRoleSets(IntegrationTestCase):
 	def test_each_role_sees_its_desk_areas_and_no_office_area(self, _packs):
 		for key, (wanted, refused) in AREAS.items():
 			user = kit_login(key)
-			frappe.set_user(user)
 			try:  # module packs are per college (test_navigation); here only the roles decide
-				frappe.cache.hdel("desktop_icons", user)
-				frappe.cache.hdel("bootinfo", user)
-				areas = {i["label"] for i in get_bootinfo().desktop_icons if i.get("app") == "campus"}
+				areas = dock_areas(desk_boot(user))
 			finally:
 				frappe.set_user("Administrator")
 			self.assertTrue(wanted <= areas, f"{key}: missing {wanted - areas}")

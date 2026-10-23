@@ -9,9 +9,9 @@ Login `faculty@sxcce.example.edu`. Guide: roles/faculty.md.
 | 4 | CIA marks > a semester 3 course, enter marks, **Save CIA marks** | Saved; totals update |
 | 5 | Leave > apply for one day | Application appears for approval |
 | N1 | Open a period marked more than 48 hours ago, try to change a status | Refused; message says to raise an Attendance Correction Request |
-| N2 | Raise the Attendance Correction Request (Faculty > Transactions) | Created; cannot approve it yourself |
+| N2 | Raise the Attendance Correction Request (Faculty > Teaching & Timetable) | Created; cannot approve it yourself |
 | N3 | Open another teacher's course in CIA marks | Not listed; direct URL refused |
 | N4 | Open a student who is not your mentee under My students | "This student is not your mentee." |
 | N5 | Edit CIA marks after the deadline | Read-only; needs an approved CIA Unlock Request |
-| N6 | Student Services > Student, and Student Record Correction | No **Add** button; you cannot create a student or a record correction |
-| N7 | Desk sidebar | No Communication, Academic Governance, Fees and Finance or Admissions |
+| N6 | Student Services > Records & Certificates > Student, and Student Record Correction | No **Add** button; you cannot create a student or a record correction |
+| N7 | Desk dock | No Communication, Academic Governance, Fees and Finance or Admissions |

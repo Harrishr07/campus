@@ -9,7 +9,7 @@
 ## Daily tasks
 1. **See today's periods:** `/campus-portal/faculty` > My timetable.
 2. **Mark attendance:** Attendance, open the period, tick only the absentees (everyone starts present), **Save attendance**.
-3. **Fix attendance:** within 48 hours of first marking, re-mark in the same page. After 48 hours you cannot; the HOD must approve an Attendance Correction Request (Faculty > Transactions > Attendance Correction Request).
+3. **Fix attendance:** within 48 hours of first marking, re-mark in the same page. After 48 hours you cannot; the HOD must approve an Attendance Correction Request (Faculty > Teaching & Timetable > Attendance Correction Request).
 4. **Substitute a colleague:** Substitution, once confirmed, opens that period's attendance.
 5. **Enter CIA marks:** CIA marks, pick the course, enter marks (AB for absent), **Save CIA marks**. After the entry deadline the page is read-only; edits need an approved CIA Unlock Request.
 6. **Your mentees:** My students (if you are a mentor): Counselling notes, **Add note**.

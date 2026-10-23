@@ -4,6 +4,7 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 MODULE = "Campus Messaging"
+SIDEBAR_LABEL = "Communication"
 LANGUAGE_FIELD = {
 	"fieldname": "oc_language",
 	"label": "Preferred Language",
@@ -96,6 +97,19 @@ def setup_messaging():
 	)
 	ensure_default_settings()
 	seed_templates()
+	label_sidebar()
+
+
+def label_sidebar():
+	"""M17-01 The desk calls this area "Communication". A sidebar is named by its title and erpnext already owns a
+	"Communication" module, so the shipped sidebar is "Communications" and the label is set on the site's layer
+	(Custom Sidebar), where Frappe keeps a site's own label for a sidebar. A label the site chose stays."""
+	name = frappe.db.exists("Custom Sidebar", {"module": MODULE, "user": ["in", ["", None]]})
+	layer = frappe.get_doc("Custom Sidebar", name) if name else frappe.new_doc("Custom Sidebar")
+	if layer.label:
+		return
+	layer.update({"module": MODULE, "user": layer.user or "", "label": SIDEBAR_LABEL})
+	layer.save(ignore_permissions=True)
 
 
 def ensure_default_settings():

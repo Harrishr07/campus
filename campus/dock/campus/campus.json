@@ -1,0 +1,136 @@
+{
+ "app": "campus",
+ "creation": "2026-10-23 04:27:03.020412",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "users-round",
+   "link_to": "Student Services",
+   "link_type": "Workspace",
+   "title": "Student Services"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "graduation-cap",
+   "link_to": "Admissions",
+   "link_type": "Workspace",
+   "title": "Admissions"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "book-open-text",
+   "link_to": "Academics",
+   "link_type": "Workspace",
+   "title": "Academics"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "book-open-check",
+   "link_to": "Examinations",
+   "link_type": "Workspace",
+   "title": "Examinations"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "circle-dollar-sign",
+   "link_to": "Fees and Finance",
+   "link_type": "Workspace",
+   "title": "Fees and Finance"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "award",
+   "link_to": "IQAC",
+   "link_type": "Workspace",
+   "title": "IQAC"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "microscope",
+   "link_to": "Research",
+   "link_type": "Workspace",
+   "title": "Research"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "bed",
+   "link_to": "Hostel",
+   "link_type": "Workspace",
+   "title": "Hostel"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "flask-conical",
+   "link_to": "Labs",
+   "link_type": "Workspace",
+   "title": "Labs"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "briefcase",
+   "link_to": "Placement",
+   "link_type": "Workspace",
+   "title": "Placement"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "users",
+   "link_to": "Faculty",
+   "link_type": "Workspace",
+   "title": "Faculty"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "landmark",
+   "link_to": "Academic Governance",
+   "link_type": "Workspace",
+   "title": "Academic Governance"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "messages-square",
+   "link_to": "Communication",
+   "link_type": "Workspace",
+   "title": "Communication"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "check",
+   "link_to": "Approvals",
+   "link_type": "Workspace",
+   "title": "Approvals"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "building-2",
+   "link_to": "Administration",
+   "link_type": "Workspace",
+   "title": "Administration"
+  }
+ ],
+ "modified": "2026-10-23 04:27:03.020412",
+ "modified_by": "Administrator",
+ "mount_on": "",
+ "name": "campus",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}

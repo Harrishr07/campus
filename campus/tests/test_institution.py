@@ -236,25 +236,40 @@ class TestInstitution(CampusTestCase):
 		make_profile(DEMO)
 		self.assertEqual(hidden_test_workspaces(USER_DEMO), {WORKSPACE})
 
-	def test_boot_session_filters_pages_sidebars_and_icons(self):
+	def test_boot_session_filters_pages_sidebars_dock_and_icons(self):
 		self.make_workspace_pack()
 		make_profile(DEMO, packs=[{"pack": "HOSTEL", "enabled": 0}])
-		other = {"name": "Other", "type": "Link", "link_type": "Workspace", "link_to": "Other"}
+		hidden_link = {"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}
+		other = {"type": "Link", "link_type": "Workspace", "link_to": "Other"}
+		section = {"type": "Section Break", "label": "Setup"}
 		bootinfo = frappe._dict(
 			workspaces={"pages": [{"name": WORKSPACE}, {"name": "Other"}], "private_pages": []},
-			workspace_sidebar_item={
-				"hostel": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}]},
-				"mixed": {"items": [{"type": "Link", "link_type": "Workspace", "link_to": WORKSPACE}, other]},
-				"area": {"label": WORKSPACE, "items": [other]},  # the sidebar of the hidden workspace itself
+			module_sidebars={
+				"Area": {"items": [hidden_link, section, other]},  # the hidden workspace's own sidebar (its Home)
+				"Mixed": {"items": [other, hidden_link]},
 			},
+			entity_module={"Thing": "Area", "Other Thing": "Mixed"},
+			canonical_shell={"DocType": {"Thing": "Area", "Other Thing": "Mixed"}},
+			home_shell="Area",
+			dock={"campus": [
+				{"link_type": "Workspace", "link_to": WORKSPACE},
+				{"link_type": "Sidebar", "link_to": "Area"},
+				{"link_type": "Sidebar", "link_to": "Mixed"},
+			]},
+			app_data=[{"app_name": "campus", "dock": [{"link_type": "Workspace", "link_to": WORKSPACE}, other]}],
 			desktop_icons=[
-				{"label": "Hostel", "link_type": "Workspace Sidebar"},
-				{"label": "Mixed", "link_type": "Workspace Sidebar"},
-				{"label": "Direct", "link_type": "Workspace", "link_to": WORKSPACE},
+				{"label": "Direct", "link_type": "Workspace Sidebar", "link_to": WORKSPACE},
+				{"label": "Mixed", "link_type": "Workspace Sidebar", "link_to": "Other"},
 			],
 		)
 		frappe.set_user(USER_DEMO)
 		boot_session(bootinfo)
 		self.assertEqual([p["name"] for p in bootinfo.workspaces["pages"]], ["Other"])
-		self.assertEqual(list(bootinfo.workspace_sidebar_item), ["mixed"])
+		self.assertEqual(list(bootinfo.module_sidebars), ["Mixed"])
+		self.assertEqual(bootinfo.module_sidebars["Mixed"]["items"], [other])
+		self.assertEqual(bootinfo.entity_module, {"Other Thing": "Mixed"})
+		self.assertEqual(bootinfo.canonical_shell, {"DocType": {"Other Thing": "Mixed"}})
+		self.assertIsNone(bootinfo.home_shell)
+		self.assertEqual(bootinfo.dock["campus"], [{"link_type": "Sidebar", "link_to": "Mixed"}])
+		self.assertEqual(bootinfo.app_data[0]["dock"], [other])
 		self.assertEqual([i["label"] for i in bootinfo.desktop_icons], ["Mixed"])
