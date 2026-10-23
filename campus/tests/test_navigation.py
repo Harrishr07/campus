@@ -1,6 +1,6 @@
 """M17-01 desk navigation (Frappe 16.53 model): the campus Dock lists every area in order, each area has one standard
-Sidebar (sections by job) and a Workspace page that agree, every link resolves, every campus DocType and report has
-exactly one home, and the Dock follows the user's roles."""
+Sidebar (sections by job) and a Workspace page that agree, every link resolves, every campus DocType, report and desk Page has
+exactly one home, the Dock follows the user's roles and a pack switched off takes its area away."""
 
 import json
 from collections import Counter
@@ -9,6 +9,7 @@ import frappe
 from frappe.boot import get_bootinfo
 
 from campus.campus_platform.api import clear_pack_cache
+from campus.campus_platform.module_packs import PACK_WORKSPACES
 from campus.campus_platform.pack_visibility import hidden_workspaces
 from campus.setup.permission_matrix import TEST_ONLY_DOCTYPES
 from campus.tests.factories import make_company, make_user
@@ -21,6 +22,8 @@ AREAS = [
 COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
 COE_OFF_COLLEGE = "Campus Nav COE Off College"  # autonomous too, but switches the COE pack off
 RESEARCH_USER = "campus-nav-research@example.com"
+AREA_PACK_USER = "campus-nav-area-packs@example.com"
+AREA_PACKS = {"HOSTEL": ("Hostel", "Warden"), "LABS": ("Labs", "Lab In-charge"), "PLACEMENT": ("Placement", "Placement Officer")}
 LAST_SECTIONS = ["Reports", "Setup"]
 USERS = {
 	"accounts": ("campus-nav-accounts@example.com", ["Accounts User"]),
@@ -185,6 +188,13 @@ class TestNavigation(CampusTestCase):
 		self.assertEqual(homes["UAT Feedback"], 1)
 		self.assertIn("UAT Feedback", [i.link_to for i in link_items(sidebar_of("Administration"))])
 
+	def test_every_campus_desk_page_has_exactly_one_home_area(self):
+		homes = Counter(i.link_to for s in campus_sidebars() for i in link_items(s) if i.link_type == "Page")
+		pages = frappe.get_all("Page", {"module": ["in", campus_modules()]}, pluck="name")
+		self.assertIn("student-360", pages)
+		self.assertEqual({p: homes.get(p, 0) for p in pages if homes.get(p, 0) != 1}, {})
+		self.assertIn("student-360", [i.link_to for i in link_items(sidebar_of("Student Services"))])
+
 	def test_every_campus_report_has_exactly_one_home_area(self):
 		homes = Counter(i.link_to for s in campus_sidebars() for i in link_items(s) if i.link_type == "Report")
 		reports = frappe.get_all("Report", {"module": ["in", campus_modules()]}, pluck="name")
@@ -194,7 +204,7 @@ class TestNavigation(CampusTestCase):
 	def test_workspace_page_mirrors_the_sidebar(self):
 		for workspace in campus_workspaces():
 			sidebar = sidebar_of(workspace.name)
-			in_sidebar = {(i.link_type, i.link_to) for i in link_items(sidebar) if i.link_type in ("DocType", "Report")}
+			in_sidebar = {(i.link_type, i.link_to) for i in link_items(sidebar) if i.link_type in ("DocType", "Report", "Page")}
 			on_page = {(l.link_type, l.link_to) for l in workspace.links if l.type == "Link"}
 			self.assertEqual(on_page, in_sidebar, workspace.name)
 			self.assertEqual([l.label for l in workspace.links if l.type == "Card Break"], list(sections(sidebar)), workspace.name)
@@ -209,9 +219,25 @@ class TestNavigation(CampusTestCase):
 
 	def test_module_packs_hide_their_area(self):
 		for code, area in (
-			("COE", "Examinations"), ("GOVERNANCE", "Academic Governance"), ("IQAC", "IQAC"), ("RESEARCH", "Research")
+			("COE", "Examinations"), ("GOVERNANCE", "Academic Governance"), ("IQAC", "IQAC"), ("RESEARCH", "Research"),
+			*((code, area) for code, (area, _role) in AREA_PACKS.items()),
 		):  # fmt: skip
 			self.assertIn(area, frappe.get_all("Module Pack Workspace", {"parent": code}, pluck="workspace"), code)
+		self.assertEqual(set(PACK_WORKSPACES), {"COE", "GOVERNANCE", "IQAC", "RESEARCH", *AREA_PACKS})
+
+	def test_hostel_labs_and_placement_go_with_their_packs(self):
+		make_desk_user(AREA_PACK_USER, [role for _area, role in AREA_PACKS.values()], COLLEGE)
+		areas = {area for area, _role in AREA_PACKS.values()}
+		self.assertTrue(areas <= dock_areas(desk_boot(AREA_PACK_USER)))
+		frappe.set_user("Administrator")
+		profile = frappe.get_doc("Institution Profile", COLLEGE)
+		for code in AREA_PACKS:
+			profile.append("packs", {"pack": code, "enabled": 0})
+		profile.save()
+		clear_pack_cache()
+		bootinfo = desk_boot(AREA_PACK_USER)
+		self.assertTrue(areas.isdisjoint(dock_areas(bootinfo)), dock_areas(bootinfo))
+		self.assertTrue(areas.isdisjoint(bootinfo.module_sidebars), list(bootinfo.module_sidebars))
 
 	def test_research_area_hidden_when_its_pack_is_off(self):
 		make_user(RESEARCH_USER, [COLLEGE])  # sees only this college, so the college's switch decides
@@ -242,6 +268,22 @@ class TestNavigation(CampusTestCase):
 		self.assertNotIn("Examinations", bootinfo.entity_module.values())
 		for by_name in bootinfo.canonical_shell.values():
 			self.assertNotIn("Examinations", by_name.values())
+
+	def test_no_dues_offices_reach_the_clearances_they_sign(self):
+		"""campus_finance.no_dues: the Warden signs off from Hostel, the Lab In-charge from Labs, the Librarian from
+		Fees and Finance, where it sees only the clearances."""
+		for email, role, area in (
+			("campus-nav-warden@example.com", "Warden", "Hostel"), ("campus-nav-lab@example.com", "Lab In-charge", "Labs"),
+			("campus-nav-librarian@example.com", "Librarian", "Fees and Finance"),
+		):  # fmt: skip
+			make_desk_user(email, [role], COLLEGE)
+			bootinfo = desk_boot(email)
+			frappe.set_user("Administrator")
+			self.assertIn(area, dock_areas(bootinfo), role)
+			links = [i["link_to"] for i in bootinfo.module_sidebars[area]["items"] if i["type"] == "Link" and i["link_type"] == "DocType"]
+			self.assertIn("No Dues Clearance", links, role)
+			if role == "Librarian":
+				self.assertEqual(links, ["No Dues Clearance"])
 
 	# role mapping
 	def desk_areas(self, key):

@@ -1,8 +1,8 @@
 # Outcomes and CO-PO matrices (M03-02, P3-T09)
 
-Academics area > Masters / Transactions / Reports.
+Academics area: the Outcomes section, Reports, and Setup (Attainment Policy).
 
-## Masters
+## Outcomes (Academics > Outcomes)
 
 - **Department Mission**: a department's numbered missions (M1, M2 ...).
 - **Program Educational Objective**: PEO1 ... of a programme under a regulation. Its **Mission Mapping** rows map it to missions of the programme's department, with a correlation from 1 to 3 (the PEO-Mission matrix).
@@ -40,7 +40,7 @@ Deferred: copying matrices into a new curriculum version, and a Bloom Level mast
 
 ## Attainment (M03-03)
 
-**Attainment Policy** (Masters), one per regulation:
+**Attainment Policy** (Academics > Setup), one per regulation:
 - CO final = direct x **Direct Weight** + indirect x **Indirect Weight** (they add up to 100). Indirect is the course exit survey.
 - Direct = CIA level x **CIA Share** + ESE level x **ESE Share** (they add up to 100).
 - **Student Threshold**: a student attains a CO in a tool (CIA or ESE) when scoring at least this % of the marks of the questions tagged with it. Questions the student was absent for count in neither marks nor maximum.
@@ -52,16 +52,16 @@ Deferred: copying matrices into a new curriculum version, and a Bloom Level mast
 
 Example, the SXCCE rule: 80 / 20, direct 60 ESE + 40 CIA, threshold 60 %, bands L1 40 %, L2 50 %, L3 60 %.
 
-**CO Attainment Run** (Transactions), one per course offering. Create it for the offering and press **Compute**, or use **Compute for a Term** on the list (every offering of the term with an approved CO-PO Matrix and a policy). Both run on the bulk runner. The run uses the policy of the offering's curriculum regulation:
+**CO Attainment Run** (Academics > Outcomes), one per course offering. Create it for the offering and press **Compute**, or use **Compute for a Term** on the list (every offering of the term with an approved CO-PO Matrix and a policy). Both run on the bulk runner. The run uses the policy of the offering's curriculum regulation:
 - Students: those with the latest, ratified result of a released exam session for the offering. SA, WD and Pending rows are left out; an AB student counts in the CIA only.
 - CIA: the CO-tagged question marks of the offering's mark sheet. ESE: the raw question marks of the two valuations that decide the final mark (before moderation, grace and revaluation), tagged by the bundle's question pattern. A question with no mark in either valuation was not answered and counts in neither the student's marks nor maximum. **Choice Paper** is ticked when the pattern's maxima add up to more than the ESE maximum.
 - **ESE Questions Not Tagged** is ticked when the ESE marks carry no CO tag at all: the run cannot be submitted until the bundle's questions are tagged and the run is computed again.
 - Indirect: the closed course exit survey campaigns of the offering, with the minimum group size applied. A CO without a survey score gets its direct level as the final.
 - Each CO row shows the CIA and ESE % of students and levels, direct, indirect, final, target and whether it is met. "Assessed" off means no tagged question was answered; "Survey Score" off means no indirect level.
-- The run copies the policy values it used and keeps an **Input Snapshot**: the sessions, the batches of the students, the students, and per CO and tool the questions and each student's marks, maximum and whether they attained. It is kept apart from the run, in a **CO Attainment Snapshot** (Transactions) that only System Manager, COE and Dean Academics can open; the run itself shows **Questions Used** (the same without students), so nothing returned about a run carries a student's marks. Submit it once computed; a submitted run never changes. To recompute, cancel and amend it. A computation that fails leaves the run **Failed** with the error.
+- The run copies the policy values it used and keeps an **Input Snapshot**: the sessions, the batches of the students, the students, and per CO and tool the questions and each student's marks, maximum and whether they attained. It is kept apart from the run, in a **CO Attainment Snapshot** (Academics > Outcomes) that only System Manager, COE and Dean Academics can open; the run itself shows **Questions Used** (the same without students), so nothing returned about a run carries a student's marks. Submit it once computed; a submitted run never changes. To recompute, cancel and amend it. A computation that fails leaves the run **Failed** with the error.
 - Who: System Manager and Dean Academics manage every run; the HOD of the programme's department computes, submits and cancels its runs; COE and IQAC Coordinator read every run; an instructor reads the runs of the offerings they teach.
 
-**PO Attainment Run** (Transactions): a programme, a batch (admission year) and optionally one academic year. Optionally choose a closed **Programme Exit Survey**: a Students or Alumni feedback campaign whose Audience Rule is this programme's and whose Likert questions are tagged PO1, PSO1 ... (small groups are hidden). Press **Compute** (bulk runner). The run uses the batch's regulation and policy and its submitted CO runs. A course taught in several sections first gets one final per CO, the student-weighted mean of its sections. Per PO / PSO it computes sum(CO final x correlation) / sum(correlation) through the course's approved CO-PO Matrix, then the exit survey at the PO indirect weight. CO runs without an approved matrix are listed under **Warnings**. "Mapped" off means no assessed CO maps to the outcome.
+**PO Attainment Run** (Academics > Outcomes): a programme, a batch (admission year) and optionally one academic year. Optionally choose a closed **Programme Exit Survey**: a Students or Alumni feedback campaign whose Audience Rule is this programme's and whose Likert questions are tagged PO1, PSO1 ... (small groups are hidden). Press **Compute** (bulk runner). The run uses the batch's regulation and policy and its submitted CO runs. A course taught in several sections first gets one final per CO, the student-weighted mean of its sections. Per PO / PSO it computes sum(CO final x correlation) / sum(correlation) through the course's approved CO-PO Matrix, then the exit survey at the PO indirect weight. CO runs without an approved matrix are listed under **Warnings**. "Mapped" off means no assessed CO maps to the outcome.
 
 **Reports**: CO Attainment by Course (filters: college, year, term, programme, course, faculty), PO Attainment by Program (programme, batch, year), and Attainment Target Gap (every CO, PO and PSO of submitted runs below its target, with the gap). **Print** on CO Attainment Run: **Course Attainment Sheet** (NBA course file): faculty, policy, and per CO the questions, % and levels.
 

@@ -1,6 +1,6 @@
 # Applicant upload and duplicate candidates (M04-06, M04-07)
 
-For admission staff (Admission Officer). Desk: **Admissions > Applicant Upload**, **Candidate Duplicate Review**.
+For admission staff (Admission Officer). Desk: **Admissions > Applications > Applicant Upload** and **Admissions > Applications > Candidate Duplicate Review**.
 
 ## Upload candidates
 1. **Applicant Upload > New**: choose the college (Company) and Academic Year, then **Download Template**.

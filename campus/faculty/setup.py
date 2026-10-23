@@ -33,7 +33,8 @@ def setup_faculty():
 	setup_payroll()
 
 
-# Rights on Education DocTypes the teaching roles need without the office role (Academics User). Custom DocPerm:
+# Rights on Education DocTypes the teaching roles need without the office role (Academics User), and the office's read
+# of the Instructor records its course allocations and timetables name (Faculty > Setup). Custom DocPerm:
 # Education's DocType JSON is never edited. Company User Permissions still scope them.
 # Once a doctype has Custom DocPerms, the site ignores its standard DocPerms: a later Education upgrade to the
 # Course Schedule or Student Attendance permissions does not reach the site (review in the Role Permission Manager).
@@ -41,6 +42,7 @@ TEACHING_STAFF_RIGHTS = {
 	("Course Schedule", "Instructor"): ("select",),  # pick the period of an Attendance Correction Request at the desk
 	("Student Attendance", "HOD"): ("read", "report"),  # the Attendance Shortage report
 	("Student Attendance", "Class Advisor"): ("read", "report"),
+	("Instructor", "Academics User"): ("read", "report"),
 }
 GRANTED_RIGHTS_KEY = "campus_teaching_staff_rights"  # global default: the TEACHING_STAFF_RIGHTS rules already granted
 

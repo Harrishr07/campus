@@ -13,5 +13,5 @@ Login `faculty@sxcce.example.edu`. Guide: roles/faculty.md.
 | N3 | Open another teacher's course in CIA marks | Not listed; direct URL refused |
 | N4 | Open a student who is not your mentee under My students | "This student is not your mentee." |
 | N5 | Edit CIA marks after the deadline | Read-only; needs an approved CIA Unlock Request |
-| N6 | Student Services > Records & Certificates > Student, and Student Record Correction | No **Add** button; you cannot create a student or a record correction |
+| N6 | Student Services > Records & Certificates > Student | No **Add** button; Student Record Correction is not listed: you cannot create a student or a record correction |
 | N7 | Desk dock | No Communication, Academic Governance, Fees and Finance or Admissions |

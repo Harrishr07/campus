@@ -4,7 +4,7 @@
 
 **What you do:** take enquiries, turn them into applicants, check documents and seats, admit, and confirm joining when the student reports.
 
-**You see (desk):** Admissions, Approvals.
+**You see (desk):** Admissions, Student Services (the Student list, where Confirm Joining is), Approvals. You hold the Admission Officer role only (not the office role, Academics User).
 
 ## Daily tasks
 1. **Review new enquiries:** Admissions > Enquiries > Lead. Filter by status; open one and follow up. The public form `/admission-enquiry` creates Leads for your college.
@@ -15,4 +15,4 @@
 6. **Watch seats:** Admissions > Reports > Live Seat Matrix, Admission No-Shows, Admissions by Quota and Category.
 7. **Late joining or cancellation:** Admissions > Joining > Late Joining Request, Admission Cancellation. Refund rules: Refund Register report.
 
-You cannot see fees, marks or exams.
+You cannot see fees, marks or exams: Confirm Joining raises the fee invoice on your behalf, but you cannot open invoices or payments.

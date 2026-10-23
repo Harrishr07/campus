@@ -4,7 +4,7 @@
 
 **What you do:** teach, mark attendance, enter CIA marks, apply for leave. Most daily work is on the faculty portal.
 
-**You see:** Faculty portal at `/campus-portal/faculty` (My timetable, Attendance, CIA marks, Course plan, Leave, My students). Desk: Academics, Examinations, Faculty (Attendance Correction Request), Student Services, Approvals. You hold the Instructor role only: you cannot create students or record corrections, and other teachers' sessions, marks and requests are not yours to change.
+**You see:** Faculty portal at `/campus-portal/faculty` (My timetable, Attendance, CIA marks, Course plan, Leave, My students). Desk: Academics, Examinations, Faculty (Attendance Correction Request, Circulars), Research, Student Services, Approvals. You hold the Instructor role only: you cannot create students or record corrections, and other teachers' sessions, marks and requests are not yours to change.
 
 ## Daily tasks
 1. **See today's periods:** `/campus-portal/faculty` > My timetable.
@@ -14,5 +14,7 @@
 5. **Enter CIA marks:** CIA marks, pick the course, enter marks (AB for absent), **Save CIA marks**. After the entry deadline the page is read-only; edits need an approved CIA Unlock Request.
 6. **Your mentees:** My students (if you are a mentor): Counselling notes, **Add note**.
 7. **Your leave:** Leave.
+8. **Circulars to staff:** Faculty > Staff > Circulars.
+9. **Research (as a PI):** Research > Proposals > Research Proposal; Research > Publications & IPR > Publication, Invention Disclosure.
 
 You see only your own course offerings and mentees.

@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Staff",
-   "link_count": 2,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -39,6 +39,17 @@
    "label": "Job Applicant",
    "link_count": 0,
    "link_to": "Job Applicant",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Circulars",
+   "link_count": 0,
+   "link_to": "Circular",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -258,7 +269,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Setup",
-   "link_count": 4,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -305,9 +316,20 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Instructor",
+   "link_count": 0,
+   "link_to": "Instructor",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-23 04:27:03.020412",
+ "modified": "2026-10-23 05:35:09.588808",
  "modified_by": "Administrator",
  "module": "Faculty",
  "name": "Faculty",

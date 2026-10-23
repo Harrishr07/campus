@@ -4,7 +4,7 @@
 
 **What you do:** collect evidence and data for NAAC / NBA / AQAR / AISHE, run feedback, track committees.
 
-**You see (desk):** IQAC, Academics, Academic Governance, Faculty, Labs, Research, Approvals.
+**You see (desk):** IQAC, Student Services, Academics, Examinations, Academic Governance, Communication, Faculty, Labs, Research, Approvals.
 
 ## Daily tasks
 1. **Accreditation cycle:** IQAC > Accreditation > Accreditation Cycle (AQAR 2025-26); Metric Value, Evidence.

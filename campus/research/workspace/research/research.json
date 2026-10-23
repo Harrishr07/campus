@@ -8,7 +8,7 @@
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "flask-conical",
+ "icon": "microscope",
  "idx": 0,
  "is_hidden": 0,
  "label": "Research",
@@ -143,9 +143,20 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Projects",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sanctioned Projects",
+   "link_count": 0,
+   "link_to": "Project",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "dependencies": "",
@@ -433,7 +444,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-23 04:27:03.020412",
+ "modified": "2026-10-23 05:35:09.588808",
  "modified_by": "Administrator",
  "module": "Research",
  "name": "Research",
@@ -454,6 +465,12 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Instructor"
+  },
+  {
+   "role": "HOD"
   }
  ],
  "sequence_id": 46.0,

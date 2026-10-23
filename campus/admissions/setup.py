@@ -23,8 +23,10 @@ def setup_admissions():
 	seed_strict_seat_matrix()
 	seed_late_joining_policy()
 	from campus.admissions.enquiry_setup import setup_enquiry
+	from campus.admissions.legacy_import import grant_import_check_rights
 
 	setup_enquiry()
+	grant_import_check_rights()
 
 
 def ensure_admission_roles():
@@ -194,13 +196,32 @@ def setup_admission_fields():
 
 
 # Read rights ERPNext's invoice and payment validation checks even when ignore_permissions is set (item
-# details, party account and the like); company User Permissions still scope the company-linked ones.
-OFFICER_READ = ("Account", "Item", "Customer", "Cost Center", "Price List", "Sales Invoice", "Payment Entry")
+# details, party account and the like); company User Permissions still scope the company-linked ones. Sales Invoice
+# and Payment Entry are not here: Confirm Joining raises the invoice with elevated rights, so the officer never opens
+# one (patch retire_officer_invoice_read took the old read away; it would also put Fees and Finance in their Dock).
+OFFICER_READ = ("Account", "Item", "Customer", "Cost Center", "Price List")
+# The officer's own work on Education records without the office role (Academics User): the applicants they convert,
+# check and admit, the Student whose form holds Confirm Joining, the enrollments the admission reports count, and the
+# masters an applicant links. Custom DocPerm: Education's DocType JSON is never edited.
+OFFICER_RIGHTS = {
+	"Student Applicant": ("write", "create", "report"),
+	"Student": ("report",),
+	"Program Enrollment": ("report",),
+	"Program": (),
+	"Academic Year": (),
+	"Student Category": (),
+	"Student Admission": (),
+}
 
 
 def grant_officer_read_access():
-	from frappe.permissions import add_permission
+	"""Add the officer's read (and OFFICER_RIGHTS) rule on each doctype the role has no rule on; a rule the college
+	edited stays as it is."""
+	from frappe.permissions import add_permission, update_permission_property
 
-	for doctype in OFFICER_READ:
-		if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": OFFICER_ROLE, "permlevel": 0}):
-			add_permission(doctype, OFFICER_ROLE, 0)
+	for doctype in (*OFFICER_READ, *OFFICER_RIGHTS):
+		if frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": OFFICER_ROLE, "permlevel": 0}):
+			continue
+		add_permission(doctype, OFFICER_ROLE, 0)
+		for right in OFFICER_RIGHTS.get(doctype, ()):
+			update_permission_property(doctype, OFFICER_ROLE, 0, right, 1)

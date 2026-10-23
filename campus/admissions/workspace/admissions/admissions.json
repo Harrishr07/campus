@@ -244,7 +244,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Setup",
-   "link_count": 11,
+   "link_count": 12,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -368,9 +368,20 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Category",
+   "link_count": 0,
+   "link_to": "Student Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-23 04:55:00.000000",
+ "modified": "2026-10-23 05:35:09.588808",
  "modified_by": "Administrator",
  "module": "Admissions",
  "name": "Admissions",

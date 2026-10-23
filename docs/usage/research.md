@@ -2,7 +2,7 @@
 
 ## Calls and proposals (P3-T13, M08-02)
 
-1. **Research Call** (Research > Transactions): the agency, one of its Funding Schemes, the deadline and
+1. **Research Call** (Research > Proposals): the agency, one of its Funding Schemes, the deadline and
    "Remind PIs (Days Before Deadline)" (default 7).
 2. **Research Proposal**: pick the college, the call (agency, scheme and deadline come from it), the PI, the
    co-investigators (employees of the college) and the budget by head. Only the scheme's heads are allowed, each
@@ -32,7 +32,7 @@ the **Funding Scheme**, choose the **Budget Action** (Stop or Warn). Each revenu
 exactly one expense account of the college, and two heads can't share an account. Seed money uses the seeded
 Funding Agency **Institution** with a scheme of its own. It works like any other grant.
 
-1. **Sanction** (Research > Transactions): enter the order no and date, the agency and scheme, the PI and co-PIs,
+1. **Sanction** (Research > Proposals): enter the order no and date, the agency and scheme, the PI and co-PIs,
    the start and end dates, the amount per head per fiscal year, the instalments (they must add up to the
    sanctioned total) and the conditions. You can link the Research Proposal if the agency sanctioned it. A proposal
    can have only one sanction.
@@ -80,7 +80,7 @@ Limits follow the scheme's **Budget Action** (Stop or Warn):
 **Extend** on a sanction also carries the Budgets into the revised end date's fiscal year. Nothing new is
 sanctioned for that year, so only the unspent balance can be spent there.
 
-**Re-appropriation Request** (Research > Transactions): pick the sanction, the fiscal year, the from and to heads
+**Re-appropriation Request** (Research > Grant Funds): pick the sanction, the fiscal year, the from and to heads
 (the to head can be any head of the scheme) and the amount. Enter the agency's letter number and date, and attach
 the letter. Submitting it:
 
@@ -96,12 +96,12 @@ Budget, and its lines are then refused. Cancelling the request moves the amount 
 Set-up: **Research Settings** names the **Grant Income Account**, the **Deferred Capital Grant Account** and the
 **Interest Treatment** (Grant Liability by default). A Funding Agency can override the treatment.
 
-**Grant Interest** (Research > Transactions): enter the interest the bank credited on a sanction's grant funds, and
+**Grant Interest** (Research > Grant Funds): enter the interest the bank credited on a sanction's grant funds, and
 the bank or cash account it was credited in. Submitting it posts a Journal Entry that debits the bank. With the
 Grant Liability treatment, it credits the sanction's "Grant Received in Advance" liability. With Interest Income,
 it credits the college's Interest Income Account instead.
 
-**Grant Income Recognition** (Research > Transactions) is the period-end entry. Enter the college and the period.
+**Grant Income Recognition** (Research > Grant Funds) is the period-end entry. Enter the college and the period.
 List the sanctions, or leave the table empty to take every submitted sanction of the college that has started by
 the period end. Submitting it posts one Journal Entry on the period end, with each sanction's project and cost
 centre on its rows. For each sanction, it:
@@ -123,7 +123,7 @@ Cancelling reverses the Journal Entry and frees the period. Only a sanction's la
 
 ## Utilisation Certificate and Statement of Expenditure (P3-T17, M08-06, blueprint D9)
 
-**Utilisation Certificate** (Research > Transactions): pick the sanction and the period (inside the sanction
+**Utilisation Certificate** (Research > Grant Funds): pick the sanction and the period (inside the sanction
 period). Saving the draft reads the figures from the general ledger:
 
 - **Opening unspent balance**: what came into the sanction's liability before the period, less what was spent
@@ -191,7 +191,7 @@ amend it. The amendment is the next **version** and needs approval again.
 
 ## PFMS EAT export (P3-T18, M08-07)
 
-**PFMS Export Batch** (Research > Transactions): pick the sanction, the export type and the period. You need read
+**PFMS Export Batch** (Research > Grant Funds): pick the sanction, the export type and the period. You need read
 access to the sanction and its college, because the rows carry suppliers' bank details. Saving the draft
 lists the sanction's payments of that type in the period:
 
@@ -238,7 +238,7 @@ until it is withdrawn from PFMS: PFMS reports its row failed (Import Status), or
 for an amendment of an exported voucher too. A batch being submitted reads the payments with locking reads, so it
 waits for a cancel in progress and leaves the cancelled voucher out. The batch keeps the row as history.
 
-**The file**: the batch attaches the EAT bulk-upload CSV, laid out by its **PFMS Export Layout** (Research > Settings).
+**The file**: the batch attaches the EAT bulk-upload CSV, laid out by its **PFMS Export Layout** (Research > Setup).
 A layout is a list of columns, each a header and a source (a payment or batch field, or a fixed value), plus the date
 format and the header row. The seeded "PFMS EAT ... (placeholder)" layouts are placeholders until the official EAT
 file spec is supplied: change the columns to the official ones, with no code change. Every layout needs a **Row

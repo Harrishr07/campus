@@ -4,7 +4,7 @@
 
 **What you do:** approve final decisions and watch the whole college.
 
-**You see (desk):** Admissions, Fees and Finance, Academics, Examinations, Faculty, Student Services, Academic Governance, Communication, IQAC, Placement, Research, Administration, Approvals.
+**You see (desk):** Admissions, Fees and Finance, Academics, Examinations, Faculty, Student Services, Academic Governance, Communication, IQAC, Labs, Placement, Research, Administration, Approvals.
 
 ## Daily tasks
 1. **Approval inbox:** Approvals > Reports > My Pending Approvals; approve or reject (scholarship sanction, record corrections, result ratification, certificates).

@@ -124,8 +124,11 @@ def user_errors(profile, departments):
 	programmes = {p.get("name") for p in profile.get("programmes", [])}
 	if group and group.get("programme") not in programmes:
 		errors.append(_("The class group names an unknown programme {0}.").format(group.get("programme")))
+	profiles = {m.get("name") for m in profile.get("module_profiles", [])}
 	for user in users:
 		label = user.get("key")
+		if user.get("module_profile") and user["module_profile"] not in profiles:
+			errors.append(_("User {0} names unknown module profile {1}.").format(label, user["module_profile"]))
 		if not (label and user.get("name") and user.get("roles")):
 			errors.append(_("Every user needs a key, a name and roles ({0}).").format(label))
 			continue

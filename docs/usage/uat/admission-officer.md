@@ -10,6 +10,6 @@ Login `admissions@sxcce.example.edu`. Guide: roles/admission-officer.md.
 | 4 | Open a Student Applicant with status Approved, click **Admit** | Confirmation; status becomes Admitted |
 | 5 | Open an Admitted applicant's Student, click **Confirm Joining** | Register number and fee invoice created |
 | 6 | Admissions > Reports > Live Seat Matrix | Joined count rose by one for that programme |
-| N1 | Open `/app/sales-invoice` or Fees and Finance | No Fees and Finance entry in the dock; access refused |
+| N1 | Open `/app/sales-invoice` or Fees and Finance | No Fees and Finance entry in the dock; `/app/sales-invoice` is refused (the officer holds no invoice rights; Confirm Joining raises the invoice on the officer's behalf) |
 | N2 | Open Examinations workspace | Not in the dock; URL gives "not permitted" |
 | N3 | Confirm Joining twice on the same student | Second attempt refused or no duplicate invoice |

@@ -17,7 +17,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Records & Certificates",
-   "link_count": 6,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -84,6 +84,17 @@
    "link_count": 0,
    "link_to": "Student Record Correction",
    "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student 360",
+   "link_count": 0,
+   "link_to": "student-360",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
@@ -403,7 +414,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-23 04:27:03.020412",
+ "modified": "2026-10-23 07:30:00.000000",
  "modified_by": "Administrator",
  "module": "Student Services",
  "name": "Student Services",
@@ -448,6 +459,9 @@
   },
   {
    "role": "COE"
+  },
+  {
+   "role": "Admission Officer"
   }
  ],
  "sequence_id": 40.0,

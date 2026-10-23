@@ -242,6 +242,28 @@ def download_import_template(template: str, file_type: str = "CSV"):
 	return download_template(spec["doctype"], spec["fields"], "blank_template", file_type)
 
 
+# The Admission Officer checks the batch files they load (UAT admission-officer step 3): Data Import rights on their
+# own imports only (if_owner), so no other import or its file is opened. The report needs report rights on Data Import.
+IMPORT_CHECK_ROLE = "Admission Officer"
+IMPORT_CHECK_RIGHTS = {"read": 1, "write": 1, "create": 1, "report": 1, "if_owner": 1}
+
+
+def grant_import_check_rights():
+	"""Add the role's own-imports rule when the role has no Data Import rule (a rule the college edited stays)."""
+	from frappe.permissions import setup_custom_perms
+
+	if frappe.db.exists("Custom DocPerm", {"parent": "Data Import", "role": IMPORT_CHECK_ROLE}):
+		return
+	setup_custom_perms("Data Import")  # copies the standard rules first, so System Manager keeps its own
+	frappe.get_doc(
+		{
+			"doctype": "Custom DocPerm", "parent": "Data Import", "parenttype": "DocType", "parentfield": "permissions",
+			"role": IMPORT_CHECK_ROLE, "permlevel": 0, **IMPORT_CHECK_RIGHTS,
+		}
+	).insert(ignore_permissions=True)  # fmt: skip
+	frappe.clear_cache(doctype="Data Import")
+
+
 @frappe.whitelist()
 def validate_import(data_import: str, template: str, company: str):
 	"""Issues of the file attached to a Data Import, without importing it: [{row, column, check, message}]."""

@@ -1,7 +1,7 @@
 {
  "app": "campus",
  "charts": [],
- "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Labs</b></span>\", \"col\": 12}}, {\"id\": \"sc0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Laboratory\", \"col\": 3}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Safety Inspection\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Incident\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Calibration and AMC Due\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0007\", \"type\": \"card\", \"data\": {\"card_name\": \"Laboratories\", \"col\": 4}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Safety\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}]",
+ "content": "[{\"id\": \"hd0001\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Labs</b></span>\", \"col\": 12}}, {\"id\": \"sc0001\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Laboratory\", \"col\": 3}}, {\"id\": \"sc0002\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Safety Inspection\", \"col\": 3}}, {\"id\": \"sc0003\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Lab Incident\", \"col\": 3}}, {\"id\": \"sc0004\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Calibration and AMC Due\", \"col\": 3}}, {\"id\": \"sp0007\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"cd0007\", \"type\": \"card\", \"data\": {\"card_name\": \"Laboratories\", \"col\": 4}}, {\"id\": \"cd0012\", \"type\": \"card\", \"data\": {\"card_name\": \"Equipment\", \"col\": 4}}, {\"id\": \"cd0008\", \"type\": \"card\", \"data\": {\"card_name\": \"Safety\", \"col\": 4}}, {\"id\": \"cd0011\", \"type\": \"card\", \"data\": {\"card_name\": \"Clearance\", \"col\": 4}}, {\"id\": \"cd0009\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 4}}, {\"id\": \"cd0010\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}]",
  "creation": "2026-10-22 07:48:15.000000",
  "custom_blocks": [],
  "docstatus": 0,
@@ -35,6 +35,36 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Equipment",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset",
+   "link_count": 0,
+   "link_to": "Asset",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset Maintenance",
+   "link_count": 0,
+   "link_to": "Asset Maintenance",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Safety",
    "link_count": 2,
    "onboard": 0,
@@ -58,6 +88,25 @@
    "label": "Lab Incident",
    "link_count": 0,
    "link_to": "Lab Incident",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Clearance",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "No Dues Sign-off",
+   "link_count": 0,
+   "link_to": "No Dues Clearance",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -134,7 +183,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-23 04:27:03.020412",
+ "modified": "2026-10-23 05:35:09.588808",
  "modified_by": "Administrator",
  "module": "Labs",
  "name": "Labs",
@@ -152,6 +201,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Principal"
   }
  ],
  "sequence_id": 48.0,

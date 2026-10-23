@@ -32,13 +32,23 @@ What it builds, from `campus/setup/profiles/<profile>.json`:
 | Approval policies | Certificate Request, Result Ratification, Rejoin Application, Examiner Remuneration Claim (Principal), only for a document type with no policy yet; Fee Refund, Fee Concession and the others come from `migrate` |
 | People | One user per role (office, admission officer, faculty, HOD, class advisor, COE, accounts, principal, IQAC, student, guardian) with its roles and Company User Permission; Employee / Instructor records for staff; Position Holders (HOD, Class Advisor, COE, Principal, IQAC); a class group; a pilot Student linked to the student user and a Guardian |
 
-Roles: teachers (faculty, HOD, class advisor) and the COE hold only their own roles, never the office role Academics
-User. A re-run gives each kit user the roles its spec lists and takes away only a retired role: today just Academics
-User, from a user whose spec is a teacher's or the COE's (`RETIRED_ROLES` in `campus/setup/people.py`). So re-running
-the kit on a site set up before this change takes Academics User from the teacher logins. No other role is ever taken
+Roles: teachers (faculty, HOD, class advisor), the COE and the admission officer hold only their own roles, never the
+office role Academics User. A re-run gives each kit user the roles its spec lists and takes away only a retired role:
+today just Academics User, from a user whose spec is a teacher's, the COE's or the admission officer's (`RETIRED_ROLES`
+in `campus/setup/people.py`). So re-running the kit on a site set up before this change takes Academics User from those
+logins. The Admission Officer role itself carries what admissions work needs (applicants, the Student list for Confirm
+Joining, programmes, seat matrices; `OFFICER_RIGHTS` in `campus/admissions/setup.py`) and no invoice or payment read. No other role is ever taken
 away: HRMS's Employee, any role added by hand (even one the kit gives other users, such as Mentor for a teacher) and a
 role an active position gives all stay. The demo data's staff step (`campus.setup.demo_data.load`, step `staff`) does
 the same for the other departments' HODs and faculty.
+
+Dock: Frappe lists every installed app's modules in a desk user's Dock, and hides one only through the user's blocked
+modules. So each kit desk user gets a Module Profile from the profile's `module_profiles` (Campus Teaching Staff for
+faculty, HOD, class advisor and COE; Campus Office; Campus Accounts; Campus IQAC; Campus Placement; Campus Principal).
+A profile names the modules to keep and blocks every other module of the non-campus apps (erpnext, hrms, education,
+frappe, india_compliance, ...), worked out from the site on each run (`campus/setup/module_profiles.py`). Only Campus
+Accounts keeps one (Accounts); the others see the campus areas alone. Portal users and users outside the kit are not
+touched. To let a role keep another module, add it to that profile's `keep` list and re-run the kit.
 
 Teaching rights on Education doctypes (Instructor select on Course Schedule, HOD and Class Advisor read on Student
 Attendance) are added once, on the first `migrate` that knows them, as Custom DocPerm rows. After that the kit never
@@ -83,7 +93,7 @@ listed in `docs/rulings.md`). Confirm these before the pilot:
 
 ## 2. Load the college's own master data
 
-Use the Data Import templates of `campus.admissions.legacy_import` (Admissions > Import Check validates a file before
+Use the Data Import templates of `campus.admissions.legacy_import` (Admissions > Reports > Import Check validates a file before
 you import it). Download a blank template (CSV or Excel) with
 `/api/method/campus.admissions.legacy_import.download_import_template?template=<name>`; the header labels are the
 importer's own. A child row (a second guardian, a second fee component, a second curriculum course) goes on the next
@@ -102,7 +112,7 @@ line with the parent cells blank. Load in this order:
 | 9 | Opening Fee Balances | Sales Invoice (opening) | see `legacy_import.py` |
 
 Course Offerings are not imported: they are generated from an Effective curriculum (Curriculum > Generate Offerings).
-New applicants (not existing students) load through Admissions > Applicant Upload (`docs/usage/applicant-upload.md`).
+New applicants (not existing students) load through Admissions > Applications > Applicant Upload (`docs/usage/applicant-upload.md`).
 
 A file whose Link cells name a master that does not exist is refused whole by Data Import: load the masters in the order
 above, and check each sheet first with the Import Check report.
