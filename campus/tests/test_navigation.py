@@ -19,6 +19,7 @@ AREAS = [
 	"Labs", "Placement", "Faculty", "Academic Governance", "Communication", "Approvals", "Administration",
 ]  # fmt: skip
 COLLEGE = "Campus Nav Test College"  # autonomous: the COE pack (Examinations) is open to it
+COE_OFF_COLLEGE = "Campus Nav COE Off College"  # autonomous too, but switches the COE pack off
 RESEARCH_USER = "campus-nav-research@example.com"
 LAST_SECTIONS = ["Reports", "Setup"]
 USERS = {
@@ -86,6 +87,17 @@ def desk_boot(email):
 	if hasattr(frappe.local, "request_cache"):
 		frappe.local.request_cache.clear()
 	return get_bootinfo()
+
+
+def make_desk_user(email, roles, college):
+	"""A user with only `roles` who sees only `college`."""
+	frappe.get_doc({"doctype": "User", "email": email, "first_name": "nav", "send_welcome_email": 0,
+		"roles": [{"role": r} for r in roles]}).insert()
+	frappe.get_doc({"doctype": "User Permission", "user": email, "allow": "Company", "for_value": college}).insert()
+
+
+def exam_shells(bootinfo):
+	return {shell for shell, s in bootinfo.module_sidebars.items() if s["module"] == "Examinations"}
 
 
 class TestNavigation(CampusTestCase):
@@ -213,6 +225,24 @@ class TestNavigation(CampusTestCase):
 		self.assertNotIn("Research", [r["link_to"] for r in bootinfo.dock.get("campus", [])])
 		self.assertNotIn("Research", bootinfo.module_sidebars)
 
+	def test_pack_off_hides_the_area_sidebar_from_users_without_the_area_role(self):
+		"""Frappe keeps the Examinations sidebar (without Home) for an Accounts Manager, who reads some exam DocType
+		but lacks the workspace role. The pack switch must still take it away, routing included."""
+		profile = frappe.get_doc("Institution Profile", COE_OFF_COLLEGE)
+		profile.append("packs", {"pack": "COE", "enabled": 0})
+		profile.save()
+		on_user, off_user = "campus-nav-am-coe-on@example.com", "campus-nav-am-coe-off@example.com"
+		for email, college in ((on_user, COLLEGE), (off_user, COE_OFF_COLLEGE)):
+			make_desk_user(email, ["Accounts Manager"], college)
+
+		self.assertIn("Examinations", exam_shells(desk_boot(on_user)))  # the pack is on for this college
+
+		bootinfo = desk_boot(off_user)
+		self.assertEqual(exam_shells(bootinfo), set())
+		self.assertNotIn("Examinations", bootinfo.entity_module.values())
+		for by_name in bootinfo.canonical_shell.values():
+			self.assertNotIn("Examinations", by_name.values())
+
 	# role mapping
 	def desk_areas(self, key):
 		bootinfo = desk_boot(USERS[key][0])
@@ -221,9 +251,10 @@ class TestNavigation(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		make_company(COLLEGE, "CNTC")  # a pack shows only to users of an institution it is enabled for
-		if not frappe.db.exists("Institution Profile", COLLEGE):
-			frappe.get_doc({"doctype": "Institution Profile", "company": COLLEGE, "institution_status": "Autonomous"}).insert()
+		for college, abbr in ((COLLEGE, "CNTC"), (COE_OFF_COLLEGE, "CNCO")):
+			make_company(college, abbr)  # a pack shows only to users of an institution it is enabled for
+			if not frappe.db.exists("Institution Profile", college):
+				frappe.get_doc({"doctype": "Institution Profile", "company": college, "institution_status": "Autonomous"}).insert()
 
 	def setUp(self):
 		frappe.db.savepoint("navigation_test")

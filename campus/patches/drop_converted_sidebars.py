@@ -1,7 +1,8 @@
 """M17-01 Frappe 16.53 converted the old campus sidebar fixtures into site-owned Sidebars on upgrade. Campus now
-ships one standard Sidebar per area, which replaces the converted one of the same name; this removes the converted
-ones the app does not ship (Campus Platform, which merged Approvals into Administration, and Campus Messaging), so
-no module carries a stale second sidebar. Sidebars a site made itself carry no conversion record and stay."""
+ships one standard Sidebar per area, so this removes every converted Sidebar in a campus module: a same-named one
+is already replaced by the shipped one, and the others (Campus Platform, which merged Approvals into Administration,
+and Campus Messaging) would leave a module with a stale second sidebar. Sidebars a site made itself carry no
+conversion record and stay."""
 
 import frappe
 

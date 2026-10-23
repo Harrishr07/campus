@@ -8,6 +8,7 @@ This hides navigation only; data access stays governed by DocType permissions.
 
 import frappe
 from frappe.core.doctype.user_permission.user_permission import get_user_permissions
+from frappe.utils.caching import request_cache
 
 from campus.campus_platform.api import pack_enabled
 
@@ -17,8 +18,10 @@ def accessible_companies(user):
 	return restricted or frappe.get_all("Institution Profile", pluck="name")
 
 
+@request_cache
 def hidden_workspaces(user):
-	"""Names of workspaces that belong to a pack the user may not see."""
+	"""Names of workspaces that belong to a pack the user may not see. Asked up to three times per boot (Apps tile,
+	grid App icon, boot_session), so it is computed once per request; `clear_pack_cache` forgets it."""
 	if user == "Administrator" or "System Manager" in frappe.get_roles(user):
 		return set()
 	user_roles = set(frappe.get_roles(user))
@@ -65,12 +68,13 @@ def filter_bootinfo(bootinfo, hidden):
 
 
 def filter_sidebars(sidebars, hidden):
-	"""Drop the sidebar of a hidden workspace (its first link, Home, is that workspace) and strip hidden workspace
-	links from the others. Returns the dropped shells."""
+	"""Drop the sidebars of a hidden workspace's module and strip hidden workspace links from the others. Matched by
+	module, not by Home: Frappe already removed Home for a user without the workspace role, but keeps the shell when
+	the user can read any DocType in it. Returns the dropped shells."""
+	hidden_modules = set(frappe.get_all("Workspace", {"name": ["in", list(hidden)]}, pluck="module"))
 	dropped = set()
 	for shell, sidebar in list(sidebars.items()):
-		home = next((i for i in sidebar["items"] if i.get("type") == "Link"), {})
-		if home.get("link_type") == "Workspace" and home.get("link_to") in hidden:
+		if sidebar.get("module") in hidden_modules or set(sidebar.get("workspaces") or ()) & hidden:
 			dropped.add(shell)
 			del sidebars[shell]
 			continue
