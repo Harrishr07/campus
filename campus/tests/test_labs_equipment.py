@@ -18,6 +18,7 @@ from campus.tests.utils import CampusTestCase
 
 COLLEGE, OTHER = "Lab Test College", "Lab Test Other College"
 READER = "lab-reader@example.com"
+OTHER_READER = "lab-other-reader@example.com"
 
 
 class TestLabRules(UnitTestCase):
@@ -51,6 +52,7 @@ class LabCase(CampusTestCase):
 		make_company(COLLEGE, "LTC")
 		make_company(OTHER, "LTO")
 		make_user(READER, [COLLEGE])
+		make_user(OTHER_READER, [OTHER])
 		frappe.get_doc("User", READER).add_roles("Lab In-charge")
 		if not frappe.db.exists("Gender", "Male"):
 			frappe.get_doc({"doctype": "Gender", "gender": "Male"}).insert()
@@ -112,8 +114,9 @@ class LabCase(CampusTestCase):
 			frappe.db.set_value("Asset", asset.name, "status", status)
 		return asset
 
-	def make_maintenance(self, asset, tasks):
-		"""Asset Maintenance with `tasks` = [(name, type, next_due_in_days)]."""
+	def make_maintenance(self, asset, tasks, assign_to=READER):
+		"""Asset Maintenance with `tasks` = [(name, type, next_due_in_days)], each assigned to `assign_to` (an
+		assignment shares the record with that user)."""
 		team = self.make_team()
 		doc = frappe.get_doc(
 			{
@@ -121,7 +124,7 @@ class LabCase(CampusTestCase):
 				"asset_maintenance_tasks": [
 					{
 						"maintenance_task": name, "maintenance_type": kind, "maintenance_status": "Planned",
-						"start_date": add_days(today(), -300), "periodicity": "Yearly", "assign_to": READER,
+						"start_date": add_days(today(), -300), "periodicity": "Yearly", "assign_to": assign_to,
 						"next_due_date": add_days(today(), due_in),
 					}
 					for name, kind, due_in in tasks
@@ -265,7 +268,7 @@ class TestReportsAreCompanyScoped(LabCase):
 		other_lab = self.make_lab("Other Lab", company=OTHER, in_charge=self.make_employee("OtherInCharge", OTHER))
 		mine, theirs = self.make_asset(self.lab), self.make_asset(other_lab, company=OTHER)
 		ours = self.make_maintenance(mine, [("Cal", "Calibration", 5)])
-		self.make_maintenance(theirs, [("Cal", "Calibration", 5)])
+		self.make_maintenance(theirs, [("Cal", "Calibration", 5)], assign_to=OTHER_READER)  # not shared with READER
 		frappe.set_user(READER)
 		assets, maintenance = frappe.get_list("Asset", pluck="name"), frappe.get_list("Asset Maintenance", pluck="name")
 		self.assertIn(mine.name, assets)
