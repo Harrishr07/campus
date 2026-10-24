@@ -487,10 +487,16 @@ class TestImportCheckAccess(CampusTestCase):
 	def test_the_officer_opens_the_report_and_only_their_own_imports(self):
 		from frappe.desk.query_report import get_report_doc
 
+		# made by Administrator, then owned by the officer: creating one needs import rights on the template's doctype
+		own = frappe.get_doc({"doctype": "Data Import", "reference_doctype": "Student", "import_type": "Insert New Records"}).insert()
+		frappe.db.set_value("Data Import", own.name, "owner", self.officer)
 		frappe.set_user(self.officer)
 		self.assertEqual(get_report_doc("Import Check").name, "Import Check")
-		own = frappe.get_doc({"doctype": "Data Import", "reference_doctype": "Student", "import_type": "Insert New Records"}).insert()
 		self.assertTrue(frappe.has_permission("Data Import", "read", own.name))
+		self.assertEqual(frappe.get_list("Data Import", pluck="name"), [own.name])
 		frappe.set_user(self.other)
+		self.assertEqual(get_report_doc("Import Check").name, "Import Check")
 		self.assertFalse(frappe.has_permission("Data Import", "read", own.name))
 		self.assertEqual(frappe.get_list("Data Import", pluck="name"), [])
+		frappe.set_user("Administrator")
+		self.assertIn(own.name, frappe.get_list("Data Import", pluck="name"))  # System Manager reads every import

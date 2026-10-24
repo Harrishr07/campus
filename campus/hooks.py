@@ -520,6 +520,9 @@ has_permission = {
 	"File": "campus.examinations.question_papers.file_has_permission",
 }
 has_permission["Appraisal"] = "campus.faculty.self_appraisal.has_permission"
+# G03: an Admission Officer reads and checks (Import Check) only the Data Imports they made
+permission_query_conditions["Data Import"] = "campus.admissions.legacy_import.own_imports_query"
+has_permission["Data Import"] = "campus.admissions.legacy_import.own_import_has_permission"
 # P3-T03: a criterion owner sees and edits only the Metric Values under their criteria
 permission_query_conditions["Metric Value"] = "campus.iqac.access.permission_query"
 has_permission["Metric Value"] = "campus.iqac.access.has_permission"
