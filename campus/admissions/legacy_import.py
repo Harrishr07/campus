@@ -247,29 +247,31 @@ def download_import_template(template: str, file_type: str = "CSV"):
 # own_imports_query / own_import_has_permission narrow the officer to the imports they made: no other import or its
 # file is opened.
 IMPORT_CHECK_ROLE = "Admission Officer"
-IMPORT_CHECK_RIGHTS = {"read": 1, "write": 1, "create": 1, "report": 1}
+IMPORT_CHECK_RIGHTS = {"read": 1, "report": 1}  # no write/create: the officer cannot start or stop an import
+FIRST_CUT_RIGHTS = {"read": 1, "write": 1, "create": 1, "report": 1}  # the earlier rule, which patch narrow_officer_rights trims
 OWN_IMPORTS_EXEMPT = ("System Manager",)  # Data Import's own role reads every import
 
 
 def grant_import_check_rights():
 	"""Add the role's rule when it has none (a rule the college edited stays). The first cut of this rule was if_owner,
-	which kept the report shut; that exact rule is turned into the plain one."""
+	which kept the report shut; that exact rule is turned into the plain one (the patch narrow_officer_rights takes
+	write and create away from a rule that still has them)."""
 	from frappe.permissions import setup_custom_perms
 
 	rule = frappe.db.get_value(
 		"Custom DocPerm", {"parent": "Data Import", "role": IMPORT_CHECK_ROLE, "permlevel": 0},
-		["name", "if_owner", *IMPORT_CHECK_RIGHTS], as_dict=True,
+		["name", "if_owner", *FIRST_CUT_RIGHTS], as_dict=True,
 	)  # fmt: skip
 	if rule:
-		if rule.if_owner and all(rule[right] == value for right, value in IMPORT_CHECK_RIGHTS.items()):
-			frappe.db.set_value("Custom DocPerm", rule.name, "if_owner", 0)
+		if rule.if_owner and all(rule[right] == value for right, value in FIRST_CUT_RIGHTS.items()):
+			frappe.db.set_value("Custom DocPerm", rule.name, {"if_owner": 0, "write": 0, "create": 0, "export": 0})
 			frappe.clear_cache(doctype="Data Import")
 		return
 	setup_custom_perms("Data Import")  # copies the standard rules first, so System Manager keeps its own
 	frappe.get_doc(
 		{
 			"doctype": "Custom DocPerm", "parent": "Data Import", "parenttype": "DocType", "parentfield": "permissions",
-			"role": IMPORT_CHECK_ROLE, "permlevel": 0, **IMPORT_CHECK_RIGHTS,
+			"role": IMPORT_CHECK_ROLE, "permlevel": 0, "export": 0, **IMPORT_CHECK_RIGHTS,
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
 	frappe.clear_cache(doctype="Data Import")

@@ -15,4 +15,4 @@
 6. **Watch seats:** Admissions > Reports > Live Seat Matrix, Admission No-Shows, Admissions by Quota and Category.
 7. **Late joining or cancellation:** Admissions > Joining > Late Joining Request, Admission Cancellation. Refund rules: Refund Register report.
 
-You cannot see fees, marks or exams: Confirm Joining raises the fee invoice on your behalf, but you cannot open invoices or payments.
+You cannot see fees, marks or exams: You can read (not change, print or export) the fee invoices and payments that Confirm Joining and a cancellation raise, because ERPNext checks them as you; Fees and Finance is not in your dock.
