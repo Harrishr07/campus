@@ -29,6 +29,7 @@ def setup_finance():
 	seed_refund_policy()
 	seed_scholarship_policy()
 	open_fee_collection_report()
+	grant_guardian_invoice_read()
 
 
 # Education's Student Fee Collection report is for Academics User only; accounts staff run it too (UAT accounts step 4).
@@ -50,6 +51,27 @@ def open_fee_collection_report():
 			"roles": [{"role": role} for role in roles],
 		}
 	).insert(ignore_permissions=True)
+
+
+# ERPNext's Payment Request validation reads its Sales Invoice as the session user (ERPNext 58de4a5c36, 16.52), so a
+# guardian paying a ward's fee through the portal needs read on Sales Invoice. Read alone (no report, export, print,
+# email or share; the role has no desk access): the PORTAL_SCOPES hooks in campus.examinations.access narrow it to the
+# invoices of the guardian's wards, in lists, counts and by name. Custom DocPerm: ERPNext's JSON is never edited.
+GUARDIAN_ROLE = "Guardian"
+GUARDIAN_INVOICE_FLAGS = ("read", "write", "create", "report", "export", "print", "email", "share", "select")
+
+
+def grant_guardian_invoice_read():
+	"""Idempotent: add the Guardian row once, with read only; a row the college already keeps is left as it is."""
+	from frappe.core.doctype.custom_docperm.custom_docperm import update_custom_docperm
+	from frappe.permissions import add_permission
+
+	if not frappe.db.exists("Role", GUARDIAN_ROLE) or frappe.db.exists(
+		"Custom DocPerm", {"parent": "Sales Invoice", "role": GUARDIAN_ROLE, "permlevel": 0}
+	):
+		return
+	name = add_permission("Sales Invoice", GUARDIAN_ROLE, 0)  # copies the standard DocPerms first, so none is lost
+	update_custom_docperm(name, {flag: int(flag == "read") for flag in GUARDIAN_INVOICE_FLAGS})
 
 
 def seed_concession_policy():
