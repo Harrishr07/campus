@@ -309,7 +309,11 @@ class TestImportIdempotency(LegacyFixture):
 		Returns (created, {sheet row: error text}) for Insert New Records, or None when the importer refuses the
 		whole file over template warnings (a Link value that does not exist, for one).
 		"""
-		importer = Importer("Student", file_path=path, import_type="Insert New Records", console=True)
+		# an unsaved Data Import is passed because Frappe 16.53's Importer reads custom_delimiters off the argument itself
+		data_import = frappe.get_doc(doctype="Data Import", import_type="Insert New Records")
+		importer = Importer("Student", data_import=data_import, file_path=path, console=True)
+		importer.before_import()  # 16.53 sets the importer's per-run state here (import flags, tree-alias lookup)
+		self.addCleanup(importer.after_import)
 		if [w for w in importer.import_file.get_warnings() if w.get("type") != "info"]:
 			return None
 		created, failed = 0, {}
