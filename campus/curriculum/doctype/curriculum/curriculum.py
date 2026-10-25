@@ -33,11 +33,17 @@ class Curriculum(Document):
 		abbreviation = frappe.db.get_value("Program", self.program, "program_abbreviation")
 		self.name = f"{abbreviation or self.program}-{self.regulation}-v{cint(self.version) or 1}"
 		if frappe.db.exists("Curriculum", self.name):
+			link = frappe.utils.get_link_to_form("Curriculum", self.name)
 			frappe.throw(
-				_("{0} already exists. Create a new version of it instead.").format(frappe.bold(self.name))
+				_("Curriculum {0} already exists. You can open it here: {1} or create a new version of it instead.").format(
+					frappe.bold(self.name), link
+				),
+				title=_("Curriculum Already Exists"),
 			)
 
 	def validate(self):
+		if not self.company and self.program:
+			self.company = frappe.db.get_value("Program", self.program, "oc_company")
 		self.validate_status_change()
 		if self.validate_lock():
 			return

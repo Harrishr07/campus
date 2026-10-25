@@ -32,6 +32,7 @@ COMPANY_FIELD = {
 	**dict.fromkeys(COMPANY_SCOPED_DOCTYPES, "oc_company"),
 	"Fee Schedule": "company",
 	"Regulation": "company",
+	"Curriculum": "company",
 }
 
 # doctype -> (link field on the doc, doctype it points to) whose company is inherited.
@@ -39,10 +40,12 @@ PARENT_LINKS = {
 	"Program Enrollment": ("program", "Program"),
 	"Course Schedule": ("student_group", "Student Group"),
 	"Student Group": ("program", "Program"),
+	"Curriculum": ("program", "Program"),
 }
 
 # doctype -> [(table fieldname or None, link fieldname, linked doctype)] that must share the company.
 LINKED_RECORDS = {
+	"Curriculum": [(None, "program", "Program")],
 	"Student Applicant": [(None, "program", "Program"), (None, "student_admission", "Student Admission")],
 	"Program": [("courses", "course", "Course")],
 	"Student Group": [

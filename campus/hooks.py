@@ -158,6 +158,7 @@ doc_events = {
 		"Assessment Plan",
 		"Fee Schedule",
 		"Regulation",
+		"Curriculum",
 	]
 }
 for _dt in [
