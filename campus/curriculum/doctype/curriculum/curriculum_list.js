@@ -1,4 +1,5 @@
 frappe.listview_settings["Curriculum"] = {
+	add_fields: ["company", "status"],
 	get_indicator(doc) {
 		const colors = {
 			Draft: "orange",
@@ -6,6 +7,7 @@ frappe.listview_settings["Curriculum"] = {
 			Effective: "blue",
 			Superseded: "gray",
 		};
-		return [__(doc.status), colors[doc.status] || "gray", "status,=," + doc.status];
+		const status = doc.status || "Draft";
+		return [__(status), colors[status] || "gray", "status,=," + status];
 	},
 };

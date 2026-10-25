@@ -173,6 +173,7 @@ for _dt in [
 	"Room",
 	"Student Admission",
 	"Assessment Plan",
+	"Curriculum",
 ]:
 	doc_events.setdefault(_dt, {})["before_validate"] = f"{_company_scope}.before_validate"
 

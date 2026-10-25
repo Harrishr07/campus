@@ -98,14 +98,15 @@ def permitted_companies(user):
 
 def before_validate(doc, method=None):
 	"""Set the company from the parent link, falling back to the user's default company."""
+	company_field = COMPANY_FIELD.get(doc.doctype, "oc_company")
 	company = (
 		get_parent_company(doc)
-		or doc.oc_company
+		or doc.get(company_field)
 		or frappe.defaults.get_user_default("Company")
 		or frappe.db.get_single_value("Global Defaults", "default_company")
 	)
 	if company:
-		doc.oc_company = company
+		doc.set(company_field, company)
 
 
 def get_parent_company(doc):
