@@ -7,6 +7,15 @@ from frappe.utils import flt, now_datetime
 
 
 class StudentOnboarding(Document):
+	def before_insert(self):
+		if not self.items and (self.student or self.template):
+			details = get_onboarding_template_details(self.student, self.template)
+			if details.get("template") and not self.template:
+				self.template = details["template"]
+			if details.get("items") and not self.items:
+				for item in details["items"]:
+					self.append("items", {**item, "status": "Pending"})
+
 	def validate(self):
 		for row in self.items:
 			self.check_item(row)
@@ -36,3 +45,26 @@ def completion_percent(items):
 	if not counted:
 		return 100.0
 	return flt(100 * sum(row.status == "Done" for row in counted) / len(counted), 2)
+
+
+@frappe.whitelist()
+def get_onboarding_template_details(student=None, template=None):
+	"""Resolves the default template and checklist items for a student or given template."""
+	if not template and student:
+		company = frappe.db.get_value("Student", student, "oc_company")
+		if company:
+			template = frappe.db.get_value(
+				"Student Onboarding Template", {"company": company, "is_default": 1}
+			)
+
+	if not template:
+		return {"template": None, "items": []}
+
+	items = frappe.get_all(
+		"Student Onboarding Template Item",
+		filters={"parent": template},
+		fields=["item_code", "title", "mandatory", "requires_attachment"],
+		order_by="idx",
+	)
+	return {"template": template, "items": items}
+
