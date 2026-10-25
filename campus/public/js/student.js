@@ -27,8 +27,38 @@ function confirm_joining(frm) {
 	dialog.show();
 }
 
+// BUG-07: Clean link-query for Guardian field in guardians child table and auto-fetch guardian details.
+// Prevents upstream education bug where empty/undefined guardian_list produced "Filtered by: Name is not one of ."
+function setup_guardians_filter(frm) {
+	if (!frm.fields_dict.guardians || !frm.fields_dict.guardians.grid) return;
+
+	const filter_fn = function (doc, cdt, cdn) {
+		const row = cdt && cdn ? locals[cdt]?.[cdn] : null;
+		const current = row ? row.guardian : null;
+		const already_selected = (doc.guardians || [])
+			.map((d) => d.guardian)
+			.filter((g) => Boolean(g) && g !== current);
+
+		const filters = {};
+		if (already_selected.length > 0) {
+			filters["name"] = ["not in", already_selected];
+		}
+		return { filters: filters };
+	};
+
+	frm.set_query("guardian", "guardians", filter_fn);
+	const grid = frm.fields_dict.guardians.grid;
+	if (grid.get_field("guardian")) {
+		grid.get_field("guardian").get_query = filter_fn;
+	}
+}
+
 frappe.ui.form.on("Student", {
+	onload(frm) {
+		setup_guardians_filter(frm);
+	},
 	refresh(frm) {
+		setup_guardians_filter(frm);
 		if (frm.is_new()) return;
 		const officer = frappe.user.has_role("Admission Officer") || frappe.session.user === "Administrator";
 		if (officer && frm.doc.student_applicant && ["Admitted", "Joined"].includes(frm.doc.oc_academic_status)) {
@@ -53,3 +83,45 @@ frappe.ui.form.on("Student", {
 		}, __("Create"));
 	},
 });
+
+frappe.ui.form.on("Student Guardian", {
+	form_render(frm) {
+		setup_guardians_filter(frm);
+	},
+	guardians_add(frm) {
+		setup_guardians_filter(frm);
+	},
+	guardian(frm, cdt, cdn) {
+		const row = locals[cdt]?.[cdn];
+		if (!row) return;
+
+		if (!row.guardian) {
+			frappe.model.set_value(cdt, cdn, "guardian_name", "");
+			if (frm.fields_dict.guardians?.grid?.fields_map?.email_address) {
+				frappe.model.set_value(cdt, cdn, "email_address", "");
+			}
+			if (frm.fields_dict.guardians?.grid?.fields_map?.mobile_number) {
+				frappe.model.set_value(cdt, cdn, "mobile_number", "");
+			}
+			return;
+		}
+
+		frappe.db
+			.get_value("Guardian", row.guardian, ["guardian_name", "email_address", "mobile_number"])
+			.then((r) => {
+				if (r && r.message) {
+					const data = r.message;
+					if (data.guardian_name) {
+						frappe.model.set_value(cdt, cdn, "guardian_name", data.guardian_name);
+					}
+					if (data.email_address && frm.fields_dict.guardians?.grid?.fields_map?.email_address) {
+						frappe.model.set_value(cdt, cdn, "email_address", data.email_address);
+					}
+					if (data.mobile_number && frm.fields_dict.guardians?.grid?.fields_map?.mobile_number) {
+						frappe.model.set_value(cdt, cdn, "mobile_number", data.mobile_number);
+					}
+				}
+			});
+	},
+});
+
