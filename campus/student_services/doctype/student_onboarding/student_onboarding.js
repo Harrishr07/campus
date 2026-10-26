@@ -7,7 +7,7 @@ frappe.ui.form.on("Student Onboarding", {
 		}
 		frm.call({
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
-			args: { student: current_student },
+			args: { student: current_student, template: current_template },
 			callback(r) {
 				if (
 					frm.doc.student !== current_student ||
@@ -16,9 +16,13 @@ frappe.ui.form.on("Student Onboarding", {
 				) {
 					return;
 				}
-				if (r.message && r.message.template) {
-					frm.set_value("template", r.message.template);
-					populate_items(frm, r.message.items);
+				if (r.message) {
+					if (!frm.doc.template && r.message.template) {
+						frm.set_value("template", r.message.template);
+					}
+					if (r.message.items) {
+						populate_items(frm, r.message.items);
+					}
 				}
 			},
 		});
