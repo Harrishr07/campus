@@ -13,6 +13,7 @@ def before_tests():
 	frappe.clear_cache()
 	complete_setup()
 	clear_default_company()
+	match_number_settings()
 	make_fiscal_years()
 	make_genders()
 	make_price_list()
@@ -52,6 +53,13 @@ def clear_default_company():
 	frappe.db.set_single_value("Global Defaults", "default_company", None)
 	frappe.db.delete("DefaultValue", {"defkey": ["in", ["company", "Company"]]})
 	frappe.clear_cache()
+
+
+def match_number_settings():
+	"""The wizard picks India's lakh grouping; the campus-test sites keep the plain format and rounding."""
+	frappe.db.set_single_value(
+		"System Settings", {"number_format": "#,###.##", "rounding_method": "Banker's Rounding (legacy)"}
+	)
 
 
 def make_fiscal_years():
