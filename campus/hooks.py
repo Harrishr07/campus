@@ -399,7 +399,7 @@ doc_events.setdefault("Unreconcile Payment", {})["before_submit"] = f"{_consulta
 # Testing
 # -------
 
-# before_tests = "campus.install.before_tests"
+before_tests = "campus.tests.bootstrap.before_tests"
 
 # Extend DocType Class
 # ------------------------------

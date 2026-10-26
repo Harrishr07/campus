@@ -1,0 +1,53 @@
+# CodeRabbit review settings for OneBook Campus (a Frappe v16 app on ERPNext, HRMS and Education).
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - develop
+      - main
+  path_filters:
+    - "!campus/public/dist/**"
+    - "!**/*.min.js"
+    - "!docs/research/**"
+  path_instructions:
+    - path: "campus/**/*.py"
+      instructions: |
+        Frappe v16 app. Check in particular:
+        - Permissions: every @frappe.whitelist() checks the caller's rights (frappe.has_permission / doc.check_permission)
+          before reading or writing; ignore_permissions=True and frappe.db.get_value/sql are justified, never on
+          user-chosen records without a check. Guest and portal users (Student, Guardian) must not reach desk data.
+        - Company scope: records of one college (Company) never leak to another; see campus/campus_platform/company_scope.py.
+          No fallback to "the first Company" or another arbitrary company.
+        - SQL: parameters are bound, never formatted into the query from user input; prefer frappe.qb / frappe.get_all.
+        - No frappe.db.commit() inside request handlers or doc events.
+        - Upstream apps (frappe, erpnext, hrms, education) are never edited: changes go through hooks, Custom DocPerm,
+          Custom Field or Property Setter.
+        - Errors are not swallowed with a bare `except Exception: pass`.
+    - path: "campus/patches/**"
+      instructions: |
+        Patches run once per site on migrate and must be idempotent and safe on real data: only change rows that still
+        hold what campus wrote, never rewrite user-entered values beyond the bug being fixed, and keep an audit trail
+        where the record is versioned. Check the entry is in campus/patches.txt in the right section.
+    - path: "campus/**/doctype/**/*.json"
+      instructions: |
+        DocType JSON is written by Frappe's DocType form. Flag hand edits that break its formatting, removed read_only on
+        fields a controller relies on, and permission rows that widen access (export, delete, write for portal roles).
+    - path: "campus/tests/**"
+      instructions: |
+        Tests use FrappeTestCase and run on campus-test*.localhost sites only. Check imports, that tests assert behaviour
+        (not only that a mocked call happened), and that test data stays synthetic.
+    - path: "campus/**/*.js"
+      instructions: |
+        Desk form scripts: use frm.set_query / frappe.call with server-side checks; never rely on the client for
+        permission or validation.
+chat:
+  auto_reply: true
