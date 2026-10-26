@@ -12,6 +12,5 @@
 	"root_password": "root",
 	"host_name": "http://test_site:8000",
 	"allow_tests": true,
-	"developer_mode": 1,
-	"throttle_user_limit": 100
+	"developer_mode": 1
 }

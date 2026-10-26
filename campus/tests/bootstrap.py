@@ -12,6 +12,7 @@ PRICE_LIST = "Standard Selling"
 def before_tests():
 	frappe.clear_cache()
 	complete_setup()
+	clear_default_company()
 	make_fiscal_years()
 	make_genders()
 	make_price_list()
@@ -42,6 +43,15 @@ def complete_setup():
 			"chart_of_accounts": "Standard",
 		}
 	)
+
+
+def clear_default_company():
+	"""The campus-test sites keep no default company: campus falls back to it in several places (company scope,
+	formats, policies), so a default would stamp the wizard's _Test Company on records the tests make for their own
+	colleges."""
+	frappe.db.set_single_value("Global Defaults", "default_company", None)
+	frappe.db.delete("DefaultValue", {"defkey": ["in", ["company", "Company"]]})
+	frappe.clear_cache()
 
 
 def make_fiscal_years():
