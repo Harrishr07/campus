@@ -106,9 +106,14 @@ jobs:
         if: env.FULL_SUITE != 'true'
         run: |
           cd ~/frappe-bench
+          failed=""
           for module in $QUICK_MODULES; do
-            bench --site test_site run-tests --app campus --module "$module"
+            bench --site test_site run-tests --app campus --module "$module" || failed="$failed $module"
           done
+          if [ -n "$failed" ]; then
+            echo "Failed modules:$failed"
+            exit 1
+          fi
 
       - name: Full suite (part ${{ matrix.container }} of ${{ strategy.job-total }})
         if: env.FULL_SUITE == 'true'
