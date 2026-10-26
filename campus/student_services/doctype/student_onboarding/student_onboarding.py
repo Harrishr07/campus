@@ -73,4 +73,3 @@ def get_onboarding_template_details(student=None, template=None):
 		order_by="idx",
 	)
 	return {"template": template, "items": items}
-

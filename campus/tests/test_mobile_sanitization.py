@@ -5,8 +5,8 @@ try:
 except ImportError:
 	from unittest import TestCase as FrappeTestCase
 
-from campus.campus_platform.sanitize import clean_mobile_number, validate_mobile
 from campus.admissions.allotment_import import coerce
+from campus.campus_platform.sanitize import clean_mobile_number, validate_mobile
 
 
 class TestMobileSanitization(FrappeTestCase):
@@ -29,7 +29,6 @@ class TestMobileSanitization(FrappeTestCase):
 		]
 		for inp, expected in cases:
 			self.assertEqual(clean_mobile_number(inp), expected, f"Failed on input {inp}")
-
 
 	def test_validate_mobile_doc_event_hook(self):
 		"""validate_mobile hook sanitizes mobile fields in memory on doc validation."""

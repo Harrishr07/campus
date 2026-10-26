@@ -2,7 +2,6 @@
 
 import frappe
 
-
 TARGETS = [
 	("Student", "student_mobile_number"),
 	("Student Applicant", "student_mobile_number"),
@@ -31,4 +30,3 @@ def execute():
 			WHERE `{field}` LIKE '%.00'
 			"""
 		)
-

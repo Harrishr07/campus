@@ -199,7 +199,9 @@ doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
 	"campus.faculty.session_states.validate_session",
 ]
 doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
-doc_events["Student Attendance"] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
+doc_events[
+	"Student Attendance"
+] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
 	"validate": [
 		"campus.faculty.attendance_corrections.guard_record",
 		"campus.campus_platform.sanitize.validate_mobile",

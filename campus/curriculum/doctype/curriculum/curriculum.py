@@ -35,9 +35,9 @@ class Curriculum(Document):
 		if frappe.db.exists("Curriculum", self.name):
 			link = frappe.utils.get_link_to_form("Curriculum", self.name)
 			frappe.throw(
-				_("Curriculum {0} already exists. You can open it here: {1} or create a new version of it instead.").format(
-					frappe.bold(self.name), link
-				),
+				_(
+					"Curriculum {0} already exists. You can open it here: {1} or create a new version of it instead."
+				).format(frappe.bold(self.name), link),
 				title=_("Curriculum Already Exists"),
 			)
 

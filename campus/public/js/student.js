@@ -130,5 +130,3 @@ frappe.ui.form.on("Student Guardian", {
 		setup_guardians_filter(frm);
 	},
 });
-
-
