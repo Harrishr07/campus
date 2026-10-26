@@ -52,7 +52,7 @@ def completion_percent(items):
 
 
 @frappe.whitelist()
-def get_onboarding_template_details(student=None, template=None):
+def get_onboarding_template_details(student: str | None = None, template: str | None = None) -> dict:
 	"""Resolves the default template and checklist items for a student or given template."""
 	if student:
 		frappe.has_permission("Student", "read", student, throw=True)
