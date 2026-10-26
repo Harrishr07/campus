@@ -150,9 +150,10 @@ class TestNavigation(CampusTestCase):
 	def test_no_area_is_open_to_every_desk_user(self):
 		for workspace in campus_workspaces():
 			self.assertTrue(workspace.roles, f"workspace {workspace.name} has no roles")
-			icon = frappe.get_doc(
-				"Desktop Icon", workspace.name
-			)  # the retiring icon grid, still on upgraded sites
+			# the retiring icon grid: upgraded sites keep its rows, a fresh site in Apps mode has none
+			if not frappe.db.exists("Desktop Icon", workspace.name):
+				continue
+			icon = frappe.get_doc("Desktop Icon", workspace.name)
 			self.assertEqual({r.role for r in icon.roles}, {r.role for r in workspace.roles}, workspace.name)
 
 	def test_students_and_guardians_have_no_desk_access(self):

@@ -66,5 +66,11 @@ def make_genders():
 def make_price_list():
 	if not frappe.db.exists("Price List", PRICE_LIST):
 		frappe.get_doc(
-			{"doctype": "Price List", "price_list_name": PRICE_LIST, "selling": 1, "currency": "INR", "enabled": 1}
+			{
+				"doctype": "Price List",
+				"price_list_name": PRICE_LIST,
+				"selling": 1,
+				"currency": "INR",
+				"enabled": 1,
+			}
 		).insert(ignore_permissions=True)
