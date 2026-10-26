@@ -16,6 +16,10 @@ class CounsellingAuthority(Document):
 				frappe.throw(_("Row {0}: column {1} is mapped twice.").format(row.idx, row.source_column))
 			seen.add(row.source_column)
 			if row.target_field in (AADHAAR_FIELD, MASKED_FIELD):
-				frappe.throw(_("Row {0}: Aadhaar numbers are never imported from allotment files.").format(row.idx))
+				frappe.throw(
+					_("Row {0}: Aadhaar numbers are never imported from allotment files.").format(row.idx)
+				)
 			if not meta.has_field(row.target_field):
-				frappe.throw(_("Row {0}: Student Applicant has no field {1}.").format(row.idx, row.target_field))
+				frappe.throw(
+					_("Row {0}: Student Applicant has no field {1}.").format(row.idx, row.target_field)
+				)

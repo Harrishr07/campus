@@ -24,7 +24,9 @@ MEMBER = "T07 Employer"
 
 def make_offering(students):
 	if not frappe.db.exists("Course", COURSE):
-		frappe.get_doc({"doctype": "Course", "course_name": COURSE, "oc_company": fx.COLLEGE}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Course", "course_name": COURSE, "oc_company": fx.COLLEGE}).insert(
+			ignore_permissions=True
+		)
 	name = frappe.db.get_value("Student Group", {"student_group_name": OFFERING})
 	if name:
 		return name
@@ -38,9 +40,19 @@ def make_offering(students):
 
 def make_member():
 	name = frappe.db.get_value("External Member", {"member_name": MEMBER})
-	return name or frappe.get_doc(
-		{"doctype": "External Member", "member_name": MEMBER, "organisation": "T07 Industries", "email": "t07-employer@example.com"}
-	).insert(ignore_permissions=True).name
+	return (
+		name
+		or frappe.get_doc(
+			{
+				"doctype": "External Member",
+				"member_name": MEMBER,
+				"organisation": "T07 Industries",
+				"email": "t07-employer@example.com",
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
 
 
 class TestRules(UnitTestCase):
@@ -94,7 +106,11 @@ class FeedbackFixture(IntegrationTestCase):
 			{"question": "Comments", "question_type": "Text", "is_required": 0},
 		]
 		return frappe.get_doc(
-			{"doctype": "Feedback Form", "form_name": name or f"T07 Form {frappe.generate_hash(length=6)}", "questions": questions}
+			{
+				"doctype": "Feedback Form",
+				"form_name": name or f"T07 Form {frappe.generate_hash(length=6)}",
+				"questions": questions,
+			}
 		).insert()
 
 	def campaign(self, form=None, **values):
@@ -129,7 +145,9 @@ class TestFormAndCampaign(FeedbackFixture):
 			self.form([{"question": "Pick", "question_type": "Choice", "options": "Only one"}])
 		with self.assertRaises(frappe.ValidationError):
 			self.form([{"question": "Say", "question_type": "Text", "course_outcome": "CO1"}])
-		self.assertTrue(self.form([{"question": "Rate", "question_type": "Likert", "course_outcome": "CO3"}]).name)
+		self.assertTrue(
+			self.form([{"question": "Rate", "question_type": "Likert", "course_outcome": "CO3"}]).name
+		)
 
 	def test_the_window_must_end_after_it_starts_and_an_offering_audience_needs_the_offering(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -151,15 +169,31 @@ class TestFormAndCampaign(FeedbackFixture):
 	def test_the_seeded_forms_are_placeholders_and_the_course_exit_survey_is_co_tagged(self):
 		for name in SEEDED_FORMS:
 			self.assertTrue(frappe.db.get_value("Feedback Form", name, "is_placeholder"), name)
-		tags = frappe.get_all("Feedback Question", {"parent": "Course Exit Survey", "question_type": "Likert"}, pluck="course_outcome")
+		tags = frappe.get_all(
+			"Feedback Question",
+			{"parent": "Course Exit Survey", "question_type": "Likert"},
+			pluck="course_outcome",
+		)
 		self.assertTrue(all(tags) and len(tags) >= 5)
-		self.assertTrue({"Curriculum Feedback - Students", "Curriculum Feedback - Teachers", "Curriculum Feedback - Employers", "Curriculum Feedback - Alumni"} <= set(SEEDED_FORMS))
+		self.assertTrue(
+			{
+				"Curriculum Feedback - Students",
+				"Curriculum Feedback - Teachers",
+				"Curriculum Feedback - Employers",
+				"Curriculum Feedback - Alumni",
+			}
+			<= set(SEEDED_FORMS)
+		)
 
 	def test_feedback_campaign_is_an_evidence_source_with_its_action_taken_report(self):
 		from campus.iqac.setup import seed_evidence_sources
 
 		seed_evidence_sources()
-		field = frappe.db.get_value("Evidence Source Doctype", {"parent": "Campus Settings", "document_type": "Feedback Campaign"}, "file_field")
+		field = frappe.db.get_value(
+			"Evidence Source Doctype",
+			{"parent": "Campus Settings", "document_type": "Feedback Campaign"},
+			"file_field",
+		)
 		self.assertEqual(field, "action_taken_report")
 
 
@@ -168,35 +202,59 @@ class TestAnonymity(FeedbackFixture):
 		"""Every stored column of the response, its answers and the campaign's tokens, read straight from the tables."""
 		response = frappe.db.sql("select * from `tabFeedback Response` where name=%s", name, as_dict=True)[0]
 		answers = frappe.db.sql("select * from `tabFeedback Answer` where parent=%s", name, as_dict=True)
-		tokens = frappe.db.sql("select * from `tabFeedback Response Token` where campaign=%s", response.campaign, as_dict=True)
+		tokens = frappe.db.sql(
+			"select * from `tabFeedback Response Token` where campaign=%s", response.campaign, as_dict=True
+		)
 		return response, answers, tokens
 
 	def test_an_anonymous_response_stores_no_user_student_or_time_of_day(self):
 		campaign = self.campaign()
 		name = self.respond(campaign, fx.STUDENT_USER)
 		response, answers, tokens = self.stored(name)
-		identities = {fx.STUDENT_USER, self.world["asha"], "T11Asha", frappe.db.get_value("Student", self.world["asha"], "student_name")}
+		identities = {
+			fx.STUDENT_USER,
+			self.world["asha"],
+			"T11Asha",
+			frappe.db.get_value("Student", self.world["asha"], "student_name"),
+		}
 		for row in [response, *answers, *tokens]:
 			for column, value in row.items():
 				self.assertFalse(any(i and i in str(value or "") for i in identities), (column, value))
 		for row in [response, *answers]:
 			self.assertEqual((row.owner, row.modified_by), ("Guest", "Guest"))
-			self.assertEqual((row.creation.hour, row.creation.minute, row.creation.second, row.creation.microsecond), (0, 0, 0, 0))
+			self.assertEqual(
+				(row.creation.hour, row.creation.minute, row.creation.second, row.creation.microsecond),
+				(0, 0, 0, 0),
+			)
 			self.assertEqual(row.modified, row.creation)
 		self.assertEqual(response.response_date, getdate(today()))
 		self.assertFalse(response.respondent)
 		[token] = tokens
 		self.assertEqual((token.owner, token.modified_by), ("Guest", "Guest"))
-		self.assertEqual(token.creation.date(), getdate(campaign.start_date))  # the campaign's start, not the response day
-		self.assertFalse(token._comments)  # a framework column (no longer in optional_fields since 16.53), left empty
-		extra = set(token) - set(frappe.model.default_fields) - set(frappe.model.optional_fields) - {"campaign", "_comments"}
+		self.assertEqual(
+			token.creation.date(), getdate(campaign.start_date)
+		)  # the campaign's start, not the response day
+		self.assertFalse(
+			token._comments
+		)  # a framework column (no longer in optional_fields since 16.53), left empty
+		extra = (
+			set(token)
+			- set(frappe.model.default_fields)
+			- set(frappe.model.optional_fields)
+			- {"campaign", "_comments"}
+		)
 		self.assertEqual(extra, set())  # nothing but the hash and the campaign
 
 	def test_no_version_follow_comment_or_log_names_the_response(self):
 		frappe.db.set_value("User", fx.STUDENT_USER, "follow_created_documents", 1)
 		campaign = self.campaign()
 		name = self.respond(campaign, fx.STUDENT_USER)
-		for doctype, field in (("Version", "docname"), ("Document Follow", "ref_docname"), ("Comment", "reference_name"), ("Activity Log", "reference_name")):
+		for doctype, field in (
+			("Version", "docname"),
+			("Document Follow", "ref_docname"),
+			("Comment", "reference_name"),
+			("Activity Log", "reference_name"),
+		):
 			self.assertFalse(frappe.db.exists(doctype, {field: name}), doctype)
 		self.assertFalse(frappe.get_meta("Feedback Response").track_changes)
 
@@ -210,7 +268,9 @@ class TestAnonymity(FeedbackFixture):
 	def test_a_response_cannot_be_made_or_edited_through_the_document_api(self):
 		campaign = self.campaign()
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Feedback Response", "campaign": campaign.name, "response_date": today()}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{"doctype": "Feedback Response", "campaign": campaign.name, "response_date": today()}
+			).insert(ignore_permissions=True)
 		name = self.respond(campaign, fx.STUDENT_USER)
 		doc = frappe.get_doc("Feedback Response", name)
 		doc.respondent = "Student:" + self.world["asha"]
@@ -251,17 +311,25 @@ class TestAnonymity(FeedbackFixture):
 		secret = "SECRET-REQUEST-T07"
 		before = set(frappe.get_all("Error Log", pluck="name"))
 		saved_request, saved_form = getattr(frappe.local, "request", None), frappe.local.form_dict
-		frappe.local.request = SimpleNamespace(method="POST", path="/api/method/campus.iqac.feedback.submit_response", referrer=None)
+		frappe.local.request = SimpleNamespace(
+			method="POST", path="/api/method/campus.iqac.feedback.submit_response", referrer=None
+		)
 		answers = self.answers(campaign, text=secret)
 		frappe.set_user(fx.STUDENT_USER)
 		frappe.local.form_dict = frappe._dict(
-			cmd="campus.iqac.feedback.submit_response", campaign=campaign.name, answers=answers, member="T07-MEMBER", signature="T07-SIGNATURE"
+			cmd="campus.iqac.feedback.submit_response",
+			campaign=campaign.name,
+			answers=answers,
+			member="T07-MEMBER",
+			signature="T07-SIGNATURE",
 		)
 		try:
 			with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
 				with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded"):
 					feedback.submit_response(campaign.name, answers)
-			self.assertFalse({"campaign", "answers", "member", "signature"} & set(frappe.form_dict))  # nothing later sees them
+			self.assertFalse(
+				{"campaign", "answers", "member", "signature"} & set(frappe.form_dict)
+			)  # nothing later sees them
 		finally:
 			frappe.set_user("Administrator")
 			frappe.local.request, frappe.local.form_dict = saved_request, saved_form
@@ -280,9 +348,13 @@ class TestAnonymity(FeedbackFixture):
 		lost = frappe.db.OperationalError(2013, "Lost connection")
 		frappe.set_user(fx.STUDENT_USER)
 		try:
-			with patch.object(frappe.db, "rollback", side_effect=lost):  # neither the savepoint nor a full rollback works
+			with patch.object(
+				frappe.db, "rollback", side_effect=lost
+			):  # neither the savepoint nor a full rollback works
 				with self.assertRaisesRegex(frappe.ValidationError, "already answered"):
-					feedback.submit_response(campaign.name, self.answers(campaign, text=secret))  # the refusal, not the rollback error
+					feedback.submit_response(
+						campaign.name, self.answers(campaign, text=secret)
+					)  # the refusal, not the rollback error
 				with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
 					with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded") as raised:
 						feedback.submit_response(other.name, self.answers(other, text=secret))
@@ -290,11 +362,17 @@ class TestAnonymity(FeedbackFixture):
 			with patch("campus.iqac.feedback.store_response", side_effect=KeyError(secret)):
 				with patch("campus.iqac.feedback.log_failure", side_effect=lost):
 					with self.assertRaisesRegex(frappe.ValidationError, "could not be recorded") as raised:
-						feedback.submit_response(third.name, self.answers(third, text=secret))  # other's token stayed: rollback was patched
+						feedback.submit_response(
+							third.name, self.answers(third, text=secret)
+						)  # other's token stayed: rollback was patched
 			self.assertIsNone(raised.exception.__context__)
 		finally:
 			frappe.set_user("Administrator")
-		new = frappe.get_all("Error Log", {"name": ["not in", list(before) or [""]]}, ["error", "metadata", "owner", "creation"])
+		new = frappe.get_all(
+			"Error Log",
+			{"name": ["not in", list(before) or [""]]},
+			["error", "metadata", "owner", "creation"],
+		)
 		self.assertEqual([row.error for row in new], ["KeyError"])
 		for text in (secret, fx.STUDENT_USER, self.world["asha"]):
 			self.assertNotIn(text, f"{new[0].error} {new[0].metadata}")
@@ -311,7 +389,9 @@ class TestAnonymity(FeedbackFixture):
 					feedback.submit_response(campaign.name, self.answers(campaign))
 		finally:
 			frappe.set_user("Administrator")
-		(row,) = frappe.get_all("Error Log", {"name": ["not in", list(before) or [""]]}, ["owner", "modified_by", "creation"])
+		(row,) = frappe.get_all(
+			"Error Log", {"name": ["not in", list(before) or [""]]}, ["owner", "modified_by", "creation"]
+		)
 		self.assertEqual((row.owner, row.modified_by), ("Guest", "Guest"))
 		self.assertEqual(str(row.creation), f"{today()} 00:00:00")  # the day only, like a response
 
@@ -330,7 +410,10 @@ class TestAnonymity(FeedbackFixture):
 		settings = frappe.get_single("Campus Settings")
 		settings.feedback_minimum_group_size = None
 		settings.save()  # blank is not a save blocker
-		self.assertEqual(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size"), api.MINIMUM_GROUP_DEFAULT)
+		self.assertEqual(
+			frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size"),
+			api.MINIMUM_GROUP_DEFAULT,
+		)
 		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 0)
 		try:
 			self.assertEqual(feedback.minimum_group_size(), api.MINIMUM_GROUP_DEFAULT)
@@ -341,7 +424,13 @@ class TestAnonymity(FeedbackFixture):
 		from unittest.mock import patch
 
 		asha, bala = self.world["asha"], self.world["bala"]
-		keys = [f"Student:{asha}", f"User:{fx.STUDENT_USER}", f"Student:{bala}", "External Member:M1", "External Member:M2"]
+		keys = [
+			f"Student:{asha}",
+			f"User:{fx.STUDENT_USER}",
+			f"Student:{bala}",
+			"External Member:M1",
+			"External Member:M2",
+		]
 		self.assertEqual(feedback.audience_size(keys), 4)  # Asha's student record and login are one person
 		campaign = self.campaign()
 		with patch("campus.iqac.feedback.respondents", return_value=keys[:3]):  # 3 keys, 2 people, minimum 3
@@ -349,9 +438,13 @@ class TestAnonymity(FeedbackFixture):
 				self.respond(campaign, fx.STUDENT_USER)
 
 	def test_an_existing_campaign_with_a_rule_still_saves_when_only_its_note_changes(self):
-		rule = fx.make_rule(f"T07 Rule {frappe.generate_hash(length=4)}", "Student Group", student_group=self.offering)
+		rule = fx.make_rule(
+			f"T07 Rule {frappe.generate_hash(length=4)}", "Student Group", student_group=self.offering
+		)
 		campaign = self.campaign(audience="Students", audience_rule=rule.name, course_offering=None)
-		frappe.db.set_value("Audience Rule", rule.name, "company", fx.OTHER_COLLEGE)  # the rule was re-scoped later
+		frappe.db.set_value(
+			"Audience Rule", rule.name, "company", fx.OTHER_COLLEGE
+		)  # the rule was re-scoped later
 		campaign.reload()
 		campaign.action_taken = "Lab hours added"
 		campaign.save()
@@ -366,7 +459,9 @@ class TestAnonymity(FeedbackFixture):
 		settings.feedback_minimum_group_size = 2
 		with self.assertRaisesRegex(frappe.ValidationError, "at least 3"):
 			settings.save()
-		frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 1)  # a direct write cannot lower it
+		frappe.db.set_single_value(
+			"Campus Settings", "feedback_minimum_group_size", 1
+		)  # a direct write cannot lower it
 		try:
 			self.assertEqual(feedback.minimum_group_size(), 3)
 		finally:
@@ -395,7 +490,11 @@ class TestAnonymity(FeedbackFixture):
 		from unittest.mock import patch
 
 		campaign = self.campaign()
-		keys = [f"Student:{self.world['asha']}", f"User:{fx.STUDENT_USER}", *(f"Student:{s}" for s in self.students[1:])]
+		keys = [
+			f"Student:{self.world['asha']}",
+			f"User:{fx.STUDENT_USER}",
+			*(f"Student:{s}" for s in self.students[1:]),
+		]
 		with patch("campus.iqac.feedback.respondents", return_value=keys):
 			self.respond(campaign, fx.STUDENT_USER)
 		self.assertTrue(feedback.has_responded(campaign.name, f"User:{fx.STUDENT_USER}"))
@@ -404,7 +503,9 @@ class TestAnonymity(FeedbackFixture):
 	def test_a_named_campaign_keeps_the_respondent(self):
 		campaign = self.campaign(is_anonymous=0)
 		name = self.respond(campaign, fx.STUDENT_USER)
-		self.assertEqual(frappe.db.get_value("Feedback Response", name, "respondent"), f"Student:{self.world['asha']}")
+		self.assertEqual(
+			frappe.db.get_value("Feedback Response", name, "respondent"), f"Student:{self.world['asha']}"
+		)
 
 
 class TestOneResponseEach(FeedbackFixture):
@@ -447,9 +548,19 @@ class TestOneResponseEach(FeedbackFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "already"):
 			self.respond(parents, fx.GUARDIAN_USER)
 		group = frappe.get_doc("Student Group", self.offering)
-		instructor = frappe.db.get_value("Instructor", {"employee": self.world["emp_1"]}) or frappe.get_doc(
-			{"doctype": "Instructor", "instructor_name": "T07 Ravi", "employee": self.world["emp_1"], "oc_company": fx.COLLEGE}
-		).insert(ignore_permissions=True).name
+		instructor = (
+			frappe.db.get_value("Instructor", {"employee": self.world["emp_1"]})
+			or frappe.get_doc(
+				{
+					"doctype": "Instructor",
+					"instructor_name": "T07 Ravi",
+					"employee": self.world["emp_1"],
+					"oc_company": fx.COLLEGE,
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
 		if not group.instructors:
 			group.append("instructors", {"instructor": instructor})
 			group.save(ignore_permissions=True)
@@ -459,23 +570,35 @@ class TestOneResponseEach(FeedbackFixture):
 			self.respond(teachers, fx.STUDENT_USER)
 
 	def test_an_invited_employer_answers_once_through_the_signed_link(self):
-		campaign = self.campaign(audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0)
+		campaign = self.campaign(
+			audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0
+		)
 		key = f"External Member:{self.member}"
 		signature = feedback.invite_signature(campaign.name, key)
 		frappe.set_user("Guest")
 		try:
 			with self.assertRaises(frappe.PermissionError):
-				feedback.submit_response(campaign.name, self.answers(campaign), member=self.member, signature="0" * 32)
-			self.assertTrue(feedback.submit_response(campaign.name, self.answers(campaign), member=self.member, signature=signature))
+				feedback.submit_response(
+					campaign.name, self.answers(campaign), member=self.member, signature="0" * 32
+				)
+			self.assertTrue(
+				feedback.submit_response(
+					campaign.name, self.answers(campaign), member=self.member, signature=signature
+				)
+			)
 			with self.assertRaisesRegex(frappe.ValidationError, "already"):
-				feedback.submit_response(campaign.name, self.answers(campaign), member=self.member, signature=signature)
+				feedback.submit_response(
+					campaign.name, self.answers(campaign), member=self.member, signature=signature
+				)
 		finally:
 			frappe.set_user("Administrator")
 
 	def test_the_answer_page_shows_the_form_to_a_signed_link_and_the_same_notice_to_anyone_else(self):
 		from campus.www import feedback as page
 
-		campaign = self.campaign(audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0)
+		campaign = self.campaign(
+			audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0
+		)
 		signature = feedback.invite_signature(campaign.name, f"External Member:{self.member}")
 
 		def render(**query):
@@ -490,11 +613,16 @@ class TestOneResponseEach(FeedbackFixture):
 			shown = render(member=self.member, signature=signature)
 			self.assertEqual(shown.state, "open")
 			self.assertEqual(len(shown.questions), 4)
-			for query in ({"member": self.member, "signature": "bad"}, {"member": "Nobody", "signature": signature}):
+			for query in (
+				{"member": self.member, "signature": "bad"},
+				{"member": "Nobody", "signature": signature},
+			):
 				denied = render(**query)
 				self.assertEqual(denied.state, "denied")
 				self.assertFalse(denied.get("questions"))
-			feedback.submit_response(campaign.name, self.answers(campaign), member=self.member, signature=signature)
+			feedback.submit_response(
+				campaign.name, self.answers(campaign), member=self.member, signature=signature
+			)
 			self.assertEqual(render(member=self.member, signature=signature).state, "answered")
 		finally:
 			frappe.form_dict.clear()
@@ -531,11 +659,15 @@ class TestInvitations(FeedbackFixture):
 		campaign = self.campaign()
 		items = self.run_items(feedback_invites.send_invitations(campaign.name))
 		self.assertEqual(set(items), {f"Student:{s}" for s in self.students})
-		self.assertEqual({log.recipient for log in self.logs(campaign, feedback_invites.INVITATION)}, set(items))
+		self.assertEqual(
+			{log.recipient for log in self.logs(campaign, feedback_invites.INVITATION)}, set(items)
+		)
 		self.assertTrue(frappe.db.get_value("Feedback Campaign", campaign.name, "invitations_sent"))
 
 	def test_an_invited_member_gets_a_signed_link(self):
-		campaign = self.campaign(audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0)
+		campaign = self.campaign(
+			audience="Employers", course_offering=None, invitees=[{"member": self.member}], is_anonymous=0
+		)
 		link = feedback_invites.link(campaign, f"External Member:{self.member}")
 		self.assertIn(feedback.invite_signature(campaign.name, f"External Member:{self.member}"), link)
 		self.assertNotIn("signature", feedback_invites.link(campaign, f"Student:{self.world['asha']}"))
@@ -544,12 +676,22 @@ class TestInvitations(FeedbackFixture):
 		campaign = self.campaign(start_date=add_days(today(), -3), reminder_every_days=3)
 		self.respond(campaign, fx.STUDENT_USER)
 		runs = feedback_invites.send_reminders()
-		[run] = [r for r in runs if json.loads(frappe.db.get_value("Bulk Run", r, "parameters"))["campaign"] == campaign.name]
+		[run] = [
+			r
+			for r in runs
+			if json.loads(frappe.db.get_value("Bulk Run", r, "parameters"))["campaign"] == campaign.name
+		]
 		items = json.loads(frappe.db.get_value("Bulk Run", run, "items"))
 		self.assertIn(f"Student:{self.world['asha']}", items)
 		self.assertEqual(set(items), {f"Student:{s}" for s in self.students})
 		not_due = self.campaign(start_date=add_days(today(), -2), reminder_every_days=3)
-		self.assertNotIn(not_due.name, [json.loads(frappe.db.get_value("Bulk Run", r, "parameters"))["campaign"] for r in feedback_invites.send_reminders()])
+		self.assertNotIn(
+			not_due.name,
+			[
+				json.loads(frappe.db.get_value("Bulk Run", r, "parameters"))["campaign"]
+				for r in feedback_invites.send_reminders()
+			],
+		)
 
 	def test_only_iqac_staff_send_invitations(self):
 		campaign = self.campaign()
@@ -581,7 +723,9 @@ class TestAnalysis(FeedbackFixture):
 	def test_a_co_with_fewer_responses_than_the_minimum_group_is_suppressed(self):
 		self.answered([fx.STUDENT_USER, EXTRA_USERS[0]], [(5, 2), (4, 2)])
 		scores = api.indirect_co_scores(self.offering)
-		self.assertEqual(scores["CO1"], {"responses": None, "average": None, "percent": None, "suppressed": 1})
+		self.assertEqual(
+			scores["CO1"], {"responses": None, "average": None, "percent": None, "suppressed": 1}
+		)
 
 	def test_the_report_shows_per_question_course_and_faculty_rows_and_hides_small_groups(self):
 		big = self.answered([fx.STUDENT_USER, *EXTRA_USERS[:2]], [(5, 2), (4, 2), (3, 2)])
@@ -589,16 +733,24 @@ class TestAnalysis(FeedbackFixture):
 		self.respond(small, fx.STUDENT_USER)
 		self.close(small)
 		frappe.set_user(COORDINATOR)
-		_columns, rows, message = feedback_analysis.execute({"company": fx.COLLEGE, "group_by": "Question", "campaign": big.name})[:3]
+		_columns, rows, message = feedback_analysis.execute(
+			{"company": fx.COLLEGE, "group_by": "Question", "campaign": big.name}
+		)[:3]
 		co1 = next(r for r in rows if r["course_outcome"] == "CO1")
 		self.assertEqual((co1["responses"], co1["average"]), (3, 4.0))
 		pace = next(r for r in rows if r["question_type"] == "Choice")
 		self.assertIn("Right: 3", pace["distribution"])
-		self.assertFalse(any(r["question_type"] == "Text" and r.get("distribution") for r in rows))  # free text is never listed
-		_columns, rows, message = feedback_analysis.execute({"company": fx.COLLEGE, "group_by": "Question", "campaign": small.name})[:3]
+		self.assertFalse(
+			any(r["question_type"] == "Text" and r.get("distribution") for r in rows)
+		)  # free text is never listed
+		_columns, rows, message = feedback_analysis.execute(
+			{"company": fx.COLLEGE, "group_by": "Question", "campaign": small.name}
+		)[:3]
 		self.assertEqual(rows, [])
 		self.assertIn("minimum", message)
-		_columns, rows, _message = feedback_analysis.execute({"company": fx.COLLEGE, "group_by": "Course", "campaign": big.name})[:3]
+		_columns, rows, _message = feedback_analysis.execute(
+			{"company": fx.COLLEGE, "group_by": "Course", "campaign": big.name}
+		)[:3]
 		self.assertEqual([(r["course_offering"], r["responses"]) for r in rows], [(self.offering, 3)])
 		frappe.set_user("Administrator")
 
@@ -614,7 +766,9 @@ class TestAnalysis(FeedbackFixture):
 		self.assertEqual((together["responses"], together["average"]), (alone["responses"], alone["average"]))
 		self.assertEqual(together["responses"], 3)
 		frappe.set_user("Administrator")
-		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"]["average"], 5.0)  # the single 1 is not mixed in
+		self.assertEqual(
+			api.indirect_co_scores(self.offering)["CO1"]["average"], 5.0
+		)  # the single 1 is not mixed in
 
 	def test_an_optional_question_answered_by_too_few_never_shows_by_difference(self):
 		form = self.form([
@@ -624,7 +778,9 @@ class TestAnalysis(FeedbackFixture):
 		campaign = self.campaign(form=form)
 		lectures, lab = (q.name for q in form.questions)
 		for user in (fx.STUDENT_USER, *EXTRA_USERS[:2]):
-			answers = {lectures: 5, lab: 1} if user == fx.STUDENT_USER else {lectures: 5}  # only one answers the lab question
+			answers = (
+				{lectures: 5, lab: 1} if user == fx.STUDENT_USER else {lectures: 5}
+			)  # only one answers the lab question
 			frappe.set_user(user)
 			try:
 				feedback.submit_response(campaign.name, json.dumps(answers))
@@ -632,13 +788,20 @@ class TestAnalysis(FeedbackFixture):
 				frappe.set_user("Administrator")
 		self.close(campaign)
 		frappe.set_user(COORDINATOR)
-		report = lambda group_by: feedback_analysis.execute({"company": fx.COLLEGE, "group_by": group_by, "campaign": campaign.name})[1]
+		report = lambda group_by: feedback_analysis.execute(
+			{"company": fx.COLLEGE, "group_by": group_by, "campaign": campaign.name}
+		)[1]
 		questions, [course], [faculty] = report("Question"), report("Course"), report("Faculty")
 		frappe.set_user("Administrator")
 		self.assertEqual([(r["question"], r["average"]) for r in questions], [("The lectures met CO1", 5.0)])
-		self.assertEqual((course["responses"], course["average"]), (3, 5.0))  # the lone lab rating is not pooled in
+		self.assertEqual(
+			(course["responses"], course["average"]), (3, 5.0)
+		)  # the lone lab rating is not pooled in
 		self.assertEqual(faculty["average"], 5.0)
-		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"], {"responses": 3, "average": 5.0, "percent": 100.0, "suppressed": 0})
+		self.assertEqual(
+			api.indirect_co_scores(self.offering)["CO1"],
+			{"responses": 3, "average": 5.0, "percent": 100.0, "suppressed": 0},
+		)
 
 	def test_only_closed_campaigns_are_analysed(self):
 		campaign = self.campaign()
@@ -646,7 +809,12 @@ class TestAnalysis(FeedbackFixture):
 			self.respond(campaign, user)
 		self.assertNotIn("CO1", api.indirect_co_scores(self.offering))
 		frappe.set_user(COORDINATOR)
-		self.assertEqual(feedback_analysis.execute({"company": fx.COLLEGE, "group_by": "Question", "campaign": campaign.name})[1], [])
+		self.assertEqual(
+			feedback_analysis.execute(
+				{"company": fx.COLLEGE, "group_by": "Question", "campaign": campaign.name}
+			)[1],
+			[],
+		)
 		frappe.set_user("Administrator")
 		self.close(campaign)
 		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"]["responses"], 3)
@@ -663,9 +831,16 @@ class TestAnalysis(FeedbackFixture):
 		self.respond(parents, fx.GUARDIAN_USER, ratings=(1, 1))
 		self.close(parents)
 		self.answered([fx.STUDENT_USER, *EXTRA_USERS[:2]], [(5, 5), (5, 5), (5, 5)])
-		self.assertEqual(api.indirect_co_scores(self.offering)["CO1"], {"responses": 3, "average": 5.0, "percent": 100.0, "suppressed": 0})
-		rule = fx.make_rule(f"T07 Rule {frappe.generate_hash(length=4)}", "Student Group", student_group=self.offering)
-		self.assertFalse(self.campaign(audience_rule=rule.name).audience_rule)  # offering students come from the offering
+		self.assertEqual(
+			api.indirect_co_scores(self.offering)["CO1"],
+			{"responses": 3, "average": 5.0, "percent": 100.0, "suppressed": 0},
+		)
+		rule = fx.make_rule(
+			f"T07 Rule {frappe.generate_hash(length=4)}", "Student Group", student_group=self.offering
+		)
+		self.assertFalse(
+			self.campaign(audience_rule=rule.name).audience_rule
+		)  # offering students come from the offering
 
 	def test_an_unknown_grouping_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):

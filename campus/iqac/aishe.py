@@ -45,7 +45,9 @@ def export_dataset(company, academic_year, layout=None):
 	frappe.only_for(READERS)
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and company not in permitted:
-		frappe.throw(_("You may not export the data of {0}.").format(frappe.bold(company)), frappe.PermissionError)
+		frappe.throw(
+			_("You may not export the data of {0}.").format(frappe.bold(company)), frappe.PermissionError
+		)
 	layout = frappe.get_doc("AISHE Layout", layout or PLACEHOLDER_LAYOUT)
 	book = Workbook()
 	cover = book.active
@@ -66,7 +68,14 @@ def cover_rows(company, academic_year, layout):
 		(_("Notice"), _("Built from submitted enrolments, published results and sanctioned scholarships of the selected company.")),
 	]  # fmt: skip
 	if layout.is_placeholder:
-		rows.append((_("Notice"), _("Placeholder layout: the official AISHE template was not available. Replace the layout with the official one.")))
+		rows.append(
+			(
+				_("Notice"),
+				_(
+					"Placeholder layout: the official AISHE template was not available. Replace the layout with the official one."
+				),
+			)
+		)
 	return rows
 
 
@@ -81,9 +90,17 @@ def write_sections(book, layout, sections):
 			for shift, value in enumerate(values):
 				cell = (row.sheet.lower(), column + shift, first_row + offset)
 				if cell in written:
-					frappe.throw(_("The {0} section overlaps another section on {1}; move one in the AISHE Layout.").format(frappe.bold(row.section), frappe.bold(row.sheet)))
+					frappe.throw(
+						_(
+							"The {0} section overlaps another section on {1}; move one in the AISHE Layout."
+						).format(frappe.bold(row.section), frappe.bold(row.sheet))
+					)
 				written.add(cell)
-				put(sheets[row.sheet.lower()], f"{get_column_letter(column + shift)}{first_row + offset}", value)
+				put(
+					sheets[row.sheet.lower()],
+					f"{get_column_letter(column + shift)}{first_row + offset}",
+					value,
+				)
 
 
 def build(company, academic_year):
@@ -91,14 +108,26 @@ def build(company, academic_year):
 	return {
 		section: dict(zip(("header", "rows"), builder(company, academic_year), strict=True))
 		for section, builder in (
-			("Institution", institution), ("Programmes", programmes), ("Enrolment", enrolment), ("Faculty", faculty),
-			("Examination Results", examination_results), ("Scholarships", scholarships),
+			("Institution", institution),
+			("Programmes", programmes),
+			("Enrolment", enrolment),
+			("Faculty", faculty),
+			("Examination Results", examination_results),
+			("Scholarships", scholarships),
 		)  # fmt: skip
 	}
 
 
 def institution(company, academic_year):
-	profile = frappe.db.get_value("Institution Profile", {"company": company}, [field for _label, field in PROFILE_ITEMS], as_dict=True) or {}
+	profile = (
+		frappe.db.get_value(
+			"Institution Profile",
+			{"company": company},
+			[field for _label, field in PROFILE_ITEMS],
+			as_dict=True,
+		)
+		or {}
+	)
 	rows = [["Institution", company], ["Academic Year", academic_year]]
 	return ["Item", "Value"], rows + [[label, profile.get(field)] for label, field in PROFILE_ITEMS]
 
@@ -111,7 +140,9 @@ def enrollments(company, academic_year):
 
 
 def programmes(company, academic_year):
-	matrices = frappe.get_all("Seat Matrix", {"company": company, "academic_year": academic_year}, ["name", "program"])
+	matrices = frappe.get_all(
+		"Seat Matrix", {"company": company, "academic_year": academic_year}, ["name", "program"]
+	)
 	program_of = {m.name: m.program for m in matrices}
 	intake = Counter()
 	seats = frappe.get_all(
@@ -124,7 +155,9 @@ def programmes(company, academic_year):
 	for row in enrollments(company, academic_year):
 		admitted.setdefault(row.program, set()).add(row.student)
 	programs = sorted({*program_of.values(), *admitted})
-	departments = dict(frappe.get_all("Program", {"name": ["in", programs or [""]]}, ["name", "department"], as_list=True))
+	departments = dict(
+		frappe.get_all("Program", {"name": ["in", programs or [""]]}, ["name", "department"], as_list=True)
+	)
 	rows = [[p, departments.get(p) or NOT_RECORDED, intake[p], len(admitted.get(p, ()))] for p in programs]
 	return ["Programme", "Department", "Sanctioned Intake", "Admitted"], rows
 
@@ -134,8 +167,21 @@ def student_traits(students, company, academic_year):
 	category = {}
 	for row in enrollments(company, academic_year):
 		category.setdefault(row.student, row.student_category)
-	people = {s.name: s for s in frappe.get_all("Student", {"name": ["in", list(students) or [""]]}, ["name", "gender", "state"])}
-	return {s: (category.get(s) or NOT_RECORDED, people[s].gender or NOT_RECORDED, people[s].state or NOT_RECORDED) for s in students if s in people}
+	people = {
+		s.name: s
+		for s in frappe.get_all(
+			"Student", {"name": ["in", list(students) or [""]]}, ["name", "gender", "state"]
+		)
+	}
+	return {
+		s: (
+			category.get(s) or NOT_RECORDED,
+			people[s].gender or NOT_RECORDED,
+			people[s].state or NOT_RECORDED,
+		)
+		for s in students
+		if s in people
+	}
 
 
 def enrolment(company, academic_year):
@@ -149,9 +195,18 @@ def faculty(company, academic_year):
 
 	start, end = staffing.year_bounds(academic_year)
 	fields = ["designation", "employment_type", "gender", "status", "relieving_date"]
-	people = [p for p in frappe.get_all("Employee", staffing.teaching_filters(company, end), fields, limit=0) if staffing.on_roll(p, start)]
-	counts = Counter((p.designation or NOT_RECORDED, p.employment_type or NOT_RECORDED, p.gender or NOT_RECORDED) for p in people)
-	return ["Designation", "Employment Type (category)", "Gender", "Teachers"], [[*key, n] for key, n in sorted(counts.items())]
+	people = [
+		p
+		for p in frappe.get_all("Employee", staffing.teaching_filters(company, end), fields, limit=0)
+		if staffing.on_roll(p, start)
+	]
+	counts = Counter(
+		(p.designation or NOT_RECORDED, p.employment_type or NOT_RECORDED, p.gender or NOT_RECORDED)
+		for p in people
+	)
+	return ["Designation", "Employment Type (category)", "Gender", "Teachers"], [
+		[*key, n] for key, n in sorted(counts.items())
+	]
 
 
 def examination_results(company, academic_year):
@@ -160,7 +215,10 @@ def examination_results(company, academic_year):
 
 	outcomes = coe_reports.year_outcomes(company, academic_year, final_year=True)
 	tally = rules.tally(outcomes, lambda r: r["program"], lambda r: r["result"])
-	rows = [[program or NOT_RECORDED, c["appeared"], c["passed"], rules.percent(c["passed"], c["appeared"])] for program, c in sorted(tally.items(), key=lambda item: item[0] or "")]
+	rows = [
+		[program or NOT_RECORDED, c["appeared"], c["passed"], rules.percent(c["passed"], c["appeared"])]
+		for program, c in sorted(tally.items(), key=lambda item: item[0] or "")
+	]
 	if rows:
 		appeared, passed = sum(r[1] for r in rows), sum(r[2] for r in rows)
 		rows.append([_("Total"), appeared, passed, rules.percent(passed, appeared)])

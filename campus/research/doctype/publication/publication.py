@@ -9,8 +9,8 @@ from frappe import _
 from frappe.model.document import Document
 
 from campus.research import publications
-from campus.research.crossref import normalise_doi
 from campus.research.contributors import validate_contributors
+from campus.research.crossref import normalise_doi
 
 
 class Publication(Document):

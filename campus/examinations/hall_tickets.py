@@ -40,7 +40,9 @@ def start(exam_session):
 	running = live_run(RUN_TYPE, exam_session=exam_session)
 	if running:
 		frappe.throw(_("Hall ticket run {0} of this session is still running.").format(frappe.bold(running)))
-	registrations = frappe.get_all(REGISTRATION, {"exam_session": exam_session}, pluck="name", order_by="name")
+	registrations = frappe.get_all(
+		REGISTRATION, {"exam_session": exam_session}, pluck="name", order_by="name"
+	)
 	return run_bulk(RUN_TYPE, registrations, HANDLER, parameters={"exam_session": exam_session})
 
 
@@ -94,18 +96,35 @@ def scheduled_courses(exam_session, eligible):
 	"""[{course, kind, exam_date, slot}] in exam order; an eligible course with no exam date fails (fail closed)."""
 	schedule = {
 		row.course: row
-		for row in frappe.get_all("Exam Schedule", {"parent": exam_session, "parenttype": SESSION}, ["course", "exam_date", "slot"])
+		for row in frappe.get_all(
+			"Exam Schedule", {"parent": exam_session, "parenttype": SESSION}, ["course", "exam_date", "slot"]
+		)
 	}
 	missing = [row.course for row in eligible if row.course not in schedule]
 	if missing:
-		frappe.throw(_("No exam date is scheduled for {0} in {1}.").format(", ".join(missing), frappe.bold(exam_session)))
-	rows = [{"course": r.course, "kind": r.kind, "exam_date": schedule[r.course].exam_date, "slot": schedule[r.course].slot} for r in eligible]
+		frappe.throw(
+			_("No exam date is scheduled for {0} in {1}.").format(
+				", ".join(missing), frappe.bold(exam_session)
+			)
+		)
+	rows = [
+		{
+			"course": r.course,
+			"kind": r.kind,
+			"exam_date": schedule[r.course].exam_date,
+			"slot": schedule[r.course].slot,
+		}
+		for r in eligible
+	]
 	return sorted(rows, key=lambda row: (str(row["exam_date"]), row["slot"] != "FN", row["course"]))
 
 
 def content(ticket):
 	"""What a ticket shows: the comparison that decides whether it changed."""
-	courses = tuple((r.get("course"), r.get("kind"), str(r.get("exam_date")), r.get("slot")) for r in ticket.get("courses") or [])
+	courses = tuple(
+		(r.get("course"), r.get("kind"), str(r.get("exam_date")), r.get("slot"))
+		for r in ticket.get("courses") or []
+	)
 	fields = ("status", "withheld_reasons", "photo", "student_name", "program", "academic_term")
 	return tuple(ticket.get(f) or None for f in fields) + (courses,)
 
@@ -133,7 +152,10 @@ def portal_row(registration):
 
 	The caller (the portal) has resolved the student; the download itself is gated again by access.py."""
 	ticket = frappe.db.get_value(
-		DOCTYPE, {"exam_registration": registration}, ["name", "status", "withheld_reasons", "exam_session"], as_dict=True
+		DOCTYPE,
+		{"exam_registration": registration},
+		["name", "status", "withheld_reasons", "exam_session"],
+		as_dict=True,
 	)
 	if not ticket:
 		return None

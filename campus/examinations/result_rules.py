@@ -37,8 +37,12 @@ def grace_needed(cia, ese, cia_max, ese_max, ese_min_pct, total_min_pct, ese_alo
 	cannot. `ese_alone_min_pct` is given from the attempt on which the ESE alone may pass (rules.ese_alone_applies):
 	the smaller need of the two bases counts."""
 	on_total = max(ese_min_pct * ese_max / 100 - ese, total_min_pct * (cia_max + ese_max) / 100 - cia - ese)
-	shortfalls = [on_total] if ese_alone_min_pct is None else [on_total, ese_alone_min_pct * ese_max / 100 - ese]
-	feasible = [m for m in (max(0, math.ceil(n - EPSILON)) for n in shortfalls) if ese + m <= ese_max + EPSILON]
+	shortfalls = (
+		[on_total] if ese_alone_min_pct is None else [on_total, ese_alone_min_pct * ese_max / 100 - ese]
+	)
+	feasible = [
+		m for m in (max(0, math.ceil(n - EPSILON)) for n in shortfalls) if ese + m <= ese_max + EPSILON
+	]
 	return min(feasible) if feasible else None
 
 
@@ -49,7 +53,11 @@ def allocate_grace(needs, rule):
 	courses pass; a course needing more than the per-course limit, or more than the budget left, gets none."""
 	if not rule.get("grace_allowed"):
 		return {}
-	per_course, max_courses, budget = rule["grace_max_per_course"], rule["grace_max_courses"], rule["grace_max_total"]
+	per_course, max_courses, budget = (
+		rule["grace_max_per_course"],
+		rule["grace_max_courses"],
+		rule["grace_max_total"],
+	)
 	given = {}
 	for course, marks in sorted(needs.items(), key=lambda item: (item[1], item[0])):
 		if not marks or marks > per_course + EPSILON:
@@ -82,14 +90,18 @@ def change_log(old, new):
 		elif not now:
 			lines.append(f"{course}: removed, was {outcome(was)}")
 		elif (was["grade"], was["result"], was["total"]) != (now["grade"], now["result"], now["total"]):
-			lines.append(f"{course}: {outcome(was)} -> {outcome(now)}, total {number(was['total'])} -> {number(now['total'])}")
+			lines.append(
+				f"{course}: {outcome(was)} -> {outcome(now)}, total {number(was['total'])} -> {number(now['total'])}"
+			)
 	for label, field in (("SGPA", "sgpa"), ("CGPA", "cgpa")):
 		if old[field] != new[field]:
 			lines.append(f"{label}: {number(old[field])} -> {number(new[field])}")
 	if (old.get("arrear_count") or 0) != (new.get("arrear_count") or 0):
 		lines.append(f"Arrears: {old.get('arrear_count') or 0} -> {new.get('arrear_count') or 0}")
 	if (old.get("classification") or "") != (new.get("classification") or ""):
-		lines.append(f"Classification: {old.get('classification') or '-'} -> {new.get('classification') or '-'}")
+		lines.append(
+			f"Classification: {old.get('classification') or '-'} -> {new.get('classification') or '-'}"
+		)
 	return "\n".join(lines)
 
 
@@ -114,7 +126,9 @@ def configuration_gaps(courses, rule_types, duplicated=frozenset()):
 		elif not course["exam_type"]:
 			gaps.append((course["label"], _("no course type")))
 		elif course["exam_type"] != INTERNAL_ONLY:
-			reasons = [_("student {0} has no regulation").format(s) for s in sorted(course.get("unregulated") or ())]
+			reasons = [
+				_("student {0} has no regulation").format(s) for s in sorted(course.get("unregulated") or ())
+			]
 			reasons += rule_gaps(course["course_type"], course["regulations"], rule_types, duplicated)
 			gaps.extend((course["label"], reason) for reason in reasons)
 	return gaps
@@ -128,5 +142,7 @@ def rule_gaps(course_type, regulations, rule_types, duplicated=frozenset()):
 		elif regulation not in rule_types:
 			reasons.append(_("regulation {0} has no Exam Rule Set").format(regulation))
 		elif course_type not in rule_types[regulation]:
-			reasons.append(_("the Exam Rule Set of {0} has no {1} course type").format(regulation, _(course_type)))
+			reasons.append(
+				_("the Exam Rule Set of {0} has no {1} course type").format(regulation, _(course_type))
+			)
 	return reasons

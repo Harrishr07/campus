@@ -23,7 +23,12 @@ def execute(filters=None):
 
 def columns(group_by):
 	return [
-		{"fieldname": "group", "label": _(group_by), "fieldtype": "Data", "width": 200},  # Data: the Total row
+		{
+			"fieldname": "group",
+			"label": _(group_by),
+			"fieldtype": "Data",
+			"width": 200,
+		},  # Data: the Total row
 		{"fieldname": "appeared", "label": _("Appeared"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "passed", "label": _("Passed"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "pass_pct", "label": _("Pass %"), "fieldtype": "Percent", "width": 110},
@@ -40,7 +45,10 @@ def data(filters, group_by):
 	tally = rules.tally(rows, lambda r: r[field], unit)
 	out = [line(group, counts) for group, counts in sorted(tally.items(), key=lambda item: item[0] or "")]
 	if out:
-		total = {"appeared": sum(c["appeared"] for c in tally.values()), "passed": sum(c["passed"] for c in tally.values())}
+		total = {
+			"appeared": sum(c["appeared"] for c in tally.values()),
+			"passed": sum(c["passed"] for c in tally.values()),
+		}
 		out.append(line(_("Total"), total))
 	return out
 

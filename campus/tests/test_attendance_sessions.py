@@ -8,7 +8,14 @@ from frappe.utils import add_days
 from campus.student_services import eligibility_run
 from campus.student_services.api import attendance_snapshot, attendance_summary, eligibility_status
 from campus.tests.factories import make_company
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "Session Test College"
@@ -55,7 +62,14 @@ def make_sessions(group, days):
 	"""A Course Schedule of the group on each of the term days `days` (numbers from FIRST_DAY)."""
 	names = []
 	for day in days:
-		doc = frappe.get_doc({"doctype": "Course Schedule", "student_group": group, "course": COURSE, "schedule_date": add_days(FIRST_DAY, day)})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Course Schedule",
+				"student_group": group,
+				"course": COURSE,
+				"schedule_date": add_days(FIRST_DAY, day),
+			}
+		)
 		doc.flags.ignore_validate = True  # Education's room, instructor and clash checks are not under test
 		names.append(doc.insert(ignore_permissions=True, ignore_mandatory=True).name)
 	return names
@@ -66,7 +80,9 @@ def set_state(session, state, **links):
 
 
 def mark(student, session, status):
-	schedule = frappe.db.get_value("Course Schedule", session, ["student_group", "schedule_date"], as_dict=True)
+	schedule = frappe.db.get_value(
+		"Course Schedule", session, ["student_group", "schedule_date"], as_dict=True
+	)
 	doc = frappe.get_doc(
 		{
 			"doctype": "Student Attendance", "student": student, "student_group": schedule.student_group, "course_schedule": session,
@@ -87,7 +103,9 @@ def approved_leave(student, day, kind, **scope):
 	)  # fmt: skip
 	doc.flags.ignore_validate = True
 	doc.insert(ignore_permissions=True)
-	frappe.db.set_value("Student Leave Application", doc.name, "docstatus", 1)  # Education's on_submit needs a holiday list
+	frappe.db.set_value(
+		"Student Leave Application", doc.name, "docstatus", 1
+	)  # Education's on_submit needs a holiday list
 	return doc.name
 
 
@@ -100,7 +118,9 @@ class TestAttendanceSessions(CampusTestCase):
 		make_year("2022")
 		make_program(PROGRAM, COLLEGE)
 		regulation = make_regulation("R2022-SES", COLLEGE, [PROGRAM], "2022").name
-		cls.rule = frappe.get_doc({"doctype": "Attendance Rule", "regulation": regulation, **RULE}).insert().name
+		cls.rule = (
+			frappe.get_doc({"doctype": "Attendance Rule", "regulation": regulation, **RULE}).insert().name
+		)
 		if not frappe.db.exists("Course", COURSE):
 			frappe.get_doc({"doctype": "Course", "course_name": COURSE, "oc_company": COLLEGE}).insert()
 		cls.term = make_term()
@@ -124,7 +144,9 @@ class TestAttendanceSessions(CampusTestCase):
 
 	def row(self, student, offering):
 		"""(conducted, attended, medical leave) of the student in the offering."""
-		row = next(r for r in attendance_summary(student, self.term)["offerings"] if r["offering"] == offering)
+		row = next(
+			r for r in attendance_summary(student, self.term)["offerings"] if r["offering"] == offering
+		)
 		return row["conducted"], row["attended"], row["leave"]
 
 	def set_rule(self, fieldname, value):
@@ -141,13 +163,19 @@ class TestAttendanceSessions(CampusTestCase):
 			mark(self.late, session, "Present")
 		self.assertEqual(self.row(self.late, group), (10, 5, 0))  # no start date yet: the whole term counts
 		frappe.db.set_value(
-			"Program Enrollment", self.enrollments["late"], {"docstatus": 1, "oc_attendance_start_date": add_days(FIRST_DAY, 5)}
+			"Program Enrollment",
+			self.enrollments["late"],
+			{"docstatus": 1, "oc_attendance_start_date": add_days(FIRST_DAY, 5)},
 		)  # joined on day 5 (the joining confirmation sets this date)
 		self.addCleanup(frappe.db.set_value, "Program Enrollment", self.enrollments["late"], "docstatus", 0)
 		self.assertEqual(self.row(self.late, group), (5, 5, 0))
 		self.assertEqual(self.row(self.main, group), (10, 8, 0))  # classmates keep the whole term
-		frappe.db.set_value("Program Enrollment", self.enrollments["late"], "oc_attendance_start_date", "2023-01-02")
-		self.assertEqual(self.row(self.late, group), (10, 5, 0))  # a start after the term is not this term's joining
+		frappe.db.set_value(
+			"Program Enrollment", self.enrollments["late"], "oc_attendance_start_date", "2023-01-02"
+		)
+		self.assertEqual(
+			self.row(self.late, group), (10, 5, 0)
+		)  # a start after the term is not this term's joining
 
 	def test_a_cancelled_session_drops_out_of_the_denominator(self):
 		group = self.offering(self.main)
@@ -192,7 +220,9 @@ class TestAttendanceSessions(CampusTestCase):
 		first, second = make_sessions(group, (6, 7))
 		mark(self.medic, first, "Present")  # the second session is not marked for the student at all
 		approved_leave(self.medic, 7, "Medical")
-		self.assertEqual(self.row(self.medic, group), (2, 1, 1))  # medical leave counts in the band decision only
+		self.assertEqual(
+			self.row(self.medic, group), (2, 1, 1)
+		)  # medical leave counts in the band decision only
 		self.set_rule("medical_counts", 0)
 		self.assertEqual(self.row(self.medic, group), (2, 1, 0))
 
@@ -202,7 +232,12 @@ class TestAttendanceSessions(CampusTestCase):
 		for n, session in enumerate(sessions):
 			mark(self.cond, session, "Present" if n < 7 else "Absent")
 		self.assertEqual(eligibility_status(self.cond, self.term), "Shortage")  # 7 of 10
-		request = {"doctype": "Condonation Request", "student": self.cond, "academic_term": self.term, "reason": "Ill"}
+		request = {
+			"doctype": "Condonation Request",
+			"student": self.cond,
+			"academic_term": self.term,
+			"reason": "Ill",
+		}
 		with self.assertRaisesRegex(frappe.ValidationError, "below the medical band"):
 			frappe.get_doc(request).insert()
 		for session in sessions[8:]:
@@ -210,15 +245,26 @@ class TestAttendanceSessions(CampusTestCase):
 		self.assertEqual(eligibility_status(self.cond, self.term), "Eligible")  # 7 of 8 = 87.5
 		with self.assertRaisesRegex(frappe.ValidationError, "no condonation is needed"):
 			frappe.get_doc(request).insert()
-		run = frappe.get_doc({"doctype": "Attendance Eligibility Run", "company": COLLEGE, "academic_term": self.term}).insert()
+		run = frappe.get_doc(
+			{"doctype": "Attendance Eligibility Run", "company": COLLEGE, "academic_term": self.term}
+		).insert()
 		eligibility_run.run_student(self.cond, frappe._dict(get_parameters=lambda: {"run": run.name}))
-		self.assertEqual(frappe.db.get_value("Attendance Eligibility Row", {"parent": run.name, "student": self.cond}, "overall_pct"), 87.5)
+		self.assertEqual(
+			frappe.db.get_value(
+				"Attendance Eligibility Row", {"parent": run.name, "student": self.cond}, "overall_pct"
+			),
+			87.5,
+		)
 		run.db_set("locked", 1)
-		self.assertEqual(attendance_snapshot(self.cond, self.term, COLLEGE), "Eligible")  # what exam registration and hall tickets read
+		self.assertEqual(
+			attendance_snapshot(self.cond, self.term, COLLEGE), "Eligible"
+		)  # what exam registration and hall tickets read
 
 	def test_a_makeup_still_to_come_does_not_replace_its_session_yet(self):
 		group = self.offering(self.main)
-		missed, held, makeup = make_sessions(group, (12, 13, 200))  # day 200 is after the term's counted window
+		missed, held, makeup = make_sessions(
+			group, (12, 13, 200)
+		)  # day 200 is after the term's counted window
 		mark(self.main, held, "Present")
 		set_state(makeup, "Makeup", oc_makeup_for=missed)
 		self.assertEqual(self.row(self.main, group), (2, 1, 0))
@@ -243,7 +289,13 @@ class TestAttendanceSessions(CampusTestCase):
 		group = self.offering(self.main)
 		make_sessions(group, (22, 22))
 		doc = frappe.get_doc(
-			{"doctype": "Student Attendance", "student": self.main, "student_group": group, "date": add_days(FIRST_DAY, 22), "status": "Present"}
+			{
+				"doctype": "Student Attendance",
+				"student": self.main,
+				"student_group": group,
+				"date": add_days(FIRST_DAY, 22),
+				"status": "Present",
+			}
 		)
 		doc.flags.ignore_validate = True
 		doc.insert(ignore_permissions=True).submit()

@@ -96,7 +96,9 @@ def mark_confidential():
 
 def seed_body_types():
 	for name, term_years, meetings, quorum, rules in STATUTORY:
-		make_body_type(name, 1, term_years=term_years, min_meetings_per_year=meetings, quorum_percent=quorum, rules=rules)
+		make_body_type(
+			name, 1, term_years=term_years, min_meetings_per_year=meetings, quorum_percent=quorum, rules=rules
+		)
 	for name in NON_STATUTORY:
 		make_body_type(name, 0, confidential=int(name in CONFIDENTIAL))
 
@@ -110,7 +112,8 @@ def make_body_type(name, statutory, rules=(), **values):
 			"body_type_name": name,
 			"statutory": statutory,
 			"composition": [
-				{"category": c, "minimum_count": low, "maximum_count": high, "mandatory_for_quorum": must} for c, low, high, must in rules
+				{"category": c, "minimum_count": low, "maximum_count": high, "mandatory_for_quorum": must}
+				for c, low, high, must in rules
 			],
 			**values,
 		}
@@ -132,9 +135,20 @@ def revert_unsourced_values():
 		if not frappe.db.exists("Body Type", name):
 			continue
 		doc = frappe.get_doc("Body Type", name)
-		current = (doc.term_years, doc.min_meetings_per_year, doc.quorum_percent, [(r.category, r.minimum_count, r.maximum_count, r.mandatory_for_quorum) for r in doc.composition])
+		current = (
+			doc.term_years,
+			doc.min_meetings_per_year,
+			doc.quorum_percent,
+			[(r.category, r.minimum_count, r.maximum_count, r.mandatory_for_quorum) for r in doc.composition],
+		)
 		if current != old:
 			continue
 		doc.term_years, doc.min_meetings_per_year, doc.quorum_percent, rules = sourced[name]
-		doc.set("composition", [{"category": c, "minimum_count": low, "maximum_count": high, "mandatory_for_quorum": must} for c, low, high, must in rules])
+		doc.set(
+			"composition",
+			[
+				{"category": c, "minimum_count": low, "maximum_count": high, "mandatory_for_quorum": must}
+				for c, low, high, must in rules
+			],
+		)
 		doc.save(ignore_permissions=True)

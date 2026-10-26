@@ -17,7 +17,10 @@ class AttendanceCorrectionRequest(ApprovableDocument, Document):
 			return  # the approval-driven submit must not re-judge an approved request
 		if not self.flags.ignore_permissions:
 			if not has_user_permission(frappe.get_doc("Student", self.student)):
-				frappe.throw(_("You are not permitted to act for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+				frappe.throw(
+					_("You are not permitted to act for {0}.").format(frappe.bold(self.student)),
+					frappe.PermissionError,
+				)
 			corrections.check_requester(self)
 		corrections.prepare(self)
 

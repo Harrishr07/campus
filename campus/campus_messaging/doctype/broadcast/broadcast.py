@@ -34,7 +34,9 @@ class Broadcast(ApprovableDocument, Document):
 		super().validate()
 		rule = frappe.get_doc("Audience Rule", self.audience_rule)
 		if rule.company != self.company:
-			frappe.throw(_("Audience Rule {0} belongs to {1}, not {2}.").format(rule.name, rule.company, self.company))
+			frappe.throw(
+				_("Audience Rule {0} belongs to {1}, not {2}.").format(rule.name, rule.company, self.company)
+			)
 		audience.ensure_available(rule)
 		if not frappe.db.get_value("Message Template", self.message_template, "enabled"):
 			frappe.throw(_("Message Template {0} is disabled.").format(self.message_template))
@@ -115,7 +117,11 @@ def refresh_status(name):
 	broadcast.check_permission("write")
 	if broadcast.docstatus != 1 or broadcast.status not in (SENDING, SENT, FAILED):
 		return broadcast.status
-	run = frappe.db.get_value("Bulk Run", broadcast.bulk_run, ["status", "failed"], as_dict=True) if broadcast.bulk_run else None
+	run = (
+		frappe.db.get_value("Bulk Run", broadcast.bulk_run, ["status", "failed"], as_dict=True)
+		if broadcast.bulk_run
+		else None
+	)
 	counts = delivery_counts(broadcast, run.failed if run else 0)
 	status = broadcast.status
 	if status in (SENDING, FAILED) and run:  # a resumed Failed run recovers
@@ -129,7 +135,11 @@ def delivery_counts(broadcast, run_failures):
 	by_recipient = {}
 	logs = frappe.get_all(
 		"Message Log",
-		filters={"reference_doctype": "Broadcast", "reference_name": broadcast.name, "event_key": broadcast.message_template},
+		filters={
+			"reference_doctype": "Broadcast",
+			"reference_name": broadcast.name,
+			"event_key": broadcast.message_template,
+		},
 		fields=["recipient", "status"],
 	)
 	for log in logs:

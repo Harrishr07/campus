@@ -39,7 +39,10 @@ class TestFacultyReports(CampusTestCase):
 
 	def test_faculty_vs_sanctioned_posts(self):
 		self.assertEqual(CSE, demo.department_name(demo.CSE_DEPARTMENT, demo.ENGINEERING))
-		rows = {(r["department"], r["cadre"]): (r["sanctioned"], r["filled"], r["vacant"]) for r in run(faculty_vs_sanctioned_posts)}
+		rows = {
+			(r["department"], r["cadre"]): (r["sanctioned"], r["filled"], r["vacant"])
+			for r in run(faculty_vs_sanctioned_posts)
+		}
 		self.assertEqual(rows, {
 			(CSE, "Professor"): (1, 1, 0), (CSE, "Associate Professor"): (2, 1, 1), (CSE, "Assistant Professor"): (6, 2, 4),
 			(ECE, "Professor"): (1, 0, 1), (ECE, "Associate Professor"): (1, 0, 1), (ECE, "Assistant Professor"): (3, 0, 3),
@@ -52,7 +55,9 @@ class TestFacultyReports(CampusTestCase):
 		self.assertEqual(rows, {CSE: (4, 2, 50.0)})
 		phd = point("phd_teachers")
 		self.assertEqual(phd["value"], 2)
-		self.assertEqual({r["name"] for r in phd["records"]}, {demo.employee_of("hod_cse"), demo.employee_of("faculty_1")})
+		self.assertEqual(
+			{r["name"] for r in phd["records"]}, {demo.employee_of("hod_cse"), demo.employee_of("faculty_1")}
+		)
 
 	def test_teaching_experience(self):
 		rows = run(teaching_experience)
@@ -65,8 +70,12 @@ class TestFacultyReports(CampusTestCase):
 		self.assertEqual((rows[CSE]["students"], rows[CSE]["teachers"]), (students(CSE), 4))
 		self.assertEqual(rows[CSE]["ratio"], round(students(CSE) / 4, 2))
 		self.assertEqual(rows[CSE]["norm"], 20)
-		self.assertEqual((rows[ECE]["students"], rows[ECE]["teachers"], rows[ECE]["ratio"]), (students(ECE), 0, None))
-		self.assertEqual(point("student_teacher_ratio")["value"], round(point("total_students")["value"] / 4, 2))
+		self.assertEqual(
+			(rows[ECE]["students"], rows[ECE]["teachers"], rows[ECE]["ratio"]), (students(ECE), 0, None)
+		)
+		self.assertEqual(
+			point("student_teacher_ratio")["value"], round(point("total_students")["value"] / 4, 2)
+		)
 		self.assertGreaterEqual(students(CSE), 20)  # 10 B.E. CSE + 10 M.E. CSE in the small demo
 
 	def test_cadre_ratio(self):
@@ -90,13 +99,18 @@ class TestFacultyReports(CampusTestCase):
 	def test_user_without_the_company_sees_nothing(self):
 		user = "p2t05-other-college@example.com"
 		frappe.db.savepoint("faculty_report_user")
-		was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # skip the users-per-minute throttle in a full run
+		was_importing, frappe.flags.in_import = (
+			frappe.flags.in_import,
+			True,
+		)  # skip the users-per-minute throttle in a full run
 		try:
 			if not frappe.db.exists("User", user):
 				frappe.get_doc({"doctype": "User", "email": user, "first_name": "other", "send_welcome_email": 0,
 					"roles": [{"role": "HR User"}]}).insert()  # fmt: skip
 			frappe.flags.in_import = was_importing
-			frappe.get_doc({"doctype": "User Permission", "user": user, "allow": "Company", "for_value": demo.ARTS}).insert()
+			frappe.get_doc(
+				{"doctype": "User Permission", "user": user, "allow": "Company", "for_value": demo.ARTS}
+			).insert()
 			frappe.set_user(user)
 			self.assertEqual(run(faculty_vs_sanctioned_posts), [])
 			self.assertEqual(run(teaching_experience), [])
@@ -120,7 +134,9 @@ class TestFacultyFixRound1(CampusTestCase):
 		super().tearDown()
 
 	def leave(self, username, relieving_date):
-		frappe.db.set_value("Employee", demo.employee_of(username), {"status": "Left", "relieving_date": relieving_date})
+		frappe.db.set_value(
+			"Employee", demo.employee_of(username), {"status": "Left", "relieving_date": relieving_date}
+		)
 
 	def teachers(self):
 		return {t.name for t in staffing.teachers(demo.ENGINEERING, YEAR)}
@@ -150,9 +166,19 @@ class TestFacultyFixRound1(CampusTestCase):
 		frappe.db.savepoint("cse_only_user")
 		was_importing, frappe.flags.in_import = frappe.flags.in_import, True
 		try:
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "cse", "send_welcome_email": 0, "roles": [{"role": "HR User"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "cse",
+					"send_welcome_email": 0,
+					"roles": [{"role": "HR User"}],
+				}
+			).insert()
 			frappe.flags.in_import = was_importing
-			frappe.get_doc({"doctype": "User Permission", "user": user, "allow": "Department", "for_value": CSE}).insert()
+			frappe.get_doc(
+				{"doctype": "User Permission", "user": user, "allow": "Department", "for_value": CSE}
+			).insert()
 			frappe.set_user(user)
 			names = {r["employee"] for r in run(teaching_experience)}
 		finally:
@@ -168,7 +194,11 @@ class TestFacultyFixRound1(CampusTestCase):
 			self.assertEqual(meta.get_field(fieldname).permlevel, 0, fieldname)
 		# HRMS adds its own Employee Self Service row (and so copies the standard rows) on every site; campus adds none
 		self.assertEqual(frappe.get_all("Custom DocPerm", {"parent": "Employee", "permlevel": ["!=", 0]}), [])
-		self.assertEqual({r.role for r in frappe.get_all("Custom DocPerm", {"parent": "Employee"}, ["role"])} - {r.role for r in frappe.get_all("DocPerm", {"parent": "Employee"}, ["role"])}, {"Employee Self Service"})
+		self.assertEqual(
+			{r.role for r in frappe.get_all("Custom DocPerm", {"parent": "Employee"}, ["role"])}
+			- {r.role for r in frappe.get_all("DocPerm", {"parent": "Employee"}, ["role"])},
+			{"Employee Self Service"},
+		)
 
 	def test_phd_count_is_right_for_a_user_who_reads_employees_at_permlevel_zero(self):
 		user = "p2t05-iqac@example.com"
@@ -196,20 +226,54 @@ class TestFacultyFixRound1(CampusTestCase):
 			undo_permlevel_one()
 			self.assertEqual(frappe.db.count("Custom DocPerm", {"parent": "Employee"}), 0)
 			self.copy_standard_and_add_permlevel_one(standard)
-			frappe.get_doc({"doctype": "Custom DocPerm", "parent": "Employee", "role": "Accounts User", "permlevel": 0, "read": 1}).insert()  # someone else's
+			frappe.get_doc(
+				{
+					"doctype": "Custom DocPerm",
+					"parent": "Employee",
+					"role": "Accounts User",
+					"permlevel": 0,
+					"read": 1,
+				}
+			).insert()  # someone else's
 			undo_permlevel_one()
 			self.assertEqual(frappe.get_all("Custom DocPerm", {"parent": "Employee", "permlevel": 1}), [])
-			self.assertTrue(frappe.db.exists("Custom DocPerm", {"parent": "Employee", "role": "Accounts User"}))
-			self.assertEqual(frappe.db.count("Custom DocPerm", {"parent": "Employee"}), len(standard) + 1)  # their customisation stays
+			self.assertTrue(
+				frappe.db.exists("Custom DocPerm", {"parent": "Employee", "role": "Accounts User"})
+			)
+			self.assertEqual(
+				frappe.db.count("Custom DocPerm", {"parent": "Employee"}), len(standard) + 1
+			)  # their customisation stays
 		finally:
 			frappe.db.rollback(save_point="undo_permlevel")
 
 	def copy_standard_and_add_permlevel_one(self, standard):
 		frappe.db.delete("Custom DocPerm", {"parent": "Employee"})
 		for row in standard:
-			frappe.get_doc({"doctype": "Custom DocPerm", **{k: v for k, v in row.items() if k not in ("name", "creation", "modified", "owner", "modified_by", "docstatus", "idx")}}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Custom DocPerm",
+					**{
+						k: v
+						for k, v in row.items()
+						if k
+						not in ("name", "creation", "modified", "owner", "modified_by", "docstatus", "idx")
+					},
+				}
+			).insert()
 		for role in ("HR Manager", "HR User", "Principal"):
-			frappe.get_doc({"doctype": "Custom DocPerm", "parent": "Employee", "role": role, "permlevel": 1, "read": 1, "write": 1}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Custom DocPerm",
+					"parent": "Employee",
+					"role": role,
+					"permlevel": 1,
+					"read": 1,
+					"write": 1,
+				}
+			).insert()
 
 	def test_cadre_is_mandatory_for_teaching_staff(self):
-		self.assertEqual(frappe.get_meta("Employee").get_field("oc_cadre").mandatory_depends_on, 'eval:doc.oc_staff_type=="Teaching"')
+		self.assertEqual(
+			frappe.get_meta("Employee").get_field("oc_cadre").mandatory_depends_on,
+			'eval:doc.oc_staff_type=="Teaching"',
+		)

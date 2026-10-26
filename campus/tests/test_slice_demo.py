@@ -7,8 +7,8 @@ import frappe
 
 from campus.admissions.api import admit, confirm_joining
 from campus.admissions.report.live_seat_matrix import live_seat_matrix
-from campus.examinations.report.result_analysis.result_analysis import execute as result_analysis
 from campus.examinations.report.days_exam_end_to_result.days_exam_end_to_result import execute as days_report
+from campus.examinations.report.result_analysis.result_analysis import execute as result_analysis
 from campus.iqac.registry import data_point
 from campus.iqac.setup import FRAMEWORK
 from campus.student_services import portal
@@ -49,34 +49,53 @@ class TestSliceDemo(CampusTestCase):
 		self.assertEqual(len(APPLICANTS), 5)
 		self.assertTrue(all(self.students))
 		statuses = frappe.get_all(
-			"Student Applicant", {"student_email_id": ["like", "slice-%"]}, ["student_email_id", "application_status"], order_by="student_email_id"
+			"Student Applicant",
+			{"student_email_id": ["like", "slice-%"]},
+			["student_email_id", "application_status"],
+			order_by="student_email_id",
 		)
-		self.assertEqual([s.application_status for s in statuses], ["Admitted"] * 5 + ["Approved"])  # slice-6 is left for the live demo
+		self.assertEqual(
+			[s.application_status for s in statuses], ["Admitted"] * 5 + ["Approved"]
+		)  # slice-6 is left for the live demo
 		enrollments = frappe.get_all(
-			"Program Enrollment", {"student": ["in", self.students], "docstatus": 1}, ["student", "oc_admission_quota"]
+			"Program Enrollment",
+			{"student": ["in", self.students], "docstatus": 1},
+			["student", "oc_admission_quota"],
 		)
 		self.assertEqual(sorted(e.oc_admission_quota for e in enrollments), ["GQ"] * 4 + ["MQ"])
-		self.assertRegex(frappe.db.get_value("Student", self.students[0], "oc_register_no"), r"^DCE26CSE\d{4}$")
+		self.assertRegex(
+			frappe.db.get_value("Student", self.students[0], "oc_register_no"), r"^DCE26CSE\d{4}$"
+		)
 		self.assertTrue(all(frappe.db.get_value("Student", s, "oc_regulation") for s in self.students))
 
 	def test_the_admission_officer_can_admit_the_sixth_applicant_live(self):
-		applicant = frappe.db.get_value("Student Applicant", {"student_email_id": demo.email(demo_slice.LIVE_APPLICANT[0])})
+		applicant = frappe.db.get_value(
+			"Student Applicant", {"student_email_id": demo.email(demo_slice.LIVE_APPLICANT[0])}
+		)
 		frappe.db.savepoint("live_admit")
 		self.addCleanup(frappe.db.rollback, save_point="live_admit")
 		frappe.set_user(demo.email("admissions"))
 		admitted = admit(applicant)
-		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted")
-		self.assertFalse(frappe.db.exists("Sales Invoice", {"student": admitted["student"]}))  # nothing billable before joining
+		self.assertEqual(
+			frappe.db.get_value("Student Applicant", applicant, "application_status"), "Admitted"
+		)
+		self.assertFalse(
+			frappe.db.exists("Sales Invoice", {"student": admitted["student"]})
+		)  # nothing billable before joining
 		joined = confirm_joining(applicant)
 		self.assertEqual(frappe.db.get_value("Sales Invoice", joined["invoice"], "grand_total"), 65000)
 
 	def test_fees_invoiced_for_all_and_four_paid(self):
 		invoices = frappe.get_all(
-			"Sales Invoice", {"student": ["in", self.students], "docstatus": 1}, ["student", "grand_total", "outstanding_amount"]
+			"Sales Invoice",
+			{"student": ["in", self.students], "docstatus": 1},
+			["student", "grand_total", "outstanding_amount"],
 		)
 		self.assertEqual(len(invoices), 5)
 		due = [i for i in invoices if i.outstanding_amount]
-		self.assertEqual([(d.student, d.grand_total) for d in due], [(self.students[4], 155000)])  # management quota fee
+		self.assertEqual(
+			[(d.student, d.grand_total) for d in due], [(self.students[4], 155000)]
+		)  # management quota fee
 		self.assertEqual(sorted(i.grand_total for i in invoices if not i.outstanding_amount), [65000] * 4)
 
 	def test_registration_enrols_every_student_in_the_four_offerings(self):
@@ -98,7 +117,9 @@ class TestSliceDemo(CampusTestCase):
 		self.assertEqual(summary["offerings"][0]["conducted"], demo_slice.SESSIONS)
 
 	def test_results_carry_the_su_codes_and_hand_computed_sgpa(self):
-		self.assertEqual({r[0] for r in self.grades(2).values()}, {"SA"})  # attendance shortage: every course SA
+		self.assertEqual(
+			{r[0] for r in self.grades(2).values()}, {"SA"}
+		)  # attendance shortage: every course SA
 		self.assertEqual(self.grades(4)[self.course(0)], ("AB", "AB"))  # absent in Matrices and Calculus
 		self.assertEqual(self.grades(1)[self.course(0)], ("U", "Fail"))  # ESE 24/60 = 40% is below 45%
 		self.assertEqual(self.grades(0), {
@@ -118,45 +139,73 @@ class TestSliceDemo(CampusTestCase):
 
 	def test_one_grade_sheet_is_issued_with_a_qr_code(self):
 		documents = frappe.get_all(
-			"Verifiable Document", {"reference_doctype": "Student Result"}, ["reference_name", "document_type", "status"]
+			"Verifiable Document",
+			{"reference_doctype": "Student Result"},
+			["reference_name", "document_type", "status"],
 		)
 		self.assertEqual([(d.reference_name, d.status) for d in documents], [(self.result(0).name, "Valid")])
 
 	def test_aqar_cycle_has_the_hand_counted_final_year_pass_percentage(self):
-		cycle = frappe.get_doc("Accreditation Cycle", {"framework": FRAMEWORK, "academic_year": demo_slice.YEAR})
-		metric = frappe.get_doc("Metric Value", f"{cycle.name}-2.6.3")  # the college row; department rows have their own names
+		cycle = frappe.get_doc(
+			"Accreditation Cycle", {"framework": FRAMEWORK, "academic_year": demo_slice.YEAR}
+		)
+		metric = frappe.get_doc(
+			"Metric Value", f"{cycle.name}-2.6.3"
+		)  # the college row; department rows have their own names
 		# appeared: students 1, 2, 4, 5 (student 3 is all SA); passed: 1 and 4 (2 failed a course, 5 was absent in one)
 		self.assertEqual(metric.value, 50)
 		inputs = json.loads(metric.snapshot)["inputs"]
 		self.assertEqual(
-			[r["name"] for r in inputs["final_year_passed"]["records"]], sorted(self.result(n).name for n in (0, 3))
+			[r["name"] for r in inputs["final_year_passed"]["records"]],
+			sorted(self.result(n).name for n in (0, 3)),
 		)
 		self.assertEqual(inputs["final_year_appeared"]["value"], 4)
 		admitted = frappe.get_doc("Metric Value", f"{cycle.name}-2.1.1")
 		self.assertEqual(
 			admitted.value,
-			frappe.db.count("Program Enrollment", {"oc_company": demo.ENGINEERING, "academic_year": demo_slice.YEAR, "docstatus": 1}),
+			frappe.db.count(
+				"Program Enrollment",
+				{"oc_company": demo.ENGINEERING, "academic_year": demo_slice.YEAR, "docstatus": 1},
+			),
 		)
 
 	def test_coe_data_points_match_the_result_analysis_of_the_demo(self):
 		# appeared: students 1, 2, 4, 5 (student 3 is all SA); passed every course: 1 and 4 (P2-T24)
-		filters = {"company": demo.ENGINEERING, "academic_year": demo_slice.YEAR, "group_by": "Program", "final_year_only": 1}
+		filters = {
+			"company": demo.ENGINEERING,
+			"academic_year": demo_slice.YEAR,
+			"group_by": "Program",
+			"final_year_only": 1,
+		}
 		total = result_analysis(filters)[1][-1]
 		self.assertEqual((total["appeared"], total["passed"], total["pass_pct"]), (4, 2, 50))
-		self.assertEqual(data_point("pass_percentage", demo.ENGINEERING, demo_slice.YEAR)["value"], total["pass_pct"])
-		self.assertEqual(data_point("students_appeared", demo.ENGINEERING, demo_slice.YEAR)["value"], total["appeared"])
+		self.assertEqual(
+			data_point("pass_percentage", demo.ENGINEERING, demo_slice.YEAR)["value"], total["pass_pct"]
+		)
+		self.assertEqual(
+			data_point("students_appeared", demo.ENGINEERING, demo_slice.YEAR)["value"], total["appeared"]
+		)
 		days = days_report({"company": demo.ENGINEERING, "academic_year": demo_slice.YEAR})[1]
 		self.assertEqual(days[-1]["days"], 20)  # exam end 21 days ago, published yesterday
-		self.assertEqual(data_point("days_exam_to_result", demo.ENGINEERING, demo_slice.YEAR)["value"], days[-1]["days"])
+		self.assertEqual(
+			data_point("days_exam_to_result", demo.ENGINEERING, demo_slice.YEAR)["value"], days[-1]["days"]
+		)
 
 	def test_reserved_seat_data_points_are_filled_from_the_flagged_demo_categories(self):
 		filled = data_point("reserved_seats_filled", demo.ENGINEERING, demo_slice.YEAR)
 		earmarked = data_point("seats_earmarked_reserved", demo.ENGINEERING, demo_slice.YEAR)
 		self.assertEqual(filled["value"], 3)  # the BC, MBC and SC government-quota students; OC is open
-		self.assertEqual(earmarked["value"], 50)  # 10 seats each: government BC, MBC, SC, ST and management BC
-		report = live_seat_matrix.data(frappe._dict(company=demo.ENGINEERING, program=demo_slice.PROGRAM, academic_year=demo_slice.YEAR))
+		self.assertEqual(
+			earmarked["value"], 50
+		)  # 10 seats each: government BC, MBC, SC, ST and management BC
+		report = live_seat_matrix.data(
+			frappe._dict(company=demo.ENGINEERING, program=demo_slice.PROGRAM, academic_year=demo_slice.YEAR)
+		)
 		reserved = [r for r in report if r["category"] in demo.RESERVED_CATEGORIES and not r["supernumerary"]]
-		self.assertEqual((filled["value"], earmarked["value"]), (sum(r["filled"] for r in reserved), sum(r["sanctioned"] for r in reserved)))
+		self.assertEqual(
+			(filled["value"], earmarked["value"]),
+			(sum(r["filled"] for r in reserved), sum(r["sanctioned"] for r in reserved)),
+		)
 
 	def test_portal_shows_student_1_only_their_own_data(self):
 		frappe.set_user(demo.email("student_1"))
@@ -214,7 +263,10 @@ class TestDeskButtons(CampusTestCase):
 		from frappe import get_hooks
 
 		hooked = get_hooks("doctype_js", app_name="campus")
-		for doctype, script in (("Student Applicant", "student_applicant.js"), ("Student Result", "student_result.js")):
+		for doctype, script in (
+			("Student Applicant", "student_applicant.js"),
+			("Student Result", "student_result.js"),
+		):
 			self.assertIn(f"public/js/{script}", hooked[doctype])
 			source = open(frappe.get_app_path("campus", "public", "js", script)).read()
 			constants = dict(re.findall(r'const (\w+) = "([\w.]+)"', source))

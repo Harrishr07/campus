@@ -63,39 +63,66 @@ class CourseAllocation(ApprovableDocument, Document):
 	def check_term_and_department(self):
 		duplicate = frappe.db.exists(
 			"Course Allocation",
-			{"academic_term": self.academic_term, "department": self.department, "docstatus": ["<", 2], "name": ["!=", self.name]},
+			{
+				"academic_term": self.academic_term,
+				"department": self.department,
+				"docstatus": ["<", 2],
+				"name": ["!=", self.name],
+			},
 		)
 		if duplicate:
-			frappe.throw(_("{0} already allocates {1} for {2}.").format(duplicate, self.department, self.academic_term))
+			frappe.throw(
+				_("{0} already allocates {1} for {2}.").format(duplicate, self.department, self.academic_term)
+			)
 
 	def check_rows(self):
 		offerings = set(workload.term_offerings(self.department, self.academic_term))
 		seen = set()
 		for row in self.allocations:
 			if row.offering not in offerings:
-				frappe.throw(_("Row {0}: {1} is not a course offering of {2} for {3}.").format(row.idx, row.offering, self.department, self.academic_term))
+				frappe.throw(
+					_("Row {0}: {1} is not a course offering of {2} for {3}.").format(
+						row.idx, row.offering, self.department, self.academic_term
+					)
+				)
 			if (row.offering, row.faculty) in seen:
-				frappe.throw(_("Row {0}: {1} is already allocated to {2}.").format(row.idx, row.faculty, row.offering))
+				frappe.throw(
+					_("Row {0}: {1} is already allocated to {2}.").format(row.idx, row.faculty, row.offering)
+				)
 			seen.add((row.offering, row.faculty))
 			self.check_offering_company(row)
 			row.total_hours = workload.row_hours(row)
 			if not row.total_hours:
-				frappe.throw(_("Row {0}: give the weekly Lecture, Tutorial or Practical hours.").format(row.idx))
+				frappe.throw(
+					_("Row {0}: give the weekly Lecture, Tutorial or Practical hours.").format(row.idx)
+				)
 			self.check_faculty(row)
 
 	def check_offering_company(self, row):
-		company = frappe.db.get_value("Program", frappe.db.get_value("Student Group", row.offering, "program"), "oc_company")
+		company = frappe.db.get_value(
+			"Program", frappe.db.get_value("Student Group", row.offering, "program"), "oc_company"
+		)
 		if company != self.company:
-			frappe.throw(_("Row {0}: {1} belongs to {2}, not {3}.").format(row.idx, row.offering, company, self.company))
+			frappe.throw(
+				_("Row {0}: {1} belongs to {2}, not {3}.").format(
+					row.idx, row.offering, company, self.company
+				)
+			)
 
 	def check_faculty(self, row):
 		status, company = frappe.db.get_value("Employee", row.faculty, ["status", "company"])
 		if status != "Active":
 			frappe.throw(_("Row {0}: {1} is not an active employee.").format(row.idx, row.faculty))
 		if company != self.company:
-			frappe.throw(_("Row {0}: {1} belongs to {2}, not {3}.").format(row.idx, row.faculty, company, self.company))
+			frappe.throw(
+				_("Row {0}: {1} belongs to {2}, not {3}.").format(row.idx, row.faculty, company, self.company)
+			)
 		if not self.instructor_of(row.faculty):
-			frappe.throw(_("Row {0}: {1} has no Instructor record, so cannot be set as an instructor.").format(row.idx, row.faculty))
+			frappe.throw(
+				_("Row {0}: {1} has no Instructor record, so cannot be set as an instructor.").format(
+					row.idx, row.faculty
+				)
+			)
 
 	def instructor_of(self, employee):
 		return frappe.db.get_value("Instructor", {"employee": employee}, "name")
@@ -114,7 +141,9 @@ class CourseAllocation(ApprovableDocument, Document):
 				self.warn_unchecked(employee, cadre, bool(rule), warn)
 				continue
 			_minimum, maximum, margin = rule
-			message = _("{0} has {1} hours a week against the {2} maximum of {3}.").format(employee, total, cadre, maximum)
+			message = _("{0} has {1} hours a week against the {2} maximum of {3}.").format(
+				employee, total, cadre, maximum
+			)
 			level = workload.classify(total, maximum, margin)
 			if level == workload.BLOCK:
 				blocked.append(message)
@@ -129,9 +158,13 @@ class CourseAllocation(ApprovableDocument, Document):
 		if not cadre:
 			message = _("{0} has no cadre, so the workload norm cannot be checked.").format(employee)
 		elif not has_norm:
-			message = _("No Faculty Norm covers the {0} cadre of {1}, so the workload cannot be checked.").format(cadre, employee)
+			message = _(
+				"No Faculty Norm covers the {0} cadre of {1}, so the workload cannot be checked."
+			).format(cadre, employee)
 		else:
-			message = _("The Faculty Norm sets no maximum hours for the {0} cadre of {1}, so the workload cannot be checked.").format(cadre, employee)
+			message = _(
+				"The Faculty Norm sets no maximum hours for the {0} cadre of {1}, so the workload cannot be checked."
+			).format(cadre, employee)
 		frappe.msgprint(message, title=_("Workload Not Checked"), indicator="orange")
 
 	def apply_dean_override(self, blocked):
@@ -145,19 +178,30 @@ class CourseAllocation(ApprovableDocument, Document):
 
 	def same_override(self, before):
 		"""The Dean's override still stands while the reason and the allocation are as the Dean saved them."""
-		return before.dean_override_reason == self.dean_override_reason and self.signature() == before.signature()
+		return (
+			before.dean_override_reason == self.dean_override_reason
+			and self.signature() == before.signature()
+		)
 
 	def signature(self):
-		return sorted((r.offering, r.faculty, r.lecture_hours or 0, r.tutorial_hours or 0, r.practical_hours or 0) for r in self.allocations)
+		return sorted(
+			(r.offering, r.faculty, r.lecture_hours or 0, r.tutorial_hours or 0, r.practical_hours or 0)
+			for r in self.allocations
+		)
 
 	def require_dean_override(self, blocked):
 		if not self.dean_override_reason:
 			frappe.throw(
-				_("{0}<br>The Dean Academics must enter an override reason to allocate beyond the maximum plus the block margin.").format("<br>".join(blocked)),
+				_(
+					"{0}<br>The Dean Academics must enter an override reason to allocate beyond the maximum plus the block margin."
+				).format("<br>".join(blocked)),
 				title=_("Workload Over the Limit"),
 			)
 		if frappe.session.user not in resolve_position(DEAN, self.company):
-			frappe.throw(_("Only the Dean Academics of {0} can override the workload limit.").format(self.company), frappe.PermissionError)
+			frappe.throw(
+				_("Only the Dean Academics of {0} can override the workload limit.").format(self.company),
+				frappe.PermissionError,
+			)
 		self.dean_override_by = frappe.session.user
 
 	def offerings_without_faculty(self):
@@ -168,7 +212,10 @@ class CourseAllocation(ApprovableDocument, Document):
 		"""Tell the drafter early: an approval that is later approved cannot submit while offerings lack faculty."""
 		missing = self.offerings_without_faculty()
 		if missing:
-			frappe.msgprint(_("{0} offering(s) still have no faculty: {1}").format(len(missing), ", ".join(missing)), indicator="orange")
+			frappe.msgprint(
+				_("{0} offering(s) still have no faculty: {1}").format(len(missing), ", ".join(missing)),
+				indicator="orange",
+			)
 
 	def check_every_offering_has_faculty(self):
 		missing = self.offerings_without_faculty()

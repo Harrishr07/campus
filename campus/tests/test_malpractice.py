@@ -26,7 +26,9 @@ class MalpracticeFixture(SeatingFixture):
 		super().setUp()
 		self.student = self.students[0]
 		if self.test_policy:
-			frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+			frappe.db.delete(
+				"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+			)
 			frappe.db.delete("Approval Policy", {"document_type": "Malpractice Report"})
 			frappe.get_doc(
 				{"doctype": "Approval Policy", "policy_name": "Seat Test Malpractice", "document_type": "Malpractice Report",
@@ -34,11 +36,20 @@ class MalpracticeFixture(SeatingFixture):
 			).insert()  # fmt: skip
 
 	def policies(self):
-		return frappe.get_all("Approval Policy", {"document_type": "Malpractice Report"}, pluck="name") or [""]
+		return frappe.get_all("Approval Policy", {"document_type": "Malpractice Report"}, pluck="name") or [
+			""
+		]
 
 	def evidence(self, private=1):
 		"""A real File uploaded by the current user, as the form's attach dialog leaves it (not yet attached)."""
-		doc = frappe.get_doc({"doctype": "File", "file_name": f"seat-chit-{frappe.generate_hash(length=6)}.txt", "content": "chit", "is_private": private}).insert()
+		doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": f"seat-chit-{frappe.generate_hash(length=6)}.txt",
+				"content": "chit",
+				"is_private": private,
+			}
+		).insert()
 		path = get_file_path(doc.file_url)
 		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
 		return doc.file_url
@@ -61,7 +72,18 @@ class MalpracticeFixture(SeatingFixture):
 		return report.reload()
 
 	def make_outsider(self):
-		return frappe.get_doc({"doctype": "Student", "first_name": "Seat Outsider", "student_email_id": "seat-outsider@example.com", "oc_company": demo.ENGINEERING}).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Student",
+					"first_name": "Seat Outsider",
+					"student_email_id": "seat-outsider@example.com",
+					"oc_company": demo.ENGINEERING,
+				}
+			)
+			.insert()
+			.name
+		)
 
 	def registration(self):
 		return frappe.get_doc("Exam Registration", f"EXR-{self.session}-{self.student}")
@@ -72,7 +94,9 @@ class TestMalpractice(MalpracticeFixture):
 		report = self.approved(self.report())
 		self.assertEqual(report.docstatus, 1)
 		registration = self.registration()
-		self.assertEqual((registration.debarred, registration.debarment_reason), (1, f"Malpractice {report.name}: Copying"))
+		self.assertEqual(
+			(registration.debarred, registration.debarment_reason), (1, f"Malpractice {report.name}: Copying")
+		)
 		self.assertEqual({row.eligibility for row in registration.courses}, {DEBARRED})
 
 	def test_only_a_system_manager_cancels_and_cancelling_lifts_the_debarment(self):
@@ -94,7 +118,9 @@ class TestMalpractice(MalpracticeFixture):
 		report = self.report()
 		with self.assertRaises(frappe.ValidationError):
 			report.submit()  # a policy exists: only its approval submits
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": "Malpractice Report"})
 		with self.assertRaisesRegex(frappe.ValidationError, "only by its approval"):
 			request_approval("Malpractice Report", report.name)
@@ -130,14 +156,28 @@ class TestMalpractice(MalpracticeFixture):
 		self.approved(original).cancel()
 		url = original.evidence[0].file
 		frappe.set_user(OTHER_INVIGILATOR)  # Academics User: may create reports, holds no amend right
-		stolen = frappe.copy_doc(frappe.get_doc("Malpractice Report", original.name).as_dict() | {"docstatus": 0})
+		stolen = frappe.copy_doc(
+			frappe.get_doc("Malpractice Report", original.name).as_dict() | {"docstatus": 0}
+		)
 		stolen.amended_from = original.name
 		with self.assertRaisesRegex(frappe.PermissionError, "amend"):
 			stolen.insert()
 		frappe.set_user("Administrator")
 		attached = frappe.get_all("File", {"file_url": url}, ["attached_to_doctype", "attached_to_name"])
-		self.assertEqual({(f.attached_to_doctype, f.attached_to_name) for f in attached}, {("Malpractice Report", original.name)})
-		self.assertFalse(frappe.get_all("File", {"attached_to_doctype": "Malpractice Report", "attached_to_name": ["!=", original.name], "owner": OTHER_INVIGILATOR}))
+		self.assertEqual(
+			{(f.attached_to_doctype, f.attached_to_name) for f in attached},
+			{("Malpractice Report", original.name)},
+		)
+		self.assertFalse(
+			frappe.get_all(
+				"File",
+				{
+					"attached_to_doctype": "Malpractice Report",
+					"attached_to_name": ["!=", original.name],
+					"owner": OTHER_INVIGILATOR,
+				},
+			)
+		)
 
 	def test_evidence_must_be_a_private_file_of_this_report(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "private"):
@@ -147,7 +187,8 @@ class TestMalpractice(MalpracticeFixture):
 		first = self.report()
 		url = first.evidence[0].file
 		self.assertEqual(
-			frappe.db.get_value("File", {"file_url": url}, ["attached_to_doctype", "attached_to_name"]), ("Malpractice Report", first.name)
+			frappe.db.get_value("File", {"file_url": url}, ["attached_to_doctype", "attached_to_name"]),
+			("Malpractice Report", first.name),
 		)
 		with self.assertRaisesRegex(frappe.ValidationError, "another document"):
 			self.report(evidence=url)  # a file attached to another report cannot be borrowed
@@ -190,7 +231,9 @@ class TestCommitteeDecision(MalpracticeFixture):
 
 	def test_a_decision_not_set_by_the_exam_office_is_refused_at_submit(self):
 		report = self.report(decision="Debarment")
-		frappe.db.set_value("Malpractice Report", report.name, "decision_set_by", INVIGILATOR)  # legacy or imported row
+		frappe.db.set_value(
+			"Malpractice Report", report.name, "decision_set_by", INVIGILATOR
+		)  # legacy or imported row
 		with self.assertRaisesRegex(frappe.ValidationError, "committee decision"):
 			self.approved(report.reload())
 
@@ -200,10 +243,14 @@ class TestConfidentiality(MalpracticeFixture):
 		frappe.set_user(INVIGILATOR)
 		report = self.report()
 		file = frappe.get_doc("File", {"file_url": report.evidence[0].file})
-		self.assertTrue(frappe.has_permission("Malpractice Report", "read", doc=report.name, user=INVIGILATOR))
+		self.assertTrue(
+			frappe.has_permission("Malpractice Report", "read", doc=report.name, user=INVIGILATOR)
+		)
 		frappe.set_user("Administrator")
 		for user in (OTHER_INVIGILATOR, demo.email("student_1")):
-			self.assertFalse(frappe.has_permission("Malpractice Report", "read", doc=report.name, user=user), user)
+			self.assertFalse(
+				frappe.has_permission("Malpractice Report", "read", doc=report.name, user=user), user
+			)
 			self.assertFalse(frappe.has_permission("File", "read", doc=file, user=user), user)
 		frappe.set_user(OTHER_INVIGILATOR)
 		self.assertEqual(frappe.get_list("Malpractice Report", pluck="name"), [])

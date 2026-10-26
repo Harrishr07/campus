@@ -13,8 +13,16 @@ DEMO_DOCTYPES = ["Academic Year", "Academic Term", "Department", "Employee", "In
 
 def snapshot():
 	counts = demo.counts()
-	for doctype in [*DEMO_DOCTYPES, "Program Enrollment", "Position Holder", "Institution Profile",
-			"Shared Service Agreement", "User Permission", "Student Category", "Guardian"]:
+	for doctype in [
+		*DEMO_DOCTYPES,
+		"Program Enrollment",
+		"Position Holder",
+		"Institution Profile",
+		"Shared Service Agreement",
+		"User Permission",
+		"Student Category",
+		"Guardian",
+	]:
 		counts[doctype] = frappe.db.count(doctype)
 	return counts
 
@@ -36,7 +44,11 @@ class TestDemoData(CampusTestCase):
 		self.assertEqual(frappe.db.count("Institution Profile", {"name": ["in", demo.ALL_COMPANIES]}), 3)
 
 	def test_reserved_categories_are_flagged(self):
-		flagged = set(frappe.get_all("Student Category", {"name": ["in", demo.CATEGORIES], "oc_is_reserved": 1}, pluck="name"))
+		flagged = set(
+			frappe.get_all(
+				"Student Category", {"name": ["in", demo.CATEGORIES], "oc_is_reserved": 1}, pluck="name"
+			)
+		)
 		self.assertEqual(flagged, {"BC", "MBC", "SC", "ST"})
 
 	def test_cse_r2022_curriculum_is_a_draft_with_derived_credits(self):
@@ -53,7 +65,9 @@ class TestDemoData(CampusTestCase):
 		profile = frappe.get_doc("Institution Profile", demo.ENGINEERING)
 		status = (profile.institution_status, str(profile.status_effective_from))
 		self.assertEqual(status, ("Autonomous", "2022-05-26"))
-		self.assertEqual(frappe.db.get_value("Institution Profile", demo.ARTS, "institution_status"), "Affiliated")
+		self.assertEqual(
+			frappe.db.get_value("Institution Profile", demo.ARTS, "institution_status"), "Affiliated"
+		)
 
 	def test_students_resolve_to_effective_regulation_with_category_spread(self):
 		students = frappe.get_all(
@@ -62,7 +76,9 @@ class TestDemoData(CampusTestCase):
 			fields=["name", "oc_regulation", "oc_batch", "oc_company"],
 		)
 		categories = frappe.get_all(
-			"Program Enrollment", filters={"student": ["in", [s.name for s in students]]}, pluck="student_category"
+			"Program Enrollment",
+			filters={"student": ["in", [s.name for s in students]]},
+			pluck="student_category",
 		)
 		self.assertEqual({s.oc_regulation for s in students}, {regulation_name("R2026", demo.ENGINEERING)})
 		self.assertEqual({s.oc_batch for s in students}, {"2026-27"})
@@ -115,11 +131,17 @@ class TestDemoData(CampusTestCase):
 	def test_users_have_company_permission_and_roles(self):
 		principal, warden = demo.email("principal"), demo.email("warden")
 		self.assertEqual(
-			frappe.get_all("User Permission", filters={"user": principal, "allow": "Company"}, pluck="for_value"),
+			frappe.get_all(
+				"User Permission", filters={"user": principal, "allow": "Company"}, pluck="for_value"
+			),
 			[demo.ENGINEERING],
 		)
 		self.assertEqual(
-			set(frappe.get_all("User Permission", filters={"user": warden, "allow": "Company"}, pluck="for_value")),
+			set(
+				frappe.get_all(
+					"User Permission", filters={"user": warden, "allow": "Company"}, pluck="for_value"
+				)
+			),
 			set(demo.ALL_COMPANIES),
 		)
 		self.assertIn("Principal", frappe.get_roles(principal))
@@ -134,7 +156,9 @@ class TestDemoData(CampusTestCase):
 	def test_faculty_are_instructors_and_student_1_is_linked(self):
 		for username in demo.INSTRUCTORS:
 			employee = demo.employee_of(username)
-			self.assertTrue(frappe.db.exists("Instructor", {"employee": employee, "oc_company": demo.ENGINEERING}))
+			self.assertTrue(
+				frappe.db.exists("Instructor", {"employee": employee, "oc_company": demo.ENGINEERING})
+			)
 		student = frappe.db.get_value("Student", {"user": demo.email("student_1")})
 		self.assertTrue(student)
 		self.assertTrue(frappe.db.exists("Guardian", {"user": demo.email("guardian_1")}))
@@ -163,7 +187,9 @@ class TestDemoHelpers(UnitTestCase):
 		self.assertEqual(len({demo.category_for(n) for n in range(1, 11)}), 4)  # even a small batch is mixed
 
 	def test_batch_to_regulation_mapping(self):
-		codes = {batch: demo.expected_regulation_code(batch) for batch in (2021, 2022, 2023, 2024, 2025, 2026)}
+		codes = {
+			batch: demo.expected_regulation_code(batch) for batch in (2021, 2022, 2023, 2024, 2025, 2026)
+		}
 		self.assertEqual(
 			codes,
 			{2021: "AU-R2021", 2022: "R2022", 2023: "R2022", 2024: "R2022", 2025: "R2022", 2026: "R2026"},

@@ -6,11 +6,18 @@ import frappe
 
 from campus.examinations import registration, results
 from campus.examinations.seed import seed_regulation
-from campus.student_services.api import pending_bridge_courses
 from campus.student_services import lifecycle
+from campus.student_services.api import pending_bridge_courses
 from campus.student_services.lifecycle import LOG
 from campus.tests.test_regulation import make_regulation, year_name
-from campus.tests.test_results import COLLEGE, PROGRAM, enter_marks, make_course, make_curriculum, make_offering
+from campus.tests.test_results import (
+	COLLEGE,
+	PROGRAM,
+	enter_marks,
+	make_course,
+	make_curriculum,
+	make_offering,
+)
 from campus.tests.test_student_records import CLERK, REJOIN, StudentRecordsFixture
 
 BRIDGE_COURSE = "EXM BRIDGE"
@@ -54,7 +61,9 @@ class TestRejoin(StudentRecordsFixture):
 		return doc
 
 	def two_year_break(self, student, start="2024-06-01", end="2026-05-31"):
-		return self.approve_fully(self.study_break(student, start, end, exceptional=1, exceptional_reason="Surgery"))
+		return self.approve_fully(
+			self.study_break(student, start, end, exceptional=1, exceptional_reason="Surgery")
+		)
 
 	def test_a_rejoiner_takes_the_regulation_and_batch_of_the_cohort_joined(self):
 		# admitted 2022, two years done when the break starts in 2024, back in 2026: joins the 2024 cohort (R2024),
@@ -63,7 +72,9 @@ class TestRejoin(StudentRecordsFixture):
 		doc = self.rejoin(self.two_year_break(self.s22))
 		self.assertEqual((doc.from_regulation, doc.to_regulation), (old, self.r2024))
 		self.assertEqual(doc.from_batch, year_name("2022"))
-		self.assertEqual(start_of(doc.to_batch).year, 2024)  # any 2024 year on the site (demo years share dates)
+		self.assertEqual(
+			start_of(doc.to_batch).year, 2024
+		)  # any 2024 year on the site (demo years share dates)
 		self.approve_fully(doc)
 		student = frappe.get_doc("Student", self.s22.name)
 		self.assertEqual((student.oc_regulation, student.oc_batch), (self.r2024, doc.to_batch))
@@ -101,7 +112,10 @@ class TestRejoin(StudentRecordsFixture):
 		rows = {r.course: (r.kind, r.eligibility) for r in frappe.get_doc("Exam Registration", name).courses}
 		self.assertEqual(rows[BRIDGE_COURSE], ("Bridge", "Eligible"))
 		results.compute_student_result(self.s22.name, self.session.name)
-		graded = {c.course: c.result for c in frappe.get_doc("Student Result", f"SR-{self.session.name}-{self.s22.name}").courses}
+		graded = {
+			c.course: c.result
+			for c in frappe.get_doc("Student Result", f"SR-{self.session.name}-{self.s22.name}").courses
+		}
 		self.assertEqual(graded[BRIDGE_COURSE], "Pass")  # 70%
 		self.assertEqual(pending_bridge_courses(self.s22.name), [])
 
@@ -124,7 +138,14 @@ class TestRejoin(StudentRecordsFixture):
 		self.assertEqual(student.oc_academic_status, "Active")  # the status before the break
 		log = frappe.get_last_doc(LOG, {"student": self.s26.name}, order_by="creation desc, name desc")
 		self.assertEqual(
-			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.kind),
+			(
+				log.from_status,
+				log.to_status,
+				log.effective_date,
+				log.source_doctype,
+				log.source_name,
+				log.kind,
+			),
 			("On Break", "Active", frappe.utils.getdate("2027-06-15"), REJOIN, doc.name, "Transition"),
 		)
 
@@ -132,12 +153,17 @@ class TestRejoin(StudentRecordsFixture):
 		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))
 		frappe.db.delete(LOG, {"student": self.s26.name})  # as recorded before L-01
 		frappe.db.set_value("Student", self.s26.name, "oc_academic_status", "Break of Study")
-		frappe.db.set_value("Break of Study", study_break.name, "previous_status", "Long Absent")  # not mapped yet
+		frappe.db.set_value(
+			"Break of Study", study_break.name, "previous_status", "Long Absent"
+		)  # not mapped yet
 		lifecycle.migrate_student(self.s26.name)
 		doc = self.approve_fully(self.rejoin(study_break, year="2027", rejoin_date="2027-06-15", bridge=()))
 		self.assertEqual(frappe.db.get_value("Student", self.s26.name, "oc_academic_status"), "Active")
 		log = frappe.get_last_doc(LOG, {"student": self.s26.name}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Transition", "On Break", "Active", doc.name))
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.source_name),
+			("Transition", "On Break", "Active", doc.name),
+		)
 
 	def test_a_break_with_a_rejoin_cannot_be_cancelled(self):
 		study_break = self.approve_fully(self.study_break(self.s26, "2026-06-01", "2027-05-31"))

@@ -10,7 +10,17 @@ from frappe.utils import get_datetime, now_datetime, time_diff_in_hours
 from campus.campus_platform.approval_rules import ESCALATE, PENDING
 from campus.campus_platform.company_scope import permitted_companies
 
-FIELDS = ["name", "student", "student_name", "category", "department", "status", "raised_on", "resolved_on", "docstatus"]
+FIELDS = [
+	"name",
+	"student",
+	"student_name",
+	"category",
+	"department",
+	"status",
+	"raised_on",
+	"resolved_on",
+	"docstatus",
+]
 
 
 def execute(filters=None):
@@ -55,7 +65,9 @@ def requests_of(names):
 		["name", "reference_name", "current_level", "due_at", "status"],
 		order_by="creation asc", limit=0,
 	):  # fmt: skip
-		request["escalations"] = frappe.db.count("Approval Action", {"parent": request.name, "action": ESCALATE})
+		request["escalations"] = frappe.db.count(
+			"Approval Action", {"parent": request.name, "action": ESCALATE}
+		)
 		found[request.reference_name] = request
 	return found
 

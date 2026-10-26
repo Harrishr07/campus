@@ -47,11 +47,20 @@ class ScholarshipApplication(ApprovableDocument, Document):
 
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)
-		scheme = frappe.db.get_value("Scholarship Scheme", self.scheme, ["company", "scheme_type"], as_dict=True)
+		scheme = frappe.db.get_value(
+			"Scholarship Scheme", self.scheme, ["company", "scheme_type"], as_dict=True
+		)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to apply for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to apply for {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		if scheme.company != student.oc_company:
-			frappe.throw(_("Scheme {0} belongs to {1}, not to the student's company.").format(self.scheme, scheme.company))
+			frappe.throw(
+				_("Scheme {0} belongs to {1}, not to the student's company.").format(
+					self.scheme, scheme.company
+				)
+			)
 		self.company, self.scheme_type = scheme.company, scheme.scheme_type
 
 	def check_duplicate(self):
@@ -78,16 +87,26 @@ class ScholarshipApplication(ApprovableDocument, Document):
 	def student_category(self):
 		"""The category on the student's latest submitted enrolment (Student itself carries none)."""
 		return frappe.db.get_value(
-			"Program Enrollment", {"student": self.student, "docstatus": 1}, "student_category", order_by="creation desc"
+			"Program Enrollment",
+			{"student": self.student, "docstatus": 1},
+			"student_category",
+			order_by="creation desc",
 		)
 
 	def renewal_reasons(self, scheme):
 		if not scheme.renewable:
 			return [_("The scheme cannot be renewed.")]
 		previous = self.previous_application and frappe.db.get_value(
-			"Scholarship Application", self.previous_application, ["student", "scheme", "docstatus", "academic_year"], as_dict=True
+			"Scholarship Application",
+			self.previous_application,
+			["student", "scheme", "docstatus", "academic_year"],
+			as_dict=True,
 		)
-		if not previous or previous.docstatus != 1 or (previous.student, previous.scheme) != (self.student, self.scheme):
+		if (
+			not previous
+			or previous.docstatus != 1
+			or (previous.student, previous.scheme) != (self.student, self.scheme)
+		):
 			return [_("A renewal needs the student's sanctioned application of the same scheme.")]
 		if not self.is_earlier_year(previous.academic_year):
 			return [_("The renewed application must be of an earlier academic year.")]
@@ -95,11 +114,15 @@ class ScholarshipApplication(ApprovableDocument, Document):
 
 	def is_earlier_year(self, academic_year):
 		start = frappe.db.get_value("Academic Year", academic_year, "year_start_date")
-		return bool(start) and start < frappe.db.get_value("Academic Year", self.academic_year, "year_start_date")
+		return bool(start) and start < frappe.db.get_value(
+			"Academic Year", self.academic_year, "year_start_date"
+		)
 
 	def set_amount(self):
 		scheme = frappe.get_doc("Scholarship Scheme", self.scheme)
-		most = scholarships.scheme_amount(scheme.amount_type, scheme.amount, scheme.percent, scheme.max_amount, self.base_fee)
+		most = scholarships.scheme_amount(
+			scheme.amount_type, scheme.amount, scheme.percent, scheme.max_amount, self.base_fee
+		)
 		if not flt(self.sanctioned_amount):
 			self.sanctioned_amount = most
 		elif flt(self.sanctioned_amount) > most:

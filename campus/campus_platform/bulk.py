@@ -242,7 +242,12 @@ def _save_chunk(run, keys, errors):
 	run.failed += len(errors)
 	_insert_children(run.name, "processed_keys", "Bulk Run Item Key", [(k,) for k in keys], ("item_key",))
 	_insert_children(
-		run.name, "errors", "Bulk Run Row Error", errors, ("item_key", "error", "traceback"), run.failed - len(errors)
+		run.name,
+		"errors",
+		"Bulk Run Row Error",
+		errors,
+		("item_key", "error", "traceback"),
+		run.failed - len(errors),
 	)
 	frappe.db.set_value("Bulk Run", run.name, {"done": run.done, "failed": run.failed}, update_modified=False)
 	frappe.db.commit()
@@ -324,9 +329,30 @@ def _insert_children(parent, parentfield, doctype, rows, fields, first_idx=0):
 		first_idx = frappe.db.count(doctype, {"parent": parent})
 	now = now_datetime()
 	user = frappe.session.user
-	base = ("name", "parent", "parenttype", "parentfield", "idx", "creation", "modified", "owner", "modified_by")
+	base = (
+		"name",
+		"parent",
+		"parenttype",
+		"parentfield",
+		"idx",
+		"creation",
+		"modified",
+		"owner",
+		"modified_by",
+	)
 	values = [
-		(frappe.generate_hash(length=10), parent, "Bulk Run", parentfield, first_idx + i + 1, now, now, user, user, *row)
+		(
+			frappe.generate_hash(length=10),
+			parent,
+			"Bulk Run",
+			parentfield,
+			first_idx + i + 1,
+			now,
+			now,
+			user,
+			user,
+			*row,
+		)
 		for i, row in enumerate(rows)
 	]
 	frappe.db.bulk_insert(doctype, [*base, *fields], values)
@@ -352,7 +378,9 @@ def _unique_items(items, key_fn):
 def _key(key_fn, item):
 	item_key = str(key_fn(item))
 	if len(item_key) > KEY_LENGTH:
-		frappe.throw(_("Bulk Run item key is longer than {0} characters: {1}").format(KEY_LENGTH, item_key[:40]))
+		frappe.throw(
+			_("Bulk Run item key is longer than {0} characters: {1}").format(KEY_LENGTH, item_key[:40])
+		)
 	return item_key
 
 

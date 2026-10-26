@@ -24,7 +24,9 @@ class GrantSetup:
 	def create(self):
 		settings = get_research_settings(self.company)
 		if not settings.research_cost_center:
-			frappe.throw(_("Set the Research Cost Centre in {0}'s Research Settings first.").format(self.company))
+			frappe.throw(
+				_("Set the Research Cost Centre in {0}'s Research Settings first.").format(self.company)
+			)
 		sanction = self.sanction
 		sanction.liability_account = self.make_liability_account(settings.grant_liability_parent)
 		sanction.cost_center = self.make_cost_center(settings.research_cost_center)
@@ -36,7 +38,11 @@ class GrantSetup:
 	def remove(self):
 		sanction = self.sanction
 		self.check_nothing_posted()
-		records = (("Project", sanction.project), ("Cost Center", sanction.cost_center), ("Account", sanction.liability_account))
+		records = (
+			("Project", sanction.project),
+			("Cost Center", sanction.cost_center),
+			("Account", sanction.liability_account),
+		)
 		# the sanction row still links them (its cancel isn't committed yet): unlink first so they can be deleted
 		sanction.db_set({"project": None, "cost_center": None, "liability_account": None})
 		cost_center = records[1][1]
@@ -55,29 +61,38 @@ class GrantSetup:
 			frappe.delete_doc(doctype, name, ignore_permissions=True)
 		except frappe.LinkExistsError:
 			frappe.throw(
-				_("{0} can't be cancelled: its {1} {2} is used by other documents. Cancel or delete them first.").format(
-					self.sanction.name, _(doctype), name
-				)
+				_(
+					"{0} can't be cancelled: its {1} {2} is used by other documents. Cancel or delete them first."
+				).format(self.sanction.name, _(doctype), name)
 			)
 
 	def check_nothing_posted(self):
 		sanction = self.sanction
-		conditions = {"account": sanction.liability_account, "cost_center": sanction.cost_center, "project": sanction.project}
+		conditions = {
+			"account": sanction.liability_account,
+			"cost_center": sanction.cost_center,
+			"project": sanction.project,
+		}
 		for field, value in conditions.items():
 			# locking reads on the indexed account and cost centre see a receipt committed while we waited; GL Entry's
 			# project has no index (a locking read would lock the whole table), and every posting here carries the cost centre
-			if value and frappe.db.get_value("GL Entry", {field: value}, "name", for_update=field != "project"):
+			if value and frappe.db.get_value(
+				"GL Entry", {field: value}, "name", for_update=field != "project"
+			):
 				frappe.throw(
-					_("{0} has accounting entries against its project, cost centre or liability account, so it can't be cancelled.").format(
-						sanction.name
-					)
+					_(
+						"{0} has accounting entries against its project, cost centre or liability account, so it can't be cancelled."
+					).format(sanction.name)
 				)
 
 	def make_liability_account(self, parent):
 		account = frappe.get_doc(
 			{
-				"doctype": "Account", "account_name": f"Grant Received in Advance - {self.sanction.name}",
-				"parent_account": parent, "company": self.company, "is_group": 0,
+				"doctype": "Account",
+				"account_name": f"Grant Received in Advance - {self.sanction.name}",
+				"parent_account": parent,
+				"company": self.company,
+				"is_group": 0,
 				"account_currency": self.sanction.currency,
 			}  # fmt: skip
 		)
@@ -87,8 +102,11 @@ class GrantSetup:
 	def make_cost_center(self, parent):
 		cost_center = frappe.get_doc(
 			{
-				"doctype": "Cost Center", "cost_center_name": self.sanction.name, "parent_cost_center": parent,
-				"company": self.company, "is_group": 0,
+				"doctype": "Cost Center",
+				"cost_center_name": self.sanction.name,
+				"parent_cost_center": parent,
+				"company": self.company,
+				"is_group": 0,
 			}  # fmt: skip
 		)
 		cost_center.flags.ignore_permissions = True
@@ -98,9 +116,13 @@ class GrantSetup:
 		sanction = self.sanction
 		project = frappe.get_doc(
 			{
-				"doctype": "Project", "project_name": f"{sanction.title} ({sanction.name})", "company": self.company,
-				"cost_center": sanction.cost_center, "expected_start_date": sanction.start_date,
-				"expected_end_date": sanction.end_date, "status": "Open",
+				"doctype": "Project",
+				"project_name": f"{sanction.title} ({sanction.name})",
+				"company": self.company,
+				"cost_center": sanction.cost_center,
+				"expected_start_date": sanction.start_date,
+				"expected_end_date": sanction.end_date,
+				"status": "Open",
 			}  # fmt: skip
 		)
 		project.flags.ignore_permissions = True
@@ -121,14 +143,21 @@ class GrantSetup:
 		total = sum(per_year.values())
 		budget = frappe.get_doc(
 			{
-				"doctype": "Budget", "budget_against": "Cost Center", "company": self.company,
-				"cost_center": self.sanction.cost_center, "account": account, "budget_amount": total,
+				"doctype": "Budget",
+				"budget_against": "Cost Center",
+				"company": self.company,
+				"cost_center": self.sanction.cost_center,
+				"account": account,
+				"budget_amount": total,
 				"from_fiscal_year": self.fiscal_year(self.sanction.start_date),
 				"to_fiscal_year": self.fiscal_year(self.sanction.end_date),
-				"distribution_frequency": "Yearly", "distribute_equally": 1,
-				"applicable_on_booking_actual_expenses": 1, "action_if_annual_budget_exceeded": action,
+				"distribution_frequency": "Yearly",
+				"distribute_equally": 1,
+				"applicable_on_booking_actual_expenses": 1,
+				"action_if_annual_budget_exceeded": action,
 				"action_if_accumulated_monthly_budget_exceeded": action,
-				"applicable_on_purchase_order": 1, "action_if_annual_budget_exceeded_on_po": action,
+				"applicable_on_purchase_order": 1,
+				"action_if_annual_budget_exceeded_on_po": action,
 				"action_if_accumulated_monthly_budget_exceeded_on_po": action,
 			}  # fmt: skip
 		)

@@ -30,7 +30,9 @@ def setup_college(profile="sxcce", test_passwords=None):
 	use_test_passwords = decide_passwords(test_passwords)
 	missing = people.missing_roles(profile)
 	if missing:
-		frappe.throw(_("Roles missing on this site: {0}. Run bench migrate first.").format(", ".join(missing)))
+		frappe.throw(
+			_("Roles missing on this site: {0}. Run bench migrate first.").format(", ".join(missing))
+		)
 	out = Outcome()
 	result = {"reset_links": {}}
 	ensure_seed_positions()
@@ -45,7 +47,9 @@ def setup_college(profile="sxcce", test_passwords=None):
 	admission.ensure_admission(profile, college, out)
 	fees.ensure_selling_defaults()
 	fees.ensure_fees(profile, college, out)
-	employees = people.ensure_people(profile, {"college": college, "trust": trust}, out, use_test_passwords, result)
+	employees = people.ensure_people(
+		profile, {"college": college, "trust": trust}, out, use_test_passwords, result
+	)
 	module_profiles.ensure_module_profiles(profile, out)
 	structure.ensure_institution_profile(profile, college, employees, out)
 	if trust:
@@ -74,6 +78,8 @@ def decide_passwords(test_passwords):
 	allowed = people.test_passwords_allowed()
 	if test_passwords and not allowed:
 		frappe.throw(
-			_("Test passwords are for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config.")
+			_(
+				"Test passwords are for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config."
+			)
 		)
 	return allowed if test_passwords is None else test_passwords

@@ -21,7 +21,12 @@ def execute():
 	for language, (old, new) in FIRST_SEED.items():
 		frappe.db.set_value(
 			"Message Template Body",
-			{"parent": "admission.document_pending", "parenttype": "Message Template", "language": language, "body": old},
+			{
+				"parent": "admission.document_pending",
+				"parenttype": "Message Template",
+				"language": language,
+				"body": old,
+			},
 			"body",
 			new,
 		)

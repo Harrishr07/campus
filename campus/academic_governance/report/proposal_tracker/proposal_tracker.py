@@ -13,7 +13,9 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	if not filters.company:
 		return columns(), []
-	query = {key: filters[key] for key in ("company", "status", "proposal_type", "department") if filters.get(key)}
+	query = {
+		key: filters[key] for key in ("company", "status", "proposal_type", "department") if filters.get(key)
+	}
 	rows = frappe.get_list("Academic Proposal", query, FIELDS, order_by="creation desc")
 	return columns(), [row_of(row) for row in rows]
 
@@ -37,7 +39,13 @@ def stage_label(proposal):
 
 def columns():
 	def col(fieldname, label, fieldtype="Data", width=120, options=None):
-		return {"fieldname": fieldname, "label": _(label), "fieldtype": fieldtype, "width": width, "options": options}
+		return {
+			"fieldname": fieldname,
+			"label": _(label),
+			"fieldtype": fieldtype,
+			"width": width,
+			"options": options,
+		}
 
 	return [
 		col("proposal", "Proposal", "Link", 140, "Academic Proposal"),

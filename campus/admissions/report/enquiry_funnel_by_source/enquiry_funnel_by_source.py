@@ -41,11 +41,16 @@ def data(filters):
 		conditions["creation"] = (">=", f"{filters.from_date} 00:00:00")
 	elif filters.to_date:
 		conditions["creation"] = ("<=", f"{filters.to_date} 23:59:59")
-	leads = frappe.get_list("Lead", filters=conditions, fields=["utm_source", "status", "oc_applicant"], limit=0)
+	leads = frappe.get_list(
+		"Lead", filters=conditions, fields=["utm_source", "status", "oc_applicant"], limit=0
+	)
 	admitted = set(
 		frappe.get_all(
 			"Student Applicant",
-			{"name": ("in", [lead.oc_applicant for lead in leads if lead.oc_applicant] or [""]), "application_status": "Admitted"},
+			{
+				"name": ("in", [lead.oc_applicant for lead in leads if lead.oc_applicant] or [""]),
+				"application_status": "Admitted",
+			},
 			pluck="name",
 			limit=0,
 		)
@@ -53,7 +58,14 @@ def data(filters):
 	rows = {}
 	for lead in leads:
 		row = rows.setdefault(
-			lead.utm_source or NO_SOURCE, {"source": lead.utm_source or NO_SOURCE, "leads": 0, "contacted": 0, "applicants": 0, "admitted": 0}
+			lead.utm_source or NO_SOURCE,
+			{
+				"source": lead.utm_source or NO_SOURCE,
+				"leads": 0,
+				"contacted": 0,
+				"applicants": 0,
+				"admitted": 0,
+			},
 		)
 		row["leads"] += 1
 		row["contacted"] += lead.status != "Lead" or bool(lead.oc_applicant)

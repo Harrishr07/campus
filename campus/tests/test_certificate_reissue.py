@@ -17,7 +17,9 @@ SEEDED = "Certificate Reissue"
 
 
 class ReissueFixture(CertificateFixture):
-	drop_seeded_policy = True  # the seeded policy needs the college's Principal; tests approve through the fixture's policy
+	drop_seeded_policy = (
+		True  # the seeded policy needs the college's Principal; tests approve through the fixture's policy
+	)
 
 	def setUp(self):
 		super().setUp()
@@ -64,7 +66,9 @@ class TestNoPolicy(ReissueFixture):
 		original = self.issue()
 		draft = self.reissue_draft(original)
 		frappe.db.set_value("Approval Policy", {"document_type": "Certificate Request"}, "enabled", 0)
-		with self.assertRaisesRegex(frappe.ValidationError, "No approval policy is configured for Certificate Reissue"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "No approval policy is configured for Certificate Reissue"
+		):
 			request_approval("Certificate Request", draft.name)
 
 
@@ -99,7 +103,12 @@ class TestReissueRules(ReissueFixture):
 			self.reissue_draft(original, CORRECTION, evidence=None)
 		with self.assertRaisesRegex(frappe.ValidationError, "FIR|Evidence|evidence"):
 			self.reissue_draft(original, LOST, reference_note=" ")
-		for path in ("/files/proof.pdf", "/private/../files/proof.pdf", "/private//../files/proof.pdf", "/private/"):
+		for path in (
+			"/files/proof.pdf",
+			"/private/../files/proof.pdf",
+			"/private//../files/proof.pdf",
+			"/private/",
+		):
 			with self.assertRaisesRegex(frappe.ValidationError, "private"):
 				self.reissue_draft(original, LOST, evidence=path)
 		self.assertTrue(self.reissue_draft(original, LOST).name)
@@ -110,10 +119,15 @@ class TestReissueRules(ReissueFixture):
 		third = self.reissue(second, LOST)
 		numbers = {first.certificate_number, second.certificate_number, third.certificate_number}
 		self.assertEqual(len(numbers), 3)
-		superseded_by = {name: frappe.db.get_value("Certificate Request", name, "superseded_by") for name in (first.name, second.name, third.name)}
+		superseded_by = {
+			name: frappe.db.get_value("Certificate Request", name, "superseded_by")
+			for name in (first.name, second.name, third.name)
+		}
 		self.assertEqual(superseded_by, {first.name: second.name, second.name: third.name, third.name: None})
 		for name in (first.name, second.name, third.name):
-			self.assertEqual(frappe.db.get_value("Certificate Request", name, "docstatus"), 1)  # never deleted or cancelled
+			self.assertEqual(
+				frappe.db.get_value("Certificate Request", name, "docstatus"), 1
+			)  # never deleted or cancelled
 		self.assertEqual(frappe.get_doc("Certificate Request", third.name).supersedes, second.name)
 
 	def test_a_superseded_original_cannot_be_cancelled_until_the_reissue_is(self):
@@ -145,7 +159,10 @@ class TestReissueVerification(ReissueFixture):
 		self.assertEqual((found.status, found.superseded_by_code), ("Superseded", second.verification_code))
 		self.assertEqual(verify(second.verification_code).status, "Valid")
 		public = public_lookup(first.verification_code)
-		self.assertEqual((public.status, public.superseded_by_code, public.details), ("Superseded", second.verification_code, []))
+		self.assertEqual(
+			(public.status, public.superseded_by_code, public.details),
+			("Superseded", second.verification_code, []),
+		)
 
 	def test_the_public_page_renders_the_superseded_state_and_the_link(self):
 		first = self.issue()
@@ -174,7 +191,10 @@ class TestReissuedTransferCertificate(ReissueFixture):
 		student = frappe.get_doc("Student", self.a)
 		self.assertEqual(student.oc_academic_status, "Withdrawn")
 		self.assertEqual(student.leaving_certificate_number, duplicate.certificate_number)
-		self.assertEqual((duplicate.leaving_date, duplicate.reason_for_leaving), (original.leaving_date, original.reason_for_leaving))
+		self.assertEqual(
+			(duplicate.leaving_date, duplicate.reason_for_leaving),
+			(original.leaving_date, original.reason_for_leaving),
+		)
 
 	def test_a_tc_correction_updates_the_leaving_particulars_without_a_transition(self):
 		original = self.tc()
@@ -182,7 +202,10 @@ class TestReissuedTransferCertificate(ReissueFixture):
 		corrected = self.reissue(original, CORRECTION, reason_for_leaving="Joining another college")
 		self.assertEqual(self.transitions(), before)
 		student = frappe.get_doc("Student", self.a)
-		self.assertEqual((student.leaving_certificate_number, student.reason_for_leaving), (corrected.certificate_number, "Joining another college"))
+		self.assertEqual(
+			(student.leaving_certificate_number, student.reason_for_leaving),
+			(corrected.certificate_number, "Joining another college"),
+		)
 
 	def test_a_reissue_is_not_blocked_by_dues_that_arose_after_the_tc(self):
 		original = self.tc()
@@ -197,7 +220,10 @@ class TestReissuedTransferCertificate(ReissueFixture):
 		self.assertEqual(self.transitions(), before)
 		student = frappe.get_doc("Student", self.a)
 		self.assertEqual(student.oc_academic_status, "Withdrawn")
-		self.assertEqual((student.leaving_certificate_number, student.reason_for_leaving), (original.certificate_number, "Migrating to another city"))
+		self.assertEqual(
+			(student.leaving_certificate_number, student.reason_for_leaving),
+			(original.certificate_number, "Migrating to another city"),
+		)
 		original.reload()
 		original.cancel()  # now current: the L-01 reversal still works
 		self.assertEqual(frappe.db.get_value("Student", self.a, "oc_academic_status"), "Active")
@@ -232,7 +258,9 @@ class TestReissuePrintAndFee(ReissueFixture):
 		duplicate.reload()
 		invoice = frappe.get_doc("Sales Invoice", duplicate.fee_invoice)
 		self.assertEqual((invoice.grand_total, invoice.items[0].item_code), (40, "Certificate"))
-		self.assertEqual(frappe.db.count("Sales Invoice", {"student": self.a, "name": duplicate.fee_invoice}), 1)
+		self.assertEqual(
+			frappe.db.count("Sales Invoice", {"student": self.a, "name": duplicate.fee_invoice}), 1
+		)
 		corrected = self.reissue(duplicate, CORRECTION)
 		self.assertEqual(corrected.fee_amount, 0)
 		certificate_fee.raise_fee(corrected.name)

@@ -26,9 +26,13 @@ class MetricOverride(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
-		if not is_approved(self):  # without a policy the engine would submit directly: an override always needs one
+		if not is_approved(
+			self
+		):  # without a policy the engine would submit directly: an override always needs one
 			frappe.throw(
-				_("A Metric Override is submitted only by its approval. Set up an Approval Policy for Metric Override."),
+				_(
+					"A Metric Override is submitted only by its approval. Set up an Approval Policy for Metric Override."
+				),
 				title=_("Approval Required"),
 			)
 		self.check_applicable()
@@ -37,7 +41,12 @@ class MetricOverride(ApprovableDocument, Document):
 		metric = self.metric(lock=True)
 		metric.flags.override_applied = True
 		metric.update(
-			{"manual_value": self.proposed_value, "override_reason": self.reason, "override_approved": 1, "override_request": self.name}
+			{
+				"manual_value": self.proposed_value,
+				"override_reason": self.reason,
+				"override_approved": 1,
+				"override_request": self.name,
+			}
 		)
 		metric.save(ignore_permissions=True)
 
@@ -46,17 +55,25 @@ class MetricOverride(ApprovableDocument, Document):
 		if metric.override_request != self.name:
 			return  # a later override replaced it
 		if metric.status == "Verified":
-			frappe.throw(_("{0} is Verified; reopen it before cancelling the override that set its value.").format(frappe.bold(metric.name)))
+			frappe.throw(
+				_("{0} is Verified; reopen it before cancelling the override that set its value.").format(
+					frappe.bold(metric.name)
+				)
+			)
 		self.check_applicable(applied=True)
 		metric.flags.override_applied = True
-		metric.update({"manual_value": None, "override_reason": None, "override_approved": 0, "override_request": None})
+		metric.update(
+			{"manual_value": None, "override_reason": None, "override_approved": 0, "override_request": None}
+		)
 		metric.save(ignore_permissions=True)
 
 	def metric(self, lock=False):
 		return frappe.get_doc("Metric Value", self.metric_value, for_update=lock)
 
 	def set_context(self):
-		values = frappe.db.get_value("Metric Value", self.metric_value, ["cycle", "company", "computed_value"], as_dict=True)
+		values = frappe.db.get_value(
+			"Metric Value", self.metric_value, ["cycle", "company", "computed_value"], as_dict=True
+		)
 		if not values:
 			frappe.throw(_("Metric Value {0} does not exist.").format(frappe.bold(self.metric_value)))
 		self.update(values)
@@ -67,14 +84,29 @@ class MetricOverride(ApprovableDocument, Document):
 	def check_may_request(self):
 		node = frappe.db.get_value("Metric Value", self.metric_value, "node")
 		if not may_edit(frappe.session.user, self.cycle, node):
-			frappe.throw(_("Only IQAC staff or the owner of the criterion can override {0}.").format(self.metric_value), frappe.PermissionError)
+			frappe.throw(
+				_("Only IQAC staff or the owner of the criterion can override {0}.").format(
+					self.metric_value
+				),
+				frappe.PermissionError,
+			)
 
 	def check_applicable(self, applied=False):
 		"""The override can be requested, approved or (applied=True) withdrawn only while the value is open."""
 		metric = self.metric(lock=True)
 		if frappe.db.get_value("Accreditation Cycle", metric.cycle, "status") in CLOSED_CYCLE:
-			frappe.throw(_("The cycle of {0} is approved; its values are locked.").format(frappe.bold(metric.name)))
+			frappe.throw(
+				_("The cycle of {0} is approved; its values are locked.").format(frappe.bold(metric.name))
+			)
 		if not frappe.db.get_value("Framework Node", metric.node, "formula"):
-			frappe.throw(_("{0} has no formula; enter its value directly instead of overriding it.").format(frappe.bold(metric.name)))
+			frappe.throw(
+				_("{0} has no formula; enter its value directly instead of overriding it.").format(
+					frappe.bold(metric.name)
+				)
+			)
 		if metric.status not in OPEN_STATUSES and not applied:
-			frappe.throw(_("{0} is {1}; reopen it before an override.").format(frappe.bold(metric.name), _(metric.status)))
+			frappe.throw(
+				_("{0} is {1}; reopen it before an override.").format(
+					frappe.bold(metric.name), _(metric.status)
+				)
+			)

@@ -12,9 +12,15 @@ from frappe.utils import flt
 
 class AttendanceRule(Document):
 	def validate(self):
-		overall, band, per_course = (flt(self.overall_min_pct), flt(self.medical_band_min_pct), flt(self.per_course_min_pct))
+		overall, band, per_course = (
+			flt(self.overall_min_pct),
+			flt(self.medical_band_min_pct),
+			flt(self.per_course_min_pct),
+		)
 		if not (0 <= band <= overall <= 100):
-			frappe.throw(_("The medical band minimum must not exceed the overall minimum, and both lie within 0-100."))
+			frappe.throw(
+				_("The medical band minimum must not exceed the overall minimum, and both lie within 0-100.")
+			)
 		if not 0 <= per_course <= 100:
 			frappe.throw(_("The per-course minimum must lie within 0-100."))
 		if flt(self.condonation_fee) < 0:
@@ -25,7 +31,9 @@ class AttendanceRule(Document):
 		"""Each band needs a valid range and marks; bands must not overlap (so a percentage has one band)."""
 		bands = sorted(self.mark_bands, key=lambda b: b.from_pct)
 		for band in bands:
-			if not 0 <= band.from_pct <= 100 or (band.to_pct is not None and band.to_pct != "" and not band.from_pct <= band.to_pct <= 100):
+			if not 0 <= band.from_pct <= 100 or (
+				band.to_pct is not None and band.to_pct != "" and not band.from_pct <= band.to_pct <= 100
+			):
 				frappe.throw(_("Row {0}: the percentage range is not valid.").format(band.idx))
 			if flt(band.marks) < 0:
 				frappe.throw(_("Row {0}: marks cannot be negative.").format(band.idx))

@@ -8,7 +8,16 @@ from frappe import _
 
 from campus.examinations import coe_reports
 
-COUNTS = ("registrations", "confirmed", "shortage", "detained", "debarred", "current_courses", "arrear_courses", "not_eligible_courses")
+COUNTS = (
+	"registrations",
+	"confirmed",
+	"shortage",
+	"detained",
+	"debarred",
+	"current_courses",
+	"arrear_courses",
+	"not_eligible_courses",
+)
 
 
 def execute(filters=None):
@@ -55,4 +64,7 @@ def data(filters):
 		row["current_courses"] += c.kind == "Current"
 		row["arrear_courses"] += c.kind == "Arrear"
 		row["not_eligible_courses"] += bool(c.eligibility) and c.eligibility != "Eligible"
-	return [{"exam_session": s, "program": p, **counts} for (s, p), counts in sorted(out.items(), key=lambda i: (i[0][0], i[0][1] or ""))]
+	return [
+		{"exam_session": s, "program": p, **counts}
+		for (s, p), counts in sorted(out.items(), key=lambda i: (i[0][0], i[0][1] or ""))
+	]

@@ -79,7 +79,10 @@ class CourseRegistration(ApprovableDocument, Document):
 		enrollment = self.bind_enrollment()
 		self.company = student.oc_company
 		if not has_user_permission(frappe.get_doc("Student", self.student)):  # Company User Permissions
-			frappe.throw(_("You are not permitted to register {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to register {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		self.department = frappe.db.get_value("Program", enrollment.program, "department")
 		self.regulation = get_regulation(self.student)
 		batch = frappe.db.get_value("Student", self.student, "oc_batch") or enrollment.academic_year
@@ -105,7 +108,9 @@ class CourseRegistration(ApprovableDocument, Document):
 			)
 			if not enrollment:
 				frappe.throw(
-					_("{0} is not an enrollment of {1}.").format(frappe.bold(self.program_enrollment), frappe.bold(self.student))
+					_("{0} is not an enrollment of {1}.").format(
+						frappe.bold(self.program_enrollment), frappe.bold(self.student)
+					)
 				)
 			return enrollment
 		enrollment = latest_enrollment(self.student)
@@ -122,7 +127,11 @@ class CourseRegistration(ApprovableDocument, Document):
 		for item in self.items:
 			candidates = by_course.get(item.course)
 			if not candidates:
-				frappe.throw(_("Row {0}: {1} is not in curriculum {2}.").format(item.idx, frappe.bold(item.course), self.curriculum))
+				frappe.throw(
+					_("Row {0}: {1} is not in curriculum {2}.").format(
+						item.idx, frappe.bold(item.course), self.curriculum
+					)
+				)
 			row = self.pick_curriculum_row(item, candidates)
 			item.update(
 				{
@@ -141,9 +150,9 @@ class CourseRegistration(ApprovableDocument, Document):
 			return same_semester[0]
 		if item.registration_type == "Regular":
 			frappe.throw(
-				_("Row {0}: {1} is not a semester {2} course of curriculum {3}; register it as Arrear or Additional.").format(
-					item.idx, frappe.bold(item.course), self.semester, self.curriculum
-				)
+				_(
+					"Row {0}: {1} is not a semester {2} course of curriculum {3}; register it as Arrear or Additional."
+				).format(item.idx, frappe.bold(item.course), self.semester, self.curriculum)
 			)
 		return candidates[0]
 
@@ -155,19 +164,33 @@ class CourseRegistration(ApprovableDocument, Document):
 			seen.add(item.course)
 			registered = current_offering(self.student, item.course, self.academic_term)
 			if item.registration_type == "Dropped" and not registered:
-				frappe.throw(_("Row {0}: {1} is not registered this term, so it cannot be dropped.").format(item.idx, frappe.bold(item.course)))
+				frappe.throw(
+					_("Row {0}: {1} is not registered this term, so it cannot be dropped.").format(
+						item.idx, frappe.bold(item.course)
+					)
+				)
 			if item.registration_type != "Dropped" and registered:
-				frappe.throw(_("Row {0}: {1} is already registered this term.").format(item.idx, frappe.bold(item.course)))
+				frappe.throw(
+					_("Row {0}: {1} is already registered this term.").format(
+						item.idx, frappe.bold(item.course)
+					)
+				)
 			self.check_prerequisites(item)
 
 	def check_prerequisites(self, item):
 		"""Hold the row (with the reason) while a prerequisite has no Pass in a published result."""
 		prerequisites = self.curriculum_rows[item.course].prerequisites
-		missing = unmet_prerequisites(self.student, prerequisites, self.flags.passed_cache) if item.registration_type != "Dropped" else []
+		missing = (
+			unmet_prerequisites(self.student, prerequisites, self.flags.passed_cache)
+			if item.registration_type != "Dropped"
+			else []
+		)
 		item.hold_reason = rules.hold_reason(missing)
 
 	def held_rows(self):
-		return [_("Row {0}: {1}: {2}").format(i.idx, i.course, i.hold_reason) for i in self.items if i.hold_reason]
+		return [
+			_("Row {0}: {1}: {2}").format(i.idx, i.course, i.hold_reason) for i in self.items if i.hold_reason
+		]
 
 	def report_holds(self):
 		held = self.held_rows()
@@ -178,7 +201,9 @@ class CourseRegistration(ApprovableDocument, Document):
 		held = self.held_rows()
 		if held:
 			frappe.throw(
-				"<br>".join(held) + "<br>" + _("A held row cannot be approved; drop it or wait for the published result."),
+				"<br>".join(held)
+				+ "<br>"
+				+ _("A held row cannot be approved; drop it or wait for the published result."),
 				title=_("Rows Held For Review"),
 			)
 
@@ -204,7 +229,9 @@ class CourseRegistration(ApprovableDocument, Document):
 		if self.docstatus != 0 or all(i.registration_type == "Dropped" for i in self.items):
 			return
 		dates = [getdate(self.registration_date), getdate()]
-		closed = [d for d in dates if not window or not getdate(window.opens_on) <= d <= getdate(window.closes_on)]
+		closed = [
+			d for d in dates if not window or not getdate(window.opens_on) <= d <= getdate(window.closes_on)
+		]
 		if closed:
 			return self.authorise_late(closed[0])
 		if self.is_new():
@@ -243,7 +270,9 @@ class CourseRegistration(ApprovableDocument, Document):
 		deadline = rules.drop_deadline(term_start, rule.drop_window_days, window and window.drop_until)
 		return (
 			self.credit_problems(window, lock=False)
-			+ rules.drop_problems(rows, self.registration_date, deadline, rule.max_drop_credits, prefix("drop_clause"))
+			+ rules.drop_problems(
+				rows, self.registration_date, deadline, rule.max_drop_credits, prefix("drop_clause")
+			)
 			+ rules.add_problems(rows, self.semester, rule, prefix("add_clause"))
 			+ self.choose_problems(prefix("elective_clause"))
 			+ self.honours_problems(prefix("honours_clause"))
@@ -253,12 +282,21 @@ class CourseRegistration(ApprovableDocument, Document):
 		kinds = {i.registration_type for i in self.items}
 		if not kinds & {rules.HONOURS, rules.MINOR}:
 			return []
-		from campus.examinations.api import arrear_courses, cgpa  # lazy: examinations.api pulls in the finance stack
+		from campus.examinations.api import (  # lazy: examinations.api pulls in the finance stack
+			arrear_courses,
+			cgpa,
+		)
 
 		upto = cint(self.rule.honours_cgpa_upto_semester)
-		filters = {"parent": self.curriculum, "parenttype": "Curriculum", **({"semester": ["<=", upto]} if upto else {})}
+		filters = {
+			"parent": self.curriculum,
+			"parenttype": "Curriculum",
+			**({"semester": ["<=", upto]} if upto else {}),
+		}
 		courses = set(frappe.get_all("Curriculum Course", filters, pluck="course"))
-		return rules.honours_problems(kinds, cgpa(self.student, courses), arrear_courses(self.student), self.rule, prefix)
+		return rules.honours_problems(
+			kinds, cgpa(self.student, courses), arrear_courses(self.student), self.rule, prefix
+		)
 
 	def credit_problems(self, window, lock):
 		"""The credit cap over the student's other submitted registrations of the term plus this one. Every
@@ -283,7 +321,9 @@ class CourseRegistration(ApprovableDocument, Document):
 			.join(item)
 			.on(item.parent == registration.name)
 			.select(item.registration_type, item.credits)
-			.where((registration.student == self.student) & (registration.academic_term == self.academic_term))
+			.where(
+				(registration.student == self.student) & (registration.academic_term == self.academic_term)
+			)
 			.where((registration.docstatus == 1) & (registration.name != (self.name or "")))
 		)
 		return [tuple(row) for row in (query.for_update() if lock else query).run()]
@@ -300,7 +340,10 @@ class CourseRegistration(ApprovableDocument, Document):
 			choose = frappe.db.get_value("Elective Group", group, "choose_n")
 			chosen = len(courses) + len(self.held_in_group(group, in_this))
 			if chosen > choose:
-				problems.append(prefix + _("elective group {0} allows {1} course(s); {2} chosen.").format(group, choose, chosen))
+				problems.append(
+					prefix
+					+ _("elective group {0} allows {1} course(s); {2} chosen.").format(group, choose, chosen)
+				)
 		return problems
 
 	def held_in_group(self, group, skip):
@@ -329,16 +372,25 @@ class CourseRegistration(ApprovableDocument, Document):
 		return [i for i in self.items if i.elective_group and i.registration_type != "Dropped"]
 
 	def assign_offerings(self):
-		section = frappe.db.get_value("Student Group", self.class_group, "oc_section") if self.class_group else None
+		section = (
+			frappe.db.get_value("Student Group", self.class_group, "oc_section") if self.class_group else None
+		)
 		for item in self.items:
 			if item.registration_type == "Dropped":
 				item.offering = current_offering(self.student, item.course, self.academic_term)
 				continue
 			item.offering = find_offering(self.curriculum, item.course, self.academic_term, section)
-			if item.offering and frappe.db.get_value("Student Group", item.offering, "oc_company") != self.company:
+			if (
+				item.offering
+				and frappe.db.get_value("Student Group", item.offering, "oc_company") != self.company
+			):
 				frappe.throw(_("Row {0}: the offering belongs to another company.").format(item.idx))
 			if not item.offering:
-				frappe.throw(_("Row {0}: no offering of {1} exists for {2}.").format(item.idx, frappe.bold(item.course), self.academic_term))
+				frappe.throw(
+					_("Row {0}: no offering of {1} exists for {2}.").format(
+						item.idx, frappe.bold(item.course), self.academic_term
+					)
+				)
 
 	def apply_rows(self, enrolling):
 		"""Enroll (or on cancel, reverse) every row; a drop does the opposite of a registration."""

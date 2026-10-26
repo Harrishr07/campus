@@ -9,7 +9,16 @@ import frappe
 from frappe.utils import add_days, today
 
 from campus.campus_platform import bulk
-from campus.examinations import affiliation, api, arrears, publication, registration, results, university_export, university_import
+from campus.examinations import (
+	affiliation,
+	api,
+	arrears,
+	publication,
+	registration,
+	results,
+	university_export,
+	university_import,
+)
 from campus.examinations.affiliation import AFFILIATED, examination_mode
 from campus.tests.factories import make_company, make_user
 from campus.tests.test_results import COE_USER, COLLEGE, PROGRAM, ExamFixture, enter_marks
@@ -44,20 +53,39 @@ class AffiliatedFixture(ExamFixture):
 	def setUpClass(cls):
 		super().setUpClass()
 		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": ["like", "R2022-EXM%"]})
-		frappe.db.set_value("Exam Rule Set", rule_set, "examination_mode", AFFILIATED)  # the R2022 students: the university's
+		frappe.db.set_value(
+			"Exam Rule Set", rule_set, "examination_mode", AFFILIATED
+		)  # the R2022 students: the university's
 		cls.affiliated = frappe.get_doc(
-			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": cls.term, "status": "Marks Entry", "examination_mode": AFFILIATED}
+			{
+				"doctype": "Exam Session",
+				"company": COLLEGE,
+				"academic_term": cls.term,
+				"status": "Marks Entry",
+				"examination_mode": AFFILIATED,
+			}
 		).insert()
 		frappe.db.set_value("Student", cls.s22.name, "oc_university_register_no", "UNI-22")
 		frappe.db.set_value("Student", cls.s26.name, "oc_university_register_no", "UNI-26")
 		cls.export_format = make_format(
-			EXPORT_FORMAT, "Export", [("REGNO", "University Register No"), ("SUB", "Course Code"), ("NAME", "Student Name"), ("INT", "CIA")]
+			EXPORT_FORMAT,
+			"Export",
+			[
+				("REGNO", "University Register No"),
+				("SUB", "Course Code"),
+				("NAME", "Student Name"),
+				("INT", "CIA"),
+			],
 		).name
 		cls.import_format = make_format(
-			IMPORT_FORMAT, "Import", [("REGNO", "University Register No"), ("SUB", "Course Code"), ("GRADE", "Grade"), ("ESE", "ESE")]
+			IMPORT_FORMAT,
+			"Import",
+			[("REGNO", "University Register No"), ("SUB", "Course Code"), ("GRADE", "Grade"), ("ESE", "ESE")],
 		).name
 		for course in ("EXM TH", "EXM LB", "EXM FA"):  # EXM TL has no CIA sheet in the affiliated session
-			enter_marks(cls.affiliated.name, cls.offerings22[course], {cls.s22.name: (30, 0), cls.s_ab.name: (25, 0)})
+			enter_marks(
+				cls.affiliated.name, cls.offerings22[course], {cls.s22.name: (30, 0), cls.s_ab.name: (25, 0)}
+			)
 		with patch.object(registration, "attendance_snapshot", lambda *a: "Eligible"):
 			for student in (cls.s22, cls.s_ab):
 				name = registration.register(student.name, cls.affiliated.name)
@@ -76,7 +104,11 @@ class AffiliatedFixture(ExamFixture):
 
 	def batch(self):
 		return frappe.get_doc(
-			{"doctype": "University Exam Registration Batch", "exam_session": self.affiliated.name, "export_format": self.export_format}
+			{
+				"doctype": "University Exam Registration Batch",
+				"exam_session": self.affiliated.name,
+				"export_format": self.export_format,
+			}
 		).insert()
 
 	def build(self, name):
@@ -88,7 +120,9 @@ class AffiliatedFixture(ExamFixture):
 			university_export.run_build(name)
 
 	def rows(self, name):
-		return {(r.student, r.course): r for r in frappe.get_doc("University Exam Registration Batch", name).rows}
+		return {
+			(r.student, r.course): r for r in frappe.get_doc("University Exam Registration Batch", name).rows
+		}
 
 	def exported(self, url):
 		content = frappe.get_doc("File", {"file_url": url}).get_content()
@@ -111,9 +145,15 @@ class AffiliatedFixture(ExamFixture):
 		with patch.object(frappe, "enqueue") as enqueue:
 			self.assertEqual(university_import.validate_import(name), "Validating")
 		self.assertEqual(enqueue.call_args.kwargs["queue"], "long")
-		with patch.object(university_import, "read_private_file", lambda url: self.content), patch.object(frappe.db, "commit"):
+		with (
+			patch.object(university_import, "read_private_file", lambda url: self.content),
+			patch.object(frappe.db, "commit"),
+		):
 			university_import.run_preview(name)
-		return {r.row_no: r for r in frappe.get_all("University Result Import Row", {"university_result_import": name}, ["*"])}
+		return {
+			r.row_no: r
+			for r in frappe.get_all("University Result Import Row", {"university_result_import": name}, ["*"])
+		}
 
 	def run_import(self, name):
 		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
@@ -123,7 +163,9 @@ class AffiliatedFixture(ExamFixture):
 		return frappe.get_doc("University Result Import", name)
 
 	def latest(self, student):
-		name = frappe.db.get_value("Student Result", {"student": student, "exam_session": self.affiliated.name, "is_latest": 1})
+		name = frappe.db.get_value(
+			"Student Result", {"student": student, "exam_session": self.affiliated.name, "is_latest": 1}
+		)
 		return name and frappe.get_doc("Student Result", name)
 
 
@@ -135,7 +177,9 @@ class TestMode(AffiliatedFixture):
 	def test_the_college_mode_applies_when_the_rule_set_is_blank(self):
 		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": ["like", "R2026-EXM%"]})
 		self.assertEqual(frappe.db.get_value("Exam Rule Set", rule_set, "examination_mode") or "", "")
-		frappe.get_doc({"doctype": "Institution Profile", "company": COLLEGE, "examination_mode": AFFILIATED}).insert()
+		frappe.get_doc(
+			{"doctype": "Institution Profile", "company": COLLEGE, "examination_mode": AFFILIATED}
+		).insert()
 		self.assertEqual(examination_mode(self.s26.name), AFFILIATED)
 
 	def test_an_affiliated_session_refuses_the_result_run_and_publication(self):
@@ -172,7 +216,14 @@ class TestMode(AffiliatedFixture):
 
 	def test_one_session_per_term_and_mode(self):
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Exam Session", "company": COLLEGE, "academic_term": self.term, "examination_mode": AFFILIATED}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Exam Session",
+					"company": COLLEGE,
+					"academic_term": self.term,
+					"examination_mode": AFFILIATED,
+				}
+			).insert()
 
 
 LOCKED = frappe._dict(name="CIA-SCHED-LOCKED", locked_on="2026-10-01")
@@ -181,7 +232,9 @@ LOCKED = frappe._dict(name="CIA-SCHED-LOCKED", locked_on="2026-10-01")
 class TestRegistrationExport(AffiliatedFixture):
 	def setUp(self):
 		super().setUp()
-		final = patch.object(university_export, "cia_schedule", lambda offering: LOCKED)  # the fixture has no CIA Schedule
+		final = patch.object(
+			university_export, "cia_schedule", lambda offering: LOCKED
+		)  # the fixture has no CIA Schedule
 		final.start()
 		self.addCleanup(final.stop)
 
@@ -198,8 +251,12 @@ class TestRegistrationExport(AffiliatedFixture):
 
 	def test_an_unlocked_cia_schedule_is_not_final(self):
 		unlocked = frappe._dict(name="CIA-SCHED-X", locked_on=None)
-		with patch.object(university_export, "cia_schedule", lambda offering: unlocked):  # a schedule never locked
-			row = university_export.RowBuilder(self.batch()).term_cia(self.s22.name, self.offerings22["EXM TH"])
+		with patch.object(
+			university_export, "cia_schedule", lambda offering: unlocked
+		):  # a schedule never locked
+			row = university_export.RowBuilder(self.batch()).term_cia(
+				self.s22.name, self.offerings22["EXM TH"]
+			)
 		self.assertIn("not finalised", row[2])
 
 	def test_the_file_follows_the_format_and_is_formula_safe(self):
@@ -213,7 +270,9 @@ class TestRegistrationExport(AffiliatedFixture):
 		self.assertEqual({line[2] for line in lines[1:]}, {"'" + INJECTION})
 		self.assertTrue(frappe.db.get_value("File", {"file_url": out["file_url"]}, "is_private"))
 		self.assertEqual({r["student"] for r in out["refused"]}, {self.s22.name, self.s_ab.name})
-		self.assertEqual(frappe.db.get_value("University Exam Registration Batch", name, "status"), "Exported")
+		self.assertEqual(
+			frappe.db.get_value("University Exam Registration Batch", name, "status"), "Exported"
+		)
 
 	def test_reexport_sends_only_the_corrected_rows(self):
 		name = self.batch().name
@@ -221,13 +280,22 @@ class TestRegistrationExport(AffiliatedFixture):
 		university_export.export(name)
 		university_export.record_transmission(name, "TX-1", today())
 		batch = frappe.get_doc("University Exam Registration Batch", name)
-		next(r for r in batch.rows if r.course == "EXM LB" and r.student == self.s22.name).rejection_reason = "Subject code withdrawn"
+		next(
+			r for r in batch.rows if r.course == "EXM LB" and r.student == self.s22.name
+		).rejection_reason = "Subject code withdrawn"
 		batch.save()
 		university_export.record_acknowledgement(name, "ACK-1", today())
 		rows = self.rows(name)
-		self.assertEqual((rows[(self.s22.name, "EXM LB")].status, rows[(self.s22.name, "EXM TH")].status), ("Rejected", "Accepted"))
-		self.assertEqual(frappe.db.get_value("University Exam Registration Batch", name, "status"), "Partly Rejected")
-		frappe.db.set_value("Student", self.s_ab.name, "oc_university_register_no", "UNI-AB")  # a refused row fixed
+		self.assertEqual(
+			(rows[(self.s22.name, "EXM LB")].status, rows[(self.s22.name, "EXM TH")].status),
+			("Rejected", "Accepted"),
+		)
+		self.assertEqual(
+			frappe.db.get_value("University Exam Registration Batch", name, "status"), "Partly Rejected"
+		)
+		frappe.db.set_value(
+			"Student", self.s_ab.name, "oc_university_register_no", "UNI-AB"
+		)  # a refused row fixed
 		batch = frappe.get_doc("University Exam Registration Batch", name)
 		next(r for r in batch.rows if r.course == "EXM LB" and r.student == self.s22.name).corrected = 1
 		batch.save()
@@ -254,7 +322,11 @@ class TestRegistrationExport(AffiliatedFixture):
 	def test_an_autonomous_session_takes_no_batch(self):
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc(
-				{"doctype": "University Exam Registration Batch", "exam_session": self.session.name, "export_format": self.export_format}
+				{
+					"doctype": "University Exam Registration Batch",
+					"exam_session": self.session.name,
+					"export_format": self.export_format,
+				}
 			).insert()
 
 
@@ -282,7 +354,9 @@ class TestResultImport(AffiliatedFixture):
 		doc = self.run_import(self.preview_and_name(self.GOOD))
 		self.assertEqual(doc.status, "Imported")
 		result = self.latest(self.s22.name)
-		self.assertEqual((result.source, result.university_result_import, result.version), ("University", doc.name, 1))
+		self.assertEqual(
+			(result.source, result.university_result_import, result.version), ("University", doc.name, 1)
+		)
 		grades = {c.course: (c.grade, c.grade_point, c.result) for c in result.courses}
 		self.assertEqual(grades, {"EXM TH": ("A", 8, "Pass"), "EXM LB": ("U", 0, "Fail")})
 		self.assertEqual((result.sgpa, result.arrear_count, result.result), (8.0, 1, "Reappear"))
@@ -295,7 +369,12 @@ class TestResultImport(AffiliatedFixture):
 		again = self.preview_and_name(self.GOOD)
 		self.assertEqual({r.status for r in self.preview(again).values()}, {"Unchanged"})
 		self.assertEqual(self.run_import(again).status, "Imported")
-		self.assertEqual(frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.affiliated.name}), 1)
+		self.assertEqual(
+			frappe.db.count(
+				"Student Result", {"student": self.s22.name, "exam_session": self.affiliated.name}
+			),
+			1,
+		)
 
 	def test_a_correction_needs_a_reason_and_versions_the_old_result(self):
 		first = self.latest_after(self.GOOD)
@@ -313,8 +392,12 @@ class TestResultImport(AffiliatedFixture):
 		self.assertEqual(arrears.arrear_courses(self.s22.name), [])
 
 	def test_a_public_file_is_refused(self):
-		file = frappe.get_doc({"doctype": "File", "file_name": "univ-public.csv", "content": b"REGNO\n", "is_private": 0}).insert()
-		self.addCleanup(lambda: frappe.db.exists("File", file.name) and frappe.delete_doc("File", file.name, force=True))
+		file = frappe.get_doc(
+			{"doctype": "File", "file_name": "univ-public.csv", "content": b"REGNO\n", "is_private": 0}
+		).insert()
+		self.addCleanup(
+			lambda: frappe.db.exists("File", file.name) and frappe.delete_doc("File", file.name, force=True)
+		)
 		with self.assertRaises(frappe.ValidationError) as refused:
 			university_import.read_private_file(file.file_url)
 		self.assertIn("private", str(refused.exception))
@@ -365,7 +448,13 @@ class TestFixRound1(AffiliatedFixture):
 			[("REGNO", "University Register No"), ("SUB", "Course Code"), ("GRADE", "Grade"), ("ESE", "ESE"), ("RES", "Result")],
 		).name  # fmt: skip
 		name = self.result_import([], import_format=with_result)
-		self.content = csv_bytes([["REGNO", "SUB", "GRADE", "ESE", "RES"], ["UNI-22", "U-TH", "A", "40", "Fail"], ["UNI-22", "U-LB", "U", "abc", "Fail"]])
+		self.content = csv_bytes(
+			[
+				["REGNO", "SUB", "GRADE", "ESE", "RES"],
+				["UNI-22", "U-TH", "A", "40", "Fail"],
+				["UNI-22", "U-LB", "U", "abc", "Fail"],
+			]
+		)
 		rows = self.preview(name)
 		self.assertEqual((rows[2].status, rows[3].status), ("Rejected", "Rejected"))
 		self.assertIn("means Pass, but the result says Fail", rows[2].message)
@@ -379,7 +468,10 @@ class TestFixRound1(AffiliatedFixture):
 		def unreadable(url):
 			raise frappe.ValidationError("file gone")
 
-		with patch.object(university_import, "read_private_file", unreadable), patch.object(frappe.db, "commit"):
+		with (
+			patch.object(university_import, "read_private_file", unreadable),
+			patch.object(frappe.db, "commit"),
+		):
 			university_import.run_preview(name)
 		status, summary = frappe.db.get_value("University Result Import", name, ["status", "summary"])
 		self.assertEqual(status, "Draft")
@@ -388,7 +480,10 @@ class TestFixRound1(AffiliatedFixture):
 	def test_a_preview_whose_job_is_gone_returns_to_draft(self):
 		name = self.result_import(self.GOOD)
 		frappe.db.set_value("University Result Import", name, "status", "Validating")
-		with patch("frappe.utils.background_jobs.is_job_enqueued", return_value=False), patch.object(frappe.db, "commit"):
+		with (
+			patch("frappe.utils.background_jobs.is_job_enqueued", return_value=False),
+			patch.object(frappe.db, "commit"),
+		):
 			university_import.reconcile_finished_imports()
 		status, summary = frappe.db.get_value("University Result Import", name, ["status", "summary"])
 		self.assertEqual(status, "Draft")
@@ -404,14 +499,18 @@ class TestFixRound1(AffiliatedFixture):
 			"item_key": university_import.item_key({"import": name, "student": self.s22.name}), "error": "Lock wait timeout"}
 		).db_insert()  # fmt: skip
 		university_import.reconcile(name)
-		messages = frappe.get_all("University Result Import Row", {"university_result_import": name}, pluck="message")
+		messages = frappe.get_all(
+			"University Result Import Row", {"university_result_import": name}, pluck="message"
+		)
 		self.assertTrue(messages and all("Lock wait timeout" in m for m in messages))
 		self.assertEqual(frappe.db.get_value("University Result Import", name, "status"), "Failed")
 
 	def test_an_import_is_deleted_only_while_it_has_written_nothing(self):
 		unused = self.preview_and_name(self.GOOD)
 		frappe.delete_doc("University Result Import", unused)
-		self.assertFalse(frappe.db.exists("University Result Import Row", {"university_result_import": unused}))
+		self.assertFalse(
+			frappe.db.exists("University Result Import Row", {"university_result_import": unused})
+		)
 		used = self.preview_and_name(self.GOOD)
 		self.run_import(used)
 		with self.assertRaises(frappe.ValidationError):
@@ -426,10 +525,14 @@ class TestFixRound1(AffiliatedFixture):
 			).insert()  # fmt: skip
 		self.assertIn("Affiliated", str(refused.exception))
 		with self.assertRaises(frappe.ValidationError) as refused:
-			frappe.get_doc({"doctype": "Result Ratification", "exam_session": self.affiliated.name, "reason": "x"}).insert()
+			frappe.get_doc(
+				{"doctype": "Result Ratification", "exam_session": self.affiliated.name, "reason": "x"}
+			).insert()
 		self.assertIn("Affiliated", str(refused.exception))
 		before = self.latest(self.s22.name).name
-		api.refresh_student_result(self.s22.name, self.affiliated.name)  # a withdrawal on the university's result
+		api.refresh_student_result(
+			self.s22.name, self.affiliated.name
+		)  # a withdrawal on the university's result
 		self.assertEqual(self.latest(self.s22.name).name, before)
 
 	def test_imported_results_get_their_release_notice(self):
@@ -445,7 +548,12 @@ class TestFixRound1(AffiliatedFixture):
 	def test_a_desk_registration_follows_the_mode(self):
 		with self.assertRaises(frappe.ValidationError) as refused:
 			frappe.get_doc(
-				{"doctype": "Exam Registration", "exam_session": self.affiliated.name, "student": self.s26.name, "attendance_status": "Eligible"}
+				{
+					"doctype": "Exam Registration",
+					"exam_session": self.affiliated.name,
+					"student": self.s26.name,
+					"attendance_status": "Eligible",
+				}
 			).insert()
 		self.assertIn("Affiliated session", str(refused.exception))
 
@@ -453,7 +561,9 @@ class TestFixRound1(AffiliatedFixture):
 		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": ["like", "R2022-EXM%"]})
 		frappe.db.set_value("Exam Rule Set", rule_set, "examination_mode", "Autonomous")
 		first = results.compute_student_result(self.s22.name, self.session.name)
-		frappe.db.set_value("Exam Rule Set", rule_set, "examination_mode", AFFILIATED)  # the regulation moved later
+		frappe.db.set_value(
+			"Exam Rule Set", rule_set, "examination_mode", AFFILIATED
+		)  # the regulation moved later
 		self.assertEqual(results.compute_student_result(self.s22.name, self.session.name), first)
 
 	def test_the_university_register_number_is_unique_within_a_college(self):
@@ -469,23 +579,33 @@ class TestFixRound1(AffiliatedFixture):
 
 	def test_no_cia_schedule_means_the_cia_is_not_final(self):
 		with patch.object(university_export, "schedule_of", lambda offering: None):
-			row = university_export.RowBuilder(self.batch()).term_cia(self.s22.name, self.offerings22["EXM TH"])
+			row = university_export.RowBuilder(self.batch()).term_cia(
+				self.s22.name, self.offerings22["EXM TH"]
+			)
 		self.assertIn("no CIA Schedule", row[2])
 
 	def test_a_failed_build_says_why_and_returns_to_draft(self):
 		name = self.batch().name
 		with patch.object(frappe, "enqueue"):
 			university_export.build_rows(name)
-		with patch.object(university_export, "RowBuilder", side_effect=frappe.ValidationError("no rule set")), patch.object(frappe.db, "commit"):
+		with (
+			patch.object(university_export, "RowBuilder", side_effect=frappe.ValidationError("no rule set")),
+			patch.object(frappe.db, "commit"),
+		):
 			university_export.run_build(name)
-		status, summary = frappe.db.get_value("University Exam Registration Batch", name, ["status", "summary"])
+		status, summary = frappe.db.get_value(
+			"University Exam Registration Batch", name, ["status", "summary"]
+		)
 		self.assertEqual(status, "Draft")
 		self.assertIn("no rule set", summary)
 
 	def test_a_build_whose_job_is_gone_returns_to_draft(self):
 		name = self.batch().name
 		frappe.db.set_value("University Exam Registration Batch", name, "status", "Building")
-		with patch("frappe.utils.background_jobs.is_job_enqueued", return_value=False), patch.object(frappe.db, "commit"):
+		with (
+			patch("frappe.utils.background_jobs.is_job_enqueued", return_value=False),
+			patch.object(frappe.db, "commit"),
+		):
 			university_export.reconcile_building()
 		self.assertEqual(frappe.db.get_value("University Exam Registration Batch", name, "status"), "Draft")
 

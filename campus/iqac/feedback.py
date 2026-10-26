@@ -74,16 +74,25 @@ def respondents(campaign):
 		return audience_members(campaign.audience_rule)
 	if campaign.audience == "Teachers":
 		return offering_teachers(campaign.course_offering)
-	rule = {"doctype": "Audience Rule", "company": campaign.company, "rule_type": "Student Group", "student_group": campaign.course_offering}
+	rule = {
+		"doctype": "Audience Rule",
+		"company": campaign.company,
+		"rule_type": "Student Group",
+		"student_group": campaign.course_offering,
+	}
 	if campaign.audience == "Parents":
 		rule.update({"rule_type": "Guardians of", "guardians_of": "Student Group"})
 	return audience_members(frappe.get_doc(rule))
 
 
 def offering_teachers(offering):
-	instructors = frappe.get_all("Student Group Instructor", {"parent": offering, "parenttype": "Student Group"}, pluck="instructor")
+	instructors = frappe.get_all(
+		"Student Group Instructor", {"parent": offering, "parenttype": "Student Group"}, pluck="instructor"
+	)
 	employees = frappe.get_all("Instructor", {"name": ["in", instructors or [""]]}, pluck="employee")
-	active = frappe.get_all("Employee", {"name": ["in", [e for e in employees if e] or [""]], "status": "Active"}, pluck="name")
+	active = frappe.get_all(
+		"Employee", {"name": ["in", [e for e in employees if e] or [""]], "status": "Active"}, pluck="name"
+	)
 	return [f"Employee:{name}" for name in sorted(active)]
 
 
@@ -97,7 +106,11 @@ def respondent_keys(campaign, addressed, member=None, signature=None):
 	the session user (all are claimed, so nobody answers again under another of their records)."""
 	if member or signature:
 		key = f"External Member:{member}"
-		if campaign.audience not in EXTERNAL or key not in addressed or not valid_signature(campaign.name, key, signature):
+		if (
+			campaign.audience not in EXTERNAL
+			or key not in addressed
+			or not valid_signature(campaign.name, key, signature)
+		):
 			not_available()
 		return [key]
 	matches = sorted(recipient_keys_for_user(frappe.session.user) & set(addressed))
@@ -112,7 +125,9 @@ def check_audience_size(campaign, addressed):
 	least = minimum_group_size()
 	if too_small(campaign, addressed):
 		frappe.throw(
-			_("The audience of this anonymous campaign is too small (fewer than {0}) to keep answers anonymous. Widen the audience or make the campaign named.").format(least)
+			_(
+				"The audience of this anonymous campaign is too small (fewer than {0}) to keep answers anonymous. Widen the audience or make the campaign named."
+			).format(least)
 		)
 
 
@@ -141,7 +156,11 @@ def login_of(doctype, names):
 	field = USER_FIELDS.get(doctype)
 	if not field:
 		return {}
-	return dict(frappe.get_all(doctype, {"name": ["in", list(names)], field: ["is", "set"]}, ["name", field], as_list=True))
+	return dict(
+		frappe.get_all(
+			doctype, {"name": ["in", list(names)], field: ["is", "set"]}, ["name", field], as_list=True
+		)
+	)
 
 
 def is_open(campaign, day=None):
@@ -153,15 +172,26 @@ def open_campaigns_for(user=None):
 	keys = recipient_keys_for_user(user or frappe.session.user)
 	result = []
 	for row in frappe.get_all(
-		"Feedback Campaign", {"start_date": ["<=", today()], "end_date": [">=", today()]}, ["name"], order_by="end_date"
+		"Feedback Campaign",
+		{"start_date": ["<=", today()], "end_date": [">=", today()]},
+		["name"],
+		order_by="end_date",
 	):
 		campaign = frappe.get_doc("Feedback Campaign", row.name)
 		if campaign.audience in EXTERNAL:
 			continue
 		addressed = respondents(campaign)
 		mine = sorted(keys & set(addressed))
-		if mine and not too_small(campaign, addressed) and not any(has_responded(campaign.name, key) for key in mine):
-			result.append(frappe._dict(name=campaign.name, campaign_title=campaign.campaign_title, end_date=campaign.end_date))
+		if (
+			mine
+			and not too_small(campaign, addressed)
+			and not any(has_responded(campaign.name, key) for key in mine)
+		):
+			result.append(
+				frappe._dict(
+					name=campaign.name, campaign_title=campaign.campaign_title, end_date=campaign.end_date
+				)
+			)
 	return result
 
 
@@ -211,7 +241,14 @@ def log_failure(error_class):
 	"""An Error Log row naming the failure's class only, with empty metadata (log_error would add the request and user),
 	owner "Guest" and the day's midnight, so neither its owner nor its time marks the respondent."""
 	log = frappe.new_doc("Error Log")
-	log.update({"name": frappe.generate_hash(length=16), "method": _("Feedback response failed"), "error": error_class, "metadata": "{}"})
+	log.update(
+		{
+			"name": frappe.generate_hash(length=16),
+			"method": _("Feedback response failed"),
+			"error": error_class,
+			"metadata": "{}",
+		}
+	)
 	stamp(log, midnight(today()), ANONYMOUS_OWNER)
 	log.db_insert()
 
@@ -251,7 +288,12 @@ def answer_rows(form, answers):
 			if question.is_required:
 				frappe.throw(_("Please answer: {0}").format(question.question))
 			continue
-		row = {"question_row": question.name, "question": question.question, "question_type": question.question_type, "course_outcome": question.course_outcome}
+		row = {
+			"question_row": question.name,
+			"question": question.question,
+			"question_type": question.question_type,
+			"course_outcome": question.course_outcome,
+		}
 		if question.question_type == "Likert":
 			if str(value) not in {str(n) for n in LIKERT}:
 				frappe.throw(_("{0}: choose a rating from 1 to 5.").format(question.question))
@@ -315,7 +357,10 @@ def midnight(day):
 def minimum_group_size():
 	"""Smallest group a report or score may show (Campus Settings; blank means MINIMUM_GROUP_DEFAULT); never below
 	MINIMUM_GROUP_FLOOR."""
-	value = cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size")) or MINIMUM_GROUP_DEFAULT
+	value = (
+		cint(frappe.db.get_single_value("Campus Settings", "feedback_minimum_group_size"))
+		or MINIMUM_GROUP_DEFAULT
+	)
 	return max(value, MINIMUM_GROUP_FLOOR)
 
 
@@ -345,7 +390,12 @@ def tag_scores(cells):
 			scores[tag] = {"responses": None, "average": None, "percent": None, "suppressed": 1}
 			continue
 		average = flt(sum(c.total for c in kept) / sum(c.ratings for c in kept), 2)
-		scores[tag] = {"responses": sum(c.responses for c in kept), "average": average, "percent": flt(average / 5 * 100, 2), "suppressed": 0}
+		scores[tag] = {
+			"responses": sum(c.responses for c in kept),
+			"average": average,
+			"percent": flt(average / 5 * 100, 2),
+			"suppressed": 0,
+		}
 	return scores
 
 
@@ -359,7 +409,11 @@ def tagged_cells(condition):
 	"""{tag: [(campaign, responses, ratings, total)]} of the closed campaigns' responses matching `condition`, from the
 	ratings of (campaign, question) cells with at least the minimum group size only: a tag on an optional question
 	answered by a few would otherwise show them as the difference between the tag and its other questions."""
-	campaign, response, answer = frappe.qb.DocType("Feedback Campaign"), frappe.qb.DocType(RESPONSE), frappe.qb.DocType(ANSWER)
+	campaign, response, answer = (
+		frappe.qb.DocType("Feedback Campaign"),
+		frappe.qb.DocType(RESPONSE),
+		frappe.qb.DocType(ANSWER),
+	)
 	ratings = (
 		frappe.qb.from_(response)
 		.join(campaign)
@@ -374,7 +428,10 @@ def tagged_cells(condition):
 	)  # fmt: skip
 	pooled = {}
 	for item in large_question_answers(ratings, minimum_group_size())[0]:
-		cell = pooled.setdefault((item.course_outcome, item.campaign), frappe._dict(campaign=item.campaign, responses=set(), ratings=0, total=0))
+		cell = pooled.setdefault(
+			(item.course_outcome, item.campaign),
+			frappe._dict(campaign=item.campaign, responses=set(), ratings=0, total=0),
+		)
 		cell.responses.add(item.response)
 		cell.ratings += 1
 		cell.total += item.rating

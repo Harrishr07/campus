@@ -11,7 +11,9 @@ from campus.iqac.registry import DESCRIPTIONS, REGISTRY, data_point_keys
 
 FRAMEWORK = "NAAC-AQAR-RAF2017"
 FRAMEWORK_VALUES = {
-	"framework_code": "NAAC-AQAR", "version": "RAF 2017", "segments": "UG\nPG",
+	"framework_code": "NAAC-AQAR",
+	"version": "RAF 2017",
+	"segments": "UG\nPG",
 	"description": f"NAAC AQAR, Revised Accreditation Framework 2017: structure only, {PLACEHOLDER}.",
 }
 
@@ -19,7 +21,9 @@ FRAMEWORK_VALUES = {
 def ensure_iqac_role():
 	for role in ("IQAC Coordinator", OWNER_ROLE):
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 
 
 def seed_iqac_policies():
@@ -29,7 +33,9 @@ def seed_iqac_policies():
 		("Accreditation Cycle", "PRINCIPAL", "Principal"),
 		("Metric Override", "IQAC-COORDINATOR", "IQAC Coordinator"),
 	):
-		if frappe.db.exists("Approval Policy", {"document_type": document_type}) or not frappe.db.exists("Position", position):
+		if frappe.db.exists("Approval Policy", {"document_type": document_type}) or not frappe.db.exists(
+			"Position", position
+		):
 			continue
 		frappe.get_doc(
 			{
@@ -50,7 +56,11 @@ def sync_data_points():
 			"parameters": ", ".join(inspect.signature(function).parameters),
 			"function": f"{function.__module__}.{function.__name__}",
 		}
-		doc = frappe.get_doc("Data Point", key) if frappe.db.exists("Data Point", key) else frappe.new_doc("Data Point")
+		doc = (
+			frappe.get_doc("Data Point", key)
+			if frappe.db.exists("Data Point", key)
+			else frappe.new_doc("Data Point")
+		)
 		doc.update({"key": key, "registered": 1, **values})
 		doc.save(ignore_permissions=True)
 	used = formula_keys()
@@ -58,7 +68,8 @@ def sync_data_points():
 		if stale in used:  # a formula still names it: keep the record, flagged, and say so
 			frappe.db.set_value("Data Point", stale, "registered", 0)
 			frappe.log_error(
-				title="Unregistered data point still used", message=f"Data point {stale} is used by a Framework Node formula but no longer registered."
+				title="Unregistered data point still used",
+				message=f"Data point {stale} is used by a Framework Node formula but no longer registered.",
 			)
 		else:
 			frappe.delete_doc("Data Point", stale, ignore_permissions=True)
@@ -82,9 +93,9 @@ def seed_framework():
 	if frappe.db.exists("Accreditation Framework", FRAMEWORK):
 		framework = frappe.get_doc("Accreditation Framework", FRAMEWORK)
 	else:
-		framework = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": FRAMEWORK}).insert(
-			ignore_permissions=True
-		)
+		framework = frappe.get_doc(
+			{"doctype": "Accreditation Framework", "framework_name": FRAMEWORK}
+		).insert(ignore_permissions=True)
 	if framework.status in ("Published", "Retired"):
 		return
 	fill_blanks(framework, FRAMEWORK_VALUES)
@@ -99,7 +110,9 @@ def seed_node(spec):
 	values = {**spec, "parent_node": spec["parent"] and f"{FRAMEWORK}-{spec['parent']}"}
 	del values["parent"]
 	if not frappe.db.exists("Framework Node", name):
-		frappe.get_doc({"doctype": "Framework Node", "framework": FRAMEWORK, **values}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Framework Node", "framework": FRAMEWORK, **values}).insert(
+			ignore_permissions=True
+		)
 		return
 	node = frappe.get_doc("Framework Node", name)
 	if fill_blanks(node, values):
@@ -113,7 +126,14 @@ def fill_blanks(doc, values):
 	return bool(blank)
 
 
-EVIDENCE_SOURCES = ("Body Meeting", "Circular", "Faculty Achievement", "Sanction", "Feedback Campaign", "Placement Drive")
+EVIDENCE_SOURCES = (
+	"Body Meeting",
+	"Circular",
+	"Faculty Achievement",
+	"Sanction",
+	"Feedback Campaign",
+	"Placement Drive",
+)
 EVIDENCE_FILE_FIELDS = {"Faculty Achievement": "evidence", "Feedback Campaign": "action_taken_report"}
 
 
@@ -123,7 +143,10 @@ def seed_evidence_sources():
 	listed = {row.document_type for row in settings.evidence_sources}
 	missing = [d for d in EVIDENCE_SOURCES if d not in listed and frappe.db.exists("DocType", d)]
 	for document_type in missing:
-		settings.append("evidence_sources", {"document_type": document_type, "file_field": EVIDENCE_FILE_FIELDS.get(document_type)})
+		settings.append(
+			"evidence_sources",
+			{"document_type": document_type, "file_field": EVIDENCE_FILE_FIELDS.get(document_type)},
+		)
 	if missing:
 		settings.flags.ignore_permissions = True
 		settings.save()

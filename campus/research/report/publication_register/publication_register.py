@@ -10,12 +10,20 @@ def execute(filters=None):
 	filters = filters or {}
 	if not (filters.get("company") and filters.get("academic_year")):
 		return columns(), []
-	return columns(), publications.register_rows(filters["company"], filters["academic_year"], filters.get("department"))
+	return columns(), publications.register_rows(
+		filters["company"], filters["academic_year"], filters.get("department")
+	)
 
 
 def columns():
 	def col(fieldname, label, fieldtype="Data", width=120, options=None):
-		return {"fieldname": fieldname, "label": _(label), "fieldtype": fieldtype, "width": width, "options": options}
+		return {
+			"fieldname": fieldname,
+			"label": _(label),
+			"fieldtype": fieldtype,
+			"width": width,
+			"options": options,
+		}
 
 	return [
 		col("name", "Publication", "Link", 130, "Publication"),

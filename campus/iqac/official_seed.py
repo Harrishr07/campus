@@ -46,7 +46,10 @@ def seed_aishe_layout():
 		return
 	frappe.get_doc(
 		{
-			"doctype": "AISHE Layout", "layout_name": PLACEHOLDER_LAYOUT, "is_placeholder": 1, "description": LAYOUT_NOTE,
+			"doctype": "AISHE Layout",
+			"layout_name": PLACEHOLDER_LAYOUT,
+			"is_placeholder": 1,
+			"description": LAYOUT_NOTE,
 			"sections": [{"section": section, "sheet": section, "first_cell": "A3"} for section in SECTIONS],
 		}
 	).insert(ignore_permissions=True)

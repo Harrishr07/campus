@@ -8,12 +8,16 @@ frappe.ui.form.on("Broadcast", {
 			frm.add_custom_button(__("Preview Recipients"), () =>
 				frappe
 					.xcall(PREVIEW, { audience_rule: frm.doc.audience_rule })
-					.then((count) => frappe.msgprint(__("This broadcast will reach {0} recipients.", [count])))
+					.then((count) =>
+						frappe.msgprint(__("This broadcast will reach {0} recipients.", [count]))
+					)
 			);
 		}
 		if (frm.doc.docstatus === 1 && ["Sending", "Sent"].includes(frm.doc.status)) {
 			frm.add_custom_button(__("Refresh Counts"), () =>
-				frappe.xcall(BROADCAST + "refresh_status", { name: frm.doc.name }).then(() => frm.reload_doc())
+				frappe
+					.xcall(BROADCAST + "refresh_status", { name: frm.doc.name })
+					.then(() => frm.reload_doc())
 			);
 		}
 	},

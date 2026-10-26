@@ -8,10 +8,22 @@ import frappe
 from cryptography.fernet import Fernet
 from frappe.installer import update_site_config
 
-from campus.examinations.question_paper_files import KEY_CONFIG, KEY_ENV, KEY_FILE_CONFIG, QUESTION_PAPER, SEALED_SUFFIX, key
+from campus.examinations.question_paper_files import (
+	KEY_CONFIG,
+	KEY_ENV,
+	KEY_FILE_CONFIG,
+	QUESTION_PAPER,
+	SEALED_SUFFIX,
+	key,
+)
 
 SETTINGS = "Question Paper Settings"
-DEFAULT_SETTINGS = {"download_lead_minutes": 30, "slot_minutes": 180, "forenoon_starts_at": "10:00:00", "afternoon_starts_at": "14:00:00"}
+DEFAULT_SETTINGS = {
+	"download_lead_minutes": 30,
+	"slot_minutes": 180,
+	"forenoon_starts_at": "10:00:00",
+	"afternoon_starts_at": "14:00:00",
+}
 MODERATION_POLICY = "Question Paper Moderation"
 UNVERSIONED = ("Question Bank Item", "Question Paper", "QP Setter Nomination")
 
@@ -31,7 +43,9 @@ def ensure_key():
 			print(f"campus: the question paper key is in site_config ({KEY_CONFIG}), so site backups carry it. "
 				f"Move it to the {KEY_ENV} environment variable or a file outside sites/ named by {KEY_FILE_CONFIG}.")  # fmt: skip
 		return True
-	if frappe.db.exists("File", {"attached_to_doctype": QUESTION_PAPER, "file_url": ["like", f"%{SEALED_SUFFIX}"]}):
+	if frappe.db.exists(
+		"File", {"attached_to_doctype": QUESTION_PAPER, "file_url": ["like", f"%{SEALED_SUFFIX}"]}
+	):
 		print(f"campus: no question paper key is configured but sealed papers exist; NOT generating a new key. "
 			f"Restore the key ({KEY_ENV}, {KEY_FILE_CONFIG} or {KEY_CONFIG}).")  # fmt: skip
 		return False

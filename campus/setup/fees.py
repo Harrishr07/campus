@@ -14,7 +14,15 @@ PRICE_LIST = "Standard Selling"
 def ensure_selling_defaults():
 	"""Confirm Joining raises a Sales Invoice, which needs a selling price list; the ERPNext setup wizard sets it, a bare site lacks it."""
 	if not frappe.db.exists("Price List", PRICE_LIST):
-		frappe.get_doc({"doctype": "Price List", "price_list_name": PRICE_LIST, "currency": "INR", "selling": 1, "enabled": 1}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Price List",
+				"price_list_name": PRICE_LIST,
+				"currency": "INR",
+				"selling": 1,
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
 	if not frappe.db.get_single_value("Selling Settings", "selling_price_list"):
 		frappe.db.set_single_value("Selling Settings", "selling_price_list", PRICE_LIST)
 
@@ -37,7 +45,9 @@ def ensure_fee_accounts(company, out):
 	abbr = frappe.db.get_value("Company", company, "abbr")
 	income = frappe.db.get_value("Company", company, "default_income_account") or f"Sales - {abbr}"
 	deposit = ensure_deposit_account(company, abbr, out)
-	cost_center = frappe.db.get_value("Cost Center", {"company": company, "is_group": 0}, "name", order_by="creation, name")
+	cost_center = frappe.db.get_value(
+		"Cost Center", {"company": company, "is_group": 0}, "name", order_by="creation, name"
+	)
 	receivable = frappe.db.get_value("Company", company, "default_receivable_account")
 	if not receivable:
 		frappe.throw(_("Company {0} has no default receivable account.").format(company))
@@ -56,8 +66,12 @@ def ensure_deposit_account(company, abbr, out):
 	if not frappe.db.exists("Account", name):
 		frappe.get_doc(
 			{
-				"doctype": "Account", "account_name": DEPOSIT_ACCOUNT, "company": company, "root_type": "Liability",
-				"parent_account": f"Current Liabilities - {abbr}", "account_type": "",
+				"doctype": "Account",
+				"account_name": DEPOSIT_ACCOUNT,
+				"company": company,
+				"root_type": "Liability",
+				"parent_account": f"Current Liabilities - {abbr}",
+				"account_type": "",
 			}
 		).insert(ignore_permissions=True)
 		out.created["Account"] += 1
@@ -73,9 +87,16 @@ def ensure_fee_structure(out, company, programme, year, quota, components, accou
 		return
 	doc = frappe.get_doc(
 		{
-			"doctype": "Fee Structure", "company": company, "program": programme, "academic_year": year,
-			"oc_admission_quota": quota, "receivable_account": accounts["receivable"], "cost_center": accounts["cost_center"],
-			"components": [{"fees_category": category, "amount": amount} for category, amount in components.items()],
+			"doctype": "Fee Structure",
+			"company": company,
+			"program": programme,
+			"academic_year": year,
+			"oc_admission_quota": quota,
+			"receivable_account": accounts["receivable"],
+			"cost_center": accounts["cost_center"],
+			"components": [
+				{"fees_category": category, "amount": amount} for category, amount in components.items()
+			],
 		}
 	).insert(ignore_permissions=True)
 	doc.submit()
@@ -84,6 +105,10 @@ def ensure_fee_structure(out, company, programme, year, quota, components, accou
 
 def note_differences(out, name, components):
 	stored = {row.fees_category: row.amount for row in frappe.get_doc("Fee Structure", name).components}
-	if any(stored.get(category) != amount for category, amount in components.items()) or set(stored) != set(components):
+	if any(stored.get(category) != amount for category, amount in components.items()) or set(stored) != set(
+		components
+	):
 		state = "submitted" if frappe.db.get_value("Fee Structure", name, "docstatus") == 1 else "a draft"
-		out.notes.append(f"Fee Structure {name} differs from the profile; it is {state} and was left as it is.")
+		out.notes.append(
+			f"Fee Structure {name} differs from the profile; it is {state} and was left as it is."
+		)

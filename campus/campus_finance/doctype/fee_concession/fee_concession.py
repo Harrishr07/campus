@@ -26,21 +26,34 @@ class FeeConcession(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		if not is_approved(self):
-			frappe.throw(_("{0} needs approval before it can be submitted. Use Request Approval.").format(self.name))
+			frappe.throw(
+				_("{0} needs approval before it can be submitted. Use Request Approval.").format(self.name)
+			)
 
 	def before_cancel(self):
 		if self.status == "Applied":
-			frappe.throw(_("{0} is applied to invoice {1}; cancel the invoice first.").format(self.name, self.applied_invoice))
+			frappe.throw(
+				_("{0} is applied to invoice {1}; cancel the invoice first.").format(
+					self.name, self.applied_invoice
+				)
+			)
 
 	def set_company(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to give a concession to {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to give a concession to {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		self.company = student.oc_company
 
 	def check_category(self):
 		if not frappe.db.get_value("Fee Category", self.fee_category, "oc_concession_allowed"):
-			frappe.throw(_("Fee category {0} is not configured for concessions.").format(frappe.bold(self.fee_category)))
+			frappe.throw(
+				_("Fee category {0} is not configured for concessions.").format(
+					frappe.bold(self.fee_category)
+				)
+			)
 
 	def check_value(self):
 		if self.concession_type == "Percent":

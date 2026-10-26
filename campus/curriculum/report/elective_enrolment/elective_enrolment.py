@@ -21,9 +21,21 @@ def execute(filters=None):
 def columns():
 	return [
 		{"fieldname": "course", "label": _("Course"), "fieldtype": "Link", "options": "Course", "width": 220},
-		{"fieldname": "curriculum", "label": _("Curriculum"), "fieldtype": "Link", "options": "Curriculum", "width": 160},
+		{
+			"fieldname": "curriculum",
+			"label": _("Curriculum"),
+			"fieldtype": "Link",
+			"options": "Curriculum",
+			"width": 160,
+		},
 		{"fieldname": "semester", "label": _("Semester"), "fieldtype": "Int", "width": 80},
-		{"fieldname": "elective_group", "label": _("Elective Group"), "fieldtype": "Link", "options": "Elective Group", "width": 140},
+		{
+			"fieldname": "elective_group",
+			"label": _("Elective Group"),
+			"fieldtype": "Link",
+			"options": "Elective Group",
+			"width": 140,
+		},
 		{"fieldname": "offerings", "label": _("Offerings"), "fieldtype": "Int", "width": 90},
 		{"fieldname": "seat_cap", "label": _("Seat Cap"), "fieldtype": "Int", "width": 90},
 		{"fieldname": "enrolled", "label": _("Enrolled"), "fieldtype": "Int", "width": 90},
@@ -56,12 +68,16 @@ def window_closed(company, academic_term):
 
 def offering_groups(filters):
 	conditions = {
-		"oc_company": filters.company, "academic_term": filters.academic_term, "oc_curriculum": ["is", "set"],
+		"oc_company": filters.company,
+		"academic_term": filters.academic_term,
+		"oc_curriculum": ["is", "set"],
 	}
 	if filters.program:
 		conditions["program"] = filters.program
 	groups = {}
-	for group in frappe.get_list("Student Group", filters=conditions, fields=["name", "oc_curriculum", "course"]):
+	for group in frappe.get_list(
+		"Student Group", filters=conditions, fields=["name", "oc_curriculum", "course"]
+	):
 		groups.setdefault((group.oc_curriculum, group.course), []).append(group.name)
 	return groups
 
@@ -77,7 +93,9 @@ def elective_row(curriculum, course):
 
 def report_row(curriculum, course, elective, offerings, academic_term, closed):
 	regulation = frappe.db.get_value("Curriculum", curriculum, "regulation")
-	minimum = frappe.db.get_value("Registration Rule", {"regulation": regulation}, "elective_min_enrolment") or 0
+	minimum = (
+		frappe.db.get_value("Registration Rule", {"regulation": regulation}, "elective_min_enrolment") or 0
+	)
 	enrolled = count_members(curriculum, course, academic_term)
 	status = elective_status(enrolled, minimum, closed)
 	return {

@@ -16,13 +16,17 @@ from campus.tests.research_fixtures import ABBR, COLLEGE, OTHER, OTHER_ABBR, San
 class TestSanction(SanctionFixtures):
 	# set-up validation
 	def test_scheme_must_be_usable_by_the_college(self):
-		other_head = self.make_head("RSA Unmapped", [(OTHER, make_account(OTHER, OTHER_ABBR, "RSA Other", "Indirect Expenses"))])
+		other_head = self.make_head(
+			"RSA Unmapped", [(OTHER, make_account(OTHER, OTHER_ABBR, "RSA Other", "Indirect Expenses"))]
+		)
 		scheme = self.make_scheme("RSA Unusable", [self.consumables, other_head])
 		with self.assertRaisesRegex(frappe.ValidationError, "no account mapped"):
 			self.sanction(heads=[(self.consumables, self.year1.name, 1000)], scheme=scheme)
 
 	def test_scheme_must_belong_to_the_agency(self):
-		other_agency = frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RSA Other Board"}).insert().name
+		other_agency = (
+			frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RSA Other Board"}).insert().name
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "RSA Other Board"):
 			self.sanction(agency=other_agency)
 
@@ -31,7 +35,9 @@ class TestSanction(SanctionFixtures):
 		with self.assertRaisesRegex(frappe.ValidationError, "RSA Outside"):
 			self.sanction(heads=[(outside, self.year1.name, 1000)])
 		with self.assertRaisesRegex(frappe.ValidationError, "more than once"):
-			self.sanction(heads=[(self.consumables, self.year1.name, 1000), (self.consumables, self.year1.name, 500)])
+			self.sanction(
+				heads=[(self.consumables, self.year1.name, 1000), (self.consumables, self.year1.name, 500)]
+			)
 		later = get_fiscal_year(add_days(self.year2.end, 1), company=COLLEGE)[0]
 		with self.assertRaisesRegex(frappe.ValidationError, "outside the sanction period"):
 			self.sanction(heads=[(self.consumables, later, 1000)])
@@ -61,7 +67,9 @@ class TestSanction(SanctionFixtures):
 
 	def test_research_cost_centre_must_be_a_group_of_the_college(self):
 		settings = frappe.get_doc("Research Settings", COLLEGE)
-		settings.research_cost_center = frappe.db.get_value("Cost Center", {"company": COLLEGE, "is_group": 0})
+		settings.research_cost_center = frappe.db.get_value(
+			"Cost Center", {"company": COLLEGE, "is_group": 0}
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "group"):
 			settings.save()
 		settings.research_cost_center = self.make_group_cost_center(OTHER, OTHER_ABBR, "Research Projects")
@@ -82,16 +90,29 @@ class TestSanction(SanctionFixtures):
 		project = frappe.get_doc("Project", sanction.project)
 		self.assertEqual((project.company, project.cost_center), (COLLEGE, sanction.cost_center))
 		self.assertEqual(getdate(project.expected_end_date), getdate(self.year2.end))
-		cost_center = frappe.db.get_value("Cost Center", sanction.cost_center, ["parent_cost_center", "is_group", "company"], as_dict=True)
-		self.assertEqual((cost_center.parent_cost_center, cost_center.is_group, cost_center.company), (self.research_cc, 0, COLLEGE))
+		cost_center = frappe.db.get_value(
+			"Cost Center", sanction.cost_center, ["parent_cost_center", "is_group", "company"], as_dict=True
+		)
+		self.assertEqual(
+			(cost_center.parent_cost_center, cost_center.is_group, cost_center.company),
+			(self.research_cc, 0, COLLEGE),
+		)
 		liability = frappe.db.get_value(
-			"Account", sanction.liability_account, ["account_name", "parent_account", "root_type", "is_group"], as_dict=True
+			"Account",
+			sanction.liability_account,
+			["account_name", "parent_account", "root_type", "is_group"],
+			as_dict=True,
 		)
 		self.assertEqual(liability.account_name, f"Grant Received in Advance - {sanction.name}")
-		self.assertEqual((liability.parent_account, liability.root_type, liability.is_group), (f"Current Liabilities - {ABBR}", "Liability", 0))
+		self.assertEqual(
+			(liability.parent_account, liability.root_type, liability.is_group),
+			(f"Current Liabilities - {ABBR}", "Liability", 0),
+		)
 
 		budgets = {row.account: row for row in self.budgets(sanction.cost_center)}
-		self.assertEqual(set(budgets), {self.consumables_account, self.travel_account})  # capital heads: no ERPNext budget
+		self.assertEqual(
+			set(budgets), {self.consumables_account, self.travel_account}
+		)  # capital heads: no ERPNext budget
 		self.assertEqual(budgets[self.consumables_account].budget_amount, 300000)
 		self.assertEqual(budgets[self.travel_account].budget_amount, 50000)
 		for row in budgets.values():
@@ -99,9 +120,15 @@ class TestSanction(SanctionFixtures):
 			self.assertEqual(row.action_if_annual_budget_exceeded, "Stop")
 			self.assertEqual(row.action_if_accumulated_monthly_budget_exceeded, "Stop")
 		distribution = frappe.get_all(
-			"Budget Distribution", {"parent": budgets[self.consumables_account].name}, ["start_date", "amount"], order_by="start_date"
+			"Budget Distribution",
+			{"parent": budgets[self.consumables_account].name},
+			["start_date", "amount"],
+			order_by="start_date",
 		)
-		self.assertEqual([(getdate(d.start_date), d.amount) for d in distribution], [(getdate(self.year1.start), 200000), (getdate(self.year2.start), 100000)])
+		self.assertEqual(
+			[(getdate(d.start_date), d.amount) for d in distribution],
+			[(getdate(self.year1.start), 200000), (getdate(self.year2.start), 100000)],
+		)
 
 		self.assertEqual(frappe.db.count("Project", {"name": sanction.project}), 1)
 		self.assertEqual(frappe.db.count("Cost Center", {"parent_cost_center": self.research_cc}), 1)
@@ -116,11 +143,21 @@ class TestSanction(SanctionFixtures):
 		def spend(amount):
 			entry = frappe.get_doc(
 				{
-					"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+					"doctype": "Journal Entry",
+					"company": COLLEGE,
+					"posting_date": today(),
 					"accounts": [
-						{"account": self.consumables_account, "debit_in_account_currency": amount, "cost_center": sanction.cost_center,
-						 "oc_budget_head": self.consumables},
-						{"account": self.bank, "credit_in_account_currency": amount, "cost_center": sanction.cost_center},
+						{
+							"account": self.consumables_account,
+							"debit_in_account_currency": amount,
+							"cost_center": sanction.cost_center,
+							"oc_budget_head": self.consumables,
+						},
+						{
+							"account": self.bank,
+							"credit_in_account_currency": amount,
+							"cost_center": sanction.cost_center,
+						},
 					],
 				}  # fmt: skip
 			).insert()
@@ -132,7 +169,9 @@ class TestSanction(SanctionFixtures):
 
 	def test_warn_scheme_gives_warn_budgets(self):
 		scheme = self.make_scheme("RSA Warn Grant", [self.consumables], budget_action="Warn")
-		sanction = self.sanction(heads=[(self.consumables, self.year1.name, 1000)], instalments=[("First", 1000)], scheme=scheme)
+		sanction = self.sanction(
+			heads=[(self.consumables, self.year1.name, 1000)], instalments=[("First", 1000)], scheme=scheme
+		)
 		sanction.submit()
 		[budget] = self.budgets(sanction.reload().cost_center)
 		self.assertEqual(budget.action_if_annual_budget_exceeded, "Warn")
@@ -169,7 +208,10 @@ class TestSanction(SanctionFixtures):
 		amended.insert()
 		amended.submit()
 		amended.reload()
-		self.assertEqual(frappe.get_all("Cost Center", {"parent_cost_center": self.research_cc}, pluck="name"), [amended.cost_center])
+		self.assertEqual(
+			frappe.get_all("Cost Center", {"parent_cost_center": self.research_cc}, pluck="name"),
+			[amended.cost_center],
+		)
 		self.assertEqual(frappe.get_all("Project", {"company": COLLEGE}, pluck="name"), [amended.project])
 		self.assertEqual(len(self.budgets(amended.cost_center)), 2)
 
@@ -179,10 +221,17 @@ class TestSanction(SanctionFixtures):
 		sanction.reload()
 		frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": today(),
 				"accounts": [
-					{"account": self.consumables_account, "debit_in_account_currency": 10, "cost_center": sanction.cost_center,
-					 "project": sanction.project, "oc_budget_head": self.consumables},
+					{
+						"account": self.consumables_account,
+						"debit_in_account_currency": 10,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
+						"oc_budget_head": self.consumables,
+					},
 					{"account": self.bank, "credit_in_account_currency": 10},
 				],
 			}  # fmt: skip
@@ -207,7 +256,9 @@ class TestSanction(SanctionFixtures):
 
 		with patch.object(frappe.db, "get_value", side_effect=spy):
 			frappe.get_doc("Sanction", sanction.name).cancel()
-		self.assertEqual([next(iter(args[0])) for args in locked], ["account", "cost_center"])  # project: no index, plain read
+		self.assertEqual(
+			[next(iter(args[0])) for args in locked], ["account", "cost_center"]
+		)  # project: no index, plain read
 
 	def assert_cancel_refused(self, name):
 		frappe.db.savepoint("sanction_cancel")  # a failed request rolls back; so does this
@@ -218,7 +269,9 @@ class TestSanction(SanctionFixtures):
 	# acceptance 2: a receipt credits the sanction's liability, never income
 	def gl(self, voucher):
 		return frappe.get_all(
-			"GL Entry", {"voucher_no": voucher, "is_cancelled": 0}, ["account", "debit", "credit", "project", "cost_center"]
+			"GL Entry",
+			{"voucher_no": voucher, "is_cancelled": 0},
+			["account", "debit", "credit", "project", "cost_center"],
 		)
 
 	def test_receipt_credits_the_liability_never_income(self):
@@ -239,7 +292,10 @@ class TestSanction(SanctionFixtures):
 
 		sanction.reload()
 		self.assertEqual(sanction.total_received, 510000)
-		self.assertEqual({row.instalment: row.received_amount for row in sanction.instalments}, {"First": 510000, "Second": 0})
+		self.assertEqual(
+			{row.instalment: row.received_amount for row in sanction.instalments},
+			{"First": 510000, "Second": 0},
+		)
 
 		receipt.cancel()
 		self.assertEqual(frappe.db.get_value("Journal Entry", receipt.journal_entry, "docstatus"), 2)
@@ -250,7 +306,9 @@ class TestSanction(SanctionFixtures):
 		sanction = self.sanction()
 		sanction.submit()
 		receipt = self.receipt(sanction.reload())
-		frappe.db.set_value("Sanction", sanction.name, "docstatus", 2)  # as a concurrent cancel would leave it
+		frappe.db.set_value(
+			"Sanction", sanction.name, "docstatus", 2
+		)  # as a concurrent cancel would leave it
 		with self.assertRaisesRegex(frappe.ValidationError, "must be submitted"):
 			receipt.before_submit()
 		self.assertFalse(frappe.db.exists("Journal Entry", {"user_remark": ["like", f"%{receipt.name}%"]}))
@@ -275,7 +333,9 @@ class TestSanction(SanctionFixtures):
 
 	# acceptance 3: seed money from the Institution works the same way
 	def test_institution_agency_is_seeded(self):
-		self.assertEqual(frappe.db.get_value("Funding Agency", INSTITUTION_AGENCY, "agency_type"), "Institution")
+		self.assertEqual(
+			frappe.db.get_value("Funding Agency", INSTITUTION_AGENCY, "agency_type"), "Institution"
+		)
 
 	def test_seed_money_sanction_and_receipt(self):
 		scheme = self.make_scheme("RSA Seed Money", [self.consumables], agency=INSTITUTION_AGENCY)
@@ -306,7 +366,9 @@ class TestSanction(SanctionFixtures):
 		[row] = sanction.extensions
 		self.assertEqual((row.order_no, getdate(row.previous_end_date), getdate(row.revised_end_date)),
 			("DST/EXT/7", getdate(self.year2.end), getdate(revised)))  # fmt: skip
-		self.assertEqual(getdate(frappe.db.get_value("Project", sanction.project, "expected_end_date")), getdate(revised))
+		self.assertEqual(
+			getdate(frappe.db.get_value("Project", sanction.project, "expected_end_date")), getdate(revised)
+		)
 
 	# link to the proposal
 	def make_proposal(self, status):

@@ -31,7 +31,10 @@ def is_hr(user=None):
 def rule_in_force(company, on_date):
 	"""API Score Rule document in force for `company` on `on_date` (latest Effective From not after it), or None."""
 	name = frappe.db.get_value(
-		"API Score Rule", {"company": company, "effective_from": ["<=", getdate(on_date)]}, "name", order_by="effective_from desc"
+		"API Score Rule",
+		{"company": company, "effective_from": ["<=", getdate(on_date)]},
+		"name",
+		order_by="effective_from desc",
 	)
 	return frappe.get_doc("API Score Rule", name) if name else None
 
@@ -44,7 +47,9 @@ def phase3_quantity(activity, employee, start, end):
 
 def compute(employee, appraisal_cycle):
 	"""The API computation for one teacher and cycle, without saving anything."""
-	cycle = frappe.db.get_value("Appraisal Cycle", appraisal_cycle, ["company", "start_date", "end_date"], as_dict=True)
+	cycle = frappe.db.get_value(
+		"Appraisal Cycle", appraisal_cycle, ["company", "start_date", "end_date"], as_dict=True
+	)
 	if not cycle:
 		frappe.throw(_("Appraisal Cycle {0} does not exist.").format(appraisal_cycle))
 	rule = rule_in_force(cycle.company, cycle.end_date)
@@ -64,7 +69,10 @@ def academic_year_of():
 
 	def year_of(on_date):
 		on_date = getdate(on_date)
-		return next((y.name for y in years if getdate(y.year_start_date) <= on_date <= getdate(y.year_end_date)), on_date.year)
+		return next(
+			(y.name for y in years if getdate(y.year_start_date) <= on_date <= getdate(y.year_end_date)),
+			on_date.year,
+		)
 
 	return year_of
 
@@ -99,7 +107,11 @@ def fdp_dates(employee, cycle):
 def verified_achievements(employee, cycle):
 	return frappe.get_all(
 		"Faculty Achievement",
-		{"employee": employee, "verified": 1, "achievement_date": ["between", [cycle.start_date, cycle.end_date]]},
+		{
+			"employee": employee,
+			"verified": 1,
+			"achievement_date": ["between", [cycle.start_date, cycle.end_date]],
+		},
 		["achievement_type", "achievement_date"],
 	)
 
@@ -117,14 +129,19 @@ def workload_items(employee, cycle, year_of):
 		hours = flt(workload.submitted_hours(term.name, cycle.company).get(employee))
 		if hours:
 			by_year.setdefault(year_of(term.term_start_date), []).append((term.term_start_date, hours))
-	return [(WORKLOAD, terms_hours[0][0], sum(h for _d, h in terms_hours) / len(terms_hours)) for terms_hours in by_year.values()]
+	return [
+		(WORKLOAD, terms_hours[0][0], sum(h for _d, h in terms_hours) / len(terms_hours))
+		for terms_hours in by_year.values()
+	]
 
 
 def breakdown_text(computation):
 	lines = []
 	for r in computation.results:
 		note = _("capped, {0} before the annual caps").format(flt(r.raw_points, 2)) if r.capped else ""
-		lines.append(f"{_(r.activity)}: {flt(r.quantity, 2)} = {flt(r.points, 2)} {_('points')} {note}".strip())
+		lines.append(
+			f"{_(r.activity)}: {flt(r.quantity, 2)} = {flt(r.points, 2)} {_('points')} {note}".strip()
+		)
 	return "\n".join(lines)
 
 
@@ -154,19 +171,25 @@ def create_or_update(employee, appraisal_cycle):
 	computation = compute(employee, appraisal_cycle)
 	appraisal = existing_appraisal(employee, appraisal_cycle) or new_appraisal(employee, appraisal_cycle)
 	apply_to(appraisal, computation)
-	appraisal.flags.ignore_permissions = True  # the permission check above is the rule; Employee role rights on Appraisal vary
+	appraisal.flags.ignore_permissions = (
+		True  # the permission check above is the rule; Employee role rights on Appraisal vary
+	)
 	appraisal.save()
 	appraisal.flags.api_applied = False  # later saves of this object are recomputed again
 	return appraisal
 
 
 def existing_appraisal(employee, appraisal_cycle):
-	name = frappe.db.get_value("Appraisal", {"employee": employee, "appraisal_cycle": appraisal_cycle, "docstatus": ["<", 2]})
+	name = frappe.db.get_value(
+		"Appraisal", {"employee": employee, "appraisal_cycle": appraisal_cycle, "docstatus": ["<", 2]}
+	)
 	if not name:
 		return None
 	appraisal = frappe.get_doc("Appraisal", name, for_update=True)
 	if not appraisal.oc_api_rule:
-		frappe.throw(_("{0} was not made from a self-appraisal; change it in the Appraisal itself.").format(name))
+		frappe.throw(
+			_("{0} was not made from a self-appraisal; change it in the Appraisal itself.").format(name)
+		)
 	if appraisal.docstatus:
 		frappe.throw(_("{0} is submitted and can no longer be changed.").format(name))
 	if frozen_reviews(name):
@@ -175,7 +198,9 @@ def existing_appraisal(employee, appraisal_cycle):
 
 
 def new_appraisal(employee, appraisal_cycle):
-	cycle = frappe.db.get_value("Appraisal Cycle", appraisal_cycle, ["company", "start_date", "end_date"], as_dict=True)
+	cycle = frappe.db.get_value(
+		"Appraisal Cycle", appraisal_cycle, ["company", "start_date", "end_date"], as_dict=True
+	)
 	return frappe.get_doc(
 		{
 			"doctype": "Appraisal", "employee": employee, "appraisal_cycle": appraisal_cycle, "company": cycle.company,
@@ -187,7 +212,11 @@ def new_appraisal(employee, appraisal_cycle):
 def open_reviews(appraisal, lock=False):
 	"""Appraisal Reviews of `appraisal` that are not cancelled or rejected (read with FOR UPDATE when `lock`)."""
 	review = frappe.qb.DocType("Appraisal Review")
-	query = frappe.qb.from_(review).select(review.name).where((review.appraisal == appraisal) & (review.docstatus < 2))
+	query = (
+		frappe.qb.from_(review)
+		.select(review.name)
+		.where((review.appraisal == appraisal) & (review.docstatus < 2))
+	)
 	names = [name for (name,) in (query.for_update() if lock else query).run()]
 	return [n for n in names if review_status(n) != rules.REJECTED]
 
@@ -208,8 +237,14 @@ def request_review(appraisal):
 	doc = frappe.get_doc("Appraisal", appraisal, for_update=True)
 	check_may_act_for(doc.employee)
 	returned = [n for n in open_reviews(doc.name) if review_status(n) == rules.RETURNED]
-	review = frappe.get_doc("Appraisal Review", returned[0]) if returned else frappe.get_doc({"doctype": "Appraisal Review", "appraisal": doc.name})
-	review.flags.ignore_permissions = True  # the appraisee's rights on the Review are read-only; the check above is the rule
+	review = (
+		frappe.get_doc("Appraisal Review", returned[0])
+		if returned
+		else frappe.get_doc({"doctype": "Appraisal Review", "appraisal": doc.name})
+	)
+	review.flags.ignore_permissions = (
+		True  # the appraisee's rights on the Review are read-only; the check above is the rule
+	)
 	review.insert() if review.is_new() else review.save()
 	if not find_policy(review):
 		frappe.throw(_("No approval policy covers Appraisal Review for {0}.").format(review.company))
@@ -221,10 +256,16 @@ def request_review(appraisal):
 def check_has_other_approver(request, review):
 	"""Fail now, not at the final approval, when nobody but the appraisee could approve."""
 	approvers = frappe.get_all(
-		"Approval Request Approver", {"parent": request.name, "cycle": request.cycle, "level": request.current_level}, pluck="user"
+		"Approval Request Approver",
+		{"parent": request.name, "cycle": request.cycle, "level": request.current_level},
+		pluck="user",
 	)
 	if not [u for u in approvers if u != appraisee_user(review)]:
-		frappe.throw(_("No reviewer other than the appraisee could be found for {0}. Ask HR to fix the position holders.").format(review.appraisal))
+		frappe.throw(
+			_(
+				"No reviewer other than the appraisee could be found for {0}. Ask HR to fix the position holders."
+			).format(review.appraisal)
+		)
 
 
 def appraisee_user(review):
@@ -244,7 +285,9 @@ def check_reviewable(review):
 		frappe.throw(_("{0} was not made from a self-appraisal.").format(review.appraisal))
 	if appraisal.docstatus != 0:
 		frappe.throw(_("{0} is already submitted.").format(review.appraisal))
-	frappe.db.get_value("Appraisal", review.appraisal, "name", for_update=True)  # serialises requests for one Appraisal
+	frappe.db.get_value(
+		"Appraisal", review.appraisal, "name", for_update=True
+	)  # serialises requests for one Appraisal
 	if [r for r in open_reviews(review.appraisal, lock=True) if r != review.name]:
 		frappe.throw(_("{0} already has a review in progress.").format(review.appraisal))
 
@@ -268,7 +311,13 @@ def submit_appraisal(review):
 def before_validate(appraisal, method=None):
 	"""Draft Appraisals made from a self-appraisal take their Goals from the rule, so hand edits are overwritten. While a
 	review holds them (pending or approved) the scores are frozen and only HR can save, and only unchanged."""
-	if not appraisal.oc_api_rule or appraisal.docstatus != 0 or appraisal.flags.api_applied or appraisal.flags.from_review or appraisal.is_new():
+	if (
+		not appraisal.oc_api_rule
+		or appraisal.docstatus != 0
+		or appraisal.flags.api_applied
+		or appraisal.flags.from_review
+		or appraisal.is_new()
+	):
 		return
 	if frozen_reviews(appraisal.name):
 		if not is_hr():
@@ -297,16 +346,26 @@ def before_submit(appraisal, method=None):
 	if is_hr() and reason and frappe.db.get_value("Employee", appraisal.employee, "user_id") != user:
 		appraisal.oc_api_override_by = user
 		return
-	frappe.throw(_("A self-appraisal is submitted by the HOD's approval of its Appraisal Review; HR can submit it directly with an override reason."))
+	frappe.throw(
+		_(
+			"A self-appraisal is submitted by the HOD's approval of its Appraisal Review; HR can submit it directly with an override reason."
+		)
+	)
 
 
 def block_feedback_on_self_appraisal(feedback, method=None):
 	"""Employee Performance Feedback moves the Appraisal's final score, so it cannot touch a submitted self-appraisal (HR may)."""
 	if not feedback.appraisal or is_hr():
 		return
-	appraisal = frappe.db.get_value("Appraisal", feedback.appraisal, ["oc_api_rule", "docstatus"], as_dict=True)
+	appraisal = frappe.db.get_value(
+		"Appraisal", feedback.appraisal, ["oc_api_rule", "docstatus"], as_dict=True
+	)
 	if appraisal and appraisal.oc_api_rule and appraisal.docstatus == 1:
-		frappe.throw(_("{0} is a submitted self-appraisal and its score can no longer change.").format(feedback.appraisal))
+		frappe.throw(
+			_("{0} is a submitted self-appraisal and its score can no longer change.").format(
+				feedback.appraisal
+			)
+		)
 
 
 def has_permission(doc, ptype=None, user=None):

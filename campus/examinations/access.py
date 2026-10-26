@@ -42,12 +42,16 @@ def instructor_users(offering):
 	"""User ids of the instructors of a course offering."""
 	instructors = frappe.get_all("Student Group Instructor", {"parent": offering}, pluck="instructor") or [""]
 	employees = frappe.get_all("Instructor", {"name": ["in", instructors]}, pluck="employee") or [""]
-	return set(frappe.get_all("Employee", {"name": ["in", employees], "user_id": ["is", "set"]}, pluck="user_id"))
+	return set(
+		frappe.get_all("Employee", {"name": ["in", employees], "user_id": ["is", "set"]}, pluck="user_id")
+	)
 
 
 def instructed_offerings(user):
 	instructors = frappe.get_all("Instructor", {"employee": ["in", employees_of(user)]}, pluck="name") or [""]
-	return frappe.get_all("Student Group Instructor", {"instructor": ["in", instructors]}, pluck="parent") or [""]
+	return frappe.get_all(
+		"Student Group Instructor", {"instructor": ["in", instructors]}, pluck="parent"
+	) or [""]
 
 
 def employees_of(user):
@@ -65,7 +69,9 @@ def hod_offerings(user):
 	programs = hod_programs(user)
 	if not programs:
 		return []
-	return frappe.get_all("Student Group", {"group_based_on": "Course", "program": ["in", programs]}, pluck="name")
+	return frappe.get_all(
+		"Student Group", {"group_based_on": "Course", "program": ["in", programs]}, pluck="name"
+	)
 
 
 def offering_permission_query(user=None, doctype="Mark Sheet Entry"):
@@ -117,7 +123,9 @@ def students_of(user):
 	own = frappe.get_all("Student", {"user": user}, pluck="name")
 	guardians = frappe.get_all("Guardian", {"user": user}, pluck="name")
 	guarded = (
-		frappe.get_all("Student Guardian", {"guardian": ["in", guardians], "parenttype": "Student"}, pluck="parent")
+		frappe.get_all(
+			"Student Guardian", {"guardian": ["in", guardians], "parenttype": "Student"}, pluck="parent"
+		)
 		if guardians
 		else []
 	)
@@ -129,7 +137,9 @@ def mentees_of(user):
 	if not user:
 		return set()
 	employees = frappe.get_all("Employee", {"user_id": user}, pluck="name")
-	return set(frappe.get_all("Student", {"oc_mentor": ["in", employees]}, pluck="name")) if employees else set()
+	return (
+		set(frappe.get_all("Student", {"oc_mentor": ["in", employees]}, pluck="name")) if employees else set()
+	)
 
 
 def advised_students(user):
@@ -146,7 +156,9 @@ def guardians_of(user):
 	"""The user's own Guardian records plus the guardians of the students the user is or guards."""
 	own = frappe.get_all("Guardian", {"user": user}, pluck="name")
 	linked = frappe.get_all(
-		"Student Guardian", {"parent": ["in", students_of(user) or [""]], "parenttype": "Student"}, pluck="guardian"
+		"Student Guardian",
+		{"parent": ["in", students_of(user) or [""]], "parenttype": "Student"},
+		pluck="guardian",
 	)
 	return set(own) | set(linked)
 
@@ -154,7 +166,9 @@ def guardians_of(user):
 def groups_of(user):
 	"""Student Groups that contain one of the user's students."""
 	rows = frappe.get_all(
-		"Student Group Student", {"student": ["in", students_of(user) or [""]], "parenttype": "Student Group"}, pluck="parent"
+		"Student Group Student",
+		{"student": ["in", students_of(user) or [""]], "parenttype": "Student Group"},
+		pluck="parent",
 	)
 	return set(rows)
 
@@ -217,7 +231,9 @@ def confidential_clause(user, doctype):
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return clause
 	departments = ", ".join(frappe.db.escape(d) for d in held_scopes(user, HANDLER_POSITION))
-	own = f" or `tab{doctype}`.department in ({departments})" if departments else ""  # no seat: never match a blank department
+	own = (
+		f" or `tab{doctype}`.department in ({departments})" if departments else ""
+	)  # no seat: never match a blank department
 	return f"{clause} and (`tab{doctype}`.name in ({handled_grievances_sql(user)}){own})"
 
 
@@ -229,9 +245,13 @@ def may_see_confidential(doc, user):
 		return False
 	if has_any_role(user, COMPANY_WIDE_HANDLERS):
 		return True
-	if frappe.flags.approval_candidate == user:  # being appointed its approver right now: the same as having handled it
+	if (
+		frappe.flags.approval_candidate == user
+	):  # being appointed its approver right now: the same as having handled it
 		return True
-	handled = frappe.db.sql(f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}")
+	handled = frappe.db.sql(
+		f"{handled_grievances_sql(user)} and r.reference_name = {frappe.db.escape(doc.name or '')}"
+	)
 	department = doc.get("department")
 	return bool(handled) or bool(department and department in held_scopes(user, HANDLER_POSITION))
 
@@ -258,7 +278,9 @@ def portal_permission_query(user=None, doctype="Student"):
 	field = PORTAL_SCOPES[doctype][0]
 	names = ", ".join(frappe.db.escape(k) for k in scope_keys(user, doctype)) or "''"
 	clause = f"`tab{doctype}`.`{field}` in ({names})"
-	if doctype in CONFIDENTIAL_FIELDS:  # a guardian reads the ordinary rows of their ward, not the confidential ones
+	if (
+		doctype in CONFIDENTIAL_FIELDS
+	):  # a guardian reads the ordinary rows of their ward, not the confidential ones
 		own = ", ".join(frappe.db.escape(k) for k in own_students(user)) or "''"
 		clause += f" and (ifnull(`tab{doctype}`.`{CONFIDENTIAL_FIELDS[doctype]}`, 0) = 0 or `tab{doctype}`.`{field}` in ({own}))"
 	return clause
@@ -302,7 +324,9 @@ def result_permission_query(user=None):
 	sessions = published_sessions()
 	if not sessions:
 		return "1=0"
-	released = "`tabStudent Result`.exam_session in ({})".format(", ".join(frappe.db.escape(s) for s in sessions))
+	released = "`tabStudent Result`.exam_session in ({})".format(
+		", ".join(frappe.db.escape(s) for s in sessions)
+	)
 	ratified = f"{released} and ifnull(`tabStudent Result`.pending_ratification, 0) = 0"
 	if has_any_role(user, RESULT_RELEASED_ROLES):
 		return ratified

@@ -22,7 +22,14 @@ def notify_overdue(on_date=None):
 	for name in items:
 		try:
 			item = frappe.get_doc("Meeting Action Item", name)
-			send(OVERDUE_EVENT, item, [f"Employee:{item.responsible}"], context={"dedupe_token": f"{year}-W{week}"})
+			send(
+				OVERDUE_EVENT,
+				item,
+				[f"Employee:{item.responsible}"],
+				context={"dedupe_token": f"{year}-W{week}"},
+			)
 		except Exception:
-			frappe.log_error(title=f"Overdue action reminder failed for {name}")  # no context: keep the rest going
+			frappe.log_error(
+				title=f"Overdue action reminder failed for {name}"
+			)  # no context: keep the rest going
 	return len(items)

@@ -14,7 +14,9 @@ from campus.curriculum import attainment
 class COAttainmentRun(Document):
 	def validate(self):
 		attainment.set_co_scope(self)
-		attainment.check_one_live(self, {"course_offering": self.course_offering}, ("Student Group", self.course_offering))
+		attainment.check_one_live(
+			self, {"course_offering": self.course_offering}, ("Student Group", self.course_offering)
+		)
 
 	def on_trash(self):
 		attainment.delete_input_snapshot(self.name)
@@ -24,7 +26,7 @@ class COAttainmentRun(Document):
 			frappe.throw(_("Compute the run before submitting it."))
 		if self.ese_untagged:
 			frappe.throw(
-				_("The ESE marks of {0} carry no CO tag. Tag the questions of its Answer Script Bundle with their COs and compute again.").format(
-					frappe.bold(self.course_offering)
-				)
+				_(
+					"The ESE marks of {0} carry no CO tag. Tag the questions of its Answer Script Bundle with their COs and compute again."
+				).format(frappe.bold(self.course_offering))
 			)

@@ -40,7 +40,11 @@ def offering_assessment(offering):
 
 def cohort_of(offering, sessions):
 	"""{student: exam session} of the offering's assessed students (see the module docstring)."""
-	result, row, session = frappe.qb.DocType("Student Result"), frappe.qb.DocType("Student Result Course"), frappe.qb.DocType("Exam Session")
+	result, row, session = (
+		frappe.qb.DocType("Student Result"),
+		frappe.qb.DocType("Student Result Course"),
+		frappe.qb.DocType("Exam Session"),
+	)
 	rows = (
 		frappe.qb.from_(row)
 		.join(result).on(result.name == row.parent)
@@ -67,7 +71,11 @@ def cia_marks(offering, cohort):
 	)  # fmt: skip
 	rows = frappe.get_all(
 		"Mark Sheet CIA Mark",
-		{"parenttype": "Mark Sheet Entry", "parent": ["in", list(sheets) or [""]], "student": ["in", list(cohort) or [""]]},
+		{
+			"parenttype": "Mark Sheet Entry",
+			"parent": ["in", list(sheets) or [""]],
+			"student": ["in", list(cohort) or [""]],
+		},
 		["parent", "student", "component", "question", "max_marks", "marks", "course_outcome", "absent"],
 		order_by="idx",
 	)
@@ -92,7 +100,11 @@ def ese_marks(course, cohort):
 		["name", "dummy_number", "exam_session", "valuation_round", "total", "bundle"],
 	)  # fmt: skip
 	marks = {}
-	for row in frappe.get_all("Valuation Entry Mark", {"parenttype": "Valuation Entry", "parent": ["in", [e.name for e in entries] or [""]]}, ["parent", "question", "marks"]):
+	for row in frappe.get_all(
+		"Valuation Entry Mark",
+		{"parenttype": "Valuation Entry", "parent": ["in", [e.name for e in entries] or [""]]},
+		["parent", "question", "marks"],
+	):
 		marks.setdefault(row.parent, {})[row.question] = flt(row.marks)
 	patterns = bundle_patterns({e.bundle for e in entries})
 	rounds = {}
@@ -105,9 +117,16 @@ def ese_marks(course, cohort):
 		if len(by_round) < 2:
 			continue
 		method = methods[script.student]
-		deciding = [by_round[r] for r in valuation_rules.deciding_rounds({r: flt(e.total) for r, e in by_round.items()}, method)]
+		deciding = [
+			by_round[r]
+			for r in valuation_rules.deciding_rounds({r: flt(e.total) for r, e in by_round.items()}, method)
+		]
 		for question in patterns.get(deciding[0].bundle, []):
-			given = [marks[e.name][question.question] for e in deciding if question.question in marks.get(e.name, {})]
+			given = [
+				marks[e.name][question.question]
+				for e in deciding
+				if question.question in marks.get(e.name, {})
+			]
 			rows.append({"student": script.student, "question": question.question, "max_marks": flt(question.max_marks),
 				"marks": flt(sum(given) / len(given), 2) if given else 0, "course_outcome": question.course_outcome,
 				"absent": int(not given)})  # fmt: skip
@@ -116,7 +135,9 @@ def ese_marks(course, cohort):
 
 def valuation_methods(students):
 	"""{student: final valuation method} with one Exam Rule Set lookup per regulation."""
-	regulations = dict(frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_regulation"], as_list=True))
+	regulations = dict(
+		frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_regulation"], as_list=True)
+	)
 	by_regulation, methods = {}, {}
 	for student in students:
 		regulation = regulations.get(student)
@@ -136,7 +157,9 @@ def is_choice_paper(offering, cohort, patterns):
 	except frappe.ValidationError:
 		frappe.clear_messages()
 		return False
-	return bool(ese_max) and any(sum(flt(q.max_marks) for q in pattern) > flt(ese_max) for pattern in patterns.values())
+	return bool(ese_max) and any(
+		sum(flt(q.max_marks) for q in pattern) > flt(ese_max) for pattern in patterns.values()
+	)
 
 
 def bundle_patterns(bundles):

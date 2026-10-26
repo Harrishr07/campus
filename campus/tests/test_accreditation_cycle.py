@@ -3,7 +3,8 @@
 import frappe
 
 from campus.campus_platform.approvals import approve, reject, request_approval
-from campus.iqac import api, compute, cycle as lifecycle
+from campus.iqac import api, compute
+from campus.iqac import cycle as lifecycle
 from campus.iqac.setup import FRAMEWORK
 from campus.tests.approval_fixtures import level
 from campus.tests.factories import make_user
@@ -26,11 +27,15 @@ class CycleFixture(IqacFixture):
 
 	def setUp(self):
 		super().setUp()
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": "Accreditation Cycle"})
 
 	def policies(self):
-		return frappe.get_all("Approval Policy", {"document_type": "Accreditation Cycle"}, pluck="name") or [""]
+		return frappe.get_all("Approval Policy", {"document_type": "Accreditation Cycle"}, pluck="name") or [
+			""
+		]
 
 	def make_policy(self, **extra):
 		return frappe.get_doc(
@@ -95,7 +100,12 @@ class TestOwnersAndTasks(CycleFixture):
 	def todos(self, user):
 		return frappe.get_all(
 			"ToDo",
-			{"reference_type": "Accreditation Cycle", "reference_name": self.cycle.name, "allocated_to": user, "status": "Open"},
+			{
+				"reference_type": "Accreditation Cycle",
+				"reference_name": self.cycle.name,
+				"allocated_to": user,
+				"status": "Open",
+			},
 			pluck="description",
 		)
 
@@ -147,10 +157,14 @@ class TestApprovalAndLock(CycleFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "IQAC Review"):
 			request_approval("Accreditation Cycle", self.cycle.name)
 		self.to_review()
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": "Accreditation Cycle"})
 		with self.assertRaisesRegex(frappe.ValidationError, "Approval Policy"):
-			request_approval("Accreditation Cycle", self.cycle.name)  # never approved by the engine's no-policy shortcut
+			request_approval(
+				"Accreditation Cycle", self.cycle.name
+			)  # never approved by the engine's no-policy shortcut
 		self.assertEqual(self.status(), "IQAC Review")
 
 	def test_a_policy_whose_final_action_is_not_submit_is_refused(self):
@@ -166,7 +180,10 @@ class TestApprovalAndLock(CycleFixture):
 		lifecycle.prepare_values(self.cycle.name)
 		self.to_review()
 		self.approve_cycle()
-		self.assertEqual((self.status(), frappe.db.get_value("Accreditation Cycle", self.cycle.name, "docstatus")), ("Approved", 1))
+		self.assertEqual(
+			(self.status(), frappe.db.get_value("Accreditation Cycle", self.cycle.name, "docstatus")),
+			("Approved", 1),
+		)
 		statuses = frappe.get_all("Metric Value", {"cycle": self.cycle.name}, pluck="status")
 		self.assertGreater(len(statuses), 2)
 		self.assertEqual(set(statuses), {"Locked"})
@@ -200,4 +217,6 @@ class TestApprovalAndLock(CycleFixture):
 			doc.save()
 		lifecycle.advance(self.cycle.name)
 		self.assertEqual(self.status(), "Submitted")
-		self.assertEqual(set(frappe.get_all("Metric Value", {"cycle": self.cycle.name}, pluck="status")), {"Locked"})
+		self.assertEqual(
+			set(frappe.get_all("Metric Value", {"cycle": self.cycle.name}, pluck="status")), {"Locked"}
+		)

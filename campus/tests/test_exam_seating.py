@@ -17,7 +17,14 @@ from campus.tests.utils import CampusTestCase
 COLLEGE = demo.ENGINEERING
 COE_USER = "seat-coe@example.com"
 DAY1, DAY2, DAY3 = "2026-11-20", "2026-11-21", "2026-11-23"
-SCHEDULE = {"C1": (DAY1, "FN"), "C2": (DAY1, "FN"), "C3": (DAY1, "AN"), "C4": (DAY2, "FN"), "C5": (DAY2, "AN"), "C6": (DAY3, "AN")}
+SCHEDULE = {
+	"C1": (DAY1, "FN"),
+	"C2": (DAY1, "FN"),
+	"C3": (DAY1, "AN"),
+	"C4": (DAY2, "FN"),
+	"C5": (DAY2, "AN"),
+	"C6": (DAY3, "AN"),
+}
 HALLS = {"Seat Hall A": (3, 4, [(1, 1)]), "Seat Hall B": (2, 3, [])}
 
 
@@ -44,7 +51,13 @@ def make_room(name, rows, columns, blocked, company=COLLEGE, kind="Exam Hall"):
 
 def make_plan(exam_session, exam_date, slot, halls):
 	return frappe.get_doc(
-		{"doctype": "Seating Plan", "exam_session": exam_session, "exam_date": exam_date, "slot": slot, "halls": [{"room": h} for h in halls]}
+		{
+			"doctype": "Seating Plan",
+			"exam_session": exam_session,
+			"exam_date": exam_date,
+			"slot": slot,
+			"halls": [{"room": h} for h in halls],
+		}
 	).insert()
 
 
@@ -69,7 +82,9 @@ class SeatingFixture(CampusTestCase):
 			}
 		).insert().name  # fmt: skip
 		cls.rooms = {name: make_room(name, *layout).name for name, layout in HALLS.items()}
-		cls.students = frappe.get_all("Student", {"oc_company": COLLEGE}, pluck="name", order_by="name asc", limit=13)
+		cls.students = frappe.get_all(
+			"Student", {"oc_company": COLLEGE}, pluck="name", order_by="name asc", limit=13
+		)
 		for i, student in enumerate(cls.students):
 			cls.make_ticket(student, ticket_courses(i), "Issued" if i < 12 else "Withheld")
 
@@ -119,13 +134,19 @@ class TestSeatingPlan(SeatingFixture):
 		self.assertNotIn(withheld, [s.student for s in plan.seats])
 		placed = {Seat(s.room, s.seat_row, s.seat_column): (s.student, s.course) for s in plan.seats}
 		self.assertEqual((conflicts(placed), plan.adjacent_same_course, plan.seated), (0, 0, 12))
-		self.assertNotIn((self.rooms["Seat Hall A"], 1, 1), [(s.room, s.seat_row, s.seat_column) for s in plan.seats])
+		self.assertNotIn(
+			(self.rooms["Seat Hall A"], 1, 1), [(s.room, s.seat_row, s.seat_column) for s in plan.seats]
+		)
 		for hall in plan.halls:
 			self.assertLessEqual(hall.seated, hall.capacity)
 		self.assertEqual({s.course for s in plan.seats}, {course("C1"), course("C2")})
 
 	def test_a_debarred_student_is_not_seated(self):
-		frappe.db.set_value("Exam Registration", f"EXR-{self.session}-{self.students[0]}", {"debarred": 1, "debarment_reason": "Malpractice"})
+		frappe.db.set_value(
+			"Exam Registration",
+			f"EXR-{self.session}-{self.students[0]}",
+			{"debarred": 1, "debarment_reason": "Malpractice"},
+		)
 		plan = self.generated()
 		self.assertEqual(sorted(s.student for s in plan.seats), sorted(self.students[1:12]))
 
@@ -175,7 +196,9 @@ class TestSeatingPlan(SeatingFixture):
 
 	def test_prints_show_the_seats_and_escape_names(self):
 		plan = self.generated()
-		frappe.db.set_value("Seating Plan Seat", plan.seats[0].name, "student_name", "<script>alert(1)</script>")
+		frappe.db.set_value(
+			"Seating Plan Seat", plan.seats[0].name, "student_name", "<script>alert(1)</script>"
+		)
 		for print_format in ("Seating Chart", "Hall Attendance Sheet"):
 			html = frappe.get_print("Seating Plan", plan.name, print_format)
 			self.assertIn(plan.seats[1].student, html, print_format)
@@ -190,8 +213,26 @@ class TestAttendanceToResult(ExamFixture):
 	def plan_with(self, student, course_name, absent):
 		room = make_room("Exm Hall 1", 2, 2, [], company=self.session.company).name
 		plan = frappe.new_doc("Seating Plan")
-		plan.update({"exam_session": self.session.name, "exam_date": "2022-12-01", "slot": "FN", "halls": [{"room": room}]})
-		plan.append("seats", {"room": room, "seat_row": 1, "seat_column": 1, "seat_label": "R1C1", "student": student, "course": course_name, "absent": absent})
+		plan.update(
+			{
+				"exam_session": self.session.name,
+				"exam_date": "2022-12-01",
+				"slot": "FN",
+				"halls": [{"room": room}],
+			}
+		)
+		plan.append(
+			"seats",
+			{
+				"room": room,
+				"seat_row": 1,
+				"seat_column": 1,
+				"seat_label": "R1C1",
+				"student": student,
+				"course": course_name,
+				"absent": absent,
+			},
+		)
 		plan.flags.generating = True  # stands in for Generate Seating: the result side is under test here
 		return plan.insert()
 
@@ -210,7 +251,16 @@ class TestAttendanceToResult(ExamFixture):
 		self.assertEqual(grades["EXM TL"][1], "Pass")  # other courses are graded from their marks
 
 	def test_an_absent_student_without_a_mark_row_gets_ab_not_an_error(self):
-		frappe.db.delete("Mark Sheet Entry Row", {"student": self.s22.name, "parent": frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": self.offerings22["EXM FA"]})})
+		frappe.db.delete(
+			"Mark Sheet Entry Row",
+			{
+				"student": self.s22.name,
+				"parent": frappe.db.get_value(
+					"Mark Sheet Entry",
+					{"exam_session": self.session.name, "course_offering": self.offerings22["EXM FA"]},
+				),
+			},
+		)
 		self.plan_with(self.s22.name, "EXM FA", 1)
 		self.run_session()
 		self.assertEqual(self.grades(self.s22.name)["EXM FA"], ("AB", "AB"))

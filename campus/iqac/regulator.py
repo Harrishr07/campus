@@ -29,7 +29,9 @@ def due_date(basis, period_end, month, day, days_after):
 	if basis != "Fixed Date Each Year":
 		frappe.throw(_("Unknown due basis {0}.").format(frappe.bold(basis)))
 	month, day = cint(month), cint(day)
-	if not 1 <= month <= 12 or not 1 <= day <= calendar.monthrange(2024, month)[1]:  # 2024: a leap year, so 29 Feb is allowed
+	if (
+		not 1 <= month <= 12 or not 1 <= day <= calendar.monthrange(2024, month)[1]
+	):  # 2024: a leap year, so 29 Feb is allowed
 		frappe.throw(_("Enter a valid due month and day."))
 	for year in (period_end.year, period_end.year + 1):
 		candidate = datetime.date(year, month, min(day, calendar.monthrange(year, month)[1]))
@@ -45,7 +47,11 @@ def reminder_offsets(text):
 		if not part:
 			continue
 		if not part.isdigit():
-			frappe.throw(_("Reminder days must be whole numbers separated by commas; {0} is not.").format(frappe.bold(part)))
+			frappe.throw(
+				_("Reminder days must be whole numbers separated by commas; {0} is not.").format(
+					frappe.bold(part)
+				)
+			)
 		offsets.append(int(part))
 	return sorted(set(offsets), reverse=True)
 
@@ -69,8 +75,12 @@ def send_reminders(on_date=None):
 	"""Scheduler entry point (daily). Returns the number of submissions messaged about."""
 	on_date = getdate(on_date or today())
 	count = 0
-	for row in frappe.get_all("Regulator Submission", {"status": OPEN_STATUS}, ["name", "due_date", "submission_type"]):
-		offsets = reminder_offsets(frappe.get_cached_value("Regulator Submission Type", row.submission_type, "reminder_days"))
+	for row in frappe.get_all(
+		"Regulator Submission", {"status": OPEN_STATUS}, ["name", "due_date", "submission_type"]
+	):
+		offsets = reminder_offsets(
+			frappe.get_cached_value("Regulator Submission Type", row.submission_type, "reminder_days")
+		)
 		due_stage = stage(row.due_date, on_date, offsets)
 		if not due_stage:
 			continue
@@ -78,7 +88,9 @@ def send_reminders(on_date=None):
 			notify(frappe.get_doc("Regulator Submission", row.name), on_date, *due_stage)
 			count += 1
 		except Exception:
-			frappe.log_error(title=f"Regulator submission reminder failed for {row.name}")  # no context: keep the rest going
+			frappe.log_error(
+				title=f"Regulator submission reminder failed for {row.name}"
+			)  # no context: keep the rest going
 	return count
 
 
@@ -92,5 +104,7 @@ def notify(submission, on_date, kind, days):
 	send(OVERDUE_EVENT, submission, [owner], context=context)
 	heads = principals(submission)
 	if not heads:  # nobody to escalate to: say so, the run goes on
-		frappe.logger("campus").warning(f"Regulator Submission {submission.name}: overdue, but {submission.company} has no Principal position holder")
+		frappe.logger("campus").warning(
+			f"Regulator Submission {submission.name}: overdue, but {submission.company} has no Principal position holder"
+		)
 	send(ESCALATION_EVENT, submission, [f"User:{user}" for user in heads], context=context)

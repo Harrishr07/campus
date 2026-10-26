@@ -19,10 +19,34 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 200},
-		{"fieldname": "academic_year", "label": _("Academic Year"), "fieldtype": "Link", "options": "Academic Year", "width": 120},
-		{"fieldname": "quota", "label": _("Quota"), "fieldtype": "Link", "options": "Admission Quota", "width": 120},
-		{"fieldname": "category", "label": _("Category"), "fieldtype": "Link", "options": "Student Category", "width": 110},
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 200,
+		},
+		{
+			"fieldname": "academic_year",
+			"label": _("Academic Year"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 120,
+		},
+		{
+			"fieldname": "quota",
+			"label": _("Quota"),
+			"fieldtype": "Link",
+			"options": "Admission Quota",
+			"width": 120,
+		},
+		{
+			"fieldname": "category",
+			"label": _("Category"),
+			"fieldtype": "Link",
+			"options": "Student Category",
+			"width": 110,
+		},
 		{"fieldname": "sanctioned", "label": _("Sanctioned"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "allotted", "label": _("Allotted"), "fieldtype": "Int", "width": 90},
 		{"fieldname": "filled", "label": _("Filled"), "fieldtype": "Int", "width": 90},
@@ -40,7 +64,12 @@ def data(filters):
 		if filters.get(field):
 			conditions[field] = filters[field]
 	rows = []
-	for matrix in frappe.get_list("Seat Matrix", filters=conditions, fields=["name", "company", "program", "academic_year"], order_by="program, academic_year"):
+	for matrix in frappe.get_list(
+		"Seat Matrix",
+		filters=conditions,
+		fields=["name", "company", "program", "academic_year"],
+		order_by="program, academic_year",
+	):
 		rows += matrix_rows(matrix)
 	return rows
 
@@ -49,7 +78,11 @@ def matrix_rows(matrix):
 	filled = seat_matrix.count_filled(matrix.company, matrix.program, matrix.academic_year)
 	allotted = seat_matrix.count_allotted(matrix.program, matrix.academic_year)
 	seats = frappe.get_all(
-		"Seat Matrix Row", {"parent": matrix.name}, ["quota", "category", "sanctioned"], order_by="idx", limit=0
+		"Seat Matrix Row",
+		{"parent": matrix.name},
+		["quota", "category", "sanctioned"],
+		order_by="idx",
+		limit=0,
 	)
 	rows = []
 	for seat in seats:

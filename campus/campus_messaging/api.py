@@ -73,7 +73,9 @@ def _send_to(template, settings, doc, entry, context, now):
 	if not log:  # a concurrent send took the key
 		return names + delivery.existing_logs(template.event_key, doc, entry["key"], token)
 	if not release:
-		frappe.enqueue(DISPATCH, queue="short", enqueue_after_commit=True, now=now or frappe.in_test, name=log.name)
+		frappe.enqueue(
+			DISPATCH, queue="short", enqueue_after_commit=True, now=now or frappe.in_test, name=log.name
+		)
 	return [*names, log.name]
 
 
@@ -84,14 +86,21 @@ def plan_channels(template, settings, entry):
 	is eligible or consent-skipped, so the recipient still leaves one log explaining why nothing was sent.
 	"""
 	order = [row.channel for row in settings.channel_order]
-	channels = sorted((row.channel for row in template.channels), key=lambda c: order.index(c) if c in order else len(order))
+	channels = sorted(
+		(row.channel for row in template.channels), key=lambda c: order.index(c) if c in order else len(order)
+	)
 	eligible, skipped, unaddressed = [], [], []
 	for channel in channels:
 		address = entry[ADDRESS_FIELD[channel]]
 		if not address:
 			unaddressed.append((channel, _("No address for {0}").format(channel)))
 		elif not consent.is_allowed(entry["party_type"], entry["party"], channel, template.purpose):
-			skipped.append((channel, _("Recipient has not consented to {0} {1} messages").format(template.purpose, channel)))
+			skipped.append(
+				(
+					channel,
+					_("Recipient has not consented to {0} {1} messages").format(template.purpose, channel),
+				)
+			)
 		else:
 			eligible.append((channel, address))
 	if not eligible and not skipped:

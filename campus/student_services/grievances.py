@@ -33,7 +33,10 @@ PRINCIPAL_POSITION = "PRINCIPAL"
 def category_settings(category):
 	"""The oc_ settings of a Grievance Type; throws unless students may raise it and it has an escalation policy."""
 	settings = frappe.db.get_value(
-		"Grievance Type", category, ["oc_applies_to_students", "oc_confidential", "oc_escalation_policy"], as_dict=True
+		"Grievance Type",
+		category,
+		["oc_applies_to_students", "oc_confidential", "oc_escalation_policy"],
+		as_dict=True,
 	)
 	if not settings or not settings.oc_applies_to_students:
 		frappe.throw(_("{0} is not a student grievance category.").format(frappe.bold(category)))
@@ -50,8 +53,12 @@ def validate_category(doc, method=None):
 	policy = frappe.get_doc("Approval Policy", doc.oc_escalation_policy)
 	if policy.document_type != "Student Grievance":
 		frappe.throw(_("{0} is not a Student Grievance policy.").format(frappe.bold(policy.name)))
-	if doc.oc_confidential and not all(lv.approver_type == "Role" and lv.approver in COMMITTEE_ROLES for lv in policy.levels):
-		frappe.throw(_("A confidential category needs a policy whose every level is the Grievance Committee role."))
+	if doc.oc_confidential and not all(
+		lv.approver_type == "Role" and lv.approver in COMMITTEE_ROLES for lv in policy.levels
+	):
+		frappe.throw(
+			_("A confidential category needs a policy whose every level is the Grievance Committee role.")
+		)
 
 
 def check_description(description):
@@ -86,9 +93,15 @@ def notify_unrouted(grievance):
 	"""Tell who must take a grievance no level could route: the committee; with nobody in it the Principal (never
 	for a confidential grievance), else the System Managers, so the grievance is never orphaned."""
 	users = resolve_approvers("Role", COMMITTEE_ROLE, grievance)
-	message = _("No approver could be found for the escalation levels; the grievance committee should handle it.")
+	message = _(
+		"No approver could be found for the escalation levels; the grievance committee should handle it."
+	)
 	if not users:
-		users = [] if grievance.is_confidential else resolve_approvers("Position", PRINCIPAL_POSITION, grievance, "company")
+		users = (
+			[]
+			if grievance.is_confidential
+			else resolve_approvers("Position", PRINCIPAL_POSITION, grievance, "company")
+		)
 		users = users or resolve_approvers("Role", "System Manager", grievance, limit_to_company=True)
 		message = _("No approver could be found for the escalation levels and nobody holds the Grievance Committee role. Give the role to the committee members (or fill the vacant positions) so the grievance can be handled.")  # fmt: skip
 	notify(users, _("Unrouted grievance: {0}").format(grievance.name), message, grievance)
@@ -151,7 +164,12 @@ def escalate_overdue():
 	"""Hourly job: move every open grievance whose level is past its SLA to the next level."""
 	overdue = frappe.get_all(
 		"Approval Request",
-		{"reference_doctype": "Student Grievance", "status": rules.PENDING, "escalated": 0, "due_at": ["<", now_datetime()]},
+		{
+			"reference_doctype": "Student Grievance",
+			"status": rules.PENDING,
+			"escalated": 0,
+			"due_at": ["<", now_datetime()],
+		},
 		pluck="name",
 	)
 	for name in overdue:

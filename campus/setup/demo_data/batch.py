@@ -30,7 +30,9 @@ class Cohort:
 				self.entries.append((programme, number, person))
 
 	def students(self, ctx, programme):
-		return [student_of(ctx, programme, number, person) for p, number, person in self.entries if p is programme]
+		return [
+			student_of(ctx, programme, number, person) for p, number, person in self.entries if p is programme
+		]
 
 
 def student_of(ctx, programme, number, person):
@@ -70,16 +72,33 @@ def load(ctx):
 def make_student(ctx, programme, number, person, regulation):
 	father = ctx.people.make(f"guardian-student-2025-{programme['abbr'].lower()}-{number:02d}", 1975, 1960)
 	guardian = upsert(
-		ctx.out, "Guardian", {"email_address": father.email},
+		ctx.out,
+		"Guardian",
+		{"email_address": father.email},
 		{"guardian_name": f"{father.first_name} {person.last_name}", "mobile_number": father.mobile},
 	)
 	doc = frappe.get_doc(
 		{
-			"doctype": "Student", "first_name": person.first_name, "last_name": person.last_name,
-			"student_email_id": person.email, "student_mobile_number": person.mobile, "date_of_birth": person.date_of_birth,
-			"gender": person.gender, "joining_date": JOINED_ON, "oc_company": ctx.college, "oc_batch": BATCH_YEAR,
-			"oc_regulation": regulation, "oc_register_no": register_no(ctx, programme, number), "state": "Tamil Nadu",
-			"guardians": [{"guardian": guardian, "guardian_name": f"{father.first_name} {person.last_name}", "relation": "Father"}],
+			"doctype": "Student",
+			"first_name": person.first_name,
+			"last_name": person.last_name,
+			"student_email_id": person.email,
+			"student_mobile_number": person.mobile,
+			"date_of_birth": person.date_of_birth,
+			"gender": person.gender,
+			"joining_date": JOINED_ON,
+			"oc_company": ctx.college,
+			"oc_batch": BATCH_YEAR,
+			"oc_regulation": regulation,
+			"oc_register_no": register_no(ctx, programme, number),
+			"state": "Tamil Nadu",
+			"guardians": [
+				{
+					"guardian": guardian,
+					"guardian_name": f"{father.first_name} {person.last_name}",
+					"relation": "Father",
+				}
+			],
 		}
 	).insert(ignore_permissions=True)
 	ctx.out.created["Student"] += 1
@@ -131,8 +150,13 @@ def ensure_class_group(ctx, programme, students):
 		return name
 	frappe.get_doc(
 		{
-			"doctype": "Student Group", "student_group_name": name, "group_based_on": "Batch", "academic_year": BATCH_YEAR,
-			"program": programme["name"], "oc_company": ctx.college, "oc_section": programme["abbr"],
+			"doctype": "Student Group",
+			"student_group_name": name,
+			"group_based_on": "Batch",
+			"academic_year": BATCH_YEAR,
+			"program": programme["name"],
+			"oc_company": ctx.college,
+			"oc_section": programme["abbr"],
 			"students": [{"student": s} for s in students if s],
 		}
 	).insert(ignore_permissions=True)

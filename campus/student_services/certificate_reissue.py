@@ -43,7 +43,9 @@ def keeps_original_record(doc):
 
 def apply_terms(doc, kind):
 	"""Draft: a reissue always needs approval; its fee, marking and (for a TC) leaving fields follow the reason."""
-	original = frappe.db.get_value(REQUEST, doc.supersedes, ["leaving_date", "reason_for_leaving"], as_dict=True)
+	original = frappe.db.get_value(
+		REQUEST, doc.supersedes, ["leaving_date", "reason_for_leaving"], as_dict=True
+	)
 	doc.needs_approval = 1
 	doc.fee_amount = 0 if doc.reissue_reason == CORRECTION else kind.reissue_fee
 	doc.marking = marking_for(doc.reissue_reason) if kind.mark_reissues else None
@@ -61,11 +63,23 @@ def validate_reissue(doc):
 		REQUEST, doc.supersedes, ["docstatus", "student", "certificate_type", "superseded_by"], as_dict=True
 	)
 	if not original or original.docstatus != 1:
-		frappe.throw(_("{0} is not an issued certificate, so it cannot be superseded.").format(frappe.bold(doc.supersedes)))
+		frappe.throw(
+			_("{0} is not an issued certificate, so it cannot be superseded.").format(
+				frappe.bold(doc.supersedes)
+			)
+		)
 	if (original.student, original.certificate_type) != (doc.student, doc.certificate_type):
-		frappe.throw(_("A reissue is for the same student and certificate type as {0}.").format(frappe.bold(doc.supersedes)))
+		frappe.throw(
+			_("A reissue is for the same student and certificate type as {0}.").format(
+				frappe.bold(doc.supersedes)
+			)
+		)
 	if original.superseded_by:
-		frappe.throw(_("{0} was already superseded by {1}.").format(frappe.bold(doc.supersedes), original.superseded_by))
+		frappe.throw(
+			_("{0} was already superseded by {1}.").format(
+				frappe.bold(doc.supersedes), original.superseded_by
+			)
+		)
 	if doc.reissue_reason in EVIDENCE_REASONS and not doc.evidence:
 		frappe.throw(_("Attach the evidence for a {0} reissue.").format(_(doc.reissue_reason)))
 	if doc.reissue_reason == LOST and not (doc.reference_note or "").strip():
@@ -85,23 +99,35 @@ def refuse_without_policy(doc):
 
 	if not find_policy(doc):
 		frappe.throw(
-			_("No approval policy is configured for Certificate Reissue; ask the administrator to set one up."),
+			_(
+				"No approval policy is configured for Certificate Reissue; ask the administrator to set one up."
+			),
 			title=_("Approval Policy Missing"),
 		)
 
 
 def lock_original(doc):
 	"""Submit: re-check, under a lock, that the original is still issued and current."""
-	original = frappe.db.get_value(REQUEST, doc.supersedes, ["docstatus", "superseded_by"], as_dict=True, for_update=True)
+	original = frappe.db.get_value(
+		REQUEST, doc.supersedes, ["docstatus", "superseded_by"], as_dict=True, for_update=True
+	)
 	if original.docstatus != 1 or original.superseded_by:
-		frappe.throw(_("{0} is no longer a current certificate and cannot be superseded.").format(frappe.bold(doc.supersedes)))
+		frappe.throw(
+			_("{0} is no longer a current certificate and cannot be superseded.").format(
+				frappe.bold(doc.supersedes)
+			)
+		)
 
 
 def supersede(doc):
 	"""Issue: the original becomes Superseded, its QR points to this certificate; a TC repoints the Student."""
-	original = frappe.db.get_value(REQUEST, doc.supersedes, ["name", "docstatus", "superseded_by"], as_dict=True, for_update=True)
+	original = frappe.db.get_value(
+		REQUEST, doc.supersedes, ["name", "docstatus", "superseded_by"], as_dict=True, for_update=True
+	)
 	frappe.db.set_value(REQUEST, original.name, "superseded_by", doc.name, update_modified=False)
-	verification.supersede_for(frappe._dict(doctype=REQUEST, name=original.name), frappe._dict(doctype=REQUEST, name=doc.name))
+	verification.supersede_for(
+		frappe._dict(doctype=REQUEST, name=original.name), frappe._dict(doctype=REQUEST, name=doc.name)
+	)
 	if doc.is_transfer_certificate:
 		frappe.db.set_value(
 			"Student", doc.student,
@@ -119,7 +145,11 @@ def reinstate(doc):
 		return
 	frappe.db.set_value(REQUEST, original.name, "superseded_by", None, update_modified=False)
 	verification.reinstate_for(frappe._dict(doctype=REQUEST, name=original.name))
-	if doc.is_transfer_certificate and frappe.db.get_value("Student", doc.student, "leaving_certificate_number") == doc.certificate_number:
+	if (
+		doc.is_transfer_certificate
+		and frappe.db.get_value("Student", doc.student, "leaving_certificate_number")
+		== doc.certificate_number
+	):
 		frappe.db.set_value(
 			"Student", doc.student,
 			{"leaving_certificate_number": original.certificate_number, "date_of_leaving": original.leaving_date, "reason_for_leaving": original.reason_for_leaving},
@@ -139,11 +169,13 @@ def oc_reissue_mark(doc):
 	"""Jinja global for the certificate print formats: DUPLICATE / REISSUED banner of a reissued certificate."""
 	if not doc.get("marking"):
 		return ""
-	original = frappe.db.get_value(REQUEST, doc.supersedes, "certificate_number") if doc.get("supersedes") else None
+	original = (
+		frappe.db.get_value(REQUEST, doc.supersedes, "certificate_number") if doc.get("supersedes") else None
+	)
 	note = _("In place of No. {0}").format(escape(original)) if original else ""
 	return Markup(
 		'<div class="oc-reissue-mark" style="text-align:center;font-weight:bold;letter-spacing:4px;border:2px solid #000;padding:2px">'
-		"{label}</div><div style=\"text-align:center;font-size:11px\">{note}</div>"
+		'{label}</div><div style="text-align:center;font-size:11px">{note}</div>'
 	).format(label=escape(_(doc.marking).upper()), note=Markup(note))
 
 

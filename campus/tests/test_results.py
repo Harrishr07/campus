@@ -12,7 +12,14 @@ from campus.examinations.seed import seed_regulation
 from campus.tests.approval_fixtures import make_department
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.factories import make_company, make_user
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "Exam Test College"
@@ -20,7 +27,11 @@ PROGRAM = "Exam Test BE"
 PRE_TERM, TERM = "Exm Pre", "Exm Odd"
 COE_USER = "exam-coe@example.com"
 FACULTY, OTHER_FACULTY = "exam-faculty@example.com", "exam-other-faculty@example.com"
-PRINCIPAL_USER, HOD_USER, OTHER_HOD_USER = "exam-principal@example.com", "exam-hod@example.com", "exam-other-hod@example.com"
+PRINCIPAL_USER, HOD_USER, OTHER_HOD_USER = (
+	"exam-principal@example.com",
+	"exam-hod@example.com",
+	"exam-other-hod@example.com",
+)
 STUDENT_22_USER, STUDENT_26_USER, GUARDIAN_USER = (
 	"exam-s22@example.com", "exam-s26@example.com", "exam-guardian@example.com",
 )  # fmt: skip
@@ -35,7 +46,9 @@ MARKS = {"EXM TH": (28, 35), "EXM LB": (45, 30), "EXM TL": (40, 45), "EXM FA": (
 
 def clear_world():
 	students = frappe.get_all("Student", {"oc_company": COLLEGE}, pluck="name") or [""]
-	frappe.db.delete("Student Result Course", {"parenttype": "Student Result", "parent": ["like", "SR-EXS-%"]})
+	frappe.db.delete(
+		"Student Result Course", {"parenttype": "Student Result", "parent": ["like", "SR-EXS-%"]}
+	)
 	frappe.db.delete("Student Result", {"student": ["in", students]})
 	entries = frappe.get_all("Mark Sheet Entry", {"company": COLLEGE}, pluck="name") or [""]
 	frappe.db.delete("Mark Sheet Entry Row", {"parent": ["in", entries]})
@@ -169,10 +182,20 @@ class ExamFixture(CampusTestCase):
 		cls.curriculum22 = make_curriculum(regs["R2022"], {**COURSES, PRE_COURSE[0]: PRE_COURSE[1]})
 		cls.curriculum26 = make_curriculum(regs["R2026"], COURSES)
 		cls.session = frappe.get_doc(
-			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": cls.term, "status": "Marks Entry"}
+			{
+				"doctype": "Exam Session",
+				"company": COLLEGE,
+				"academic_term": cls.term,
+				"status": "Marks Entry",
+			}
 		).insert()
 		cls.pre_session = frappe.get_doc(
-			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": cls.pre_term, "status": "Marks Entry"}
+			{
+				"doctype": "Exam Session",
+				"company": COLLEGE,
+				"academic_term": cls.pre_term,
+				"status": "Marks Entry",
+			}
 		).insert()
 		cls.offerings22, cls.offerings26 = {}, {}
 		cls.pre_offering = make_offering(PRE_COURSE[0], cls.curriculum22, cls.pre_term, [cls.s22.name])
@@ -192,7 +215,9 @@ class ExamFixture(CampusTestCase):
 		self.addCleanup(frappe.db.rollback, save_point="exam_test")
 		self.addCleanup(frappe.set_user, "Administrator")
 		patcher = patch.object(
-			results, "eligibility_status", lambda student, term: "Shortage" if student == self.s_sa.name else "Eligible"
+			results,
+			"eligibility_status",
+			lambda student, term: "Shortage" if student == self.s_sa.name else "Eligible",
 		)
 		patcher.start()
 		self.addCleanup(patcher.stop)
@@ -208,7 +233,9 @@ class ExamFixture(CampusTestCase):
 		return frappe.get_doc("Student Result", f"SR-{(session or self.session).name}-{student.name}")
 
 	def publish(self, publish_at):
-		frappe.db.set_value("Exam Session", self.session.name, {"status": "Published", "publish_at": publish_at})
+		frappe.db.set_value(
+			"Exam Session", self.session.name, {"status": "Published", "publish_at": publish_at}
+		)
 
 
 class TestResultRun(ExamFixture):
@@ -244,14 +271,21 @@ class TestResultRun(ExamFixture):
 		self.assertEqual(self.grades(ab)["EXM LB"], ("A", 8, "Pass"))
 		self.assertEqual(ab.sgpa, 8.67)  # (2*8 + 4*9) / 6: AB and the failed course are outside the credits
 
-	def test_rerun_replaces_the_result_before_publication(self):  # after publication: test_result_processing.TestVersions
+	def test_rerun_replaces_the_result_before_publication(
+		self,
+	):  # after publication: test_result_processing.TestVersions
 		names = self.run_session()
 		entry = frappe.get_doc("Mark Sheet Entry", {"course_offering": self.offerings22["EXM FA"]})
 		row = next(r for r in entry.marks if r.student == self.s22.name)
 		row.ese = 40  # 33.6 + 40 = 73.6 and ESE 66.7%: now passes
 		entry.save()
-		self.assertEqual(results.compute_student_result(self.s22.name, self.session.name), names[self.s22.name])
-		self.assertEqual(frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.session.name}), 1)
+		self.assertEqual(
+			results.compute_student_result(self.s22.name, self.session.name), names[self.s22.name]
+		)
+		self.assertEqual(
+			frappe.db.count("Student Result", {"student": self.s22.name, "exam_session": self.session.name}),
+			1,
+		)
 		doc = self.result(self.s22)
 		self.assertEqual(len(doc.courses), 4)
 		self.assertEqual(self.grades(doc)["EXM FA"], ("A", 8, "Pass"))
@@ -265,15 +299,25 @@ class TestResultRun(ExamFixture):
 			name = api.run_results(self.session.name, PROGRAM)
 		enqueue.assert_called_once_with(name)
 		run = frappe.get_doc("Bulk Run", name)
-		self.assertEqual(sorted(frappe.parse_json(run.items)), sorted([self.s22.name, self.s26.name, self.s_ab.name, self.s_sa.name]))
+		self.assertEqual(
+			sorted(frappe.parse_json(run.items)),
+			sorted([self.s22.name, self.s26.name, self.s_ab.name, self.s_sa.name]),
+		)
 		self.assertEqual(run.handler, results.HANDLER)
 		self.assertEqual(run.get_parameters(), {"exam_session": self.session.name, "program": PROGRAM})
 
 	def test_missing_marks_stop_the_student_instead_of_guessing(self):
-		frappe.db.delete("Mark Sheet Entry Row", {"parent": frappe.db.get_value("Mark Sheet Entry", {"course_offering": self.offerings26["EXM TH"]}), "student": self.s26.name})
+		frappe.db.delete(
+			"Mark Sheet Entry Row",
+			{
+				"parent": frappe.db.get_value(
+					"Mark Sheet Entry", {"course_offering": self.offerings26["EXM TH"]}
+				),
+				"student": self.s26.name,
+			},
+		)
 		with self.assertRaises(frappe.ValidationError):
 			results.compute_student_result(self.s26.name, self.session.name)
-
 
 
 class TestRunPreValidation(ExamFixture):
@@ -281,7 +325,9 @@ class TestRunPreValidation(ExamFixture):
 
 	def set_exam_type(self, course, exam_type):
 		for curriculum in (self.curriculum22, self.curriculum26):
-			frappe.db.set_value("Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", exam_type)
+			frappe.db.set_value(
+				"Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", exam_type
+			)
 
 	def start(self):
 		frappe.set_user(COE_USER)
@@ -299,7 +345,11 @@ class TestRunPreValidation(ExamFixture):
 		self.assertIn("EXM FA", str(refused.exception))
 		self.assertNotIn("EXM TH", str(refused.exception))
 		self.assertFalse(self.enqueued)
-		self.assertFalse(frappe.db.exists("Bulk Run", {"run_type": results.RUN_TYPE, "parameters": ["like", f"%{self.session.name}%"]}))
+		self.assertFalse(
+			frappe.db.exists(
+				"Bulk Run", {"run_type": results.RUN_TYPE, "parameters": ["like", f"%{self.session.name}%"]}
+			)
+		)
 
 	def test_a_course_type_the_rule_set_lacks_refuses_the_run(self):
 		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": ["like", "R2026-EXM%"]})
@@ -337,7 +387,9 @@ class TestBlankExamTypes(ExamFixture):
 
 	def blank(self, course):
 		for curriculum in (self.curriculum22, self.curriculum26):
-			frappe.db.set_value("Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", "")
+			frappe.db.set_value(
+				"Curriculum Course", {"parent": curriculum, "course": course}, "exam_type", ""
+			)
 
 	def test_registration_mark_sheet_and_cia_refuse_a_blank_exam_type(self):
 		from campus.examinations import cia, registration
@@ -357,25 +409,38 @@ class TestBlankExamTypes(ExamFixture):
 		frappe.db.set_value("Student", self.s26.name, "oc_regulation", None)
 		resolve = results.get_regulation
 		frappe.set_user(COE_USER)
-		with patch.object(results, "get_regulation", lambda s: None if s == self.s26.name else resolve(s)), patch.object(bulk, "enqueue_run"):
+		with (
+			patch.object(results, "get_regulation", lambda s: None if s == self.s26.name else resolve(s)),
+			patch.object(bulk, "enqueue_run"),
+		):
 			with self.assertRaises(frappe.ValidationError) as refused:
 				results.start_run(self.session.name, PROGRAM)
 		self.assertIn(f"student {self.s26.name} has no regulation", str(refused.exception))
 
 	def test_a_blank_arrear_course_fails_its_students_bulk_row(self):
 		pre_sheet = frappe.db.get_value("Mark Sheet Entry", {"course_offering": self.pre_offering})
-		frappe.db.set_value("Mark Sheet Entry Row", {"parent": pre_sheet, "student": self.s22.name}, "ese", 5)  # EXM PRE failed
+		frappe.db.set_value(
+			"Mark Sheet Entry Row", {"parent": pre_sheet, "student": self.s22.name}, "ese", 5
+		)  # EXM PRE failed
 		results.compute_student_result(self.s22.name, self.pre_session.name)
-		frappe.db.set_value("Exam Session", self.pre_session.name, {"status": "Published", "publish_at": add_days(now_datetime(), -1)})
+		frappe.db.set_value(
+			"Exam Session",
+			self.pre_session.name,
+			{"status": "Published", "publish_at": add_days(now_datetime(), -1)},
+		)
 		registration = frappe.get_doc(
 			{"doctype": "Exam Registration", "exam_session": self.session.name, "student": self.s22.name, "attendance_status": "Eligible",
 			"courses": [{"course": PRE_COURSE[0], "kind": "Arrear"}]}
 		).insert()  # fmt: skip
 		self.assertEqual(registration.courses[0].eligibility, "Eligible")
-		frappe.db.set_value("Curriculum Course", {"parent": self.curriculum22, "course": PRE_COURSE[0]}, "exam_type", "")
+		frappe.db.set_value(
+			"Curriculum Course", {"parent": self.curriculum22, "course": PRE_COURSE[0]}, "exam_type", ""
+		)
 		frappe.set_user(COE_USER)
 		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):
-			run = results.start_run(self.session.name, PROGRAM)  # EXM PRE is not offered this term: the run starts
+			run = results.start_run(
+				self.session.name, PROGRAM
+			)  # EXM PRE is not offered this term: the run starts
 			bulk.process_bulk_run(run)
 		errors = frappe.get_all("Bulk Run Row Error", {"parent": run}, ["item_key", "error"])
 		self.assertEqual([e.item_key for e in errors], [self.s22.name])
@@ -401,10 +466,14 @@ class TestResultAccess(ExamFixture):
 		self.run_session()
 		self.assertEqual(self.visible(STUDENT_22_USER), [])
 		self.assertEqual(self.visible(GUARDIAN_USER), [])
-		self.assertFalse(frappe.has_permission("Student Result", "read", self.result(self.s22), user=STUDENT_22_USER))
+		self.assertFalse(
+			frappe.has_permission("Student Result", "read", self.result(self.s22), user=STUDENT_22_USER)
+		)
 		self.publish(add_days(now_datetime(), 1))  # published, but publish_at is still ahead
 		self.assertEqual(self.visible(STUDENT_22_USER), [])
-		self.assertFalse(frappe.has_permission("Student Result", "read", self.result(self.s22), user=STUDENT_22_USER))
+		self.assertFalse(
+			frappe.has_permission("Student Result", "read", self.result(self.s22), user=STUDENT_22_USER)
+		)
 
 	def test_students_and_guardians_read_only_their_own_after_publication(self):
 		self.run_session()
@@ -430,7 +499,11 @@ class TestResultAccess(ExamFixture):
 		self.run_session()
 		department, other = (make_department(name, COLLEGE) for name in ("Exam Test CSE", "Exam Test ECE"))
 		frappe.db.set_value("Program", PROGRAM, "department", department)
-		for user, role, scope in ((PRINCIPAL_USER, "Principal", None), (HOD_USER, "HOD", department), (OTHER_HOD_USER, "HOD", other)):
+		for user, role, scope in (
+			(PRINCIPAL_USER, "Principal", None),
+			(HOD_USER, "HOD", department),
+			(OTHER_HOD_USER, "HOD", other),
+		):
 			make_login(user, role)
 			if scope:
 				frappe.get_doc(
@@ -439,7 +512,9 @@ class TestResultAccess(ExamFixture):
 		for user in (PRINCIPAL_USER, HOD_USER):
 			self.assertEqual(self.visible(user), [], user)  # nothing before the release
 		self.publish(add_days(now_datetime(), -1))
-		released = sorted(s.name for s in (self.s22, self.s26, self.s_ab, self.s_sa))  # the earlier session is unpublished
+		released = sorted(
+			s.name for s in (self.s22, self.s26, self.s_ab, self.s_sa)
+		)  # the earlier session is unpublished
 		self.assertEqual(self.visible(PRINCIPAL_USER), released)
 		self.assertEqual(self.visible(HOD_USER), released)
 		self.assertEqual(self.visible(OTHER_HOD_USER), [])
@@ -447,7 +522,11 @@ class TestResultAccess(ExamFixture):
 		result = self.result(self.s22)
 		self.assertTrue(frappe.has_permission("Student Result", "read", result, user=HOD_USER))
 		self.assertFalse(frappe.has_permission("Student Result", "read", result, user=OTHER_HOD_USER))
-		self.assertFalse(frappe.has_permission("Student Result", "read", self.result(self.s22, self.pre_session), user=PRINCIPAL_USER))
+		self.assertFalse(
+			frappe.has_permission(
+				"Student Result", "read", self.result(self.s22, self.pre_session), user=PRINCIPAL_USER
+			)
+		)
 
 	def test_staff_roles_may_print_results(self):
 		for role in ("System Manager", "COE", "Dean Academics", "Academics User"):
@@ -463,7 +542,9 @@ class TestResultAccess(ExamFixture):
 		with self.assertRaises(frappe.ValidationError):
 			api.issue_grade_sheet(self.result(self.s22).name)  # published, but publish_at is still ahead
 		self.publish(add_days(now_datetime(), -1))
-		code = frappe.db.get_value("Verifiable Document", api.issue_grade_sheet(self.result(self.s22).name), "code")
+		code = frappe.db.get_value(
+			"Verifiable Document", api.issue_grade_sheet(self.result(self.s22).name), "code"
+		)
 		html = frappe.get_print("Student Result", self.result(self.s22).name, "Grade Sheet")
 		self.assertIn(code, html)
 		self.assertIn("B+", html)
@@ -477,7 +558,9 @@ class TestMarkSheetEntry(ExamFixture):
 	def test_only_the_offerings_instructors_and_coe_may_edit(self):
 		entry = self.entry()
 		for user, allowed in ((FACULTY, True), (COE_USER, True), (OTHER_FACULTY, False)):
-			self.assertEqual(frappe.has_permission("Mark Sheet Entry", "write", entry, user=user), allowed, user)
+			self.assertEqual(
+				frappe.has_permission("Mark Sheet Entry", "write", entry, user=user), allowed, user
+			)
 		frappe.set_user(OTHER_FACULTY)
 		self.assertEqual(frappe.get_list("Mark Sheet Entry", pluck="name"), [])
 		frappe.set_user(FACULTY)
@@ -509,7 +592,9 @@ class TestMarkSheetEntry(ExamFixture):
 class TestSchemeValidation(ExamFixture):
 	def setUp(self):
 		super().setUp()
-		frappe.db.set_value("Regulation", "R2022-EXM-EXTC", "status", "Draft")  # an Effective one locks its scheme
+		frappe.db.set_value(
+			"Regulation", "R2022-EXM-EXTC", "status", "Draft"
+		)  # an Effective one locks its scheme
 
 	def test_grading_scheme_rejects_overlapping_ranges(self):
 		scheme = frappe.get_doc("Grading Scheme", "R2022-EXM-EXTC")

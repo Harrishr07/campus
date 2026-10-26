@@ -15,7 +15,14 @@ from campus.curriculum.doctype.curriculum.curriculum import create_new_version
 from campus.curriculum.effective import effective_curriculum, pick_curriculum
 from campus.iqac.registry import data_point
 from campus.tests.factories import make_company
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "Proposal Test College"
@@ -44,8 +51,12 @@ class TestPickCurriculum(UnitTestCase):
 		self.assertEqual(pick_curriculum([candidate("v1", 1), candidate("v2", 2, "2026")], None), "v1")
 
 	def test_the_highest_version_wins_among_equals(self):
-		self.assertEqual(pick_curriculum([candidate("v1", 1), candidate("v3", 3), candidate("v2", 2)], "2022"), "v3")
-		self.assertEqual(pick_curriculum([candidate("v2", 2, "2026"), candidate("v3", 3, "2026")], "2026"), "v3")
+		self.assertEqual(
+			pick_curriculum([candidate("v1", 1), candidate("v3", 3), candidate("v2", 2)], "2022"), "v3"
+		)
+		self.assertEqual(
+			pick_curriculum([candidate("v2", 2, "2026"), candidate("v3", 3, "2026")], "2026"), "v3"
+		)
 
 	def test_nothing_applies_when_every_curriculum_is_batch_limited_elsewhere(self):
 		self.assertIsNone(pick_curriculum([candidate("v2", 2, "2026")], "2022"))
@@ -114,7 +125,14 @@ class TestAcademicProposals(CampusTestCase):
 		return name
 
 	def course_row(self, course, semester=1, credits=None, l=3, p=2):
-		values = {"semester": semester, "course": course, "category": "PCC", "lecture_periods": l, "tutorial_periods": 0, "practical_periods": p}
+		values = {
+			"semester": semester,
+			"course": course,
+			"category": "PCC",
+			"lecture_periods": l,
+			"tutorial_periods": 0,
+			"practical_periods": p,
+		}
 		if credits is not None:
 			values.update(credits_override=1, credits=credits)
 		return values
@@ -158,13 +176,23 @@ class TestAcademicProposals(CampusTestCase):
 	def meeting(self, stage_body, days_ago, proposal, decision="Approved", resolve=True, present=None):
 		"""A quorate meeting of the body (Board of Studies etc.) with a resolution on `proposal`."""
 		body = self.bodies[stage_body]
-		meeting = frappe.get_doc({"doctype": "Body Meeting", "body": body, "meeting_date": add_days(today(), -days_ago), "venue": "Hall"}).insert()
+		meeting = frappe.get_doc(
+			{
+				"doctype": "Body Meeting",
+				"body": body,
+				"meeting_date": add_days(today(), -days_ago),
+				"venue": "Hall",
+			}
+		).insert()
 		present = [self.employees[0], self.nominees[0]] if present is None else present
 		for row in meeting.attendance:
 			row.present = int((row.employee or row.external_member) in present)
 		meeting.save()
 		if resolve:
-			meeting.append("resolutions", {"resolution_text": "Resolved", "decision": decision, "proposal": proposal.name})
+			meeting.append(
+				"resolutions",
+				{"resolution_text": "Resolved", "decision": decision, "proposal": proposal.name},
+			)
 			meeting.save()
 		return meeting
 
@@ -188,7 +216,9 @@ class TestAcademicProposals(CampusTestCase):
 	def test_the_five_types_are_seeded_with_the_bos_ac_gb_route_and_idempotently(self):
 		seed_proposal_types()
 		names = set(frappe.get_all("Proposal Type", pluck="name"))
-		self.assertTrue({"New Course", "Syllabus Revision", "New Elective", "Regulation Change", "New Programme"} <= names)
+		self.assertTrue(
+			{"New Course", "Syllabus Revision", "New Elective", "Regulation Change", "New Programme"} <= names
+		)
 		for name in ("New Elective", "Regulation Change"):
 			self.assertEqual([r.body_type for r in frappe.get_doc("Proposal Type", name).route], ROUTE)
 
@@ -196,20 +226,32 @@ class TestAcademicProposals(CampusTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc({"doctype": "Proposal Type", "type_name": "No Route Type"}).insert()
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Proposal Type", "type_name": "Dup Route Type", "route": [{"body_type": "Academic Council"}, {"body_type": "Academic Council"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Proposal Type",
+					"type_name": "Dup Route Type",
+					"route": [{"body_type": "Academic Council"}, {"body_type": "Academic Council"}],
+				}
+			).insert()
 
 	# the full route (AC1, AC2)
 	def test_the_full_route_through_bos_ac_and_gb_makes_curriculum_v2_effective_for_2026(self):
 		proposal = self.make_proposal()
 		self.assertEqual((proposal.status, proposal.current_stage), ("Draft", 0))
 		self.submit(proposal)
-		self.assertEqual((proposal.status, proposal.current_stage, proposal.current_body_type), ("In Route", 1, "Board of Studies"))
+		self.assertEqual(
+			(proposal.status, proposal.current_stage, proposal.current_body_type),
+			("In Route", 1, "Board of Studies"),
+		)
 
 		bos = self.meeting("Board of Studies", 10, proposal)
 		proposal.reload()
 		proposal.advance_stage()
 		proposal.reload()
-		self.assertEqual((proposal.status, proposal.current_stage, proposal.current_body_type), ("In Route", 2, "Academic Council"))
+		self.assertEqual(
+			(proposal.status, proposal.current_stage, proposal.current_body_type),
+			("In Route", 2, "Academic Council"),
+		)
 		self.assertEqual(proposal.stage_resolutions[0].resolution_no, bos.resolutions[0].resolution_no)
 
 		self.meeting("Academic Council", 9, proposal)
@@ -227,7 +269,9 @@ class TestAcademicProposals(CampusTestCase):
 		v2 = frappe.get_doc("Curriculum", self.v2)
 		self.assertEqual((v2.status, v2.approving_resolution), ("Effective", resolution_no))
 		self.assertEqual([r.academic_year for r in v2.applicable_batches], [year_name("2026")])
-		self.assertEqual(frappe.db.get_value("Curriculum", self.v1, "status"), "Effective")  # v1 still serves the other batches
+		self.assertEqual(
+			frappe.db.get_value("Curriculum", self.v1, "status"), "Effective"
+		)  # v1 still serves the other batches
 
 	def test_the_effective_version_is_resolved_per_batch(self):
 		self.resolve_through(self.make_proposal(), 2)
@@ -289,7 +333,9 @@ class TestAcademicProposals(CampusTestCase):
 		proposal = self.make_proposal()
 		self.submit(proposal)
 		with self.assertRaisesRegex(frappe.ValidationError, "(?i)quorum"):
-			self.meeting("Governing Body", 5, proposal, present=[self.employees[0]])  # the university nominee is mandatory
+			self.meeting(
+				"Governing Body", 5, proposal, present=[self.employees[0]]
+			)  # the university nominee is mandatory
 		with self.assertRaises(frappe.ValidationError):
 			proposal.advance_stage()
 
@@ -328,7 +374,9 @@ class TestAcademicProposals(CampusTestCase):
 	def test_a_failed_final_approval_leaves_nothing_half_done(self):
 		proposal = self.make_proposal()
 		self.submit(proposal)
-		frappe.db.set_value("Curriculum Rule", {"regulation": self.regulation}, "max_total_credits", 100)  # v2 now breaks the credit range
+		frappe.db.set_value(
+			"Curriculum Rule", {"regulation": self.regulation}, "max_total_credits", 100
+		)  # v2 now breaks the credit range
 		for index in range(3):
 			self.meeting(ROUTE[index], 10 - index, proposal)
 			proposal.reload()
@@ -337,7 +385,9 @@ class TestAcademicProposals(CampusTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			proposal.advance_stage()
 		proposal.reload()
-		self.assertEqual((proposal.status, proposal.current_stage, len(proposal.stage_resolutions)), ("In Route", 3, 2))
+		self.assertEqual(
+			(proposal.status, proposal.current_stage, len(proposal.stage_resolutions)), ("In Route", 3, 2)
+		)
 		self.assertEqual(frappe.db.get_value("Curriculum", self.v2, "status"), "Draft")
 
 	# regulation change
@@ -345,11 +395,20 @@ class TestAcademicProposals(CampusTestCase):
 		from campus.campus_platform.doctype.regulation.regulation import amend_as_new_version
 
 		amended = amend_as_new_version(self.regulation)
-		proposal = self.make_proposal("Regulation Change", title="Amend R2026", regulation=amended, curriculum=None, batches=[], courses=[])
+		proposal = self.make_proposal(
+			"Regulation Change",
+			title="Amend R2026",
+			regulation=amended,
+			curriculum=None,
+			batches=[],
+			courses=[],
+		)
 		self.resolve_through(proposal, 2)
 		self.assertEqual(proposal.status, "Approved")
 		regulation = frappe.get_doc("Regulation", amended)
-		self.assertEqual((regulation.status, regulation.approving_resolution), ("Effective", proposal.approving_resolution))
+		self.assertEqual(
+			(regulation.status, regulation.approving_resolution), ("Effective", proposal.approving_resolution)
+		)
 		self.assertEqual(frappe.db.get_value("Regulation", self.regulation, "status"), "Retired")
 
 	def test_a_regulation_change_needs_an_unapproved_regulation(self):
@@ -380,10 +439,20 @@ class TestAcademicProposals(CampusTestCase):
 	def test_stage_and_status_are_server_owned(self):
 		proposal = self.make_proposal()
 		proposal.status, proposal.current_stage = "Approved", 3
-		proposal.append("stage_resolutions", {"stage": 1, "body_type": "Board of Studies", "resolution_no": "FAKE/2026/001", "decision": "Approved"})
+		proposal.append(
+			"stage_resolutions",
+			{
+				"stage": 1,
+				"body_type": "Board of Studies",
+				"resolution_no": "FAKE/2026/001",
+				"decision": "Approved",
+			},
+		)
 		proposal.save()
 		proposal.reload()
-		self.assertEqual((proposal.status, proposal.current_stage, len(proposal.stage_resolutions)), ("Draft", 0, 0))
+		self.assertEqual(
+			(proposal.status, proposal.current_stage, len(proposal.stage_resolutions)), ("Draft", 0, 0)
+		)
 
 	def test_an_approved_proposal_is_read_only(self):
 		proposal = self.resolve_through(self.make_proposal(), 2)
@@ -395,12 +464,18 @@ class TestAcademicProposals(CampusTestCase):
 
 	def test_the_meeting_link_points_at_academic_proposal(self):
 		self.assertEqual(frappe.get_meta("Meeting Resolution").get_field("proposal").fieldtype, "Link")
-		self.assertEqual(frappe.get_meta("Meeting Resolution").get_field("proposal").options, "Academic Proposal")
-		self.assertEqual(frappe.get_meta("Meeting Agenda Item").get_field("proposal").options, "Academic Proposal")
+		self.assertEqual(
+			frappe.get_meta("Meeting Resolution").get_field("proposal").options, "Academic Proposal"
+		)
+		self.assertEqual(
+			frappe.get_meta("Meeting Agenda Item").get_field("proposal").options, "Academic Proposal"
+		)
 		proposal = self.make_proposal()
 		meeting = self.meeting("Board of Studies", 5, proposal)
 		self.assertEqual(meeting.resolutions[0].proposal, proposal.name)
-		meeting.append("resolutions", {"resolution_text": "x", "decision": "Approved", "proposal": "PROP-NOPE"})
+		meeting.append(
+			"resolutions", {"resolution_text": "x", "decision": "Approved", "proposal": "PROP-NOPE"}
+		)
 		with self.assertRaises(frappe.LinkValidationError):
 			meeting.save()
 
@@ -412,12 +487,22 @@ class TestAcademicProposals(CampusTestCase):
 		self.assertFalse(frappe.db.get_value("Meeting Resolution", {"parent": meeting.name}, "proposal"))
 		frappe.db.set_value("Meeting Resolution", {"parent": meeting.name}, "proposal", proposal.name)
 		setup.clear_stale_proposal_references()
-		self.assertEqual(frappe.db.get_value("Meeting Resolution", {"parent": meeting.name}, "proposal"), proposal.name)
+		self.assertEqual(
+			frappe.db.get_value("Meeting Resolution", {"parent": meeting.name}, "proposal"), proposal.name
+		)
 
 	# audit trail (AC3)
 	def test_iqac_sees_the_comment_trail_and_the_versions(self):
 		if not frappe.db.exists("User", IQAC_USER):
-			frappe.get_doc({"doctype": "User", "email": IQAC_USER, "first_name": "Iqac", "send_welcome_email": 0, "roles": [{"role": "IQAC Coordinator"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": IQAC_USER,
+					"first_name": "Iqac",
+					"send_welcome_email": 0,
+					"roles": [{"role": "IQAC Coordinator"}],
+				}
+			).insert()
 		proposal = self.make_proposal()
 		proposal.add_comment("Comment", "BoS wants a lab component")
 		proposal.title = "Add PT New Elective (revised)"
@@ -434,7 +519,15 @@ class TestAcademicProposals(CampusTestCase):
 		proposal = self.make_proposal()
 		user = "proposal-nobody@example.com"
 		if not frappe.db.exists("User", user):
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Nobody", "send_welcome_email": 0, "roles": [{"role": "Employee"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "Nobody",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Employee"}],
+				}
+			).insert()
 		frappe.set_user(user)
 		with self.assertRaises(frappe.PermissionError):
 			proposals.audit_trail(proposal.name)
@@ -452,28 +545,58 @@ class TestAcademicProposals(CampusTestCase):
 		self.assertTrue(columns)
 		_, only_approved = proposal_tracker.execute({"company": COLLEGE, "status": "Approved"})
 		self.assertEqual(only_approved, [])
-		_, other_department = proposal_tracker.execute({"company": COLLEGE, "department": self.other_department})
+		_, other_department = proposal_tracker.execute(
+			{"company": COLLEGE, "department": self.other_department}
+		)
 		self.assertEqual(other_department, [])
 		self.assertEqual(proposal_tracker.execute({}), (proposal_tracker.columns(), []))
 
 	# AQAR data points
 	def test_aqar_data_points_count_programmes_revised_and_courses_introduced(self):
-		revision = self.make_proposal("Syllabus Revision", title="Revise core", courses=[{"course": self.core}])
-		new = self.make_proposal("New Course", title="New course", curriculum=None, batches=[], courses=[{"course": self.elective}, {"course": "PT Bulk"}])
-		pending = self.make_proposal("New Course", title="Pending", curriculum=None, batches=[], courses=[{"course": "PT Bulk"}])
+		revision = self.make_proposal(
+			"Syllabus Revision", title="Revise core", courses=[{"course": self.core}]
+		)
+		new = self.make_proposal(
+			"New Course",
+			title="New course",
+			curriculum=None,
+			batches=[],
+			courses=[{"course": self.elective}, {"course": "PT Bulk"}],
+		)
+		pending = self.make_proposal(
+			"New Course", title="Pending", curriculum=None, batches=[], courses=[{"course": "PT Bulk"}]
+		)
 		self.resolve_through(revision, 2)
 		self.resolve_through(new, 2)
 		pending.submit_to_route()
-		year = frappe.db.get_value("Academic Year", year_name("2026"), ["year_start_date", "year_end_date"], as_dict=True)
-		frappe.db.set_value("Academic Proposal", {"name": ["in", [revision.name, new.name]]}, "approved_on", year.year_start_date)
+		year = frappe.db.get_value(
+			"Academic Year", year_name("2026"), ["year_start_date", "year_end_date"], as_dict=True
+		)
+		frappe.db.set_value(
+			"Academic Proposal",
+			{"name": ["in", [revision.name, new.name]]},
+			"approved_on",
+			year.year_start_date,
+		)
 
 		revised = data_point("syllabus_revised_programmes", COLLEGE, year_name("2026"))
-		self.assertEqual((revised["value"], revised["records"]), (1, [{"doctype": "Program", "name": PROGRAM}]))
+		self.assertEqual(
+			(revised["value"], revised["records"]), (1, [{"doctype": "Program", "name": PROGRAM}])
+		)
 		introduced = data_point("new_courses_introduced", COLLEGE, year_name("2026"))
 		self.assertEqual(introduced["value"], 2)
-		self.assertEqual(data_point("new_courses_introduced", COLLEGE, year_name("2022"))["value"], 0)  # approved in another year
-		self.assertEqual(data_point("syllabus_revised_programmes", COLLEGE, year_name("2026"), self.other_department)["value"], 0)
-		self.assertEqual(data_point("syllabus_revised_programmes", COLLEGE, year_name("2026"), self.department)["value"], 1)
+		self.assertEqual(
+			data_point("new_courses_introduced", COLLEGE, year_name("2022"))["value"], 0
+		)  # approved in another year
+		self.assertEqual(
+			data_point("syllabus_revised_programmes", COLLEGE, year_name("2026"), self.other_department)[
+				"value"
+			],
+			0,
+		)
+		self.assertEqual(
+			data_point("syllabus_revised_programmes", COLLEGE, year_name("2026"), self.department)["value"], 1
+		)
 		self.assertEqual(governance.proposal_courses("Other College", year_name("2026"), "New Course"), [])
 
 	# fix round 1

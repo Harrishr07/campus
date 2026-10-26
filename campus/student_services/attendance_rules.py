@@ -31,7 +31,13 @@ MEDICAL_LEAVE = "leave"
 PRESENT, ON_LEAVE = "Present", "Leave"
 ON_DUTY, MEDICAL = "On Duty", "Medical"
 
-SCHEDULED, CONDUCTED, CANCELLED, RESCHEDULED, MAKEUP = "Scheduled", "Conducted", "Cancelled", "Rescheduled", "Makeup"
+SCHEDULED, CONDUCTED, CANCELLED, RESCHEDULED, MAKEUP = (
+	"Scheduled",
+	"Conducted",
+	"Cancelled",
+	"Rescheduled",
+	"Makeup",
+)
 SESSION_STATES = (SCHEDULED, CONDUCTED, CANCELLED, RESCHEDULED, MAKEUP)
 HELD_STATES = (SCHEDULED, CONDUCTED, MAKEUP)
 

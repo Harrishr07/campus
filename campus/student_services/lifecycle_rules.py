@@ -7,13 +7,22 @@ status: a detained student is Active and repeats the semester (Student.oc_detain
 
 ADMITTED, JOINED, ACTIVE, ON_BREAK = "Admitted", "Joined", "Active", "On Break"
 DISCONTINUED, WITHDRAWN, CANCELLED, READMITTED = "Discontinued", "Withdrawn", "Cancelled", "Readmitted"
-STUDY_COMPLETED, AWARD_ELIGIBLE, GRADUATED, ALUMNI = "Study Completed", "Award Eligible", "Graduated", "Alumni"
+STUDY_COMPLETED, AWARD_ELIGIBLE, GRADUATED, ALUMNI = (
+	"Study Completed",
+	"Award Eligible",
+	"Graduated",
+	"Alumni",
+)
 STATUSES = [
 	ADMITTED, JOINED, ACTIVE, ON_BREAK, DISCONTINUED, WITHDRAWN, CANCELLED, READMITTED,
 	STUDY_COMPLETED, AWARD_ELIGIBLE, GRADUATED, ALUMNI,
 ]  # fmt: skip
 NEW = ""  # the "from" of a record's first status
-ON_ROLL = (JOINED, ACTIVE, ON_BREAK)  # studying: a TC means they withdraw (each has a seeded rule to Withdrawn)
+ON_ROLL = (
+	JOINED,
+	ACTIVE,
+	ON_BREAK,
+)  # studying: a TC means they withdraw (each has a seeded rule to Withdrawn)
 
 # The seeded transition table (Lifecycle Transition Rule records); colleges disable or add rows.
 DEFAULT_TRANSITIONS = [
@@ -29,7 +38,12 @@ DEFAULT_TRANSITIONS = [
 	(GRADUATED, ALUMNI),
 ]  # fmt: skip
 
-UNKNOWN_STATUS, SAME_STATUS, NOT_PERMITTED, BEFORE_LATEST = "unknown", "same", "not permitted", "before latest"
+UNKNOWN_STATUS, SAME_STATUS, NOT_PERMITTED, BEFORE_LATEST = (
+	"unknown",
+	"same",
+	"not permitted",
+	"before latest",
+)
 
 # Phase 1/2 academic statuses that are not lifecycle statuses
 LEGACY_BREAK, LEGACY_COMPLETED, LEGACY_DISCONTINUED = "Break of Study", "Completed", "Discontinued"

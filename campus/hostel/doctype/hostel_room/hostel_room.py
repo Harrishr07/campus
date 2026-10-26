@@ -38,5 +38,7 @@ def refresh_capacity(room):
 	The room row is locked first and the beds counted with a locking read, so concurrent bed changes
 	of one room queue up and the last one writes the true count."""
 	lock_room(room)
-	count = frappe.db.sql("select count(*) from `tabHostel Bed` where room = %s and is_active = 1 for update", room)[0][0]
+	count = frappe.db.sql(
+		"select count(*) from `tabHostel Bed` where room = %s and is_active = 1 for update", room
+	)[0][0]
 	frappe.db.set_value("Hostel Room", room, "capacity", count, update_modified=False)

@@ -65,5 +65,9 @@ def is_current(setup, budget_name, per_year, to_year):
 	budget = frappe.get_doc("Budget", budget_name, for_update=True)
 	if budget.to_fiscal_year != to_year:
 		return False
-	held = {setup.fiscal_year(row.start_date): flt(row.amount, 2) for row in budget.budget_distribution if flt(row.amount)}
+	held = {
+		setup.fiscal_year(row.start_date): flt(row.amount, 2)
+		for row in budget.budget_distribution
+		if flt(row.amount)
+	}
 	return held == {year: flt(amount, 2) for year, amount in per_year.items()}

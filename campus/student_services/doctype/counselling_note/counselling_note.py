@@ -12,7 +12,6 @@ from campus.campus_platform.company_scope import permitted_companies
 from campus.student_services import mentoring_access
 from campus.student_services.mentoring import COUNSELLOR_ROLE, student_department
 
-
 FIXED_FIELDS = ("student", "author", "mentor", "company", "department")
 
 
@@ -38,14 +37,24 @@ class CounsellingNote(Document):
 		if not self.counsellor:
 			return
 		if COUNSELLOR_ROLE not in frappe.get_roles(self.counsellor):
-			frappe.throw(_("The designated counsellor {0} does not hold the {1} role.").format(self.counsellor, _(COUNSELLOR_ROLE)))
+			frappe.throw(
+				_("The designated counsellor {0} does not hold the {1} role.").format(
+					self.counsellor, _(COUNSELLOR_ROLE)
+				)
+			)
 		if self.company not in (permitted_companies(self.counsellor) or []):
-			frappe.throw(_("The designated counsellor {0} does not belong to {1}.").format(self.counsellor, self.company))
+			frappe.throw(
+				_("The designated counsellor {0} does not belong to {1}.").format(
+					self.counsellor, self.company
+				)
+			)
 
 	def check_action_owners(self):
 		"""An action owner must be able to read the note, or the reminder would point to a note they cannot open."""
 		for row in self.actions:
 			if not mentoring_access.reads_note(self, row.action_owner):
 				frappe.throw(
-					_("Row {0}: {1} cannot read this note, so cannot own its action.").format(row.idx, row.action_owner)
+					_("Row {0}: {1} cannot read this note, so cannot own its action.").format(
+						row.idx, row.action_owner
+					)
 				)

@@ -11,11 +11,17 @@ frappe.ui.form.on("Academic Proposal", {
 				frm.call("advance_stage").then(() => frm.reload_doc())
 			).addClass("btn-primary");
 			frm.dashboard.set_headline(
-				__("Awaiting a resolution of {0} (stage {1})", [frm.doc.current_body_type, frm.doc.current_stage])
+				__("Awaiting a resolution of {0} (stage {1})", [
+					frm.doc.current_body_type,
+					frm.doc.current_stage,
+				])
 			);
 		}
 		frm.set_query("curriculum", () => ({
-			filters: { status: ["in", ["Draft", "Approved"]], ...(frm.doc.regulation ? { regulation: frm.doc.regulation } : {}) },
+			filters: {
+				status: ["in", ["Draft", "Approved"]],
+				...(frm.doc.regulation ? { regulation: frm.doc.regulation } : {}),
+			},
 		}));
 	},
 });

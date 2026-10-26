@@ -64,13 +64,23 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to act for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to act for {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		self.company = student.oc_company
 		registration = frappe.db.get_value(
-			"Exam Registration", {"exam_session": self.exam_session, "student": self.student}, ["name", "program"], as_dict=True
+			"Exam Registration",
+			{"exam_session": self.exam_session, "student": self.student},
+			["name", "program"],
+			as_dict=True,
 		)
 		if not registration:
-			frappe.throw(_("{0} is not registered for {1}.").format(frappe.bold(self.student), frappe.bold(self.exam_session)))
+			frappe.throw(
+				_("{0} is not registered for {1}.").format(
+					frappe.bold(self.student), frappe.bold(self.exam_session)
+				)
+			)
 		self.registration = registration.name
 		self.program, self.department = student_records.programme_and_department(
 			self.student, registration.program or (latest_enrollment(self.student) or {}).get("program")
@@ -80,7 +90,11 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 
 	def check_session_open(self):
 		if frappe.db.get_value("Exam Session", self.exam_session, "status") == "Published":
-			frappe.throw(_("The results of {0} are published; a withdrawal can no longer change them.").format(frappe.bold(self.exam_session)))
+			frappe.throw(
+				_("The results of {0} are published; a withdrawal can no longer change them.").format(
+					frappe.bold(self.exam_session)
+				)
+			)
 
 	def set_courses(self):
 		from campus.examinations.api import TERM_KINDS
@@ -100,7 +114,11 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 			seen.add(row.course)
 			course = registered.get(row.course)
 			if not course or course.eligibility != "Eligible":
-				frappe.throw(_("Row {0}: {1} is not registered (and eligible) in this session.").format(row.idx, frappe.bold(row.course)))
+				frappe.throw(
+					_("Row {0}: {1} is not registered (and eligible) in this session.").format(
+						row.idx, frappe.bold(row.course)
+					)
+				)
 			if course.kind not in TERM_KINDS:
 				frappe.throw(
 					_("Row {0}: {1} is not a course of the term ({2}); only those can be withdrawn.").format(
@@ -108,16 +126,26 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 					)
 				)
 			row.exam_date = frappe.db.get_value(
-				"Exam Schedule", {"parent": self.exam_session, "parenttype": "Exam Session", "course": row.course}, "exam_date"
+				"Exam Schedule",
+				{"parent": self.exam_session, "parenttype": "Exam Session", "course": row.course},
+				"exam_date",
 			)
 			if not row.exam_date:
-				frappe.throw(_("Row {0}: the exam of {1} is not scheduled in this session.").format(row.idx, frappe.bold(row.course)))
+				frappe.throw(
+					_("Row {0}: the exam of {1} is not scheduled in this session.").format(
+						row.idx, frappe.bold(row.course)
+					)
+				)
 
 	def check_special_case(self):
 		"""Only the Principal sets, changes or clears the special case, and gives a reason for it."""
 		before = self.get_doc_before_save()
 		old = (cint(before.special_case), (before.special_case_reason or "").strip()) if before else (0, "")
-		new = (cint(self.special_case), (self.special_case_reason or "").strip()) if self.special_case else (0, "")
+		new = (
+			(cint(self.special_case), (self.special_case_reason or "").strip())
+			if self.special_case
+			else (0, "")
+		)
 		if new == old:
 			self.special_case_by = before.special_case_by if before and self.special_case else None
 			return
@@ -131,7 +159,8 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 		"""Both rules against locked facts: one approval or submit at a time per student."""
 		frappe.db.get_value("Student", self.student, "name", for_update=True)
 		days = max(
-			withdrawal_rules.days_after_exam(getdate(row.exam_date), getdate(self.application_date)) for row in self.courses
+			withdrawal_rules.days_after_exam(getdate(row.exam_date), getdate(self.application_date))
+			for row in self.courses
 		)
 		refusal = withdrawal_rules.withdrawal_refusal(
 			self.earlier_withdrawals(lock=True), days, cint(self.window_days), cint(self.special_case)
@@ -153,12 +182,12 @@ class ExamWithdrawalApplication(ApprovableDocument, Document):
 	def throw_refusal(self, refusal, days=None):
 		if refusal == withdrawal_rules.REPEAT:
 			frappe.throw(
-				_("{0} has already withdrawn from an examination of {1}; a withdrawal is allowed only once in the programme.").format(
-					frappe.bold(self.student), frappe.bold(self.program)
-				)
+				_(
+					"{0} has already withdrawn from an examination of {1}; a withdrawal is allowed only once in the programme."
+				).format(frappe.bold(self.student), frappe.bold(self.program))
 			)
 		frappe.throw(
-			_("A withdrawal must be made within {0} days of the exam; {1} days have passed. Only the Principal's special case allows a later one.").format(
-				cint(self.window_days), days
-			)
+			_(
+				"A withdrawal must be made within {0} days of the exam; {1} days have passed. Only the Principal's special case allows a later one."
+			).format(cint(self.window_days), days)
 		)

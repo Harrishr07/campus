@@ -19,8 +19,8 @@ examiner 2 x 30 = 60, TDS 10% = 6, net 54.
 import frappe
 from frappe.utils import add_days, add_months, get_first_day, get_last_day, today
 
-from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_finance.fee_heads import ensure_sac_code
+from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations import remuneration_payment
 from campus.examinations.report.remuneration_register import remuneration_register
 from campus.tests.factories import make_company, make_user
@@ -70,7 +70,9 @@ class RemunerationFixture(ValuationFixture):
 		).insert().name  # fmt: skip
 
 	def external_member(self, email, supplier=True):
-		member = frappe.get_doc({"doctype": "External Member", "member_name": f"Dr. {email.split('@')[0]}", "email": email}).insert()
+		member = frappe.get_doc(
+			{"doctype": "External Member", "member_name": f"Dr. {email.split('@')[0]}", "email": email}
+		).insert()
 		if supplier:
 			member.create_supplier()
 			frappe.db.set_value("Supplier", member.supplier, "tax_withholding_category", self.tds_category())
@@ -131,7 +133,12 @@ class RemunerationFixture(ValuationFixture):
 
 	def make_roster(self):
 		room = make_room("Exr Hall", 2, 2, [], company=COLLEGE).name
-		duty = lambda employee, date, slot: {"exam_date": date, "slot": slot, "room": room, "employee": employee}  # noqa: E731
+		duty = lambda employee, date, slot: {
+			"exam_date": date,
+			"slot": slot,
+			"room": room,
+			"employee": employee,
+		}  # noqa: E731
 		roster = frappe.get_doc(
 			{
 				"doctype": "Invigilation Roster", "exam_session": self.session.name, "invigilators_per_hall": 1,
@@ -176,8 +183,14 @@ class RemunerationFixture(ValuationFixture):
 
 	# helpers
 	def claim(self, employee=None, member=None, **values):
-		examiner = {"examiner_type": "External", "external_member": member} if member else {"examiner_type": "Internal", "employee": employee or self.internal}
-		return frappe.get_doc({"doctype": CLAIM, "exam_session": self.session.name, **examiner, **values}).insert()
+		examiner = (
+			{"examiner_type": "External", "external_member": member}
+			if member
+			else {"examiner_type": "Internal", "employee": employee or self.internal}
+		)
+		return frappe.get_doc(
+			{"doctype": CLAIM, "exam_session": self.session.name, **examiner, **values}
+		).insert()
 
 	def approved(self, claim, approver=APPROVER):
 		request = request_approval(CLAIM, claim.name)
@@ -213,7 +226,9 @@ class TestClaimComputation(RemunerationFixture):
 		sources = {r.activity: (r.source_doctype, r.source_name) for r in claim.items}
 		self.assertEqual(sources["Valuation Round 1"], ("Valuation Allocation", self.allocations[0]))
 		key = next(r.source_key for r in claim.items if r.activity == "Valuation Round 1")
-		self.assertIn(self.allocations[0], key.split("|"))  # a reallocated bundle's next examiner has a key of their own
+		self.assertIn(
+			self.allocations[0], key.split("|")
+		)  # a reallocated bundle's next examiner has a key of their own
 		self.assertEqual(sources["QP Setting"][0], "QP Setter Nomination")
 		self.assertEqual(sources["Invigilation"][0], "Invigilation Roster")
 
@@ -241,9 +256,25 @@ class TestClaimComputation(RemunerationFixture):
 
 	def test_qp_setting_is_priced_on_the_nomination_deadline_not_the_release(self):
 		# a new version between the deadline (2022-11-01) and the release (2022-12-01) does not apply
-		frappe.get_doc({"doctype": "Remuneration Rate", "company": COLLEGE, "activity": "QP Setting", "from_date": "2022-11-15", "rate": 2000}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Remuneration Rate",
+				"company": COLLEGE,
+				"activity": "QP Setting",
+				"from_date": "2022-11-15",
+				"rate": 2000,
+			}
+		).insert()
 		self.assertIn(("QP Setting", 1, 1500, 1500), self.lines(self.claim()))
-		frappe.get_doc({"doctype": "Remuneration Rate", "company": COLLEGE, "activity": "QP Scrutiny", "from_date": "2022-10-15", "rate": 700}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Remuneration Rate",
+				"company": COLLEGE,
+				"activity": "QP Scrutiny",
+				"from_date": "2022-10-15",
+				"rate": 700,
+			}
+		).insert()
 		self.assertIn(("QP Scrutiny", 1, 700, 700), self.lines(self.claim(self.scrutiniser)))
 
 	def test_no_qp_line_before_the_paper_is_released(self):
@@ -256,10 +287,14 @@ class TestClaimComputation(RemunerationFixture):
 
 	def test_a_future_claim_date_does_not_bring_in_duties_not_yet_held(self):
 		claim = self.claim(posting_date=add_days(today(), 60))
-		self.assertEqual([line for line in self.lines(claim) if line[0] == "Invigilation"], [("Invigilation", 2, 300, 600)])
+		self.assertEqual(
+			[line for line in self.lines(claim) if line[0] == "Invigilation"], [("Invigilation", 2, 300, 600)]
+		)
 
 	def test_a_rate_cannot_be_moved_onto_another_version(self):
-		rate = frappe.get_doc("Remuneration Rate", {"company": COLLEGE, "activity": "Invigilation", "from_date": "2023-01-01"})
+		rate = frappe.get_doc(
+			"Remuneration Rate", {"company": COLLEGE, "activity": "Invigilation", "from_date": "2023-01-01"}
+		)
 		for field, value in (("from_date", "2020-01-01"), ("activity", "QP Setting"), ("company", OTHER)):
 			rate.reload()
 			rate.set(field, value)
@@ -311,12 +346,20 @@ class TestInternalPayment(RemunerationFixture):
 		self.assertEqual(claim.docstatus, 1)
 		additional = frappe.get_doc("Additional Salary", claim.additional_salary)
 		self.assertEqual(
-			(additional.docstatus, additional.employee, additional.salary_component, additional.amount, str(additional.payroll_date)),
+			(
+				additional.docstatus,
+				additional.employee,
+				additional.salary_component,
+				additional.amount,
+				str(additional.payroll_date),
+			),
 			(1, self.internal, COMPONENT, 2150, today()),
 		)
 		self.assertEqual((additional.ref_doctype, additional.ref_docname), (CLAIM, claim.name))
 		slip = self.slip(self.internal, today())
-		self.assertEqual({r.salary_component: r.amount for r in slip.earnings}, {"Basic": 20000, COMPONENT: 2150})
+		self.assertEqual(
+			{r.salary_component: r.amount for r in slip.earnings}, {"Basic": 20000, COMPONENT: 2150}
+		)
 
 	def test_the_principal_alone_can_open_and_approve_a_claim_under_the_pilot_policy(self):
 		principal = "exr-principal@example.com"
@@ -327,7 +370,12 @@ class TestInternalPayment(RemunerationFixture):
 			{"doctype": "Position Holder", "position": "PRINCIPAL", "scope_value": COLLEGE, "user": principal, "from_date": add_days(today(), -30)}
 		).insert()  # fmt: skip
 		self.assertEqual(
-			sorted(r for r in frappe.get_roles(principal) if r in ("Principal", "Academics User", "Accounts Manager")), ["Principal"]
+			sorted(
+				r
+				for r in frappe.get_roles(principal)
+				if r in ("Principal", "Academics User", "Accounts Manager")
+			),
+			["Principal"],
 		)
 		policy = frappe.get_doc(
 			{
@@ -368,7 +416,10 @@ class TestExternalPayment(RemunerationFixture):
 		claim = self.approved(self.claim(member=self.member))
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
 		supplier = frappe.db.get_value("External Member", self.member, "supplier")
-		self.assertEqual((invoice.docstatus, invoice.supplier, invoice.company, invoice.bill_no), (0, supplier, COLLEGE, claim.name))
+		self.assertEqual(
+			(invoice.docstatus, invoice.supplier, invoice.company, invoice.bill_no),
+			(0, supplier, COLLEGE, claim.name),
+		)
 		self.assertEqual([(r.item_code, r.amount) for r in invoice.items], [(VALUATION_ITEM, 60)])
 		self.assertEqual({r.tax_withholding_category for r in invoice.tax_withholding_entries}, {CATEGORY})
 		self.assertEqual(sum(r.base_tax_amount for r in invoice.taxes if r.is_tax_withholding_account), 6)
@@ -393,7 +444,9 @@ class TestExternalPayment(RemunerationFixture):
 
 	def test_an_invoice_for_another_supplier_is_not_submitted(self):
 		claim = self.approved(self.claim(member=self.member))
-		other = frappe.db.get_value("External Member", self.external_member("exr-other-sup@example.com"), "supplier")
+		other = frappe.db.get_value(
+			"External Member", self.external_member("exr-other-sup@example.com"), "supplier"
+		)
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
 		invoice.supplier = other
 		invoice.save()
@@ -451,7 +504,9 @@ class TestExternalPayment(RemunerationFixture):
 
 	def test_a_claim_paid_by_journal_entry_cannot_be_cancelled(self):
 		if not frappe.db.exists("Party Type", "Supplier"):  # the bare test site has only Student
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
+			frappe.get_doc(
+				{"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}
+			).insert()
 		claim, invoice = self.submitted_invoice()
 		entry = self.journal_payment(invoice)
 		entry.submit()
@@ -488,7 +543,9 @@ class TestExternalPayment(RemunerationFixture):
 
 	def test_a_journal_entry_prepared_before_the_claim_was_cancelled_is_not_submitted(self):
 		if not frappe.db.exists("Party Type", "Supplier"):
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}).insert()
+			frappe.get_doc(
+				{"doctype": "Party Type", "party_type": "Supplier", "account_type": "Payable"}
+			).insert()
 		claim, invoice = self.submitted_invoice()
 		entry = self.journal_payment(invoice)
 		claim.cancel()
@@ -502,7 +559,17 @@ class TestExternalPayment(RemunerationFixture):
 		claim = self.approved(self.claim(member=self.member))
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
 		account = make_account(COLLEGE, ABBR, "EXR Input Tax", "Duties and Taxes", account_type="Tax")
-		invoice.append("taxes", {"charge_type": "On Net Total", "account_head": account, "description": "GST", "rate": 18, "add_deduct_tax": "Add", "category": "Total"})
+		invoice.append(
+			"taxes",
+			{
+				"charge_type": "On Net Total",
+				"account_head": account,
+				"description": "GST",
+				"rate": 18,
+				"add_deduct_tax": "Add",
+				"category": "Total",
+			},
+		)
 		invoice.save()
 		invoice.submit()
 		self.assertEqual(invoice.docstatus, 1)
@@ -511,7 +578,9 @@ class TestExternalPayment(RemunerationFixture):
 		claim, invoice = self.submitted_invoice()
 		claim.cancel()
 		amended = frappe.copy_doc(frappe.get_doc("Purchase Invoice", invoice.name))
-		amended.update({"amended_from": invoice.name, "docstatus": 0, "tax_withholding_entries": []})  # recomputed on save
+		amended.update(
+			{"amended_from": invoice.name, "docstatus": 0, "tax_withholding_entries": []}
+		)  # recomputed on save
 		amended.insert()
 		with self.assertRaises(frappe.ValidationError) as caught:
 			amended.submit()
@@ -521,7 +590,17 @@ class TestExternalPayment(RemunerationFixture):
 		claim = self.approved(self.claim(member=self.member))
 		invoice = frappe.get_doc("Purchase Invoice", claim.purchase_invoice)
 		account = make_account(COLLEGE, ABBR, "EXR Charges", "Indirect Expenses", account_type="Chargeable")
-		invoice.append("taxes", {"charge_type": "Actual", "account_head": account, "description": "Extra", "tax_amount": 100, "add_deduct_tax": "Add", "category": "Total"})
+		invoice.append(
+			"taxes",
+			{
+				"charge_type": "Actual",
+				"account_head": account,
+				"description": "Extra",
+				"tax_amount": 100,
+				"add_deduct_tax": "Add",
+				"category": "Total",
+			},
+		)
 		invoice.save()
 		with self.assertRaises(frappe.ValidationError):
 			invoice.submit()
@@ -539,7 +618,10 @@ class TestExternalPayment(RemunerationFixture):
 
 	def test_the_invoice_carries_the_claim_date(self):
 		claim = self.approved(self.claim(member=self.member, posting_date=add_days(today(), -3)))
-		self.assertEqual(str(frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "posting_date")), add_days(today(), -3))
+		self.assertEqual(
+			str(frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "posting_date")),
+			add_days(today(), -3),
+		)
 
 	def test_cancelling_the_claim_deletes_its_draft_invoice(self):
 		claim = self.approved(self.claim(member=self.member))

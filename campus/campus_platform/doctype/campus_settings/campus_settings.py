@@ -31,7 +31,11 @@ class CampusSettings(Document):
 				continue
 			field = frappe.get_meta(row.document_type).get_field(row.file_field)
 			if not (field and field.fieldtype in ATTACH_TYPES):
-				frappe.throw(_("Row {0}: {1} is not an Attach field of {2}.").format(row.idx, frappe.bold(row.file_field), frappe.bold(row.document_type)))
+				frappe.throw(
+					_("Row {0}: {1} is not an Attach field of {2}.").format(
+						row.idx, frappe.bold(row.file_field), frappe.bold(row.document_type)
+					)
+				)
 
 	def validate_approval_required_doctypes(self):
 		"""NFR Mandatory approval: only document types approved through the approval engine can require a policy."""
@@ -40,5 +44,7 @@ class CampusSettings(Document):
 		for row in self.get("approval_required_doctypes") or []:
 			if not uses_approval_engine(row.document_type):
 				frappe.throw(
-					_("Row {0}: {1} does not use the approval engine.").format(row.idx, frappe.bold(row.document_type))
+					_("Row {0}: {1} does not use the approval engine.").format(
+						row.idx, frappe.bold(row.document_type)
+					)
 				)

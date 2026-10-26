@@ -40,7 +40,9 @@ class CertificateRequest(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		if self.needs_approval and not is_approved(self):
-			frappe.throw(_("{0} needs approval before it can be issued. Use Request Approval.").format(self.name))
+			frappe.throw(
+				_("{0} needs approval before it can be issued. Use Request Approval.").format(self.name)
+			)
 		if self.supersedes:
 			certificate_reissue.lock_original(self)
 		elif self.is_transfer_certificate:
@@ -49,11 +51,15 @@ class CertificateRequest(ApprovableDocument, Document):
 		self.issued_on = now_datetime()
 
 	def on_submit(self):
-		type_values = frappe.db.get_value("Certificate Type", self.certificate_type, ["verifiable", "print_format"], as_dict=True)
+		type_values = frappe.db.get_value(
+			"Certificate Type", self.certificate_type, ["verifiable", "print_format"], as_dict=True
+		)
 		if type_values.verifiable:
 			self.db_set("verification_code", verification.issue(self, type_values.print_format).code)
 		if self.supersedes:
-			certificate_reissue.supersede(self)  # the status change belongs to the original TC and is never run again
+			certificate_reissue.supersede(
+				self
+			)  # the status change belongs to the original TC and is never run again
 		elif self.is_transfer_certificate:
 			certificates.apply_leaving(self)
 		queue_fee(self)
@@ -61,7 +67,11 @@ class CertificateRequest(ApprovableDocument, Document):
 	def before_cancel(self):
 		certificate_reissue.refuse_cancel_of_superseded(self)
 		if self.fee_invoice and frappe.db.get_value("Sales Invoice", self.fee_invoice, "docstatus") == 1:
-			frappe.throw(_("Cancel or credit the fee invoice {0} before cancelling this certificate.").format(self.fee_invoice))
+			frappe.throw(
+				_("Cancel or credit the fee invoice {0} before cancelling this certificate.").format(
+					self.fee_invoice
+				)
+			)
 
 	def on_cancel(self):
 		verification.revoke_for(self, _("Certificate {0} was cancelled.").format(self.certificate_number))
@@ -73,7 +83,12 @@ class CertificateRequest(ApprovableDocument, Document):
 	def set_company(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to request a certificate for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to request a certificate for {0}.").format(
+					frappe.bold(self.student)
+				),
+				frappe.PermissionError,
+			)
 		self.company = student.oc_company
 
 	def apply_type(self):
@@ -92,9 +107,18 @@ class CertificateRequest(ApprovableDocument, Document):
 	def check_open_request(self):
 		if frappe.db.exists(
 			"Certificate Request",
-			{"student": self.student, "certificate_type": self.certificate_type, "docstatus": 0, "name": ["!=", self.name]},
+			{
+				"student": self.student,
+				"certificate_type": self.certificate_type,
+				"docstatus": 0,
+				"name": ["!=", self.name],
+			},
 		):
-			frappe.throw(_("{0} already has an open {1} request.").format(frappe.bold(self.student), self.certificate_type))
+			frappe.throw(
+				_("{0} already has an open {1} request.").format(
+					frappe.bold(self.student), self.certificate_type
+				)
+			)
 
 	def check_transfer(self):
 		if not (self.reason_for_leaving or "").strip():

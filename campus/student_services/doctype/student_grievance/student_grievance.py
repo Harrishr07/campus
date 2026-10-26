@@ -29,7 +29,10 @@ class StudentGrievance(ApprovableDocument, Document):
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to raise a grievance for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to raise a grievance for {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		self.company = student.oc_company
 		self.department = grievances.student_department(self.student)
 		category = grievances.category_settings(self.category)
@@ -40,7 +43,9 @@ class StudentGrievance(ApprovableDocument, Document):
 		grievances.route(self)
 
 	def before_submit(self):
-		if not self.flags.unrouted:  # no approval request ever existed (no resolvable level); the committee resolves it
+		if (
+			not self.flags.unrouted
+		):  # no approval request ever existed (no resolvable level); the committee resolves it
 			super().before_submit()
 		if not (self.resolution or "").strip():
 			frappe.throw(_("Give the resolution before closing the grievance."))

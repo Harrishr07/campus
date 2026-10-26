@@ -20,9 +20,19 @@ from frappe.utils import add_days, cint, getdate, today
 from campus.campus_platform.api import get_rule
 from campus.examinations import revaluation, revaluation_rules
 
-APPLICATION, OUTCOME, RESULT, SESSION = revaluation.APPLICATION, revaluation.OUTCOME, revaluation.RESULT, revaluation.SESSION
+APPLICATION, OUTCOME, RESULT, SESSION = (
+	revaluation.APPLICATION,
+	revaluation.OUTCOME,
+	revaluation.RESULT,
+	revaluation.SESSION,
+)
 AWAITING_JUSTIFICATION, DRAFT, CANCELLED = "Awaiting justification", "Draft", "Cancelled"
-INVOICE_PENDING, FEE_DUE, PHOTOCOPY_PENDING, PHOTOCOPY_ISSUED = "Fee invoice pending", "Fee due", "Photocopy being prepared", "Photocopy issued"
+INVOICE_PENDING, FEE_DUE, PHOTOCOPY_PENDING, PHOTOCOPY_ISSUED = (
+	"Fee invoice pending",
+	"Fee due",
+	"Photocopy being prepared",
+	"Photocopy issued",
+)
 IN_PROGRESS = {revaluation.REVALUATION: "Under revaluation", revaluation.REVIEW: "Under review"}
 COMPLETED, COURSE_IN_PROGRESS = "Completed", "In progress"
 
@@ -31,7 +41,12 @@ def options(student):
 	"""[{exam_session, academic_term, closes_on, courses: [{course, grade}]}] of the open windows, newest first."""
 	from campus.examinations.api import released_sessions
 
-	rows = frappe.get_all(RESULT, {"student": student, "is_latest": 1}, ["name", "exam_session", "company"], order_by="creation desc")
+	rows = frappe.get_all(
+		RESULT,
+		{"student": student, "is_latest": 1},
+		["name", "exam_session", "company"],
+		order_by="creation desc",
+	)
 	if not rows:
 		return []
 	rule_set = get_rule(student, "Exam Rule Set")
@@ -44,7 +59,9 @@ def options(student):
 		if not revaluation_rules.window_open(published_on, today(), rule_set.revaluation_window_days):
 			continue
 		result = frappe.get_doc(RESULT, row.name)
-		courses = [{"course": c.course, "grade": c.grade} for c in revaluation.eligible_courses(result, rule_set)]
+		courses = [
+			{"course": c.course, "grade": c.grade} for c in revaluation.eligible_courses(result, rule_set)
+		]
 		if courses:
 			found.append(
 				{
@@ -65,7 +82,9 @@ def apply(student, exam_session, application_type, courses):
 			"courses": [{"course": course} for course in courses],
 		}
 	)  # fmt: skip
-	doc.flags.ignore_permissions = True  # portal roles hold no right on the doctype; the caller resolved the student
+	doc.flags.ignore_permissions = (
+		True  # portal roles hold no right on the doctype; the caller resolved the student
+	)
 	doc.insert()
 	if not awaiting_justification(doc):
 		doc.submit()
@@ -74,7 +93,9 @@ def apply(student, exam_session, application_type, courses):
 
 def submit(student, application):
 	"""Submit the student's own draft once its justifications are recorded; returns its row."""
-	name = frappe.db.get_value(APPLICATION, {"name": application, "student": student}, "name", for_update=True)
+	name = frappe.db.get_value(
+		APPLICATION, {"name": application, "student": student}, "name", for_update=True
+	)
 	if not name:
 		frappe.throw(_("You cannot submit this application."), frappe.PermissionError)
 	doc = frappe.get_doc(APPLICATION, name)
@@ -124,7 +145,9 @@ def status(doc, completed, waiting):
 		return FEE_DUE if doc.fee_invoice else INVOICE_PENDING
 	if doc.application_type == revaluation.PHOTOCOPY:
 		return PHOTOCOPY_ISSUED if doc.photocopy_issued_on else PHOTOCOPY_PENDING
-	return COMPLETED if completed >= {row.course for row in doc.courses} else IN_PROGRESS[doc.application_type]
+	return (
+		COMPLETED if completed >= {row.course for row in doc.courses} else IN_PROGRESS[doc.application_type]
+	)
 
 
 def course_status(doc, course, completed):

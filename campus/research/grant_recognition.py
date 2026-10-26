@@ -42,11 +42,16 @@ def spent_to(sanction, to_date, lock=False):
 	"""Cumulative revenue, capital and depreciation posted on the sanction's cost centre up to `to_date`."""
 	revenue, capital = [], []
 	for row in frappe.get_all(
-		"Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, ["budget_head", "is_capital"], distinct=True
+		"Sanction Head",
+		{"parent": sanction.name, "parenttype": "Sanction"},
+		["budget_head", "is_capital"],
+		distinct=True,
 	):
 		(capital if row.is_capital else revenue).extend(head_accounts(row.budget_head, sanction.company))
 	depreciation = frappe.get_all(
-		"Account", {"company": sanction.company, "account_type": "Depreciation", "root_type": "Expense", "is_group": 0}, pluck="name"
+		"Account",
+		{"company": sanction.company, "account_type": "Depreciation", "root_type": "Expense", "is_group": 0},
+		pluck="name",
 	)
 	return frappe._dict(
 		revenue=posted(sanction.cost_center, set(revenue), to_date, lock),
@@ -73,7 +78,10 @@ def posted(cost_center, accounts, to_date, lock):
 
 def recognised(sanction, lock=False):
 	"""Revenue, capital and released already recognised for the sanction, and the latest period end."""
-	row, doc = frappe.qb.DocType("Grant Income Recognition Sanction"), frappe.qb.DocType("Grant Income Recognition")
+	row, doc = (
+		frappe.qb.DocType("Grant Income Recognition Sanction"),
+		frappe.qb.DocType("Grant Income Recognition"),
+	)
 	query = (
 		frappe.qb.from_(row).join(doc).on(doc.name == row.parent)
 		.select(
@@ -83,7 +91,9 @@ def recognised(sanction, lock=False):
 		.where((row.sanction == sanction) & (row.parenttype == "Grant Income Recognition") & (doc.docstatus == 1))
 	)  # fmt: skip
 	revenue, capital, released, last_to_date = (query.for_update() if lock else query).run()[0]
-	return frappe._dict(revenue=flt(revenue), capital=flt(capital), released=flt(released), last_to_date=last_to_date)
+	return frappe._dict(
+		revenue=flt(revenue), capital=flt(capital), released=flt(released), last_to_date=last_to_date
+	)
 
 
 def journal_rows(sanction, amounts, accounts):
@@ -100,5 +110,12 @@ def journal_rows(sanction, amounts, accounts):
 		if amount < 0:
 			debit, credit, amount = credit, debit, -amount
 		for account, side in ((debit, "debit_in_account_currency"), (credit, "credit_in_account_currency")):
-			rows.append({"account": account, side: amount, "cost_center": sanction.cost_center, "project": sanction.project})
+			rows.append(
+				{
+					"account": account,
+					side: amount,
+					"cost_center": sanction.cost_center,
+					"project": sanction.project,
+				}
+			)
 	return rows

@@ -115,7 +115,15 @@ def entry_breaches(entry, grid):
 			_("{0} is unavailable on {1} period {2}.").format(entry.faculty, entry.day, entry.period)))  # fmt: skip
 	room = grid.rooms.get(entry.room)
 	if not room:
-		return found + [Violation(LAB_ROOM, entry.day, entry.period, entry.room, _("Room {0} is not available for timetabling.").format(entry.room))]
+		return found + [
+			Violation(
+				LAB_ROOM,
+				entry.day,
+				entry.period,
+				entry.room,
+				_("Room {0} is not available for timetabling.").format(entry.room),
+			)
+		]
 	if (entry.kind == PRACTICAL) != room.is_lab:
 		found.append(Violation(LAB_ROOM, entry.day, entry.period, entry.room,
 			_("{0}: a {1} cannot be held in {2}; practicals need a lab and other classes a classroom.").format(entry.offering, _(entry.kind), entry.room)))  # fmt: skip

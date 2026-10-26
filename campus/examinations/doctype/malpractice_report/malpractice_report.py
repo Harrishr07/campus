@@ -33,11 +33,18 @@ class MalpracticeReport(ApprovableDocument, Document):
 		self.company = frappe.db.get_value("Exam Session", self.exam_session, "company")
 		self.exam_registration = registration_name(self.exam_session, self.student)
 		if not frappe.db.exists("Exam Registration", self.exam_registration):
-			frappe.throw(_("{0} has no Exam Registration in {1}.").format(frappe.bold(self.student), self.exam_session))
+			frappe.throw(
+				_("{0} has no Exam Registration in {1}.").format(frappe.bold(self.student), self.exam_session)
+			)
 		if not frappe.db.exists(
-			"Exam Registration Course", {"parent": self.exam_registration, "parenttype": "Exam Registration", "course": self.course}
+			"Exam Registration Course",
+			{"parent": self.exam_registration, "parenttype": "Exam Registration", "course": self.course},
 		):
-			frappe.throw(_("{0} is not registered for {1} in this session.").format(frappe.bold(self.student), frappe.bold(self.course)))
+			frappe.throw(
+				_("{0} is not registered for {1} in this session.").format(
+					frappe.bold(self.student), frappe.bold(self.course)
+				)
+			)
 		for row in self.evidence:
 			self.validate_evidence(row)
 		self.track_decision()
@@ -45,21 +52,32 @@ class MalpracticeReport(ApprovableDocument, Document):
 	def check_amend_right(self):
 		"""An amendment inherits the original's evidence (and Frappe copies its attachments after insert): only someone
 		who may amend the original may start one."""
-		if self.is_new() and self.amended_from and not frappe.has_permission(self.doctype, "amend", doc=self.amended_from):
+		if (
+			self.is_new()
+			and self.amended_from
+			and not frappe.has_permission(self.doctype, "amend", doc=self.amended_from)
+		):
 			frappe.throw(_("You may not amend {0}.").format(self.amended_from), frappe.PermissionError)
 
 	def validate_evidence(self, row):
-		files = frappe.get_all("File", {"file_url": row.file}, ["owner", "is_private", "attached_to_doctype", "attached_to_name"])
+		files = frappe.get_all(
+			"File", {"file_url": row.file}, ["owner", "is_private", "attached_to_doctype", "attached_to_name"]
+		)
 		if not files or not all(f.is_private for f in files):
 			frappe.throw(_("Evidence row {0}: upload the file as private.").format(row.idx))
 		if not all(self.may_claim(f) for f in files):
-			frappe.throw(_("Evidence row {0}: the file belongs to another user or another document.").format(row.idx))
+			frappe.throw(
+				_("Evidence row {0}: the file belongs to another user or another document.").format(row.idx)
+			)
 
 	def may_claim(self, file):
 		"""An unattached File its uploader (the filer) claims, or one already attached to this report or its original."""
 		if not file.attached_to_doctype:
 			return file.owner in (frappe.session.user, self.owner)
-		return file.attached_to_doctype == self.doctype and file.attached_to_name in (self.name, self.amended_from)
+		return file.attached_to_doctype == self.doctype and file.attached_to_name in (
+			self.name,
+			self.amended_from,
+		)
 
 	def track_decision(self):
 		before = self.get_doc_before_save()
@@ -76,21 +94,35 @@ class MalpracticeReport(ApprovableDocument, Document):
 			unattached = {"file_url": row.file, "is_private": 1, "attached_to_doctype": ["is", "not set"]}
 			for file in frappe.get_all("File", unattached, pluck="name"):
 				frappe.db.set_value(
-					"File", file, {"attached_to_doctype": self.doctype, "attached_to_name": self.name, "attached_to_field": EVIDENCE_FIELD}
+					"File",
+					file,
+					{
+						"attached_to_doctype": self.doctype,
+						"attached_to_name": self.name,
+						"attached_to_field": EVIDENCE_FIELD,
+					},
 				)
 
 	def before_submit(self):
 		super().before_submit()
-		if not is_approved(self):  # without a policy the engine would submit directly: a decision always needs one
+		if not is_approved(
+			self
+		):  # without a policy the engine would submit directly: a decision always needs one
 			frappe.throw(
-				_("A Malpractice Report is submitted only by its approval. Set up an Approval Policy for Malpractice Report."),
+				_(
+					"A Malpractice Report is submitted only by its approval. Set up an Approval Policy for Malpractice Report."
+				),
 				title=_("Approval Required"),
 			)
-		if not self.committee_decision or not (self.decision_set_by and has_any_role(self.decision_set_by, MARKS_ROLES)):
+		if not self.committee_decision or not (
+			self.decision_set_by and has_any_role(self.decision_set_by, MARKS_ROLES)
+		):
 			frappe.throw(_("The COE must record the committee decision before approval."))
 
 	def before_cancel(self):
-		frappe.only_for("System Manager")  # undoing an approved committee decision is not the exam office's call
+		frappe.only_for(
+			"System Manager"
+		)  # undoing an approved committee decision is not the exam office's call
 
 	def on_submit(self):
 		if self.committee_decision == DEBARMENT:
@@ -113,4 +145,3 @@ class MalpracticeReport(ApprovableDocument, Document):
 	def debarment_reason(self):
 		"""Stored untranslated: it is data matched on cancel, shown as is."""
 		return f"Malpractice {self.name}: {self.category}"
-

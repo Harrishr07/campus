@@ -50,7 +50,9 @@ class Cohorts:
 		if self.frozen is not None:
 			return self.frozen.get(band_key(course, scheme))
 		totals = self.totals(course, scheme)
-		method = rules.grading_method(course_type, method_row.method, len(totals), method_row.min_cohort, totals)
+		method = rules.grading_method(
+			course_type, method_row.method, len(totals), method_row.min_cohort, totals
+		)
 		bands = self.bands(course, scheme, grades) if method == rules.RELATIVE else None
 		self.remember(band_key(course, scheme), bands)
 		return bands
@@ -65,7 +67,13 @@ class Cohorts:
 			stored[key] = bands
 		else:
 			stored.pop(key, None)
-		frappe.db.set_value("Exam Session", self.exam_session, "frozen_bands", json.dumps(stored, sort_keys=True), update_modified=False)
+		frappe.db.set_value(
+			"Exam Session",
+			self.exam_session,
+			"frozen_bands",
+			json.dumps(stored, sort_keys=True),
+			update_modified=False,
+		)
 
 	def bands(self, course, scheme, grades):
 		key = (course, scheme)
@@ -74,7 +82,11 @@ class Cohorts:
 		return self.bands_by_course[key]
 
 	def read_totals(self, course, scheme):
-		sheets = frappe.get_all("Mark Sheet Entry", {"exam_session": self.exam_session, "course": course}, ["name", "course_offering"])
+		sheets = frappe.get_all(
+			"Mark Sheet Entry",
+			{"exam_session": self.exam_session, "course": course},
+			["name", "course_offering"],
+		)
 		courses = {s.name: offering_course(s.course_offering) for s in sheets}
 		rows = frappe.get_all(
 			"Mark Sheet Entry Row",
@@ -82,17 +94,32 @@ class Cohorts:
 			["parent", "student", "cia", "ese"],
 		)
 		regulations = dict(
-			frappe.get_all("Student", {"name": ["in", [r.student for r in rows] or [""]]}, ["name", "oc_regulation"], as_list=True)
+			frappe.get_all(
+				"Student",
+				{"name": ["in", [r.student for r in rows] or [""]]},
+				["name", "oc_regulation"],
+				as_list=True,
+			)
 		)
 		skipped = arrear_writers(self.exam_session, course)
 		totals = []
 		for row in rows:
 			regulation = regulations.get(row.student)
-			if row.student in skipped or not regulation or self.scheme_of(regulation) != scheme or self.short(row.student):
+			if (
+				row.student in skipped
+				or not regulation
+				or self.scheme_of(regulation) != scheme
+				or self.short(row.student)
+			):
 				continue
 			limits = rule_limits(self.rule_set_of(regulation), courses[row.parent])
-			cia, ese = row.cia or 0, combined_ese(row.ese or 0, self.moderation.get(course, 0), 0, limits["ese_max"])
-			if rules.pass_status(cia, ese, limits["cia_max"], limits["ese_max"], limits["ese_min_pct"], limits["total_min_pct"]):
+			cia, ese = (
+				row.cia or 0,
+				combined_ese(row.ese or 0, self.moderation.get(course, 0), 0, limits["ese_max"]),
+			)
+			if rules.pass_status(
+				cia, ese, limits["cia_max"], limits["ese_max"], limits["ese_min_pct"], limits["total_min_pct"]
+			):
 				totals.append(rules.total_pct(cia, ese, limits["cia_max"], limits["ese_max"]))
 		return sorted(totals)
 
@@ -110,7 +137,6 @@ class Cohorts:
 		if regulation not in self.rule_sets:
 			self.rule_sets[regulation] = frappe.get_doc("Exam Rule Set", {"regulation": regulation})
 		return self.rule_sets[regulation]
-
 
 
 def band_key(course, scheme):

@@ -32,7 +32,9 @@ class TestEvaluate(UnitTestCase):
 		self.assertEqual(outcome["result"], rules.COMPLETE)
 		self.assertEqual(outcome["missing_courses"], [])
 		self.assertEqual((row(outcome, "PCC")["earned"], row(outcome, "PEC")["earned"]), (8, 3))
-		self.assertEqual((row(outcome, rules.TOTAL)["required"], row(outcome, rules.TOTAL)["earned"]), (11, 11))
+		self.assertEqual(
+			(row(outcome, rules.TOTAL)["required"], row(outcome, rules.TOTAL)["earned"]), (11, 11)
+		)
 		self.assertTrue(all(r["status"] == rules.MET for r in outcome["categories"]))
 
 	def test_a_category_short_of_its_minimum_is_incomplete(self):
@@ -43,7 +45,9 @@ class TestEvaluate(UnitTestCase):
 
 	def test_the_total_counts_only_categories_that_count_toward_credits(self):
 		outcome = evaluate({"C1": 4, "C2": 4, "E1": 3, "M1": 0}, total=12)
-		self.assertEqual((row(outcome, rules.TOTAL)["earned"], row(outcome, rules.TOTAL)["status"]), (11, rules.SHORT))
+		self.assertEqual(
+			(row(outcome, rules.TOTAL)["earned"], row(outcome, rules.TOTAL)["status"]), (11, rules.SHORT)
+		)
 		self.assertEqual(outcome["result"], rules.INCOMPLETE)
 
 	def test_no_total_on_record_is_not_checked(self):
@@ -52,7 +56,9 @@ class TestEvaluate(UnitTestCase):
 		self.assertEqual(outcome["result"], rules.COMPLETE)
 
 	def test_a_mandatory_course_not_passed_is_missing_even_with_the_credits(self):
-		outcome = evaluate({"C1": 4, "C2": 4, "E1": 3, "E2": 3}, total=0)  # the non-credit mandatory course M1 not passed
+		outcome = evaluate(
+			{"C1": 4, "C2": 4, "E1": 3, "E2": 3}, total=0
+		)  # the non-credit mandatory course M1 not passed
 		self.assertEqual(outcome["missing_courses"], ["M1"])
 		self.assertEqual(outcome["result"], rules.INCOMPLETE)
 
@@ -83,7 +89,9 @@ class TestEvaluate(UnitTestCase):
 	def test_a_specialisation_is_shown_and_does_not_block_the_degree(self):
 		outcome = evaluate({"C1": 4, "C2": 4, "E1": 3, "M1": 0}, specialisations=[("Honours", 18, 9)])
 		honours = row(outcome, "Honours")
-		self.assertEqual((honours["required"], honours["earned"], honours["status"]), (18, 9, rules.NOT_REQUIRED))
+		self.assertEqual(
+			(honours["required"], honours["earned"], honours["status"]), (18, 9, rules.NOT_REQUIRED)
+		)
 		self.assertEqual(outcome["result"], rules.COMPLETE)
 
 	def test_no_curriculum_is_incomplete(self):

@@ -116,7 +116,8 @@ def has_stored_aadhaar(doc) -> bool:
 def authorize_reveal(doc):
 	if VIEWER_ROLE not in frappe.get_roles():
 		frappe.throw(
-			_("Only users with the role {0} can view Aadhaar numbers.").format(VIEWER_ROLE), frappe.PermissionError
+			_("Only users with the role {0} can view Aadhaar numbers.").format(VIEWER_ROLE),
+			frappe.PermissionError,
 		)
 	doc.check_permission("read")  # company User Permissions apply
 
@@ -150,7 +151,9 @@ def log_reveal(doctype, name, reason="reveal"):
 			frappe.log_error(title="Aadhaar Access Log write failed", message=frappe.get_traceback())
 		except Exception:
 			pass  # never mask the failure below
-		raise frappe.ValidationError(_("The Aadhaar access could not be recorded; nothing was revealed.")) from error
+		raise frappe.ValidationError(
+			_("The Aadhaar access could not be recorded; nothing was revealed.")
+		) from error
 
 
 def write_on_own_connection(values):

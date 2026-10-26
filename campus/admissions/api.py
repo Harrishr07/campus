@@ -2,10 +2,14 @@
 
 import frappe
 
-from campus.admissions import admit as admission, documents, eligibility, joining
-from campus.admissions import enquiry, seat_matrix as seats
+from campus.admissions import admit as admission
+from campus.admissions import documents, eligibility, enquiry, joining
+from campus.admissions import seat_matrix as seats
+from campus.admissions.aadhaar import (  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
+	copy_aadhaar,
+	reveal_aadhaar,
+)
 from campus.admissions.documents import grant_temporary_clearance as grant_clearance
-from campus.admissions.aadhaar import copy_aadhaar, reveal_aadhaar  # noqa: F401  (public API; copy_aadhaar is internal, not whitelisted)
 
 
 @frappe.whitelist()
@@ -40,7 +44,13 @@ def pending_documents(applicant):
 
 
 @frappe.whitelist()
-def set_document_status(applicant: str, document_type: str, status: str, remarks: str | None = None, original_retained: int | None = None):
+def set_document_status(
+	applicant: str,
+	document_type: str,
+	status: str,
+	remarks: str | None = None,
+	original_retained: int | None = None,
+):
 	"""Verifier action on one checklist item; Verified/Rejected need the Admission Verifier role."""
 	return documents.set_document_status(applicant, document_type, status, remarks, original_retained)
 
@@ -64,7 +74,9 @@ def admit(applicant: str):
 
 
 @frappe.whitelist(methods=["POST"])
-def confirm_joining(applicant: str, joining_date: str | None = None, override_justification: str | None = None):
+def confirm_joining(
+	applicant: str, joining_date: str | None = None, override_justification: str | None = None
+):
 	"""Joining confirmation of an admitted applicant (role Admission Officer, M04-09).
 
 	One transaction: seat check (strict mode; an override needs `override_justification`), submitted Program

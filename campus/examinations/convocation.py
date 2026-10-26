@@ -82,13 +82,23 @@ def record_award_eligible(row, doc):
 	if lifecycle_status(row.student) == ACTIVE:
 		reason = _("Credit completion check {0} passed").format(row.completion_check)
 		if row.completion_term:
-			reason = _("Programme completed in {0}; credit completion check {1} passed").format(row.completion_term, row.completion_check)
+			reason = _("Programme completed in {0}; credit completion check {1} passed").format(
+				row.completion_term, row.completion_check
+			)
 		transition(row.student, STUDY_COMPLETED, listing_date(doc, row.student), reason, doc)
 	if row.award_hold:
-		revert_transition(doc, _("Held: {0}").format(row.award_hold), student=row.student, statuses=(AWARD_ELIGIBLE,))
+		revert_transition(
+			doc, _("Held: {0}").format(row.award_hold), student=row.student, statuses=(AWARD_ELIGIBLE,)
+		)
 		return
 	if lifecycle_status(row.student) == STUDY_COMPLETED:
-		transition(row.student, AWARD_ELIGIBLE, listing_date(doc, row.student), _("Listed for convocation on {0}").format(doc.name), doc)
+		transition(
+			row.student,
+			AWARD_ELIGIBLE,
+			listing_date(doc, row.student),
+			_("Listed for convocation on {0}").format(doc.name),
+			doc,
+		)
 
 
 def listing_date(doc, student):
@@ -128,14 +138,28 @@ def graduate(convocation_list):
 		frappe.db.savepoint(SAVEPOINT)
 		try:
 			if status == STUDY_COMPLETED:  # a hold that has cleared since listing
-				transition(row.student, AWARD_ELIGIBLE, listing_date(doc, row.student), _("Listed for convocation on {0}").format(doc.name), doc)
-			transition(row.student, GRADUATED, doc.convocation_date, _("Degree conferred at convocation {0}").format(doc.name), doc)
+				transition(
+					row.student,
+					AWARD_ELIGIBLE,
+					listing_date(doc, row.student),
+					_("Listed for convocation on {0}").format(doc.name),
+					doc,
+				)
+			transition(
+				row.student,
+				GRADUATED,
+				doc.convocation_date,
+				_("Degree conferred at convocation {0}").format(doc.name),
+				doc,
+			)
 			completion.alumni_on_convocation(row.student, doc.convocation_date, doc)
 			graduated += 1
 		except frappe.ValidationError as error:  # the refused student writes nothing
 			frappe.db.rollback(save_point=SAVEPOINT)
 			del frappe.local.message_log[messages:]
-			refused.append({"student": row.student, "reason": strip_html(str(error))})  # plain text: the form escapes it
+			refused.append(
+				{"student": row.student, "reason": strip_html(str(error))}
+			)  # plain text: the form escapes it
 	return {"graduated": graduated, "refused": refused}
 
 
@@ -145,7 +169,9 @@ def graduation_refusal(row, doc):
 	the convocation date."""
 	check = completion.run_check(row.student)
 	if check.result != completion.rules.COMPLETE:
-		return _("Completion check {0} is Incomplete: {1}").format(check.name, "; ".join((check.reasons or "").splitlines()))
+		return _("Completion check {0} is Incomplete: {1}").format(
+			check.name, "; ".join((check.reasons or "").splitlines())
+		)
 	hold = completion.award_refusal(row.student, doc.convocation_date, doc.program or row.program)
 	return _("Not award eligible: {0}").format(hold) if hold else None
 

@@ -12,12 +12,20 @@ def execute(filters=None):
 	filters = filters or {}
 	if not filters.get("company"):
 		return columns(), []
-	return columns(), consultancy.revenue_by_project(filters["company"], filters.get("academic_year"), filters.get("department"))
+	return columns(), consultancy.revenue_by_project(
+		filters["company"], filters.get("academic_year"), filters.get("department")
+	)
 
 
 def columns():
 	def col(fieldname, label, fieldtype="Currency", width=120, options="currency"):
-		return {"fieldname": fieldname, "label": _(label), "fieldtype": fieldtype, "width": width, "options": options}
+		return {
+			"fieldname": fieldname,
+			"label": _(label),
+			"fieldtype": fieldtype,
+			"width": width,
+			"options": options,
+		}
 
 	return [
 		col("consultancy_project", "Project", "Link", 130, "Consultancy Project"),

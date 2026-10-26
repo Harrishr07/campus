@@ -97,10 +97,19 @@ class FileAdapter(PFMSAdapter):
 	def import_status(self, batch, content):
 		layout = frappe.get_doc("PFMS Export Layout", batch.layout)
 		reader = csv.DictReader(io.StringIO(content.lstrip("﻿")))
-		columns = [layout.status_reference_column, layout.status_column, layout.status_pfms_reference_column, layout.status_message_column]
+		columns = [
+			layout.status_reference_column,
+			layout.status_column,
+			layout.status_pfms_reference_column,
+			layout.status_message_column,
+		]
 		missing = [c for c in columns[:2] if c not in (reader.fieldnames or [])]
 		if missing:
-			frappe.throw(_("The status file has no column {0} (PFMS Export Layout {1}).").format(", ".join(missing), layout.name))
+			frappe.throw(
+				_("The status file has no column {0} (PFMS Export Layout {1}).").format(
+					", ".join(missing), layout.name
+				)
+			)
 		success, failure = value_set(layout.success_values), value_set(layout.failure_values)
 		updates = []
 		for line in reader:
@@ -108,7 +117,8 @@ class FileAdapter(PFMSAdapter):
 			status = "Success" if reported in success else "Failed" if reported in failure else "Unknown"
 			updates.append(
 				StatusUpdate(
-					(line.get(layout.status_reference_column) or "").strip(), status,
+					(line.get(layout.status_reference_column) or "").strip(),
+					status,
 					(line.get(columns[2]) or "").strip() if columns[2] else "",
 					(line.get(columns[3]) or "").strip() if columns[3] else "",
 				)  # fmt: skip

@@ -78,14 +78,20 @@ class AdmissionCancellation(Document):
 					frappe.bold(self.student), _(status or "")
 				)
 			)
-		clash = frappe.db.exists("Admission Cancellation", {"student": self.student, "docstatus": 1, "name": ("!=", self.name)})
+		clash = frappe.db.exists(
+			"Admission Cancellation", {"student": self.student, "docstatus": 1, "name": ("!=", self.name)}
+		)
 		if clash:
 			frappe.throw(_("{0} already cancels this admission.").format(clash))
 
 	def compute_advance_refund(self):
 		"""No invoice and no fee: the whole advance is refunded (read with locking reads on submit)."""
 		customer = frappe.db.get_value("Student", self.student, "customer")
-		advance = finance.unallocated_advance(customer, self.company, locking=self.docstatus == 1) if customer else 0
+		advance = (
+			finance.unallocated_advance(customer, self.company, locking=self.docstatus == 1)
+			if customer
+			else 0
+		)
 		self.update(
 			{
 				"fee_invoice": None, "refund_rule": None, "admission_start": None, "days_since_start": 0, "invoice_total": 0,
@@ -100,9 +106,12 @@ class AdmissionCancellation(Document):
 		if not enrollment or enrollment.docstatus != 1:
 			frappe.throw(_("Program Enrollment {0} is not submitted.").format(self.program_enrollment))
 		if enrollment.student != self.student:
-			frappe.throw(_("Program Enrollment {0} belongs to another student.").format(self.program_enrollment))
+			frappe.throw(
+				_("Program Enrollment {0} belongs to another student.").format(self.program_enrollment)
+			)
 		clash = frappe.db.exists(
-			"Admission Cancellation", {"program_enrollment": self.program_enrollment, "docstatus": 1, "name": ("!=", self.name)}
+			"Admission Cancellation",
+			{"program_enrollment": self.program_enrollment, "docstatus": 1, "name": ("!=", self.name)},
 		)
 		if clash:
 			frappe.throw(_("{0} already cancels this admission.").format(clash))
@@ -137,18 +146,29 @@ class AdmissionCancellation(Document):
 		else:  # not joined: no invoice, enrollment or seat to release
 			credit_note, payment = None, make_advance_refund(self) if self.cash_refund else None
 		close_records(self)
-		self.db_set({"credit_note": credit_note and credit_note.name, "payment_entry": payment and payment.name})
+		self.db_set(
+			{"credit_note": credit_note and credit_note.name, "payment_entry": payment and payment.name}
+		)
 
 	def before_cancel(self):
-		frappe.throw(_("An Admission Cancellation cannot be cancelled; reverse its Credit Note and Payment Entry in Accounts."))
+		frappe.throw(
+			_(
+				"An Admission Cancellation cannot be cancelled; reverse its Credit Note and Payment Entry in Accounts."
+			)
+		)
 
 
 def admission_invoice(program_enrollment):
 	name = frappe.db.get_value(
-		"Sales Invoice", {"oc_program_enrollment": program_enrollment, "docstatus": 1, "is_return": 0}, "name", order_by="creation desc"
+		"Sales Invoice",
+		{"oc_program_enrollment": program_enrollment, "docstatus": 1, "is_return": 0},
+		"name",
+		order_by="creation desc",
 	)
 	if not name:
-		frappe.throw(_("No submitted fee invoice was raised for Program Enrollment {0}.").format(program_enrollment))
+		frappe.throw(
+			_("No submitted fee invoice was raised for Program Enrollment {0}.").format(program_enrollment)
+		)
 	return frappe.get_doc("Sales Invoice", name)
 
 
@@ -156,9 +176,9 @@ def check_no_scholarship(invoice, locking):
 	vouchers = finance.scholarship_vouchers(invoice, locking=locking)
 	if vouchers:
 		frappe.throw(
-			_("{0} is settled by scholarship disbursement {1}. Cancel it in Accounts first, so the scholarship is not refunded.").format(
-				invoice, ", ".join(vouchers)
-			)
+			_(
+				"{0} is settled by scholarship disbursement {1}. Cancel it in Accounts first, so the scholarship is not refunded."
+			).format(invoice, ", ".join(vouchers))
 		)
 
 
@@ -194,7 +214,9 @@ def check_advance_refund(doc, method=None):
 	cancellation = doc.get("oc_admission_cancellation")
 	if not cancellation:
 		return
-	student, company = frappe.db.get_value("Admission Cancellation", cancellation, ["student", "company"], for_update=True)
+	student, company = frappe.db.get_value(
+		"Admission Cancellation", cancellation, ["student", "company"], for_update=True
+	)
 	customer = frappe.db.get_value("Student", student, "customer")
 	if (doc.party_type, doc.party, doc.company) != ("Customer", customer, company):
 		frappe.throw(_("{0} refunds the advance of {1}: it must be paid to their customer {2} of {3}.").format(
@@ -205,7 +227,10 @@ def check_advance_refund(doc, method=None):
 		(cancellation, doc.name),
 	)
 	if paid:
-		frappe.throw(_("{0} already refunds the advance of {1}.").format(paid[0][0], cancellation), title=_("Already Refunded"))
+		frappe.throw(
+			_("{0} already refunds the advance of {1}.").format(paid[0][0], cancellation),
+			title=_("Already Refunded"),
+		)
 	left = finance.unallocated_advance(customer, company, locking=True)
 	if flt(doc.paid_amount) > left:
 		frappe.throw(

@@ -28,10 +28,14 @@ class Person:
 		self.gender = rng.choice(["Female", "Male"])
 		self.first_name = rng.choice(FEMALE if self.gender == "Female" else MALE)
 		self.last_name = rng.choice(SURNAMES)
-		self.date_of_birth = f"{rng.randint(oldest_year, youngest_year)}-{rng.randint(1, 12):02d}-{rng.randint(1, 28):02d}"
+		self.date_of_birth = (
+			f"{rng.randint(oldest_year, youngest_year)}-{rng.randint(1, 12):02d}-{rng.randint(1, 28):02d}"
+		)
 		self.email = f"{key}@{domain}"
 		digest = hashlib.sha1(f"{seed}:{key}".encode()).hexdigest()
-		self.mobile = f"0000{int(digest[:8], 16) % 1000000:06d}"  # starts with 0: never a real Indian mobile number
+		self.mobile = (
+			f"0000{int(digest[:8], 16) % 1000000:06d}"  # starts with 0: never a real Indian mobile number
+		)
 
 	@property
 	def full_name(self):

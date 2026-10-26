@@ -12,7 +12,9 @@ class InstitutionalMoU(Document):
 			frappe.throw(_("Valid To cannot be before Valid From."))
 		for row in self.activities:
 			if not getdate(self.valid_from) <= getdate(row.activity_date) <= getdate(self.valid_to):
-				frappe.throw(_("Row {0}: the activity date is outside the period of the MoU.").format(row.idx))
+				frappe.throw(
+					_("Row {0}: the activity date is outside the period of the MoU.").format(row.idx)
+				)
 		self.status = mou_status(self.valid_from, self.valid_to, self.terminated)
 
 

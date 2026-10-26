@@ -76,7 +76,11 @@ def check_whatsapp():
 		return WARN, "frappe_whatsapp is not installed"
 	account = frappe.db.get_single_value("WhatsApp Settings", "default_outgoing_account")
 	active = bool(account) and frappe.db.get_value("WhatsApp Account", account, "status") == "Active"
-	detail = f"default outgoing WhatsApp Account: {account}" if active else "no active default outgoing WhatsApp Account"
+	detail = (
+		f"default outgoing WhatsApp Account: {account}"
+		if active
+		else "no active default outgoing WhatsApp Account"
+	)
 	return flag(active, detail, bad=WARN)
 
 
@@ -94,7 +98,11 @@ def check_backups():
 
 def check_backup_age():
 	folder = frappe.utils.get_site_path(frappe.conf.get("backup_path", "private/backups"))
-	files = [os.path.getmtime(os.path.join(folder, f)) for f in os.listdir(folder)] if os.path.isdir(folder) else []
+	files = (
+		[os.path.getmtime(os.path.join(folder, f)) for f in os.listdir(folder)]
+		if os.path.isdir(folder)
+		else []
+	)
 	if not files:
 		return WARN, "no backup file found"
 	age_days = (time.time() - max(files)) / 86400

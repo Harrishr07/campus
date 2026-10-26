@@ -20,7 +20,11 @@ from campus.research.pfms import PaymentSelection, default_layout, export_key, r
 from campus.research.pfms_adapter import DEFAULT_ADAPTER, adapter_for
 
 ROW_DOCTYPE = "PFMS Export Batch Row"
-EXPORT_METHODS = {"Expenditure": "export_expenditure", "Advance": "export_advance", "Transfer": "export_transfer"}
+EXPORT_METHODS = {
+	"Expenditure": "export_expenditure",
+	"Advance": "export_advance",
+	"Transfer": "export_transfer",
+}
 ROW_FIELDS = (
 	"voucher_type", "voucher_no", "reference_doctype", "reference_name", "posting_date", "supplier", "supplier_name",
 	"pfms_vendor_code", "bank_account", "bank_account_no", "ifsc", "budget_head", "amount", "payment_key",
@@ -47,13 +51,15 @@ class PFMSExportBatch(Document):
 		self.set_rows(self.selection(sanction, lock=True))
 		if not self.rows:
 			frappe.throw(
-				_("Nothing to export: every {0} payment of Sanction {1} in the period is already exported or excluded.").format(
-					_(self.export_type).lower(), self.sanction
-				)
+				_(
+					"Nothing to export: every {0} payment of Sanction {1} in the period is already exported or excluded."
+				).format(_(self.export_type).lower(), self.sanction)
 			)
 		for row in self.rows:
 			row.row_reference = f"{self.name}-{row.idx}"
-			row.export_key = export_key(row.voucher_type, row.voucher_no, row.reference_doctype, row.reference_name)
+			row.export_key = export_key(
+				row.voucher_type, row.voucher_no, row.reference_doctype, row.reference_name
+			)
 			row.status = "Exported"
 		self.status = "Exported"
 
@@ -62,8 +68,13 @@ class PFMSExportBatch(Document):
 		export = getattr(adapter, EXPORT_METHODS[self.export_type])(self, self.rows)
 		file = frappe.get_doc(
 			{
-				"doctype": "File", "file_name": export.file_name, "content": export.content, "is_private": 1,
-				"attached_to_doctype": self.doctype, "attached_to_name": self.name, "attached_to_field": "export_file",
+				"doctype": "File",
+				"file_name": export.file_name,
+				"content": export.content,
+				"is_private": 1,
+				"attached_to_doctype": self.doctype,
+				"attached_to_name": self.name,
+				"attached_to_field": "export_file",
 			}  # fmt: skip
 		).insert(ignore_permissions=True)
 		self.db_set("export_file", file.file_url)
@@ -77,12 +88,16 @@ class PFMSExportBatch(Document):
 		)  # fmt: skip
 		if accepted:
 			frappe.throw(
-				_("{0} can't be cancelled: PFMS accepted rows {1}.").format(self.name, ", ".join(accepted[:5]))
+				_("{0} can't be cancelled: PFMS accepted rows {1}.").format(
+					self.name, ", ".join(accepted[:5])
+				)
 			)
 
 	def on_cancel(self):
 		row = frappe.qb.DocType(ROW_DOCTYPE)
-		frappe.qb.update(row).set(row.export_key, None).where((row.parent == self.name) & (row.parenttype == self.doctype)).run()
+		frappe.qb.update(row).set(row.export_key, None).where(
+			(row.parent == self.name) & (row.parenttype == self.doctype)
+		).run()
 		self.db_set("status", "Cancelled")
 
 	@frappe.whitelist()
@@ -116,14 +131,20 @@ class PFMSExportBatch(Document):
 			if problem:
 				skipped.append(problem)
 				continue
-			values = {"status": update.status, "pfms_reference": update.pfms_reference, "status_message": update.message}
+			values = {
+				"status": update.status,
+				"pfms_reference": update.pfms_reference,
+				"status_message": update.message,
+			}
 			if update.status == "Failed":
 				values["export_key"] = None  # the next batch of the period exports it again
 			frappe.db.set_value(ROW_DOCTYPE, row.name, values)
 			row.status = update.status
 			updated += 1
 		self.set_status_counts(rows.values())
-		self.add_comment("Info", _("PFMS status imported: {0} rows updated, {1} skipped.").format(updated, len(skipped)))
+		self.add_comment(
+			"Info", _("PFMS status imported: {0} rows updated, {1} skipped.").format(updated, len(skipped))
+		)
 		return {"updated": updated, "skipped": skipped}
 
 	def status_problem(self, update, row):
@@ -147,7 +168,8 @@ class PFMSExportBatch(Document):
 		statuses = [row.status for row in rows]
 		self.db_set(
 			{
-				"success_count": statuses.count("Success"), "failed_count": statuses.count("Failed"),
+				"success_count": statuses.count("Success"),
+				"failed_count": statuses.count("Failed"),
 				"status": "Exported" if "Exported" in statuses else "Processed",
 			}  # fmt: skip
 		)
@@ -165,8 +187,12 @@ class PFMSExportBatch(Document):
 		self.currency = frappe.get_cached_value("Company", self.company, "default_currency")
 		self.agency_code = frappe.db.get_value("Research Settings", self.company, "pfms_unique_agency_code")
 		if not self.agency_code:
-			frappe.throw(_("Set the PFMS Unique Agency Code in {0}'s Research Settings.").format(self.company))
-		self.funding_agency_code = frappe.db.get_value("Funding Agency", self.funding_agency, "pfms_agency_code")
+			frappe.throw(
+				_("Set the PFMS Unique Agency Code in {0}'s Research Settings.").format(self.company)
+			)
+		self.funding_agency_code = frappe.db.get_value(
+			"Funding Agency", self.funding_agency, "pfms_agency_code"
+		)
 		return sanction
 
 	def check_sanction_access(self):
@@ -184,13 +210,23 @@ class PFMSExportBatch(Document):
 			frappe.throw(_("Set up a PFMS Export Layout for {0} exports.").format(_(self.export_type)))
 		layout_type = frappe.db.get_value("PFMS Export Layout", self.layout, "export_type")
 		if layout_type != self.export_type:
-			frappe.throw(_("PFMS Export Layout {0} is for {1} exports, not {2}.").format(self.layout, _(layout_type), _(self.export_type)))
+			frappe.throw(
+				_("PFMS Export Layout {0} is for {1} exports, not {2}.").format(
+					self.layout, _(layout_type), _(self.export_type)
+				)
+			)
 
 	def selection(self, sanction, lock=False):
 		return PaymentSelection(sanction, self.export_type, self.from_date, self.to_date, lock).run()
 
 	def set_rows(self, selection):
-		self.set("rows", [{field: payment.get(field) for field in ROW_FIELDS} | {"status": "Pending"} for payment in selection.rows])
+		self.set(
+			"rows",
+			[
+				{field: payment.get(field) for field in ROW_FIELDS} | {"status": "Pending"}
+				for payment in selection.rows
+			],
+		)
 		self.set("exclusions", selection.exclusions)
 		self.row_count = len(self.rows)
 		self.total_amount = flt(sum(flt(row.amount) for row in self.rows), 2)

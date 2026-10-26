@@ -50,7 +50,13 @@ def schedule_row(schedule):
 	state = cia.lock_state(schedule.name)
 	unlock = cia.active_unlock(schedule.name) if state == cia.UNLOCKED else None
 	sheet = frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": schedule.name})
-	marks = frappe.get_all("Mark Sheet Entry Row", {"parent": sheet, "parenttype": "Mark Sheet Entry"}, pluck="cia") if sheet else []
+	marks = (
+		frappe.get_all(
+			"Mark Sheet Entry Row", {"parent": sheet, "parenttype": "Mark Sheet Entry"}, pluck="cia"
+		)
+		if sheet
+		else []
+	)
 	absent = frappe.get_all(
 		"Mark Sheet CIA Mark", {"parent": sheet, "parenttype": "Mark Sheet Entry", "absent": 1}, pluck="student", distinct=True
 	) if sheet else []  # fmt: skip

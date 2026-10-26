@@ -4,13 +4,16 @@ import frappe
 from frappe.utils import today
 
 from campus.campus_platform.approval_access import pending_approvals  # noqa: F401  (public API)
-from campus.campus_platform.approval_engine import find_policy, latest_request, start_request  # noqa: F401  (public API)
+from campus.campus_platform.approval_engine import (  # noqa: F401  (public API)
+	find_policy,
+	latest_request,
+	start_request,
+)
 from campus.campus_platform.approvals import ApprovableDocument, request_approval  # noqa: F401  (public API)
 from campus.campus_platform.bulk import live_run, run_bulk  # noqa: F401  (public API)
 from campus.campus_platform.company_scope import permitted_companies  # noqa: F401  (public API)
 from campus.campus_platform.pack_rules import effective_status, status_allows_pack
 from campus.campus_platform.positions import resolve_position  # noqa: F401  (public API)
-from campus.campus_platform.regulation_setup import DEAN_ROLE  # noqa: F401  (public API)
 from campus.campus_platform.regulation_rules import (  # noqa: F401  (public API)
 	apply_regulation_change,
 	get_regulation,
@@ -18,13 +21,16 @@ from campus.campus_platform.regulation_rules import (  # noqa: F401  (public API
 	latest_enrollment,
 	resolve_regulation,
 )
+from campus.campus_platform.regulation_setup import DEAN_ROLE  # noqa: F401  (public API)
 
 PACK_CACHE = "campus_pack_enabled"
 
 
 def pack_enabled(company, code):
 	"""True if module pack `code` is available to `company`. Cached per day; see `clear_pack_cache`."""
-	return frappe.cache.hget(PACK_CACHE, f"{company}|{code}|{today()}", lambda: _compute_pack_enabled(company, code))
+	return frappe.cache.hget(
+		PACK_CACHE, f"{company}|{code}|{today()}", lambda: _compute_pack_enabled(company, code)
+	)
 
 
 def clear_pack_cache():
@@ -57,7 +63,11 @@ def get_institution(company):
 def service_provider(service, company):
 	"""Provider company of `service` for member `company` under the agreement in force today, or None."""
 	agreements = _agreements_in_force(
-		service, name=["in", _agreements_with_member(company)], fields=["provider_company"], order_by="from_date desc", limit=1
+		service,
+		name=["in", _agreements_with_member(company)],
+		fields=["provider_company"],
+		order_by="from_date desc",
+		limit=1,
 	)
 	return agreements[0].provider_company if agreements else None
 

@@ -19,9 +19,15 @@ class ScholarshipScheme(Document):
 			frappe.throw(_("Renewal attendance must be between 0 and 100 and arrears cannot be negative."))
 
 	def validate_account(self):
-		account = frappe.db.get_value("Account", self.account, ["company", "account_type", "root_type", "is_group"], as_dict=True)
+		account = frappe.db.get_value(
+			"Account", self.account, ["company", "account_type", "root_type", "is_group"], as_dict=True
+		)
 		if account.company != self.company or account.is_group:
-			frappe.throw(_("Account {0} must be a ledger account of {1}.").format(frappe.bold(self.account), self.company))
+			frappe.throw(
+				_("Account {0} must be a ledger account of {1}.").format(
+					frappe.bold(self.account), self.company
+				)
+			)
 		if self.scheme_type == GOVERNMENT and account.account_type not in ("Bank", "Cash"):
 			frappe.throw(_("A government scheme is received into a Bank or Cash account."))
 		if self.scheme_type != GOVERNMENT and account.root_type != "Expense":

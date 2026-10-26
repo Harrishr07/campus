@@ -12,11 +12,22 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "question_paper", "label": _("Question Paper"), "fieldtype": "Link", "options": "Question Paper", "width": 140},
+		{
+			"fieldname": "question_paper",
+			"label": _("Question Paper"),
+			"fieldtype": "Link",
+			"options": "Question Paper",
+			"width": 140,
+		},
 		{"fieldname": "paper_set", "label": _("Set"), "fieldtype": "Data", "width": 60},
 		{"fieldname": "room", "label": _("Hall"), "fieldtype": "Link", "options": "Room", "width": 180},
 		{"fieldname": "copies", "label": _("Copies"), "fieldtype": "Int", "width": 90},
-		{"fieldname": "last_printed_at", "label": _("Last Printed At"), "fieldtype": "Datetime", "width": 170},
+		{
+			"fieldname": "last_printed_at",
+			"label": _("Last Printed At"),
+			"fieldtype": "Datetime",
+			"width": 170,
+		},
 	]
 
 

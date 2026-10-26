@@ -51,7 +51,9 @@ def key():
 	if path:
 		real, sites = os.path.realpath(path), os.path.realpath(os.path.join(get_bench_path(), "sites"))
 		if real == sites or real.startswith(sites + os.sep):
-			frappe.throw(_("The question paper key file must be outside the bench's sites folder (it is backed up)."))
+			frappe.throw(
+				_("The question paper key file must be outside the bench's sites folder (it is backed up).")
+			)
 		with open(real) as f:
 			return f.read().strip()
 	return frappe.conf.get(KEY_CONFIG)
@@ -60,7 +62,11 @@ def key():
 def cipher():
 	value = key()
 	if not value:
-		frappe.throw(_("The question paper key is not configured ({0}, {1} or {2}).").format(KEY_ENV, KEY_FILE_CONFIG, KEY_CONFIG))
+		frappe.throw(
+			_("The question paper key is not configured ({0}, {1} or {2}).").format(
+				KEY_ENV, KEY_FILE_CONFIG, KEY_CONFIG
+			)
+		)
 	return Fernet(value.encode())
 
 
@@ -93,7 +99,10 @@ def seal(doc, field, url):
 	if not isinstance(content, bytes) or not content.startswith(b"%PDF"):
 		frappe.throw(_("Attach the question paper as a PDF."), QPFileError)
 	if frappe.db.exists("File", {"content_hash": file.content_hash, "name": ["not in", plain]}):
-		frappe.throw(_("This file is also attached elsewhere; upload the paper only to its Question Paper."), QPFileError)
+		frappe.throw(
+			_("This file is also attached elsewhere; upload the paper only to its Question Paper."),
+			QPFileError,
+		)
 	sealed = frappe.get_doc(
 		{
 			"doctype": "File", "file_name": f"{doc.name}-{field}.pdf{SEALED_SUFFIX}", "is_private": 1,
@@ -107,7 +116,11 @@ def seal(doc, field, url):
 
 def plain_uploads(doc, field, url):
 	"""Files behind `url` that are this paper's upload for `field`, or the session user's unattached upload."""
-	files = frappe.get_all("File", {"file_url": url}, ["name", "owner", "attached_to_doctype", "attached_to_name", "attached_to_field"])
+	files = frappe.get_all(
+		"File",
+		{"file_url": url},
+		["name", "owner", "attached_to_doctype", "attached_to_name", "attached_to_field"],
+	)
 	return [
 		f.name for f in files
 		if (f.attached_to_doctype, f.attached_to_name) == (QUESTION_PAPER, doc.name) and f.attached_to_field in (field, None, "")
@@ -119,7 +132,11 @@ def delete_files(names):
 	"""Delete plain uploads; they are detached first, since an approved paper protects its attached Files."""
 	for name in names:
 		if frappe.db.exists("File", name):
-			frappe.db.set_value("File", name, {"attached_to_doctype": None, "attached_to_name": None, "attached_to_field": None})
+			frappe.db.set_value(
+				"File",
+				name,
+				{"attached_to_doctype": None, "attached_to_name": None, "attached_to_field": None},
+			)
 			frappe.delete_doc("File", name, ignore_permissions=True, force=True)
 	if not frappe.in_test:
 		frappe.db.commit()  # after_commit runs once the save's transaction has committed
@@ -153,7 +170,7 @@ def decrypt_bound(file_name, paper, field):
 	except (InvalidToken, TypeError, ValueError):
 		return None
 	header = binding(paper, field)
-	return plain[len(header):] if plain.startswith(header) else None
+	return plain[len(header) :] if plain.startswith(header) else None
 
 
 def fingerprint(file_name):
@@ -174,7 +191,11 @@ def read_sealed(doc, field):
 	"""The decrypted PDF of `doc`'s `field`; QPFileError unless it is this paper's own sealed file (and, once
 	approved, the very file and bytes snapshotted at approval)."""
 	name = bound_file(doc, field)
-	if name and doc.docstatus != 0 and (name != doc.get(f"{field}_id") or fingerprint(name) != doc.get(f"{field}_sha256")):
+	if (
+		name
+		and doc.docstatus != 0
+		and (name != doc.get(f"{field}_id") or fingerprint(name) != doc.get(f"{field}_sha256"))
+	):
 		name = None
 	content = name and decrypt_bound(name, doc.name, field)
 	if not content:
@@ -207,7 +228,9 @@ def stamp(width, height, text):
 	literal = pdf_literal(text)
 	stream = DecodedStreamObject()
 	stream.set_data(
-		f"q 0.45 g BT /FWm 8 Tf 24 14 Td ({literal}) Tj ET BT /FWm 8 Tf 24 {height - 20:.0f} Td ({literal}) Tj ET Q".encode("latin-1")
+		f"q 0.45 g BT /FWm 8 Tf 24 14 Td ({literal}) Tj ET BT /FWm 8 Tf 24 {height - 20:.0f} Td ({literal}) Tj ET Q".encode(
+			"latin-1"
+		)
 	)
 	page[NameObject("/Contents")] = stamp_writer._add_object(stream)
 	return page

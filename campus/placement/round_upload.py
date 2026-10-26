@@ -18,7 +18,10 @@ def load_results(round_result):
 	rows = export.read_rows(doc.upload_file)
 	problems = file_problems(rows, set(registered_students(doc.drive)))
 	if problems:
-		frappe.throw("<br>".join(problems[:20]) + ("<br>" + _("... and {0} more").format(len(problems) - 20) if len(problems) > 20 else ""))
+		frappe.throw(
+			"<br>".join(problems[:20])
+			+ ("<br>" + _("... and {0} more").format(len(problems) - 20) if len(problems) > 20 else "")
+		)
 	listed = {row.student: row for row in doc.results}
 	for _number, student, result, remarks in rows:
 		if student in listed:
@@ -35,11 +38,19 @@ def file_problems(rows, registered):
 	problems, seen = [], set()
 	for number, student, result, _remarks in rows:
 		if student not in registered:
-			problems.append(_("Row {0}: {1} is not registered for the drive").format(number, frappe.utils.escape_html(student)))
+			problems.append(
+				_("Row {0}: {1} is not registered for the drive").format(
+					number, frappe.utils.escape_html(student)
+				)
+			)
 		elif student in seen:
 			problems.append(_("Row {0}: {1} is listed twice").format(number, student))
 		if result not in allowed:
-			problems.append(_("Row {0}: result {1} is not one of {2}").format(number, frappe.utils.escape_html(result), ", ".join(allowed)))
+			problems.append(
+				_("Row {0}: result {1} is not one of {2}").format(
+					number, frappe.utils.escape_html(result), ", ".join(allowed)
+				)
+			)
 		seen.add(student)
 	return problems
 

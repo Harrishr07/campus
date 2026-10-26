@@ -10,7 +10,14 @@ from frappe.model.document import Document
 
 from campus.faculty.self_appraisal import is_hr
 
-SCORED_FIELDS = ("achievement_type", "achievement_date", "title", "financial_support_amount", "evidence", "training_event")
+SCORED_FIELDS = (
+	"achievement_type",
+	"achievement_date",
+	"title",
+	"financial_support_amount",
+	"evidence",
+	"training_event",
+)
 
 
 class FacultyAchievement(Document):
@@ -35,8 +42,16 @@ class FacultyAchievement(Document):
 
 	def check_training_event(self):
 		"""FDP attendance lives in the Training Event, so a Conference cannot be filed against an FDP (it would score twice)."""
-		if self.achievement_type == "Conference" and self.training_event and frappe.db.get_value("Training Event", self.training_event, "oc_is_fdp"):
-			frappe.throw(_("{0} is an FDP: its attendance is counted from the Training Event, not as a Conference.").format(self.training_event))
+		if (
+			self.achievement_type == "Conference"
+			and self.training_event
+			and frappe.db.get_value("Training Event", self.training_event, "oc_is_fdp")
+		):
+			frappe.throw(
+				_(
+					"{0} is an FDP: its attendance is counted from the Training Event, not as a Conference."
+				).format(self.training_event)
+			)
 
 	def reset_verification_on_change(self):
 		"""A verified achievement stays verified only as HR saw it: anyone else changing what is scored has to be verified again."""
@@ -45,7 +60,9 @@ class FacultyAchievement(Document):
 			return
 		if any(self.get(f) != before.get(f) for f in SCORED_FIELDS):
 			self.verified = 0
-			frappe.msgprint(_("The achievement was changed, so HR has to verify it again."), indicator="orange")
+			frappe.msgprint(
+				_("The achievement was changed, so HR has to verify it again."), indicator="orange"
+			)
 
 	def check_verification(self):
 		if self.verified and not self.evidence:

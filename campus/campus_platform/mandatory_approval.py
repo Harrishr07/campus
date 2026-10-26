@@ -37,7 +37,8 @@ MANDATORY_APPROVAL_DOCTYPES = (
 def approval_required(doctype):
 	return bool(
 		frappe.db.exists(
-			ROW_DOCTYPE, {"parenttype": "Campus Settings", "parentfield": SETTINGS_FIELD, "document_type": doctype}
+			ROW_DOCTYPE,
+			{"parenttype": "Campus Settings", "parentfield": SETTINGS_FIELD, "document_type": doctype},
 		)
 	)
 
@@ -47,7 +48,9 @@ def refuse_without_policy(doc):
 	if approval_required(doc.doctype):
 		frappe.db.after_rollback.add(partial(flag_for_configuration, doc.doctype, frappe.session.user))
 		frappe.throw(
-			_("No approval policy is configured for {0}; ask the administrator to set one up.").format(_(doc.doctype)),
+			_("No approval policy is configured for {0}; ask the administrator to set one up.").format(
+				_(doc.doctype)
+			),
 			title=_("Approval Policy Missing"),
 		)
 

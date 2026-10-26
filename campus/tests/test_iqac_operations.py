@@ -26,7 +26,9 @@ class TestDueRule(UnitTestCase):
 		self.assertEqual(due("2026-07-01"), "2027-06-30")
 
 	def test_days_after_period_end(self):
-		self.assertEqual(str(regulator.due_date("Days After Period End", "2026-03-31", 0, 0, 45)), "2026-05-15")
+		self.assertEqual(
+			str(regulator.due_date("Days After Period End", "2026-03-31", 0, 0, 45)), "2026-05-15"
+		)
 
 	def test_unknown_basis_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -65,7 +67,9 @@ class TestCompliance(UnitTestCase):
 	def test_the_yearly_minimum_is_prorated_to_the_period(self):
 		self.assertEqual(committees.meetings_required(2, "2025-04-01", "2026-03-31"), 2)
 		self.assertEqual(committees.meetings_required(4, "2025-04-01", "2025-09-30"), 2)
-		self.assertEqual(committees.meetings_required(2, "2025-04-01", "2025-04-01"), 1)  # any part of a year needs one
+		self.assertEqual(
+			committees.meetings_required(2, "2025-04-01", "2025-04-01"), 1
+		)  # any part of a year needs one
 		self.assertEqual(committees.meetings_required(0, "2025-04-01", "2026-03-31"), 0)
 		self.assertEqual(committees.meetings_required(2, "2024-04-01", "2026-03-31"), 4)
 		with self.assertRaises(frappe.ValidationError):
@@ -115,9 +119,16 @@ class TestIQACOperations(CampusTestCase):
 
 	def make_meeting(self, body, days=-10, status="Held"):
 		meeting = frappe.get_doc(
-			{"doctype": "Body Meeting", "body": body, "meeting_date": add_days(today(), 30), "venue": "Room 1"}
+			{
+				"doctype": "Body Meeting",
+				"body": body,
+				"meeting_date": add_days(today(), 30),
+				"venue": "Room 1",
+			}
 		).insert()
-		frappe.db.set_value("Body Meeting", meeting.name, {"meeting_date": add_days(today(), days), "status": status})
+		frappe.db.set_value(
+			"Body Meeting", meeting.name, {"meeting_date": add_days(today(), days), "status": status}
+		)
 		return meeting.name
 
 	def filters(self, **extra):
@@ -138,7 +149,10 @@ class TestIQACOperations(CampusTestCase):
 
 	def test_composition_shortfall_is_listed(self):
 		body = self.make_body("IQAC", minimum=0)
-		with patch("campus.academic_governance.api.composition_shortfalls", return_value=[frappe._dict(rule="at least 1 University Nominee")]):
+		with patch(
+			"campus.academic_governance.api.composition_shortfalls",
+			return_value=[frappe._dict(rule="at least 1 University Nominee")],
+		):
 			row = next(r for r in committee_compliance.execute(self.filters())[1] if r["body"] == body)
 		self.assertIn("University Nominee", row["composition"])
 
@@ -146,7 +160,10 @@ class TestIQACOperations(CampusTestCase):
 	def test_calendar_lists_iqac_meetings_and_regulator_due_dates_only(self):
 		iqac = self.make_body("IQAC")
 		other = self.make_body("Library Committee", minimum=0)
-		meeting, other_meeting = self.make_meeting(iqac, 10, "Scheduled"), self.make_meeting(other, 10, "Scheduled")
+		meeting, other_meeting = (
+			self.make_meeting(iqac, 10, "Scheduled"),
+			self.make_meeting(other, 10, "Scheduled"),
+		)
 		submission = self.make_submission(due_in=15)
 		refs = {r["reference"] for r in iqac_calendar.execute(self.filters(to_date=add_days(today(), 60)))[1]}
 		self.assertIn(meeting, refs)
@@ -158,7 +175,9 @@ class TestIQACOperations(CampusTestCase):
 		body = self.make_body("IQAC", 0)
 		meeting = self.make_meeting(body, -20)
 		open_item = self.make_item(body, meeting, due=add_days(today(), -2))
-		done_item = self.make_item(body, meeting, due=add_days(today(), -2), status="Done", action_taken="Circular issued")
+		done_item = self.make_item(
+			body, meeting, due=add_days(today(), -2), status="Done", action_taken="Circular issued"
+		)
 		rows = {r["action_item"]: r for r in iqac_action_taken_report.execute(self.filters())[1]}
 		self.assertEqual(rows[open_item]["state"], "Overdue")
 		self.assertEqual(rows[done_item]["state"], "Done")
@@ -185,7 +204,14 @@ class TestIQACOperations(CampusTestCase):
 		kind = self.make_type()
 		period_end = add_days(today(), (due_in or 30) - 30)  # due = period end + 30
 		return frappe.get_doc(
-			{"doctype": "Regulator Submission", "submission_type": kind.name, "company": COLLEGE, "period_end": period_end, "owner_employee": self.employee, **values}
+			{
+				"doctype": "Regulator Submission",
+				"submission_type": kind.name,
+				"company": COLLEGE,
+				"period_end": period_end,
+				"owner_employee": self.employee,
+				**values,
+			}
 		).insert()
 
 	def test_due_date_is_computed_from_the_type_rule(self):
@@ -205,7 +231,11 @@ class TestIQACOperations(CampusTestCase):
 		self.assertEqual(regulator.send_reminders(today()), 0)
 
 	def logs(self, submission):
-		return frappe.get_all("Message Log", {"reference_doctype": "Regulator Submission", "reference_name": submission.name}, ["event_key", "recipient"])
+		return frappe.get_all(
+			"Message Log",
+			{"reference_doctype": "Regulator Submission", "reference_name": submission.name},
+			["event_key", "recipient"],
+		)
 
 	def test_owner_is_reminded_at_the_offsets_once(self):
 		submission = self.make_submission(due_in=7)
@@ -223,7 +253,9 @@ class TestIQACOperations(CampusTestCase):
 	def test_overdue_goes_to_owner_and_escalates_to_the_principal(self):
 		principal = "principal.ops@example.com"
 		if not frappe.db.exists("User", principal):
-			frappe.get_doc({"doctype": "User", "email": principal, "first_name": "Principal", "send_welcome_email": 0}).insert()
+			frappe.get_doc(
+				{"doctype": "User", "email": principal, "first_name": "Principal", "send_welcome_email": 0}
+			).insert()
 		submission = self.make_submission(due_in=-3)
 		with patch("campus.iqac.regulator.principals", return_value=[principal]):
 			self.assertEqual(regulator.send_reminders(today()), 1)
@@ -247,17 +279,32 @@ class TestIQACOperations(CampusTestCase):
 		ensure_seed_positions()
 		make_company(OTHER_COLLEGE, "IOO")
 		holders = {}
-		for company, email in ((COLLEGE, "principal.ops-own@example.com"), (OTHER_COLLEGE, "principal.ops-other@example.com")):
+		for company, email in (
+			(COLLEGE, "principal.ops-own@example.com"),
+			(OTHER_COLLEGE, "principal.ops-other@example.com"),
+		):
 			if not frappe.db.exists("User", email):
-				frappe.get_doc({"doctype": "User", "email": email, "first_name": "Principal", "send_welcome_email": 0}).insert()
+				frappe.get_doc(
+					{"doctype": "User", "email": email, "first_name": "Principal", "send_welcome_email": 0}
+				).insert()
 			frappe.get_doc(
-				{"doctype": "Position Holder", "position": "PRINCIPAL", "scope_value": company, "user": email, "from_date": add_days(today(), -30)}
+				{
+					"doctype": "Position Holder",
+					"position": "PRINCIPAL",
+					"scope_value": company,
+					"user": email,
+					"from_date": add_days(today(), -30),
+				}
 			).insert()
 			holders[company] = email
 		submission = self.make_submission(due_in=-3)
 		self.assertEqual(regulator.principals(submission), [holders[COLLEGE]])
 		regulator.send_reminders(today())
-		escalated = {l.recipient.split(":")[-1] for l in self.logs(submission) if l.event_key == "regulator_submission.escalation"}
+		escalated = {
+			l.recipient.split(":")[-1]
+			for l in self.logs(submission)
+			if l.event_key == "regulator_submission.escalation"
+		}
 		self.assertEqual(escalated, {holders[COLLEGE]})
 
 	def test_an_overdue_return_with_no_principal_is_logged(self):

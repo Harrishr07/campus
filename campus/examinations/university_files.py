@@ -21,9 +21,17 @@ EXPORT_SOURCES = (
 	"Registration Type", "CIA", "CIA Max", "Exam Session",
 )  # fmt: skip
 IMPORT_SOURCES = ("University Register No", "Course Code", "Grade", "Result", "CIA", "ESE", "Total")
-REQUIRED = {"Export": ("University Register No", "Course Code"), "Import": ("University Register No", "Course Code", "Grade")}
+REQUIRED = {
+	"Export": ("University Register No", "Course Code"),
+	"Import": ("University Register No", "Course Code", "Grade"),
+}
 SOURCES = {"Export": EXPORT_SOURCES, "Import": IMPORT_SOURCES}
-DATE_FORMATS = {"dd-mm-yyyy": "%d-%m-%Y", "yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}
+DATE_FORMATS = {
+	"dd-mm-yyyy": "%d-%m-%Y",
+	"yyyy-mm-dd": "%Y-%m-%d",
+	"dd/mm/yyyy": "%d/%m/%Y",
+	"mm/dd/yyyy": "%m/%d/%Y",
+}
 RESULT_CODES = ("Pass", "Fail", "AB", "SA", "WD")
 CODE_TYPES = ("Course", "Grade", "Result", "Registration Type")
 
@@ -51,7 +59,9 @@ class CodeMap:
 def format_for(name, direction, company):
 	"""The University Exam Format `name` ({direction, university}); refused unless it is a `direction` format of
 	`company` or a shared one."""
-	fmt = frappe.db.get_value("University Exam Format", name, ["direction", "university", "company"], as_dict=True)
+	fmt = frappe.db.get_value(
+		"University Exam Format", name, ["direction", "university", "company"], as_dict=True
+	)
 	if fmt.direction != direction:
 		frappe.throw(_("{0} is not an {1} format.").format(frappe.bold(name), _(direction)))
 	if fmt.company and fmt.company != company:
@@ -65,8 +75,15 @@ def validate_format(fmt):
 	sources = [row.source for row in fmt.columns]
 	wrong = sorted({s for s in sources if s not in allowed})
 	if wrong:
-		frappe.throw(_("These columns cannot be used in an {0} format: {1}.").format(_(fmt.direction), ", ".join(wrong)))
-	for label, values in ((_("column"), sources), (_("heading"), [cstr(row.heading).strip().lower() for row in fmt.columns])):
+		frappe.throw(
+			_("These columns cannot be used in an {0} format: {1}.").format(
+				_(fmt.direction), ", ".join(wrong)
+			)
+		)
+	for label, values in (
+		(_("column"), sources),
+		(_("heading"), [cstr(row.heading).strip().lower() for row in fmt.columns]),
+	):
 		repeated = sorted({v for v in values if values.count(v) > 1})
 		if repeated:
 			frappe.throw(_("Each {0} may appear once: {1}.").format(label, ", ".join(repeated)))
@@ -75,16 +92,31 @@ def validate_format(fmt):
 		frappe.throw(_("An {0} format needs the columns {1}.").format(_(fmt.direction), ", ".join(missing)))
 	seen = set()
 	for row in fmt.codes:
-		for key in ((row.code_type, "ours", row.our_code), (row.code_type, "university", row.university_code.strip().upper())):
+		for key in (
+			(row.code_type, "ours", row.our_code),
+			(row.code_type, "university", row.university_code.strip().upper()),
+		):
 			if key in seen:
-				frappe.throw(_("Code mapping row {0}: {1} {2} is mapped twice.").format(row.idx, _(row.code_type), frappe.bold(key[2])))
+				frappe.throw(
+					_("Code mapping row {0}: {1} {2} is mapped twice.").format(
+						row.idx, _(row.code_type), frappe.bold(key[2])
+					)
+				)
 			seen.add(key)
 		if row.code_type == "Result" and row.our_code not in RESULT_CODES:
-			frappe.throw(_("Code mapping row {0}: our result code is one of {1}.").format(row.idx, ", ".join(RESULT_CODES)))
+			frappe.throw(
+				_("Code mapping row {0}: our result code is one of {1}.").format(
+					row.idx, ", ".join(RESULT_CODES)
+				)
+			)
 
 
 def date_text(value, fmt):
-	return getdate(value).strftime(DATE_FORMATS.get(fmt.date_format) or DATE_FORMATS["dd-mm-yyyy"]) if value else ""
+	return (
+		getdate(value).strftime(DATE_FORMATS.get(fmt.date_format) or DATE_FORMATS["dd-mm-yyyy"])
+		if value
+		else ""
+	)
 
 
 def build_file(fmt, records):
@@ -119,7 +151,9 @@ def parse_file(fmt, file_url, content):
 	columns = [(cstr(row.heading).strip().lower(), row.source) for row in fmt.columns]
 	if fmt.header_row:
 		header = [cell.lower() for cell in rows[0]]
-		missing = [heading for heading, source in columns if source in REQUIRED["Import"] and heading not in header]
+		missing = [
+			heading for heading, source in columns if source in REQUIRED["Import"] and heading not in header
+		]
 		if missing:
 			frappe.throw(_("The result file is missing the columns: {0}.").format(", ".join(missing)))
 		positions = {source: header.index(heading) for heading, source in columns if heading in header}
@@ -130,5 +164,7 @@ def parse_file(fmt, file_url, content):
 	records = []
 	for row_no, cells in enumerate(data, start=first):
 		if any(cells):
-			records.append((row_no, {source: cells[i] for source, i in positions.items() if i < len(cells) and cells[i]}))
+			records.append(
+				(row_no, {source: cells[i] for source, i in positions.items() if i < len(cells) and cells[i]})
+			)
 	return records

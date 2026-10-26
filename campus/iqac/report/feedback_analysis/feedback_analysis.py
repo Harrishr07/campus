@@ -19,7 +19,11 @@ from campus.campus_platform.company_scope import permitted_companies
 from campus.iqac.access import READERS
 from campus.iqac.feedback import ANSWER, RESPONSE, large_question_answers, minimum_group_size
 
-GROUPS = {"Question": ("campaign", "question_row"), "Course": ("course_offering",), "Faculty": ("instructor",)}
+GROUPS = {
+	"Question": ("campaign", "question_row"),
+	"Course": ("course_offering",),
+	"Faculty": ("instructor",),
+}
 
 
 def execute(filters=None):
@@ -36,7 +40,13 @@ def execute(filters=None):
 	kept, small_groups = large_cells(answered, GROUPS[group_by], least)
 	hidden = small_questions + small_groups
 	rows = [row(group_by, items) for items in grouped(kept, GROUPS[group_by]).values()]
-	message = _("{0} group(s) with fewer than {1} responses (the minimum group size) are not shown.").format(hidden, least) if hidden else None
+	message = (
+		_("{0} group(s) with fewer than {1} responses (the minimum group size) are not shown.").format(
+			hidden, least
+		)
+		if hidden
+		else None
+	)
 	return columns(group_by), rows, message
 
 
@@ -84,14 +94,27 @@ def grouped(rows, keys):
 def row(group_by, items):
 	first = items[0]
 	ratings = [i.rating for i in items if i.question_type == "Likert" and i.rating]
-	result = {"responses": len({i.response for i in items}), "average": flt(sum(ratings) / len(ratings), 2) if ratings else None}
+	result = {
+		"responses": len({i.response for i in items}),
+		"average": flt(sum(ratings) / len(ratings), 2) if ratings else None,
+	}
 	if group_by == "Question":
 		result.update({k: first[k] for k in ("campaign", "question", "question_type", "course_outcome")})
 		result["distribution"] = distribution(first.question_type, items, ratings)
 	elif group_by == "Course":
-		result.update({"course_offering": first.course_offering, "course": frappe.db.get_value("Student Group", first.course_offering, "course")})
+		result.update(
+			{
+				"course_offering": first.course_offering,
+				"course": frappe.db.get_value("Student Group", first.course_offering, "course"),
+			}
+		)
 	else:
-		result.update({"instructor": first.instructor, "instructor_name": frappe.db.get_value("Instructor", first.instructor, "instructor_name")})
+		result.update(
+			{
+				"instructor": first.instructor,
+				"instructor_name": frappe.db.get_value("Instructor", first.instructor, "instructor_name"),
+			}
+		)
 	return result
 
 
@@ -100,14 +123,22 @@ def distribution(question_type, items, ratings):
 		counts = Counter(ratings)
 		return ", ".join(f"{n}: {counts.get(n, 0)}" for n in range(1, 6))
 	if question_type == "Choice":
-		return "; ".join(f"{option}: {count}" for option, count in Counter(i.answer for i in items).most_common())
+		return "; ".join(
+			f"{option}: {count}" for option, count in Counter(i.answer for i in items).most_common()
+		)
 	return None  # free text is never listed
 
 
 def columns(group_by):
 	count = [
 		{"fieldname": "responses", "label": _("Responses"), "fieldtype": "Int", "width": 100},
-		{"fieldname": "average", "label": _("Average Rating (1-5)"), "fieldtype": "Float", "precision": 2, "width": 140},
+		{
+			"fieldname": "average",
+			"label": _("Average Rating (1-5)"),
+			"fieldtype": "Float",
+			"precision": 2,
+			"width": 140,
+		},
 	]
 	if group_by == "Question":
 		return [
@@ -125,7 +156,13 @@ def columns(group_by):
 			*count,
 		]  # fmt: skip
 	return [
-		{"fieldname": "instructor", "label": _("Instructor"), "fieldtype": "Link", "options": "Instructor", "width": 180},
+		{
+			"fieldname": "instructor",
+			"label": _("Instructor"),
+			"fieldtype": "Link",
+			"options": "Instructor",
+			"width": 180,
+		},
 		{"fieldname": "instructor_name", "label": _("Name"), "fieldtype": "Data", "width": 200},
 		*count,
 	]

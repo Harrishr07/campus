@@ -48,8 +48,12 @@ def data(filters):
 	if filters.from_date and filters.to_date:
 		conditions["posting_date"] = ["between", [filters.from_date, filters.to_date]]
 	elif filters.from_date or filters.to_date:
-		conditions["posting_date"] = [">=", filters.from_date] if filters.from_date else ["<=", filters.to_date]
-	rows = frappe.get_list("Examiner Remuneration Claim", filters=conditions, fields=FIELDS, order_by="posting_date, name")
+		conditions["posting_date"] = (
+			[">=", filters.from_date] if filters.from_date else ["<=", filters.to_date]
+		)
+	rows = frappe.get_list(
+		"Examiner Remuneration Claim", filters=conditions, fields=FIELDS, order_by="posting_date, name"
+	)
 	for row in rows:
 		row.claim = row.pop("name")
 		row.status = _(STATUS[row.pop("docstatus")])

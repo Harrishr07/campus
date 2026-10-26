@@ -8,18 +8,20 @@ from frappe.tests import UnitTestCase
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
-from campus.iqac import api, cycle as lifecycle, compute
-from campus.iqac import export
+from campus.iqac import api, compute, export
+from campus.iqac import cycle as lifecycle
 from campus.iqac.export_seed import AQAR_EXCEL, AQAR_PDF, NBA_EXCEL, NIRF_EXCEL, seed_export_templates
 from campus.iqac.setup import FRAMEWORK
-from campus.tests.test_iqac import COORDINATOR, FACULTY_USER, OTHER_COORDINATOR, OTHER_COLLEGE, IqacFixture
+from campus.tests.test_iqac import COORDINATOR, FACULTY_USER, OTHER_COLLEGE, OTHER_COORDINATOR, IqacFixture
 from campus.tests.test_results import COLLEGE
 
-N263, N211, N212, N111, N141 = (f"{FRAMEWORK}-{code}" for code in ("2.6.3", "2.1.1", "2.1.2", "1.1.1", "1.4.1"))
+N263, N211, N212, N111, N141 = (
+	f"{FRAMEWORK}-{code}" for code in ("2.6.3", "2.1.1", "2.1.2", "1.1.1", "1.4.1")
+)
 EP21 = f"{FRAMEWORK}-EP-2.1"
 CHOICE = "A. All 4 of the above"
 EXPORTER = "iqac-exporter@example.com"
-INJECTION = "=HYPERLINK(\"http://evil.example\",\"x\")"
+INJECTION = '=HYPERLINK("http://evil.example","x")'
 
 
 class TestCellSafety(UnitTestCase):
@@ -86,7 +88,11 @@ class TestExcelValues(ExportFixture):
 		self.lock()
 		book = self.workbook()
 		checked = 0
-		for value in frappe.get_all("Metric Value", {"cycle": self.cycle.name, "department": ["is", "not set"]}, ["node", "value", "choice", "status", "answered"]):
+		for value in frappe.get_all(
+			"Metric Value",
+			{"cycle": self.cycle.name, "department": ["is", "not set"]},
+			["node", "value", "choice", "status", "answered"],
+		):
 			self.assertEqual(value.status, "Locked")
 			answer_type = frappe.db.get_value("Framework Node", value.node, "answer_type")
 			if answer_type in ("Number", "Percent"):
@@ -116,7 +122,9 @@ class TestExcelValues(ExportFixture):
 		header = next(i for i, row in enumerate(rows) if row[:1] == ["Department"])
 		listed = {(row[1], row[4]) for row in rows[header + 1 :] if row[4]}
 		snapshot = json.loads(frappe.db.get_value("Metric Value", f"{self.cycle.name}-2.6.3", "snapshot"))
-		expected = {(key, record["name"]) for key, point in snapshot["inputs"].items() for record in point["records"]}
+		expected = {
+			(key, record["name"]) for key, point in snapshot["inputs"].items() for record in point["records"]
+		}
 		self.assertTrue(expected)
 		self.assertTrue(expected <= listed, expected - listed)
 		self.assertEqual({k for k, _ in expected}, {"final_year_passed", "final_year_appeared"})
@@ -124,15 +132,37 @@ class TestExcelValues(ExportFixture):
 	def test_records_the_exporter_cannot_read_are_counted_not_listed(self):
 		self.lock()
 		snapshot = json.loads(frappe.db.get_value("Metric Value", f"{self.cycle.name}-2.6.3", "snapshot"))
-		results = {r["name"] for point in snapshot["inputs"].values() for r in point["records"] if r["doctype"] == "Student Result"}
+		results = {
+			r["name"]
+			for point in snapshot["inputs"].values()
+			for r in point["records"]
+			if r["doctype"] == "Student Result"
+		}
 		self.assertTrue(results)
-		if not frappe.db.exists("User", EXPORTER):  # IQAC Coordinator alone: no exam role, so no Student Result read
-			frappe.get_doc({"doctype": "User", "email": EXPORTER, "first_name": "exporter", "send_welcome_email": 0, "roles": [{"role": "IQAC Coordinator"}]}).insert()
-			frappe.get_doc({"doctype": "User Permission", "user": EXPORTER, "allow": "Company", "for_value": COLLEGE}).insert()
+		if not frappe.db.exists(
+			"User", EXPORTER
+		):  # IQAC Coordinator alone: no exam role, so no Student Result read
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": EXPORTER,
+					"first_name": "exporter",
+					"send_welcome_email": 0,
+					"roles": [{"role": "IQAC Coordinator"}],
+				}
+			).insert()
+			frappe.get_doc(
+				{"doctype": "User Permission", "user": EXPORTER, "allow": "Company", "for_value": COLLEGE}
+			).insert()
 		frappe.set_user(EXPORTER)
 		self.assertFalse(frappe.has_permission("Student Result", "read"))
 		book = self.workbook()
-		cells = [c.value for row in book[export.data_sheet_name("2.6.3")].iter_rows() for c in row if c.value is not None]
+		cells = [
+			c.value
+			for row in book[export.data_sheet_name("2.6.3")].iter_rows()
+			for c in row
+			if c.value is not None
+		]
 		self.assertFalse(results & set(cells), "unreadable Student Results are listed")
 		self.assertIn(f"{len(results)} records you cannot open are not listed.", cells)
 
@@ -142,7 +172,9 @@ class TestExcelValues(ExportFixture):
 		snapshot = json.loads(frappe.db.get_value("Metric Value", name, "snapshot"))
 		snapshot["inputs"]["bare_point"] = {"value": 3}  # no "records" key
 		frappe.db.set_value("Metric Value", name, "snapshot", json.dumps(snapshot))
-		rows = [[c.value for c in row] for row in self.workbook()[export.data_sheet_name("2.6.3")].iter_rows()]
+		rows = [
+			[c.value for c in row] for row in self.workbook()[export.data_sheet_name("2.6.3")].iter_rows()
+		]
 		self.assertEqual([row[4] for row in rows if row[1] == "bare_point"], [None])
 
 	def test_the_cover_sheet_says_what_was_exported(self):
@@ -155,7 +187,9 @@ class TestExcelValues(ExportFixture):
 
 	def test_an_unlocked_cycle_is_marked_on_the_cover(self):
 		compute.compute_cycle(self.cycle.name)
-		text = " ".join(str(c.value) for row in self.workbook()[export.COVER].iter_rows() for c in row if c.value)
+		text = " ".join(
+			str(c.value) for row in self.workbook()[export.COVER].iter_rows() for c in row if c.value
+		)
 		self.assertIn("not Locked", text)
 
 
@@ -179,7 +213,12 @@ class TestMappingIsData(ExportFixture):
 
 	def test_data_sheet_flag_decides_which_nodes_get_a_listing(self):
 		self.lock()
-		template = self.custom_template([{"node": N263, "sheet": "R", "cell": "B2"}, {"node": N211, "sheet": "R", "cell": "B3", "data_sheet": 1}])
+		template = self.custom_template(
+			[
+				{"node": N263, "sheet": "R", "cell": "B2"},
+				{"node": N211, "sheet": "R", "cell": "B3", "data_sheet": 1},
+			]
+		)
 		names = self.workbook(template.name).sheetnames
 		self.assertIn(export.data_sheet_name("2.1.1"), names)
 		self.assertNotIn(export.data_sheet_name("2.6.3"), names)
@@ -197,12 +236,22 @@ class TestMappingIsData(ExportFixture):
 
 	def test_two_nodes_cannot_share_a_cell(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.custom_template([{"node": N263, "sheet": "R", "cell": "B2"}, {"node": N211, "sheet": "r", "cell": "b2"}])
+			self.custom_template(
+				[{"node": N263, "sheet": "R", "cell": "B2"}, {"node": N211, "sheet": "r", "cell": "b2"}]
+			)
 
 	def test_a_node_of_another_framework_is_refused(self):
-		other = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": "Export Other FW"}).insert()
+		other = frappe.get_doc(
+			{"doctype": "Accreditation Framework", "framework_name": "Export Other FW"}
+		).insert()
 		node = frappe.get_doc(
-			{"doctype": "Framework Node", "framework": other.name, "code": "9", "title": "x", "node_type": "Criterion"}
+			{
+				"doctype": "Framework Node",
+				"framework": other.name,
+				"code": "9",
+				"title": "x",
+				"node_type": "Criterion",
+			}
 		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.custom_template([{"node": node.name, "sheet": "R", "cell": "B2"}])
@@ -219,7 +268,10 @@ class TestFormulaInjection(ExportFixture):
 		frappe.db.set_value("Metric Value", f"{self.cycle.name}-1.1.1", "narrative", f"<p>{INJECTION}</p>")
 		name = f"{self.cycle.name}-2.6.3"
 		snapshot = json.loads(frappe.db.get_value("Metric Value", name, "snapshot"))
-		snapshot["inputs"][INJECTION] = {"value": 1, "records": []}  # a snapshot key, written to the Data Template sheet
+		snapshot["inputs"][INJECTION] = {
+			"value": 1,
+			"records": [],
+		}  # a snapshot key, written to the Data Template sheet
 		frappe.db.set_value("Metric Value", name, "snapshot", json.dumps(snapshot))
 		book = self.workbook()
 		texts = []
@@ -236,7 +288,9 @@ class TestFormulaInjection(ExportFixture):
 	def test_a_formula_like_sheet_name_or_label_cannot_break_out(self):
 		self.lock()
 		template = self.custom_template([{"node": N263, "sheet": "cmd", "cell": "B2"}])
-		frappe.db.set_value("Export Template Mapping", template.mappings[0].name, "sheet", "=cmd")  # past the controller's checks
+		frappe.db.set_value(
+			"Export Template Mapping", template.mappings[0].name, "sheet", "=cmd"
+		)  # past the controller's checks
 		book = self.workbook(template.name)
 		self.assertTrue(all(not name.startswith("=") for name in book.sheetnames))
 
@@ -270,7 +324,14 @@ class TestPermissionsAndScope(ExportFixture):
 		self.lock()
 		frappe.set_user(COORDINATOR)
 		api.export_cycle(self.cycle.name, AQAR_EXCEL)
-		comments = frappe.get_all("Comment", {"reference_doctype": "Accreditation Cycle", "reference_name": self.cycle.name, "content": ["like", f"%{AQAR_EXCEL}%"]})
+		comments = frappe.get_all(
+			"Comment",
+			{
+				"reference_doctype": "Accreditation Cycle",
+				"reference_name": self.cycle.name,
+				"content": ["like", f"%{AQAR_EXCEL}%"],
+			},
+		)
 		self.assertEqual(len(comments), 1)
 
 
@@ -293,7 +354,12 @@ class TestPdf(ExportFixture):
 
 	def test_markup_in_answers_is_not_rendered_into_the_pdf(self):
 		self.lock()
-		frappe.db.set_value("Metric Value", f"{self.cycle.name}-1.1.1", "narrative", "<p>Hello <script>alert(1)</script><b>bold</b></p>")
+		frappe.db.set_value(
+			"Metric Value",
+			f"{self.cycle.name}-1.1.1",
+			"narrative",
+			"<p>Hello <script>alert(1)</script><b>bold</b></p>",
+		)
 		text = self.text()
 		self.assertNotIn("<b>", text)
 		self.assertIn("Hello", text)
@@ -301,7 +367,12 @@ class TestPdf(ExportFixture):
 
 class TestSeeds(ExportFixture):
 	def test_the_regulator_templates_are_seeded_as_labelled_placeholders(self):
-		for name, fmt in ((AQAR_EXCEL, "Excel"), (AQAR_PDF, "PDF"), (NBA_EXCEL, "Excel"), (NIRF_EXCEL, "Excel")):
+		for name, fmt in (
+			(AQAR_EXCEL, "Excel"),
+			(AQAR_PDF, "PDF"),
+			(NBA_EXCEL, "Excel"),
+			(NIRF_EXCEL, "Excel"),
+		):
 			template = frappe.get_doc("Export Template", name)
 			self.assertEqual(template.export_format, fmt)
 			self.assertTrue(template.is_placeholder)
@@ -320,5 +391,9 @@ class TestSeeds(ExportFixture):
 		template = frappe.get_doc("Export Template", AQAR_EXCEL)
 		cells = [(r.sheet.lower(), r.cell.upper()) for r in template.mappings]
 		self.assertEqual(len(cells), len(set(cells)))
-		answer_nodes = frappe.get_all("Framework Node", {"framework": FRAMEWORK, "node_type": ["in", ["Metric", "Sub-Metric", "Extended Profile"]]}, pluck="name")
+		answer_nodes = frappe.get_all(
+			"Framework Node",
+			{"framework": FRAMEWORK, "node_type": ["in", ["Metric", "Sub-Metric", "Extended Profile"]]},
+			pluck="name",
+		)
 		self.assertEqual({r.node for r in template.mappings}, set(answer_nodes))

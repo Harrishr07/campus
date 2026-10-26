@@ -85,7 +85,9 @@ class PaymentSelection:
 		self.suppliers = supplier_details({p.supplier for p in payments})
 		roots = first_versions(payments)
 		for payment in payments:
-			payment.export_key = export_key(payment.voucher_type, payment.voucher_no, payment.reference_doctype, payment.reference_name)
+			payment.export_key = export_key(
+				payment.voucher_type, payment.voucher_no, payment.reference_doctype, payment.reference_name
+			)
 			payment.payment_key = payment_key(*roots[payment_voucher(payment)])
 			if self.suppliers.get(payment.supplier, {}).get("agency"):
 				payment.export_type = "Transfer"
@@ -107,7 +109,9 @@ class PaymentSelection:
 		lines = one_line_per_reference(lines)
 		documents = {}
 		for doctype in ("Purchase Invoice", "Purchase Order"):
-			documents[doctype] = self.on_sanction(doctype, {line.reference_name for line in lines if line.reference_doctype == doctype})
+			documents[doctype] = self.on_sanction(
+				doctype, {line.reference_name for line in lines if line.reference_doctype == doctype}
+			)
 		payments = []
 		for line in lines:
 			share = documents[line.reference_doctype].get(line.reference_name)
@@ -127,7 +131,9 @@ class PaymentSelection:
 			.where((pe.unallocated_amount > 0) & ((pe.project == self.sanction.project) | (pe.cost_center == self.sanction.cost_center)))
 		)  # fmt: skip
 		for payment in payments:
-			payment.update(voucher_type="Payment Entry", export_type="Advance", reason=self.other_sanction(payment))
+			payment.update(
+				voucher_type="Payment Entry", export_type="Advance", reason=self.other_sanction(payment)
+			)
 		return payments
 
 	def other_sanction(self, payment):
@@ -139,9 +145,9 @@ class PaymentSelection:
 		if not other and payment.cost_center and payment.cost_center != self.sanction.cost_center:
 			other = frappe.db.get_value("Sanction", {"cost_center": payment.cost_center, "docstatus": 1})
 		if other:
-			return _("Payment Entry {0} names the project or cost centre of Sanction {1} as well as of Sanction {2}; correct it.").format(
-				payment.voucher_no, other, self.sanction.name
-			)
+			return _(
+				"Payment Entry {0} names the project or cost centre of Sanction {1} as well as of Sanction {2}; correct it."
+			).format(payment.voucher_no, other, self.sanction.name)
 		return None
 
 	def paid_invoices(self):
@@ -158,7 +164,12 @@ class PaymentSelection:
 		payments = []
 		for invoice in invoices:
 			if invoice.voucher_no in shares:
-				invoice.update(voucher_type="Purchase Invoice", export_type="Expenditure", party_bank_account=None, **shares[invoice.voucher_no])
+				invoice.update(
+					voucher_type="Purchase Invoice",
+					export_type="Expenditure",
+					party_bank_account=None,
+					**shares[invoice.voucher_no],
+				)
 				payments.append(invoice)
 		return payments
 
@@ -201,7 +212,9 @@ class PaymentSelection:
 			heads = sorted({line.oc_budget_head for line in ours if line.oc_budget_head})
 			reason = None
 			if len(ours) != len(document_lines):
-				reason = _("{0} {1} is only partly on Sanction {2}'s cost centre.").format(_(doctype), name, self.sanction.name)
+				reason = _("{0} {1} is only partly on Sanction {2}'s cost centre.").format(
+					_(doctype), name, self.sanction.name
+				)
 			shares[name] = {"budget_head": ", ".join(heads), "reason": reason}
 		return shares
 
@@ -211,19 +224,30 @@ class PaymentSelection:
 		problems = []
 		if not supplier.get("vendor_code"):
 			problems.append(_("Supplier {0} has no PFMS vendor code.").format(payment.supplier))
-		bank = bank_details(payment.supplier, payment.party_bank_account or supplier.get("default_bank_account"))
+		bank = bank_details(
+			payment.supplier, payment.party_bank_account or supplier.get("default_bank_account")
+		)
 		if bank:
 			payment.update(bank)
 		else:
-			problems.append(_("Supplier {0} has no bank account with an account number and IFSC.").format(payment.supplier))
-		payment.update(supplier_name=supplier.get("supplier_name"), pfms_vendor_code=supplier.get("vendor_code"))
+			problems.append(
+				_("Supplier {0} has no bank account with an account number and IFSC.").format(
+					payment.supplier
+				)
+			)
+		payment.update(
+			supplier_name=supplier.get("supplier_name"), pfms_vendor_code=supplier.get("vendor_code")
+		)
 		return " ".join(problems)
 
 	# already exported
 	@staticmethod
 	def exported_as_is(payment, history):
 		"""The line itself is live in a batch, for the amount it has now."""
-		return any(row.export_key == payment.export_key and flt(row.amount, 2) == flt(payment.amount, 2) for row in history)
+		return any(
+			row.export_key == payment.export_key and flt(row.amount, 2) == flt(payment.amount, 2)
+			for row in history
+		)
 
 	def held_for_review(self, payment, history):
 		"""Why a line of a payment with live exported rows (`history`) is not exported automatically, or None for a line
@@ -236,7 +260,12 @@ class PaymentSelection:
 		return _(
 			"{0} {1}: its payment is already exported to PFMS in {2}, and this line ({3}) is new or has changed since. "
 			"It is excluded for review: check it against the exported rows; it is never exported automatically."
-		).format(_(payment.voucher_type), payment.voucher_no, batches, frappe.format(flt(payment.amount, 2), "Currency"))
+		).format(
+			_(payment.voucher_type),
+			payment.voucher_no,
+			batches,
+			frappe.format(flt(payment.amount, 2), "Currency"),
+		)
 
 	def exported_rows(self, payments):
 		"""{payment_key: [live (exported, not failed) rows of any sanction's batch]} of the payments' lines: by the
@@ -267,7 +296,9 @@ class PaymentSelection:
 		"""Every exported row of the payment `key` is still a line of its voucher, for the amount exported."""
 		if key not in self.unchanged_payments:
 			current = self.current_amounts(rows)
-			self.unchanged_payments[key] = all(current.get(row.export_key) == flt(row.amount, 2) for row in rows)
+			self.unchanged_payments[key] = all(
+				current.get(row.export_key) == flt(row.amount, 2) for row in rows
+			)
 		return self.unchanged_payments[key]
 
 	# release after review
@@ -287,16 +318,20 @@ class PaymentSelection:
 
 	def released(self, payment, history, rows, releases):
 		"""A held line released after review for its current amount, which still fits the payment."""
-		return flt(payment.amount, 2) in releases.get(payment.export_key, ()) and not self.release_problem(payment, history, rows)
+		return flt(payment.amount, 2) in releases.get(payment.export_key, ()) and not self.release_problem(
+			payment, history, rows
+		)
 
 	def release_problem(self, payment, history, rows=()):
 		"""Why the held line can't be exported even after review: its own key is live (for another amount), or the
 		payment's exported rows, this run's rows of it and the line would add up to more than the payment."""
 		if any(row.export_key == payment.export_key for row in history):
-			return _("{0} {1}: this line is itself exported to PFMS for another amount; withdraw that row from PFMS first (failed status or batch cancel).").format(
-				_(payment.voucher_type), payment.voucher_no
-			)
-		exported = sum(flt(row.amount) for row in history) + sum(flt(row.amount) for row in rows if row.payment_key == payment.payment_key)
+			return _(
+				"{0} {1}: this line is itself exported to PFMS for another amount; withdraw that row from PFMS first (failed status or batch cancel)."
+			).format(_(payment.voucher_type), payment.voucher_no)
+		exported = sum(flt(row.amount) for row in history) + sum(
+			flt(row.amount) for row in rows if row.payment_key == payment.payment_key
+		)
 		total = voucher_total(payment.voucher_type, payment.voucher_no, self.lock)
 		if flt(exported + flt(payment.amount), 2) > flt(total, 2):
 			return _("{0} {1}: {2} of its {3} is already exported to PFMS, so the money of this line ({4}) is already exported in full.").format(
@@ -307,12 +342,18 @@ class PaymentSelection:
 
 	def held_line(self, key):
 		"""(line, history) of the line `key` of this selection, held for review now, else (None, problem)."""
-		payment = next((p for p in self.payments() if p.export_key == key and p.export_type == self.export_type), None)
+		payment = next(
+			(p for p in self.payments() if p.export_key == key and p.export_type == self.export_type), None
+		)
 		if not payment:
-			return None, _("The line is no longer a {0} payment of Sanction {1} in the period.").format(_(self.export_type).lower(), self.sanction.name)
+			return None, _("The line is no longer a {0} payment of Sanction {1} in the period.").format(
+				_(self.export_type).lower(), self.sanction.name
+			)
 		history = self.exported_rows([payment]).get(payment.payment_key)
 		if not history or self.exported_as_is(payment, history) or not self.held_for_review(payment, history):
-			return None, _("{0} {1} is not held for review.").format(_(payment.voucher_type), payment.voucher_no)
+			return None, _("{0} {1} is not held for review.").format(
+				_(payment.voucher_type), payment.voucher_no
+			)
 		return (payment, history), None
 
 	def current_amounts(self, rows):
@@ -329,7 +370,9 @@ class PaymentSelection:
 				.where((pe.docstatus == 1) & (ref.parenttype == "Payment Entry") & pe.name.isin(entries))
 				.groupby(ref.parent, ref.reference_doctype, ref.reference_name)
 			):  # fmt: skip
-				amounts[export_key("Payment Entry", line.parent, line.reference_doctype, line.reference_name)] = flt(line.amount, 2)
+				amounts[
+					export_key("Payment Entry", line.parent, line.reference_doctype, line.reference_name)
+				] = flt(line.amount, 2)
 			for entry in self.read(
 				frappe.qb.from_(pe).select(pe.name, pe.unallocated_amount)
 				.where((pe.docstatus == 1) & pe.name.isin(entries) & (pe.unallocated_amount > 0))
@@ -347,9 +390,13 @@ class PaymentSelection:
 	def exclude(self, payment, reason):
 		self.exclusions.append(
 			{
-				"voucher_type": payment.voucher_type, "voucher_no": payment.voucher_no,
-				"reference_doctype": payment.reference_doctype, "reference_name": payment.reference_name,
-				"supplier": payment.supplier, "amount": flt(payment.amount, 2), "reason": reason,
+				"voucher_type": payment.voucher_type,
+				"voucher_no": payment.voucher_no,
+				"reference_doctype": payment.reference_doctype,
+				"reference_name": payment.reference_name,
+				"supplier": payment.supplier,
+				"amount": flt(payment.amount, 2),
+				"reason": reason,
 			}  # fmt: skip
 		)
 
@@ -358,7 +405,10 @@ def payment_key(voucher_type, voucher_no):
 	return f"{voucher_type}|{voucher_no}"
 
 
-ADVANCE_VOUCHERS = ("Payment Entry", "Journal Entry")  # vouchers that carry money; an order (PO/SO) carries none
+ADVANCE_VOUCHERS = (
+	"Payment Entry",
+	"Journal Entry",
+)  # vouchers that carry money; an order (PO/SO) carries none
 
 
 def payment_voucher(payment):
@@ -402,19 +452,32 @@ def release_after_review(batch, exclusion, reason):
 	if not held:
 		frappe.throw(_("{0} is not an excluded line of {1}.").format(exclusion, batch.name))
 	key = export_key(held.voucher_type, held.voucher_no, held.reference_doctype, held.reference_name)
-	selection = PaymentSelection(lock_sanction(batch.sanction), batch.export_type, batch.from_date, batch.to_date, lock=True)
+	selection = PaymentSelection(
+		lock_sanction(batch.sanction), batch.export_type, batch.from_date, batch.to_date, lock=True
+	)
 	found, problem = selection.held_line(key)
 	if found and flt(found[0].amount, 2) != flt(held.amount, 2):
-		problem = _("{0} {1} has changed since the batch was built; rebuild it and review the line again.").format(_(held.voucher_type), held.voucher_no)
+		problem = _(
+			"{0} {1} has changed since the batch was built; rebuild it and review the line again."
+		).format(_(held.voucher_type), held.voucher_no)
 	problem = problem or selection.release_problem(*found)
 	if problem:
 		frappe.throw(problem)
 	release = frappe.get_doc(
 		{
-			"doctype": "PFMS Export Release", "batch": batch.name, "sanction": batch.sanction, "export_type": batch.export_type,
-			"voucher_type": held.voucher_type, "voucher_no": held.voucher_no, "reference_doctype": held.reference_doctype,
-			"reference_name": held.reference_name, "amount": flt(held.amount, 2), "export_key": key, "reason": reason,
-			"released_by": frappe.session.user, "released_on": frappe.utils.now_datetime(),
+			"doctype": "PFMS Export Release",
+			"batch": batch.name,
+			"sanction": batch.sanction,
+			"export_type": batch.export_type,
+			"voucher_type": held.voucher_type,
+			"voucher_no": held.voucher_no,
+			"reference_doctype": held.reference_doctype,
+			"reference_name": held.reference_name,
+			"amount": flt(held.amount, 2),
+			"export_key": key,
+			"reason": reason,
+			"released_by": frappe.session.user,
+			"released_on": frappe.utils.now_datetime(),
 		}  # fmt: skip
 	).insert(ignore_permissions=True)
 	batch.add_comment(
@@ -431,7 +494,14 @@ def first_versions(payments):
 	roots = {voucher: voucher for voucher in vouchers}
 	for doctype in {doctype for doctype, _name in vouchers}:
 		names = [name for kind, name in vouchers if kind == doctype]
-		amended = dict(frappe.get_all(doctype, {"name": ["in", names], "amended_from": ["is", "set"]}, ["name", "amended_from"], as_list=True))
+		amended = dict(
+			frappe.get_all(
+				doctype,
+				{"name": ["in", names], "amended_from": ["is", "set"]},
+				["name", "amended_from"],
+				as_list=True,
+			)
+		)
 		for name, earlier in amended.items():
 			first, seen = earlier, {name}
 			while first not in seen:  # rare: walk the rest of the chain one version at a time
@@ -445,7 +515,9 @@ def refuse_exported_cancel(doc, method=None):
 	"""Doc event (Payment Entry / Purchase Invoice before_cancel): a voucher PFMS has, or may have, paid is withdrawn
 	from PFMS first (its rows reported failed, or its batch cancelled)."""
 	row = frappe.qb.DocType("PFMS Export Batch Row")
-	first = first_versions([frappe._dict(voucher_type=doc.doctype, voucher_no=doc.name)])[(doc.doctype, doc.name)]
+	first = first_versions([frappe._dict(voucher_type=doc.doctype, voucher_no=doc.name)])[
+		(doc.doctype, doc.name)
+	]
 	batches = (
 		frappe.qb.from_(row).select(row.parent)
 		.where(
@@ -460,9 +532,9 @@ def refuse_exported_cancel(doc, method=None):
 	)  # fmt: skip
 	if batches:
 		frappe.throw(
-			_("{0} {1} is exported to PFMS in {2}. Withdraw it from PFMS first: import its failed status or cancel the batch.").format(
-				_(doc.doctype), doc.name, ", ".join(sorted(set(batches)))
-			)
+			_(
+				"{0} {1} is exported to PFMS in {2}. Withdraw it from PFMS first: import its failed status or cancel the batch."
+			).format(_(doc.doctype), doc.name, ", ".join(sorted(set(batches))))
 		)
 
 
@@ -479,7 +551,13 @@ def supplier_details(suppliers):
 	rows = frappe.get_all(
 		"Supplier",
 		{"name": ["in", list(suppliers)]},
-		["name", "supplier_name", "default_bank_account", f"{VENDOR_CODE_FIELD} as vendor_code", f"{PFMS_AGENCY_FIELD} as agency"],
+		[
+			"name",
+			"supplier_name",
+			"default_bank_account",
+			f"{VENDOR_CODE_FIELD} as vendor_code",
+			f"{PFMS_AGENCY_FIELD} as agency",
+		],
 	)
 	return {row.name: row for row in rows}
 
@@ -495,7 +573,11 @@ def bank_details(supplier, preferred=None):
 		)  # fmt: skip
 	if not account or not (account.bank_account_no or "").strip() or not (account.branch_code or "").strip():
 		return None
-	return {"bank_account": account.name, "bank_account_no": account.bank_account_no.strip(), "ifsc": account.branch_code.strip()}
+	return {
+		"bank_account": account.name,
+		"bank_account_no": account.bank_account_no.strip(),
+		"ifsc": account.branch_code.strip(),
+	}
 
 
 # setup (install and migrate)
@@ -526,9 +608,14 @@ def seed_layouts():
 			continue
 		frappe.get_doc(
 			{
-				"doctype": "PFMS Export Layout", "layout_name": name, "export_type": export_type, "is_placeholder": 1,
+				"doctype": "PFMS Export Layout",
+				"layout_name": name,
+				"export_type": export_type,
+				"is_placeholder": 1,
 				"status_reference_column": STATUS_REFERENCE_HEADER,
-				"columns": [{"column_header": header, "source": source} for header, source in PLACEHOLDER_COLUMNS],
+				"columns": [
+					{"column_header": header, "source": source} for header, source in PLACEHOLDER_COLUMNS
+				],
 			}  # fmt: skip
 		).insert(ignore_permissions=True)
 
@@ -536,7 +623,9 @@ def seed_layouts():
 def fix_status_reference_column(name):
 	"""Placeholder layouts seeded before P3-T18 fix 1 read the status file's references from a "Row Reference" column
 	the export never wrote; point them at the export's own reference header unless they were edited."""
-	layout = frappe.db.get_value("PFMS Export Layout", name, ["is_placeholder", "status_reference_column"], as_dict=True)
+	layout = frappe.db.get_value(
+		"PFMS Export Layout", name, ["is_placeholder", "status_reference_column"], as_dict=True
+	)
 	if layout.is_placeholder and layout.status_reference_column == "Row Reference":
 		frappe.db.set_value("PFMS Export Layout", name, "status_reference_column", STATUS_REFERENCE_HEADER)
 
@@ -545,4 +634,6 @@ def default_layout(export_type):
 	name = DEFAULT_LAYOUTS.get(export_type)
 	if name and frappe.db.exists("PFMS Export Layout", name):
 		return name
-	return frappe.db.get_value("PFMS Export Layout", {"export_type": export_type}, "name", order_by="creation asc")
+	return frappe.db.get_value(
+		"PFMS Export Layout", {"export_type": export_type}, "name", order_by="creation asc"
+	)

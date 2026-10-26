@@ -22,13 +22,19 @@ class CIASchedule(Document):
 		self.template = cia.template_for(self.course_offering)
 		self.check_deadline_owner()
 		if not self.is_new() and cia.lock_state(self.name) == cia.LOCKED and self.pattern_changed():
-			frappe.throw(_("The question pattern is locked with the CIA marks. An approved CIA Unlock Request reopens it."))
+			frappe.throw(
+				_(
+					"The question pattern is locked with the CIA marks. An approved CIA Unlock Request reopens it."
+				)
+			)
 		self.check_pattern()
 
 	def validate_offering(self):
 		if frappe.db.get_value("Student Group", self.course_offering, "group_based_on") != "Course":
 			frappe.throw(_("A CIA Schedule is for a course offering (a Student Group based on Course)."))
-		if frappe.db.exists(cia.SCHEDULE, {"course_offering": self.course_offering, "name": ["!=", self.name]}):
+		if frappe.db.exists(
+			cia.SCHEDULE, {"course_offering": self.course_offering, "name": ["!=", self.name]}
+		):
 			frappe.throw(_("{0} already has a CIA Schedule.").format(frappe.bold(self.course_offering)))
 
 	def check_deadline_owner(self):
@@ -38,7 +44,9 @@ class CIASchedule(Document):
 			frappe.throw(_("Only the COE sets the CIA entry deadline."), frappe.PermissionError)
 		if moved and before and now_datetime() > get_datetime(before.entry_deadline):
 			frappe.throw(
-				_("The CIA entry deadline has passed and cannot be moved. An approved CIA Unlock Request reopens entry."),
+				_(
+					"The CIA entry deadline has passed and cannot be moved. An approved CIA Unlock Request reopens entry."
+				),
 				title=_("CIA Locked"),
 			)
 
@@ -47,13 +55,23 @@ class CIASchedule(Document):
 		return pattern(before) != pattern(self)
 
 	def check_pattern(self):
-		components = {row.component: row.max_marks for row in frappe.get_doc(cia.TEMPLATE, self.template).components}
+		components = {
+			row.component: row.max_marks for row in frappe.get_doc(cia.TEMPLATE, self.template).components
+		}
 		totals, seen = {}, set()
 		for row in self.questions:
 			if row.component not in components:
-				frappe.throw(_("Question row {0}: {1} is not a component of {2}.").format(row.idx, row.component, self.template))
+				frappe.throw(
+					_("Question row {0}: {1} is not a component of {2}.").format(
+						row.idx, row.component, self.template
+					)
+				)
 			if (row.component, row.question) in seen:
-				frappe.throw(_("Question row {0}: {1} {2} is listed twice.").format(row.idx, row.component, row.question))
+				frappe.throw(
+					_("Question row {0}: {1} {2} is listed twice.").format(
+						row.idx, row.component, row.question
+					)
+				)
 			if row.max_marks <= 0:
 				frappe.throw(_("Question row {0}: the maximum must be above zero.").format(row.idx))
 			seen.add((row.component, row.question))
@@ -61,12 +79,20 @@ class CIASchedule(Document):
 		for component, maximum in components.items():
 			if flt(totals.get(component, 0), 6) != flt(maximum, 6):
 				frappe.throw(
-					_("The questions of {0} must add up to {1} marks (now {2}).").format(component, maximum, totals.get(component, 0))
+					_("The questions of {0} must add up to {1} marks (now {2}).").format(
+						component, maximum, totals.get(component, 0)
+					)
 				)
 		for row in self.components:
 			if row.component not in components:
-				frappe.throw(_("Component row {0}: {1} is not a component of {2}.").format(row.idx, row.component, self.template))
+				frappe.throw(
+					_("Component row {0}: {1} is not a component of {2}.").format(
+						row.idx, row.component, self.template
+					)
+				)
 
 
 def pattern(doc):
-	return sorted((q.component, q.question, flt(q.max_marks), q.course_outcome, q.bloom_level) for q in doc.questions)
+	return sorted(
+		(q.component, q.question, flt(q.max_marks), q.course_outcome, q.bloom_level) for q in doc.questions
+	)

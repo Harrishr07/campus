@@ -12,6 +12,10 @@ class CurriculumRule(Document):
 	def validate(self):
 		if self.max_total_credits and self.min_total_credits > self.max_total_credits:
 			frappe.throw(_("Minimum total credits cannot exceed the maximum."))
-		rates = (self.lecture_credit_per_period, self.tutorial_credit_per_period, self.practical_credit_per_period)
+		rates = (
+			self.lecture_credit_per_period,
+			self.tutorial_credit_per_period,
+			self.practical_credit_per_period,
+		)
 		if min(rates) < 0:
 			frappe.throw(_("Credit per period cannot be negative."))

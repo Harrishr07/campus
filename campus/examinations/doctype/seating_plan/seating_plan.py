@@ -21,7 +21,11 @@ class SeatingPlan(Document):
 	def validate(self):
 		session = frappe.db.get_value("Exam Session", self.exam_session, ["company", "status"], as_dict=True)
 		if session.status == "Published":
-			frappe.throw(_("The results of {0} are published; its seating and attendance are closed.").format(self.exam_session))
+			frappe.throw(
+				_("The results of {0} are published; its seating and attendance are closed.").format(
+					self.exam_session
+				)
+			)
 		self.company = session.company
 		self.validate_halls()
 		self.guard_seats()
@@ -31,13 +35,23 @@ class SeatingPlan(Document):
 		seen = set()
 		for hall in self.halls:
 			if hall.room in seen:
-				frappe.throw(_("Row {0}: {1} is already in the plan.").format(hall.idx, frappe.bold(hall.room)))
+				frappe.throw(
+					_("Row {0}: {1} is already in the plan.").format(hall.idx, frappe.bold(hall.room))
+				)
 			seen.add(hall.room)
 			if frappe.db.get_value("Room", hall.room, "oc_company") != self.company:
-				frappe.throw(_("Row {0}: {1} does not belong to {2}.").format(hall.idx, frappe.bold(hall.room), self.company))
+				frappe.throw(
+					_("Row {0}: {1} does not belong to {2}.").format(
+						hall.idx, frappe.bold(hall.room), self.company
+					)
+				)
 			grid = exam_halls.layout(hall.room)
 			if not grid:
-				frappe.throw(_("Row {0}: {1} is not an Exam Hall with seat rows and columns.").format(hall.idx, frappe.bold(hall.room)))
+				frappe.throw(
+					_("Row {0}: {1} is not an Exam Hall with seat rows and columns.").format(
+						hall.idx, frappe.bold(hall.room)
+					)
+				)
 			rows, columns, blocked = grid
 			hall.seat_rows, hall.seat_columns, hall.capacity = rows, columns, rows * columns - len(blocked)
 

@@ -23,16 +23,25 @@ class Substitution(Document):
 		if not frappe.db.exists("Course Schedule", self.course_schedule):
 			frappe.throw(_("Course Schedule {0} does not exist.").format(self.course_schedule))
 		schedule = frappe.db.get_value(
-			"Course Schedule", self.course_schedule, ["instructor", "schedule_date", "from_time", "to_time", "student_group", "course", "room"], as_dict=True
+			"Course Schedule",
+			self.course_schedule,
+			["instructor", "schedule_date", "from_time", "to_time", "student_group", "course", "room"],
+			as_dict=True,
 		)
 		absent = substitution.employee_of_instructor(schedule.instructor)
 		if not absent:
-			frappe.throw(_("{0} has no teacher with an Employee record to substitute.").format(self.course_schedule))
+			frappe.throw(
+				_("{0} has no teacher with an Employee record to substitute.").format(self.course_schedule)
+			)
 		self.update({k: v for k, v in schedule.items() if k != "instructor"})
 		self.absent_faculty = absent
-		employee = frappe.db.get_value("Employee", absent, ["employee_name", "company", "department"], as_dict=True)
+		employee = frappe.db.get_value(
+			"Employee", absent, ["employee_name", "company", "department"], as_dict=True
+		)
 		self.absent_faculty_name, self.company = employee.employee_name, employee.company
-		self.department = employee.department or frappe.db.get_value("Instructor", schedule.instructor, "department")
+		self.department = employee.department or frappe.db.get_value(
+			"Instructor", schedule.instructor, "department"
+		)
 
 	def check_status(self):
 		before = self.get_doc_before_save()
@@ -44,7 +53,9 @@ class Substitution(Document):
 	def check_one_live_per_period(self):
 		if self.status == "Cancelled":
 			return
-		frappe.db.get_value("Course Schedule", self.course_schedule, "name", for_update=True)  # serialise proposals per period
+		frappe.db.get_value(
+			"Course Schedule", self.course_schedule, "name", for_update=True
+		)  # serialise proposals per period
 		others = frappe.db.sql_list(
 			"select name from `tabSubstitution` where course_schedule = %s and status in ('Proposed', 'Confirmed') and name != %s for update",
 			(self.course_schedule, self.name or ""),
@@ -69,11 +80,17 @@ class Substitution(Document):
 		if substitution.on_leave(self.substitute, self.schedule_date):
 			frappe.throw(_("{0} is on approved leave on {1}.").format(self.substitute, self.schedule_date))
 		if substitution.clashes_with(self.substitute, self, ignore=self.name):
-			frappe.throw(_("Clash: {0} already has a class between {1} and {2} on {3}.").format(self.substitute, self.from_time, self.to_time, self.schedule_date))
+			frappe.throw(
+				_("Clash: {0} already has a class between {1} and {2} on {3}.").format(
+					self.substitute, self.from_time, self.to_time, self.schedule_date
+				)
+			)
 
 	def on_update(self):
 		before = self.get_doc_before_save()
-		if self.status == "Confirmed" and (not before or before.status != "Confirmed" or before.substitute != self.substitute):
+		if self.status == "Confirmed" and (
+			not before or before.status != "Confirmed" or before.substitute != self.substitute
+		):
 			self.notify_substitute()
 
 	def notify_substitute(self, event=EVENT, token=None):
@@ -84,7 +101,12 @@ class Substitution(Document):
 
 		frappe.db.savepoint(SAVEPOINT)
 		try:
-			send(event, self, [f"Employee:{self.substitute}"], context={"dedupe_token": token or self.substitute})
+			send(
+				event,
+				self,
+				[f"Employee:{self.substitute}"],
+				context={"dedupe_token": token or self.substitute},
+			)
 		except Exception:
 			frappe.db.rollback(save_point=SAVEPOINT)
 			frappe.log_error(title=f"Substitution notice failed for {self.name}")

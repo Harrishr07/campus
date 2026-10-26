@@ -50,7 +50,11 @@ def mark_absent(seating_plan, students, value=1):
 	frappe.only_for((COE_ROLE, "System Manager"))
 	plan = frappe.get_doc(DOCTYPE, seating_plan, for_update=True)
 	plan.check_permission("write")
-	wanted, value, changed = set(frappe.parse_json(students) if isinstance(students, str) else students), cint(value), 0
+	wanted, value, changed = (
+		set(frappe.parse_json(students) if isinstance(students, str) else students),
+		cint(value),
+		0,
+	)
 	for seat in plan.seats:
 		if seat.student in wanted and seat.absent != value:
 			seat.absent, changed = value, changed + 1
@@ -79,7 +83,9 @@ def hall_seats(plan):
 	for hall in plan.halls:
 		grid = exam_halls.layout(hall.room)
 		if not grid:  # the room lost its layout or Exam Hall type after the plan was saved
-			frappe.throw(_("{0} is not an Exam Hall with seat rows and columns.").format(frappe.bold(hall.room)))
+			frappe.throw(
+				_("{0} is not an Exam Hall with seat rows and columns.").format(frappe.bold(hall.room))
+			)
 		seats += seating_rules.hall_seats(hall.room, *grid)
 	return seats
 

@@ -32,7 +32,11 @@ def regulation_withdrawal_code(student):
 	codes = [row.code for row in get_rule(student, "Grading Scheme").codes]
 	code = withdrawal_rules.withdrawal_code(codes, WITHDRAWAL_CODES)
 	if not code:
-		frappe.throw(_("The Grading Scheme of the regulation of {0} has no withdrawal code.").format(frappe.bold(student)))
+		frappe.throw(
+			_("The Grading Scheme of the regulation of {0} has no withdrawal code.").format(
+				frappe.bold(student)
+			)
+		)
 	return code
 
 
@@ -42,7 +46,10 @@ def withdrawal_code(student, exam_session, course):
 	None on a site whose DocTypes are not migrated yet: the Result Run of a shared tree must not break."""
 	if not frappe.db.table_exists("Exam Withdrawal Application"):
 		return None
-	application, row = frappe.qb.DocType("Exam Withdrawal Application"), frappe.qb.DocType("Exam Withdrawal Course")
+	application, row = (
+		frappe.qb.DocType("Exam Withdrawal Application"),
+		frappe.qb.DocType("Exam Withdrawal Course"),
+	)
 	found = (
 		frappe.qb.from_(application)
 		.join(row)
@@ -106,14 +113,22 @@ def programme_and_department(student, program):
 		frappe.throw(_("{0} has no programme enrolment.").format(frappe.bold(student)))
 	department = frappe.db.get_value("Program", program, "department")
 	if not department:
-		frappe.throw(_("Set the department of programme {0}: its HOD recommends this record.").format(frappe.bold(program)))
+		frappe.throw(
+			_("Set the department of programme {0}: its HOD recommends this record.").format(
+				frappe.bold(program)
+			)
+		)
 	return program, department
 
 
 def require_policy(doc):
 	"""Fail closed: these records are submitted only through their HOD -> Principal approval."""
 	if not find_policy(doc):
-		frappe.throw(_("No Approval Policy is set for {0}; it cannot be submitted without approval.").format(_(doc.doctype)))
+		frappe.throw(
+			_("No Approval Policy is set for {0}; it cannot be submitted without approval.").format(
+				_(doc.doctype)
+			)
+		)
 
 
 def academic_year_of(day):
@@ -140,12 +155,14 @@ def cohort_academic_year(batch, batch_start, cohort_year):
 		[(row.name, row.year_start_date) for row in candidates], batch, batch_start.year, cohort_year
 	)
 	if not found:
-		frappe.throw(_("No Academic Year starts in {0}, the admission year of the cohort joined.").format(cohort_year))
+		frappe.throw(
+			_("No Academic Year starts in {0}, the admission year of the cohort joined.").format(cohort_year)
+		)
 	if found == withdrawal_rules.AMBIGUOUS:
 		frappe.throw(
-			_("More than one Academic Year starts in {0} ({1}); name the cohort's year like the batch {2}.").format(
-				cohort_year, ", ".join(sorted(row.name for row in candidates)), frappe.bold(batch)
-			)
+			_(
+				"More than one Academic Year starts in {0} ({1}); name the cohort's year like the batch {2}."
+			).format(cohort_year, ", ".join(sorted(row.name for row in candidates)), frappe.bold(batch))
 		)
 	return found
 
@@ -159,4 +176,8 @@ def students_on_break(students):
 	"""The subset of `students` on a break of study (the Result Run skips them)."""
 	if not students:
 		return set()
-	return set(frappe.get_all("Student", {"name": ["in", list(students)], "oc_academic_status": ON_BREAK}, pluck="name"))
+	return set(
+		frappe.get_all(
+			"Student", {"name": ["in", list(students)], "oc_academic_status": ON_BREAK}, pluck="name"
+		)
+	)

@@ -40,7 +40,14 @@ class ValuationFixture(ExamFixture):
 	def seat(self, students):
 		room = make_room("Exm Val Hall", 2, 2, [], company=self.session.company).name
 		plan = frappe.new_doc("Seating Plan")
-		plan.update({"exam_session": self.session.name, "exam_date": "2022-12-01", "slot": "FN", "halls": [{"room": room}]})
+		plan.update(
+			{
+				"exam_session": self.session.name,
+				"exam_date": "2022-12-01",
+				"slot": "FN",
+				"halls": [{"room": room}],
+			}
+		)
 		for i, (student, absent) in enumerate(students):
 			row, column = divmod(i, 2)
 			plan.append("seats", {"room": room, "seat_row": row + 1, "seat_column": column + 1,
@@ -68,7 +75,9 @@ class ValuationFixture(ExamFixture):
 		return frappe.db.get_value(MAP, {"dummy_number": dummy}, ["finalised", "final_ese", "ese_written"])
 
 	def dummy_of(self, student):
-		return frappe.db.get_value(MAP, {"exam_session": self.session.name, "student": student}, "dummy_number")
+		return frappe.db.get_value(
+			MAP, {"exam_session": self.session.name, "student": student}, "dummy_number"
+		)
 
 	def bundle(self, dummies=None, expected=None, received=1, maxima=(30, 30)):
 		dummies = dummies or [self.d22, self.d26]
@@ -131,7 +140,9 @@ class ValuationFixture(ExamFixture):
 		return bundle
 
 	def sheet_of(self, student):
-		return frappe.db.get_value("Mark Sheet Entry Row", {"student": student, "parent": ["in", self.sheets()]}, "parent")
+		return frappe.db.get_value(
+			"Mark Sheet Entry Row", {"student": student, "parent": ["in", self.sheets()]}, "parent"
+		)
 
 	def sheet_ese(self, student):
 		row = frappe.db.get_value(
@@ -145,7 +156,10 @@ class ValuationFixture(ExamFixture):
 	def sheets(self):
 		return frappe.get_all(
 			"Mark Sheet Entry",
-			{"exam_session": self.session.name, "course_offering": ["in", [self.offerings22[COURSE], self.offerings26[COURSE]]]},
+			{
+				"exam_session": self.session.name,
+				"course_offering": ["in", [self.offerings22[COURSE], self.offerings26[COURSE]]],
+			},
 			pluck="name",
 		)
 
@@ -201,17 +215,23 @@ class TestPermissionIsolation(ValuationFixture):
 			self.assert_map_closed(user)
 
 	def test_a_custom_docperm_does_not_open_the_map_to_a_non_confidential_user(self):
-		frappe.get_doc({"doctype": "Custom DocPerm", "parent": MAP, "role": "System Manager", "read": 1}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{"doctype": "Custom DocPerm", "parent": MAP, "role": "System Manager", "read": 1}
+		).insert(ignore_permissions=True)
 		frappe.clear_cache(doctype=MAP)
 		self.addCleanup(frappe.clear_cache, doctype=MAP)
 		frappe.set_user(SYSTEM_MANAGER)
-		self.assertFalse(frappe.has_permission(MAP, "read", doc=frappe.db.get_value(MAP, {"dummy_number": self.d22})))
+		self.assertFalse(
+			frappe.has_permission(MAP, "read", doc=frappe.db.get_value(MAP, {"dummy_number": self.d22}))
+		)
 		self.assertEqual(frappe.get_list(MAP, pluck="name"), [])
 
 	def test_exam_confidential_joins_dummy_to_register_number(self):
 		frappe.set_user(CONFIDENTIAL_USER)
 		rows = frappe.get_list(MAP, {"exam_session": self.session.name}, ["student", "dummy_number"])
-		self.assertEqual({r.dummy_number: r.student for r in rows}, {self.d22: self.s22.name, self.d26: self.s26.name})
+		self.assertEqual(
+			{r.dummy_number: r.student for r in rows}, {self.d22: self.s22.name, self.d26: self.s26.name}
+		)
 
 	def test_the_map_cannot_be_shared(self):
 		name = frappe.db.get_value(MAP, {"dummy_number": self.d22})
@@ -224,13 +244,19 @@ class TestPermissionIsolation(ValuationFixture):
 		frappe.set_user(VAL1)
 		entries = frappe.get_list("Valuation Entry", fields=["*"])
 		self.assertEqual(len(entries), 2)
-		seen = [frappe.as_json(entries), frappe.as_json(frappe.get_list("Valuation Allocation", fields=["*"]))]
+		seen = [
+			frappe.as_json(entries),
+			frappe.as_json(frappe.get_list("Valuation Allocation", fields=["*"])),
+		]
 		for entry in entries:
 			doc = frappe.get_doc("Valuation Entry", entry.name)
 			doc.check_permission("read")
 			seen += [frappe.as_json(doc.as_dict()), frappe.get_print("Valuation Entry", doc.name)]
 		allocation.check_permission("read")
-		seen += [frappe.as_json(allocation.as_dict()), frappe.get_print("Valuation Allocation", allocation.name)]
+		seen += [
+			frappe.as_json(allocation.as_dict()),
+			frappe.get_print("Valuation Allocation", allocation.name),
+		]
 		seen.append(frappe.as_json(valuation.my_allocations()))
 		text = "\n".join(seen)
 		self.assertIn(self.d22, text)
@@ -269,7 +295,10 @@ class TestPermissionIsolation(ValuationFixture):
 		def failing(student, course):
 			frappe.throw(f"The Exam Rule Set of the regulation of {student} has no Theory course type.")
 
-		with patch.object(valuation, "student_limits", failing), self.assertRaises(frappe.ValidationError) as caught:
+		with (
+			patch.object(valuation, "student_limits", failing),
+			self.assertRaises(frappe.ValidationError) as caught,
+		):
 			self.value(first, self.d22, 20, 20, VAL1)
 		self.assertIn(self.d22, str(caught.exception))
 		self.assertNotIn(self.s22.name, str(caught.exception) + frappe.as_json(frappe.local.message_log))
@@ -281,7 +310,9 @@ class TestThirdValuation(ValuationFixture):
 		third = self.round3(bundle)
 		self.assertEqual([s.dummy_number for s in third.scripts], [self.d22])
 		self.assertEqual(third.status, "Unassigned")
-		self.assertEqual(self.sheet_ese(self.s22.name), (35, 0))  # no final mark yet: the fixture's ESE stands
+		self.assertEqual(
+			self.sheet_ese(self.s22.name), (35, 0)
+		)  # no final mark yet: the fixture's ESE stands
 
 	def test_a_difference_within_the_threshold_gives_the_final_mark_at_once(self):
 		self.double_valued()
@@ -302,8 +333,12 @@ class TestThirdValuation(ValuationFixture):
 		self.assertEqual(self.final_of(self.d22), (1, 49, 1))
 
 	def test_the_configured_rule_applies(self):
-		rule_set = frappe.db.get_value("Exam Rule Set", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
-		frappe.db.set_value("Exam Rule Set", rule_set, "final_valuation_method", "Average of Third and Nearer")
+		rule_set = frappe.db.get_value(
+			"Exam Rule Set", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")}
+		)
+		frappe.db.set_value(
+			"Exam Rule Set", rule_set, "final_valuation_method", "Average of Third and Nearer"
+		)
 		bundle = self.bundle([self.d22])
 		first, second = self.allocate(bundle, 1, VAL1), self.allocate(bundle, 2, VAL2)
 		self.value(first, self.d22, 10, 10, VAL1)  # 20
@@ -363,7 +398,10 @@ class TestMarkSheetScope(ValuationFixture):
 	DEAN = "exam-dean@example.com"
 
 	def sheet(self, course):
-		return frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": self.offerings22[course]})
+		return frappe.db.get_value(
+			"Mark Sheet Entry",
+			{"exam_session": self.session.name, "course_offering": self.offerings22[course]},
+		)
 
 	def test_academics_users_and_instructors_read_only_their_offerings(self):
 		make_login(self.ACADEMICS, "Academics User")
@@ -378,14 +416,18 @@ class TestMarkSheetScope(ValuationFixture):
 		self.assertNotIn(other, frappe.get_list("Mark Sheet Entry", pluck="name"))
 		frappe.set_user(self.DEAN)
 		self.assertTrue({taught, other} <= set(frappe.get_list("Mark Sheet Entry", pluck="name")))
-		self.assertTrue(frappe.has_permission("CIA Schedule", "read", user=self.ACADEMICS))  # only the sheets narrow
+		self.assertTrue(
+			frappe.has_permission("CIA Schedule", "read", user=self.ACADEMICS)
+		)  # only the sheets narrow
 
 
 class TestFinalMarkLock(ValuationFixture):
 	def test_a_valued_ese_cannot_be_overwritten_on_the_mark_sheet(self):
 		self.valued_all()
 		self.write_back()
-		name = frappe.db.get_value("Mark Sheet Entry Row", {"student": self.s26.name, "parent": ["in", self.sheets()]}, "parent")
+		name = frappe.db.get_value(
+			"Mark Sheet Entry Row", {"student": self.s26.name, "parent": ["in", self.sheets()]}, "parent"
+		)
 		sheet = frappe.get_doc("Mark Sheet Entry", name)
 		next(r for r in sheet.marks if r.student == self.s26.name).ese = 55
 		frappe.set_user(COE_USER)
@@ -447,7 +489,9 @@ class TestExaminerPortal(ValuationFixture):
 		frappe.set_user(VAL1)
 		context = frappe._dict()
 		page.get_context(context)
-		self.assertEqual([s.dummy_number for a in context.allocations for s in a.scripts], sorted([self.d22, self.d26]))
+		self.assertEqual(
+			[s.dummy_number for a in context.allocations for s in a.scripts], sorted([self.d22, self.d26])
+		)
 		frappe.set_user(VAL2)
 		context = frappe._dict()
 		page.get_context(context)
@@ -466,10 +510,15 @@ class TestWriteBack(ValuationFixture):
 	def test_the_examiners_request_writes_no_mark_sheet_and_the_job_does(self):
 		self.valued_all()
 		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
-		self.assertNotIn(frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"), (VAL1, VAL2))
+		self.assertNotIn(
+			frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"), (VAL1, VAL2)
+		)
 		self.assertEqual(self.write_back(), 2)
 		self.assertEqual((self.sheet_ese(self.s22.name), self.sheet_ese(self.s26.name)), ((43, 1), (44, 1)))
-		self.assertEqual(frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"), CONFIDENTIAL_USER)
+		self.assertEqual(
+			frappe.db.get_value("Mark Sheet Entry", self.sheet_of(self.s26.name), "modified_by"),
+			CONFIDENTIAL_USER,
+		)
 		self.assertEqual(self.write_back(), 0)  # nothing left pending
 
 	def test_an_unbundled_script_blocks_the_write_back(self):  # else the one written row names its student
@@ -492,7 +541,9 @@ class TestWriteBack(ValuationFixture):
 		first, second = self.allocate(bundle, 1, VAL1), self.allocate(bundle, 2, VAL2)
 		self.value(first, self.d22, 20, 20, VAL1)
 		self.value(second, self.d22, 20, 26, VAL2)
-		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1)
+		frappe.db.set_value(
+			"Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1
+		)
 		self.generate()  # d26 is void now
 		statuses = frappe.get_all("Valuation Allocation", {"bundle": bundle.name}, pluck="status")
 		self.assertEqual(statuses, ["Completed", "Completed"])
@@ -515,32 +566,46 @@ class TestWriteBack(ValuationFixture):
 			frappe.set_user(user)
 			with self.assertRaises(frappe.PermissionError):
 				valuation_write_back.write_back_pending(self.session.name, COURSE)
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[valuation_write_back.write_back_pending], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[valuation_write_back.write_back_pending],
+			["POST"],
+		)
 
 	def test_an_absent_mark_on_the_sheet_is_never_cleared(self):
 		self.valued_all()
-		row = frappe.db.get_value("Mark Sheet Entry Row", {"student": self.s26.name, "parent": self.sheet_of(self.s26.name)})
+		row = frappe.db.get_value(
+			"Mark Sheet Entry Row", {"student": self.s26.name, "parent": self.sheet_of(self.s26.name)}
+		)
 		frappe.db.set_value("Mark Sheet Entry Row", row, {"absent": 1, "ese": 0})
 		self.assertEqual(self.write_back(), 2)  # both queued, d26 skipped
-		self.assertEqual(frappe.db.get_value("Mark Sheet Entry Row", row, ["absent", "ese", "ese_from_valuation"]), (1, 0, 0))
+		self.assertEqual(
+			frappe.db.get_value("Mark Sheet Entry Row", row, ["absent", "ese", "ese_from_valuation"]),
+			(1, 0, 0),
+		)
 		self.assertEqual(self.final_of(self.d26), (1, 44, 0))
 		self.assertIn("absent", frappe.db.get_value(MAP, {"dummy_number": self.d26}, "write_back_issue"))
 
 	def test_an_absent_seat_is_never_overwritten(self):
 		self.valued_all()
-		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1)
+		frappe.db.set_value(
+			"Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1
+		)
 		self.write_back()
 		self.assertEqual(self.sheet_ese(self.s26.name), (35, 0))
 		self.assertEqual(self.final_of(self.d26), (1, 44, 0))
 		self.assertIn("absent", frappe.db.get_value(MAP, {"dummy_number": self.d26}, "write_back_issue"))
 
 	def test_a_student_marked_absent_after_generation_loses_the_dummy_number(self):
-		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1)
+		frappe.db.set_value(
+			"Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 1
+		)
 		self.generate()
 		self.assertEqual(frappe.db.get_value(MAP, {"dummy_number": self.d26}, "void"), 1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Not scripts"):
 			self.bundle([self.d26])
-		frappe.db.set_value("Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 0)
+		frappe.db.set_value(
+			"Seating Plan Seat", {"parent": self.plan.name, "student": self.s26.name}, "absent", 0
+		)
 		self.generate()
 		self.assertEqual(frappe.db.get_value(MAP, {"dummy_number": self.d26}, "void"), 0)  # same number back
 
@@ -563,10 +628,18 @@ class TestCourseTeacherAsExaminer(ValuationFixture):
 			self.allocate(bundle, 1, None, examiner_type="Internal", employee=employee)
 		for name in self.rule_sets():
 			frappe.db.set_value("Exam Rule Set", name, "allow_course_teacher_as_examiner", 1)
-		self.assertEqual(self.allocate(bundle, 1, None, examiner_type="Internal", employee=employee).examiner, FACULTY)
+		self.assertEqual(
+			self.allocate(bundle, 1, None, examiner_type="Internal", employee=employee).examiner, FACULTY
+		)
 
 	def test_the_rule_is_a_record_field_off_by_default(self):
-		self.assertEqual({frappe.db.get_value("Exam Rule Set", n, "allow_course_teacher_as_examiner") for n in self.rule_sets()}, {0})
+		self.assertEqual(
+			{
+				frappe.db.get_value("Exam Rule Set", n, "allow_course_teacher_as_examiner")
+				for n in self.rule_sets()
+			},
+			{0},
+		)
 
 
 class TestBundleFreeze(ValuationFixture):
@@ -601,7 +674,9 @@ class TestBundleFreeze(ValuationFixture):
 		frappe.set_user(COE_USER)
 		bundle.append("movements", {"from_location": "Exam cell", "to_location": "Camp"})
 		bundle.save()
-		posted = frappe.get_doc(frappe.parse_json(frappe.as_json(bundle.as_dict())))  # what a desk save sends back
+		posted = frappe.get_doc(
+			frappe.parse_json(frappe.as_json(bundle.as_dict()))
+		)  # what a desk save sends back
 		posted.movements[0].handed_to = ""
 		posted.append("movements", {"from_location": "Camp", "to_location": "Exam cell"})
 		posted.save()

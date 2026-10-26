@@ -11,27 +11,46 @@ PERMITTED = {(rules.NEW, rules.ACTIVE), (rules.ACTIVE, rules.ON_BREAK), (rules.O
 
 class TestTransitionRefusal(UnitTestCase):
 	def test_a_permitted_transition_on_or_after_the_last_change_passes(self):
-		self.assertIsNone(rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 6, 1), date(2026, 6, 1)))
-		self.assertIsNone(rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 6, 2), date(2026, 6, 1)))
+		self.assertIsNone(
+			rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 6, 1), date(2026, 6, 1))
+		)
+		self.assertIsNone(
+			rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 6, 2), date(2026, 6, 1))
+		)
 
 	def test_the_first_status_of_a_record_has_no_earlier_date(self):
 		self.assertIsNone(rules.refusal(PERMITTED, None, rules.ACTIVE, date(2026, 6, 1), None))
 		self.assertIsNone(rules.refusal(PERMITTED, rules.NEW, rules.ACTIVE, date(2026, 6, 1), None))
 
 	def test_an_unknown_status_is_refused(self):
-		self.assertEqual(rules.refusal(PERMITTED, rules.ACTIVE, "Detained", date(2026, 6, 1), None), rules.UNKNOWN_STATUS)
-		self.assertEqual(rules.refusal(PERMITTED, rules.ACTIVE, "Applicant", date(2026, 6, 1), None), rules.UNKNOWN_STATUS)
+		self.assertEqual(
+			rules.refusal(PERMITTED, rules.ACTIVE, "Detained", date(2026, 6, 1), None), rules.UNKNOWN_STATUS
+		)
+		self.assertEqual(
+			rules.refusal(PERMITTED, rules.ACTIVE, "Applicant", date(2026, 6, 1), None), rules.UNKNOWN_STATUS
+		)
 
 	def test_a_move_the_table_does_not_list_is_refused(self):
-		self.assertEqual(rules.refusal(PERMITTED, rules.ACTIVE, rules.GRADUATED, date(2026, 6, 1), None), rules.NOT_PERMITTED)
-		self.assertEqual(rules.refusal(PERMITTED, rules.NEW, rules.ON_BREAK, date(2026, 6, 1), None), rules.NOT_PERMITTED)
+		self.assertEqual(
+			rules.refusal(PERMITTED, rules.ACTIVE, rules.GRADUATED, date(2026, 6, 1), None),
+			rules.NOT_PERMITTED,
+		)
+		self.assertEqual(
+			rules.refusal(PERMITTED, rules.NEW, rules.ON_BREAK, date(2026, 6, 1), None), rules.NOT_PERMITTED
+		)
 
 	def test_staying_in_the_same_status_is_refused(self):
-		self.assertEqual(rules.refusal(PERMITTED | {(rules.ACTIVE, rules.ACTIVE)}, rules.ACTIVE, rules.ACTIVE, date(2026, 6, 1), None), rules.SAME_STATUS)
+		self.assertEqual(
+			rules.refusal(
+				PERMITTED | {(rules.ACTIVE, rules.ACTIVE)}, rules.ACTIVE, rules.ACTIVE, date(2026, 6, 1), None
+			),
+			rules.SAME_STATUS,
+		)
 
 	def test_an_effective_date_before_the_last_change_is_refused(self):
 		self.assertEqual(
-			rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 5, 31), date(2026, 6, 1)), rules.BEFORE_LATEST
+			rules.refusal(PERMITTED, rules.ACTIVE, rules.ON_BREAK, date(2026, 5, 31), date(2026, 6, 1)),
+			rules.BEFORE_LATEST,
 		)
 
 	def test_the_default_graph_covers_every_status_and_uses_only_known_ones(self):
@@ -64,14 +83,18 @@ class TestTransitionRefusal(UnitTestCase):
 
 class TestMigratedStatus(UnitTestCase):
 	def test_a_cancelled_admission_wins(self):
-		self.assertEqual(rules.migrated_status("Active", cancelled=True, left=True, convocation=True), rules.CANCELLED)
+		self.assertEqual(
+			rules.migrated_status("Active", cancelled=True, left=True, convocation=True), rules.CANCELLED
+		)
 
 	def test_a_graduate_or_alumnus_on_a_list_keeps_the_status(self):
 		self.assertEqual(rules.migrated_status(rules.GRADUATED, convocation=True), rules.GRADUATED)
 		self.assertEqual(rules.migrated_status(rules.ALUMNI, convocation=True, left=True), rules.ALUMNI)
 
 	def test_a_listed_graduate_is_award_eligible_even_with_a_tc(self):
-		self.assertEqual(rules.migrated_status("Discontinued", left=True, convocation=True), rules.AWARD_ELIGIBLE)
+		self.assertEqual(
+			rules.migrated_status("Discontinued", left=True, convocation=True), rules.AWARD_ELIGIBLE
+		)
 
 	def test_completed_becomes_study_completed(self):
 		self.assertEqual(rules.migrated_status("Completed", left=True), rules.STUDY_COMPLETED)

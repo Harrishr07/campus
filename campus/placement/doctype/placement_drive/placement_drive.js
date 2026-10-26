@@ -7,7 +7,13 @@ frappe.ui.form.on("Placement Drive", {
 			args: { template: frm.doc.eligibility_template },
 			callback: (r) => {
 				const v = r.message || {};
-				["min_cgpa", "any_standing_arrears", "max_standing_arrears", "allow_arrear_history", "gender"].forEach((f) => frm.set_value(f, v[f]));
+				[
+					"min_cgpa",
+					"any_standing_arrears",
+					"max_standing_arrears",
+					"allow_arrear_history",
+					"gender",
+				].forEach((f) => frm.set_value(f, v[f]));
 				frm.clear_table("programs");
 				(v.programs || []).forEach((row) => frm.add_child("programs", row));
 				frm.clear_table("batches");

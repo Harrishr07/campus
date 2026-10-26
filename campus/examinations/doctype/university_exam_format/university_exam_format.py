@@ -14,5 +14,9 @@ from campus.examinations.university_files import validate_format
 class UniversityExamFormat(Document):
 	def validate(self):
 		if not self.company and "System Manager" not in frappe.get_roles():
-			frappe.throw(_("Give the format its college (Company): a shared format is edited by a System Manager only."))
+			frappe.throw(
+				_(
+					"Give the format its college (Company): a shared format is edited by a System Manager only."
+				)
+			)
 		validate_format(self)

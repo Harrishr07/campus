@@ -7,12 +7,16 @@ from campus.admissions.aadhaar import VIEWER_ROLE
 
 MODULE = "Admissions"
 ADMISSION_TYPES = ("Regular", "Lateral", "PG", "Transfer")
-OVERRIDE_ROLE = "Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
+OVERRIDE_ROLE = (
+	"Admission Override"  # may admit into a full row, or (strict mode) a missing matrix/row; logged
+)
 SEAT_COUNT_INDEX = "oc_seat_count_index"
 CANDIDATE_INDEX = "oc_candidate_index"
 APPLICANT_INDEX = "oc_student_applicant_index"
 VERIFIER_ROLE = "Admission Verifier"  # may mark applicant documents Verified or Rejected
-OFFICER_ROLE = "Admission Officer"  # may admit approved applicants, confirm their joining and cancel admissions
+OFFICER_ROLE = (
+	"Admission Officer"  # may admit approved applicants, confirm their joining and cancel admissions
+)
 LATE_REQUEST = "Late Joining Request"  # M04-10
 
 
@@ -32,7 +36,9 @@ def setup_admissions():
 def ensure_admission_roles():
 	for role in (OVERRIDE_ROLE, VERIFIER_ROLE, OFFICER_ROLE):
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 
 
 def seed_strict_seat_matrix():
@@ -46,7 +52,9 @@ def seed_strict_seat_matrix():
 
 def seed_late_joining_policy():
 	"""M04-10: a late joining is approved by the Principal, unless the college has its own policy."""
-	if not frappe.db.exists("Position", "PRINCIPAL") or frappe.db.exists("Approval Policy", {"document_type": LATE_REQUEST}):
+	if not frappe.db.exists("Position", "PRINCIPAL") or frappe.db.exists(
+		"Approval Policy", {"document_type": LATE_REQUEST}
+	):
 		return
 	frappe.get_doc(
 		{
@@ -94,7 +102,9 @@ def oc_lead_can_be_unique():
 	The duplicates are logged and the constraint skipped (conversion still guards by lookup under a row
 	lock); once they are merged or cleared, the next migrate creates the index.
 	"""
-	if not frappe.db.has_column("Student Applicant", "oc_lead"):  # fresh install: the field is not created yet
+	if not frappe.db.has_column(
+		"Student Applicant", "oc_lead"
+	):  # fresh install: the field is not created yet
 		return True
 	duplicates = frappe.db.sql(
 		"select oc_lead from `tabStudent Applicant` where oc_lead is not null and oc_lead != '' "
@@ -180,14 +190,20 @@ def setup_admission_fields():
 	]  # fmt: skip
 	create_custom_fields(
 		{
-			"Student Applicant": applicant, "Student": student, "Program Enrollment": enrollment,
-			"Student Category": category, "Sales Invoice": invoice, "Payment Entry": payment,
+			"Student Applicant": applicant,
+			"Student": student,
+			"Program Enrollment": enrollment,
+			"Student Category": category,
+			"Sales Invoice": invoice,
+			"Payment Entry": payment,
 		},
 		update=True,
 	)
 	grant_officer_read_access()
 	# the seat count locks exactly this index range (submitted enrollments of one program and year)
-	frappe.db.add_index("Program Enrollment", ["oc_company", "program", "academic_year", "docstatus"], SEAT_COUNT_INDEX)
+	frappe.db.add_index(
+		"Program Enrollment", ["oc_company", "program", "academic_year", "docstatus"], SEAT_COUNT_INDEX
+	)
 	# the duplicate candidate check locks these ranges (M04-07)
 	for doctype in ("Student Applicant", "Student"):
 		frappe.db.add_index(doctype, ["oc_company", "date_of_birth"], CANDIDATE_INDEX)
@@ -200,13 +216,24 @@ def setup_admission_fields():
 # Permissions still scope the company-linked ones. Sales Invoice and Payment Entry were taken away once and are back:
 # test_admission_flow.TestOfficerWithoutInvoiceRights ran Confirm Joining and both cancellations without them and failed.
 # Read only: no write, create, export or print.
-OFFICER_READ = ("Account", "Item", "Cost Center", "Price List", "Sales Invoice", "Payment Entry", "Course Enrollment")
+OFFICER_READ = (
+	"Account",
+	"Item",
+	"Cost Center",
+	"Price List",
+	"Sales Invoice",
+	"Payment Entry",
+	"Course Enrollment",
+)
 # The officer's own work on Education records without the office role (Academics User): the applicants they convert,
 # check and admit, the Student whose form holds Confirm Joining, the enrollments the admission reports count, and the
 # masters an applicant links. Custom DocPerm: Education's DocType JSON is never edited.
 OFFICER_RIGHTS = {
 	"Student Applicant": ("write", "create", "report"),
-	"Customer": ("write", "create"),  # Education creates the Student's Customer with the session user's rights
+	"Customer": (
+		"write",
+		"create",
+	),  # Education creates the Student's Customer with the session user's rights
 	"Student": ("report",),
 	"Program Enrollment": ("report",),
 	"Program": (),
@@ -227,4 +254,6 @@ def grant_officer_read_access():
 		add_permission(doctype, OFFICER_ROLE, 0)
 		for right in OFFICER_RIGHTS.get(doctype, ()):
 			update_permission_property(doctype, OFFICER_ROLE, 0, right, 1)
-		update_permission_property(doctype, OFFICER_ROLE, 0, "export", 0)  # Custom DocPerm defaults to export 1
+		update_permission_property(
+			doctype, OFFICER_ROLE, 0, "export", 0
+		)  # Custom DocPerm defaults to export 1

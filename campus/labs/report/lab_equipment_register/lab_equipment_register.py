@@ -3,8 +3,8 @@
 import frappe
 from frappe import _
 
-from campus.labs.report_scope import scoped_companies
 from campus.labs.equipment import lab_equipment
+from campus.labs.report_scope import scoped_companies
 
 
 def execute(filters=None):

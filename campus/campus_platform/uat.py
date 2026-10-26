@@ -19,7 +19,9 @@ def ensure_uat_roles():
 	"""Before the DocType syncs: its permissions name both roles."""
 	for role in (TESTER_ROLE, COORDINATOR_ROLE):
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 
 
 def tester_roles_for(roles):

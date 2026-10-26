@@ -68,7 +68,9 @@ class TestWithdrawalIsNotAnAttempt(UnitTestCase):
 				"first_appearance_required": 1, "max_years": 0, "max_years_lateral": 0, "break_of_study_included": 1},
 		]  # fmt: skip
 		first = rules.passed_at_first_appearance({"C1": [wr.WITHDRAWN, "Pass"]})
-		self.assertEqual(rules.classify(8.7, classes, first_appearance=first), ("First Class with Distinction", "Regular"))
+		self.assertEqual(
+			rules.classify(8.7, classes, first_appearance=first), ("First Class with Distinction", "Regular")
+		)
 
 
 class TestBreakOfStudy(UnitTestCase):
@@ -77,7 +79,9 @@ class TestBreakOfStudy(UnitTestCase):
 		self.assertEqual(wr.break_days(date(2026, 6, 1), date(2027, 5, 31)), 365)
 
 	def test_one_calendar_year_fits_even_across_a_leap_day(self):
-		self.assertIsNone(wr.break_refusal(0, wr.break_days(date(2027, 6, 1), date(2028, 5, 31)), 1, 1, False))
+		self.assertIsNone(
+			wr.break_refusal(0, wr.break_days(date(2027, 6, 1), date(2028, 5, 31)), 1, 1, False)
+		)
 
 	def test_more_than_the_maximum_needs_the_exceptional_year(self):
 		self.assertEqual(wr.break_refusal(0, 400, 1, 1, exceptional=False), wr.EXCEEDS)
@@ -137,7 +141,11 @@ class TestCohortAcademicYear(UnitTestCase):
 	"""The cohort's Academic Year is found by start year; the batch's naming pattern breaks ties."""
 
 	def test_the_batch_naming_pattern_wins(self):
-		candidates = [("2024-25", date(2024, 6, 1)), ("RT-2024", date(2024, 6, 1)), ("AY 2024", date(2024, 7, 1))]
+		candidates = [
+			("2024-25", date(2024, 6, 1)),
+			("RT-2024", date(2024, 6, 1)),
+			("AY 2024", date(2024, 7, 1)),
+		]
 		self.assertEqual(wr.pick_cohort_year(candidates, "RT-2022", 2022, 2024), "RT-2024")
 
 	def test_one_start_date_takes_the_earliest_name(self):
@@ -159,7 +167,12 @@ class TestPortalWithdrawable(UnitTestCase):
 	"""The portal offers a course again when its only application was Rejected or Returned (the controller counts
 	approved withdrawals only); a Draft, Pending or Approved application still holds it."""
 
-	REGISTRATIONS = [{"exam_session": "S1", "courses": [{"course": c, "kind": "Current", "eligibility": "Eligible"} for c in ("A", "B")]}]
+	REGISTRATIONS = [
+		{
+			"exam_session": "S1",
+			"courses": [{"course": c, "kind": "Current", "eligibility": "Eligible"} for c in ("A", "B")],
+		}
+	]
 
 	def offered(self, status, docstatus=0):
 		withdrawals = [{"exam_session": "S1", "courses": ["A"], "status": status, "docstatus": docstatus}]

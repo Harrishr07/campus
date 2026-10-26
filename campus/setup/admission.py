@@ -12,7 +12,12 @@ def ensure_admission(profile, college, out):
 	if not seats:
 		return
 	for category in seats["categories"]:
-		upsert(out, "Student Category", {"category": category["category"]}, {"oc_is_reserved": int(category.get("reserved", 0))})
+		upsert(
+			out,
+			"Student Category",
+			{"category": category["category"]},
+			{"oc_is_reserved": int(category.get("reserved", 0))},
+		)
 	for quota in seats["quotas"]:
 		upsert(out, "Admission Quota", {"code": quota["code"]}, {"title": quota["title"]})
 	year = seats["academic_year"]
@@ -51,7 +56,11 @@ def ensure_seat_matrix(out, college, programme, year, split):
 	rows = [(quota, category, seats) for (quota, category), seats in split.items() if seats]
 	if not name:
 		frappe.get_doc(
-			{"doctype": "Seat Matrix", **key, "rows": [{"quota": q, "category": c, "sanctioned": n} for q, c, n in rows]}
+			{
+				"doctype": "Seat Matrix",
+				**key,
+				"rows": [{"quota": q, "category": c, "sanctioned": n} for q, c, n in rows],
+			}
 		).insert(ignore_permissions=True)
 		out.created["Seat Matrix"] += 1
 		return
@@ -77,7 +86,10 @@ def ensure_admission_settings(profile, out):
 		return
 	doc = frappe.get_doc("Admission Settings")
 	changed = False
-	for field, value in (("active_admission_year", settings.get("active_year")), ("register_no_pattern", settings.get("register_no_pattern"))):
+	for field, value in (
+		("active_admission_year", settings.get("active_year")),
+		("register_no_pattern", settings.get("register_no_pattern")),
+	):
 		if value and not doc.get(field):
 			doc.set(field, value)
 			changed = True

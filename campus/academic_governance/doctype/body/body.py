@@ -34,11 +34,25 @@ class Body(Document):
 		if member.from_date and member.to_date and getdate(member.to_date) < getdate(member.from_date):
 			frappe.throw(_("Row {0}: To cannot be before From").format(member.idx))
 		if member.employee:
-			employee = frappe.db.get_value("Employee", member.employee, ["company", "employee_name", "status"], as_dict=True)
+			employee = frappe.db.get_value(
+				"Employee", member.employee, ["company", "employee_name", "status"], as_dict=True
+			)
 			if employee and employee.company != self.company:
-				frappe.throw(_("Row {0}: Employee {1} belongs to {2}, not {3}").format(member.idx, member.employee, employee.company, self.company))
-			if employee and employee.status == "Left" and (not member.to_date or getdate(member.to_date) >= getdate(today())):
-				frappe.throw(_("Row {0}: Employee {1} has left; end the term before the leaving date").format(member.idx, member.employee))
+				frappe.throw(
+					_("Row {0}: Employee {1} belongs to {2}, not {3}").format(
+						member.idx, member.employee, employee.company, self.company
+					)
+				)
+			if (
+				employee
+				and employee.status == "Left"
+				and (not member.to_date or getdate(member.to_date) >= getdate(today()))
+			):
+				frappe.throw(
+					_("Row {0}: Employee {1} has left; end the term before the leaving date").format(
+						member.idx, member.employee
+					)
+				)
 			member.member_name = employee and employee.employee_name
 		else:
 			member.member_name = frappe.db.get_value("External Member", member.external_member, "member_name")
@@ -49,7 +63,11 @@ class Body(Document):
 			person = member.employee or member.external_member
 			for other in dated[index + 1 :]:
 				if person == (other.employee or other.external_member) and terms_overlap(member, other):
-					frappe.throw(_("Rows {0} and {1}: {2} has overlapping terms in this body").format(member.idx, other.idx, member.member_name))
+					frappe.throw(
+						_("Rows {0} and {1}: {2} has overlapping terms in this body").format(
+							member.idx, other.idx, member.member_name
+						)
+					)
 
 	def validate_composition(self):
 		"""Refuse a save that introduces or worsens a breach of the Body Type's rule; warn about a breach it leaves as it was.
@@ -63,11 +81,18 @@ class Body(Document):
 			return
 		saved = self.get_doc_before_save()
 		if saved:
-			worse = composition.is_worse(shortfalls, composition.composition_shortfalls(rules, saved.members, on_date))
+			worse = composition.is_worse(
+				shortfalls, composition.composition_shortfalls(rules, saved.members, on_date)
+			)
 		else:
 			worse = bool(self.members)
 		lines = "".join(f"<li>{frappe.utils.escape_html(s.message)}</li>" for s in shortfalls)
-		message = _("{0} does not meet the composition rule of {1}:").format(self.name or self.body_name, self.body_type) + f"<ul>{lines}</ul>"
+		message = (
+			_("{0} does not meet the composition rule of {1}:").format(
+				self.name or self.body_name, self.body_type
+			)
+			+ f"<ul>{lines}</ul>"
+		)
 		if worse:
 			frappe.throw(message, title=_("Composition rule not met"))
 		frappe.msgprint(message, title=_("Composition rule not met"), indicator="orange")

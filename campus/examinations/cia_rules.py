@@ -29,7 +29,8 @@ def converted_assessment(components, marks_by_component, round_to_integer=True):
 	`components`: [(component, max_marks, weight)]; `marks_by_component`: {component: marks}.
 	"""
 	weighted = math.fsum(
-		marks_by_component.get(component, 0.0) / max_marks * weight for component, max_marks, weight in components
+		marks_by_component.get(component, 0.0) / max_marks * weight
+		for component, max_marks, weight in components
 	)
 	weighted = round(weighted, NOISE_PLACES)
 	return round_half_up(weighted, 0 if round_to_integer else 2)

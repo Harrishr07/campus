@@ -27,10 +27,16 @@ class InvigilationRoster(Document):
 		seen = set()
 		for row in self.faculty:
 			if row.employee in seen:
-				frappe.throw(_("Row {0}: {1} is already in the pool.").format(row.idx, frappe.bold(row.employee)))
+				frappe.throw(
+					_("Row {0}: {1} is already in the pool.").format(row.idx, frappe.bold(row.employee))
+				)
 			seen.add(row.employee)
 			if frappe.db.get_value("Employee", row.employee, "company") != self.company:
-				frappe.throw(_("Row {0}: {1} does not belong to {2}.").format(row.idx, frappe.bold(row.employee), self.company))
+				frappe.throw(
+					_("Row {0}: {1} does not belong to {2}.").format(
+						row.idx, frappe.bold(row.employee), self.company
+					)
+				)
 
 	def guard_duties(self):
 		if self.flags.generating:

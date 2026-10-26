@@ -27,4 +27,6 @@ def release_time(now, start, end):
 
 
 def current_release_time(settings, now=None):
-	return release_time(now or frappe.utils.now_datetime(), settings.quiet_hours_start, settings.quiet_hours_end)
+	return release_time(
+		now or frappe.utils.now_datetime(), settings.quiet_hours_start, settings.quiet_hours_end
+	)

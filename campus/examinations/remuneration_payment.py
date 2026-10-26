@@ -22,7 +22,9 @@ POLICY = "Examiner Remuneration Claim Approval"
 def post_additional_salary(claim):
 	"""A submitted Additional Salary for the claim total on the employee's next payroll. Runs as the approver: every
 	input comes from the server-computed claim."""
-	payroll_date = rules.next_payroll_date(claim.posting_date, last_processed_slip_end(claim.employee, claim.company))
+	payroll_date = rules.next_payroll_date(
+		claim.posting_date, last_processed_slip_end(claim.employee, claim.company)
+	)
 	additional = frappe.get_doc(
 		{
 			"doctype": "Additional Salary", "employee": claim.employee, "company": claim.company, "currency": claim.currency,
@@ -37,12 +39,20 @@ def post_additional_salary(claim):
 
 
 def last_processed_slip_end(employee, company):
-	return frappe.db.get_value("Salary Slip", {"employee": employee, "company": company, "docstatus": 1}, "end_date", order_by="end_date desc")
+	return frappe.db.get_value(
+		"Salary Slip",
+		{"employee": employee, "company": company, "docstatus": 1},
+		"end_date",
+		order_by="end_date desc",
+	)
 
 
 def cancel_additional_salary(claim):
 	"""HRMS refuses while a submitted Salary Slip has paid it."""
-	if claim.additional_salary and frappe.db.get_value("Additional Salary", claim.additional_salary, "docstatus") == 1:
+	if (
+		claim.additional_salary
+		and frappe.db.get_value("Additional Salary", claim.additional_salary, "docstatus") == 1
+	):
 		additional = frappe.get_doc("Additional Salary", claim.additional_salary)
 		additional.flags.ignore_permissions = True
 		additional.cancel()
@@ -57,11 +67,17 @@ def invoice_lines(claim):
 	try:
 		lines = rules.amount_by_item(claim.items)
 	except rules.MissingItem as missing:
-		frappe.throw(_("Set the Service Item on the Remuneration Rate for {0}: external examiners are paid by Purchase Invoice.").format(_(missing.activity)))
+		frappe.throw(
+			_(
+				"Set the Service Item on the Remuneration Rate for {0}: external examiners are paid by Purchase Invoice."
+			).format(_(missing.activity))
+		)
 	if frappe.get_meta("Item").has_field("gst_hsn_code"):
 		for item in lines:
 			if not frappe.db.get_value("Item", item, "gst_hsn_code"):
-				frappe.throw(_("Item {0} (Service Item of a Remuneration Rate) has no HSN/SAC code.").format(item))
+				frappe.throw(
+					_("Item {0} (Service Item of a Remuneration Rate) has no HSN/SAC code.").format(item)
+				)
 	return lines
 
 
@@ -93,7 +109,9 @@ def payable_figures(invoice):
 def cancel_or_delete_invoice(claim):
 	"""Cancelling the claim cancels its submitted invoice (as the user, so Accounts' rights and ERPNext's payment
 	checks apply) or deletes a draft one."""
-	status = claim.purchase_invoice and frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True)
+	status = claim.purchase_invoice and frappe.db.get_value(
+		"Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True
+	)
 	if status == 1:
 		frappe.get_doc("Purchase Invoice", claim.purchase_invoice).cancel()
 	elif status == 0:
@@ -106,7 +124,10 @@ def refuse_cancel_after_payment(claim):
 	"""A claim whose submitted invoice has any payment allocated (Payment Entry, Journal Entry, debit note: Payment
 	Ledger rows against it from another voucher) is not cancelled: ERPNext would unlink the payment, leaving it an
 	advance while the claim's work is freed for a second payout."""
-	if not claim.purchase_invoice or frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True) != 1:
+	if (
+		not claim.purchase_invoice
+		or frappe.db.get_value("Purchase Invoice", claim.purchase_invoice, "docstatus", for_update=True) != 1
+	):
 		return
 	ledger = frappe.qb.DocType("Payment Ledger Entry")
 	rows = (
@@ -121,9 +142,9 @@ def refuse_cancel_after_payment(claim):
 	vouchers = sorted({row[0] for row in rows})
 	if vouchers:
 		frappe.throw(
-			_("Purchase Invoice {0} has payments allocated ({1}): cancel or unallocate the payment or debit note first.").format(
-				claim.purchase_invoice, ", ".join(vouchers)
-			)
+			_(
+				"Purchase Invoice {0} has payments allocated ({1}): cancel or unallocate the payment or debit note first."
+			).format(claim.purchase_invoice, ", ".join(vouchers))
 		)
 
 
@@ -134,7 +155,9 @@ def check_paid_invoice(voucher, method=None):
 		invoices = {r.reference_name for r in voucher.references if r.reference_doctype == "Purchase Invoice"}
 	else:
 		invoices = {r.reference_name for r in voucher.accounts if r.reference_type == "Purchase Invoice"}
-	claimed = invoices and set(frappe.get_all(CLAIM, {"purchase_invoice": ["in", list(invoices)]}, pluck="purchase_invoice"))
+	claimed = invoices and set(
+		frappe.get_all(CLAIM, {"purchase_invoice": ["in", list(invoices)]}, pluck="purchase_invoice")
+	)
 	for invoice in sorted(claimed or ()):
 		if frappe.db.get_value("Purchase Invoice", invoice, "docstatus", for_update=True) != 1:
 			frappe.throw(_("Purchase Invoice {0} is no longer submitted; it cannot be paid.").format(invoice))
@@ -151,7 +174,9 @@ def invoice_chain(invoice):
 
 def paid_claim(invoice):
 	"""The submitted claim an invoice (or a cancelled invoice it amends) pays (locking read)."""
-	return frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 1}, "name", for_update=True)
+	return frappe.db.get_value(
+		CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 1}, "name", for_update=True
+	)
 
 
 def check_invoice(invoice, method=None):
@@ -164,10 +189,14 @@ def check_invoice(invoice, method=None):
 		check_invoice_matches(invoice, claim)
 		check_tds_and_charges(invoice, claim)
 		return
-	cancelled = frappe.db.get_value(CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 2}, "name")
+	cancelled = frappe.db.get_value(
+		CLAIM, {"purchase_invoice": ["in", invoice_chain(invoice)], "docstatus": 2}, "name"
+	)
 	if cancelled:
 		frappe.throw(
-			_("Purchase Invoice {0} belongs to the cancelled Examiner Remuneration Claim {1}: amend the claim instead.").format(invoice.name, cancelled)
+			_(
+				"Purchase Invoice {0} belongs to the cancelled Examiner Remuneration Claim {1}: amend the claim instead."
+			).format(invoice.name, cancelled)
 		)
 
 
@@ -186,21 +215,34 @@ def check_invoice_matches(invoice, claim):
 	expected = {item: flt(amount, 2) for item, amount in invoice_lines(claim).items()}
 	if (invoice.supplier, invoice.company) != (claim.supplier, claim.company) or billed != expected:
 		frappe.throw(
-			_("Purchase Invoice {0} must pay Examiner Remuneration Claim {1} as approved: {2} for {3}. Cancel and amend the claim to change it.").format(
-				invoice.name, claim.name, fmt_money(claim.total_amount, currency=claim.currency), claim.supplier
+			_(
+				"Purchase Invoice {0} must pay Examiner Remuneration Claim {1} as approved: {2} for {3}. Cancel and amend the claim to change it."
+			).format(
+				invoice.name,
+				claim.name,
+				fmt_money(claim.total_amount, currency=claim.currency),
+				claim.supplier,
 			)
 		)
 
 
 def check_tds_and_charges(invoice, claim):
 	if claim.tds_section and (not invoice.apply_tds or any(not row.apply_tds for row in invoice.items)):
-		frappe.throw(_("Purchase Invoice {0} must withhold TDS ({1}) as Examiner Remuneration Claim {2} does.").format(invoice.name, claim.tds_section, claim.name))
+		frappe.throw(
+			_("Purchase Invoice {0} must withhold TDS ({1}) as Examiner Remuneration Claim {2} does.").format(
+				invoice.name, claim.tds_section, claim.name
+			)
+		)
 	taxes = tax_accounts(invoice.company)
 	for row in invoice.taxes:
 		if row.is_tax_withholding_account or row.add_deduct_tax == "Deduct" or row.account_head in taxes:
 			continue
 		if flt(row.base_tax_amount):
-			frappe.throw(_("Row {0}: Purchase Invoice {1} of Examiner Remuneration Claim {2} cannot add a charge ({3}).").format(row.idx, invoice.name, claim.name, row.account_head))
+			frappe.throw(
+				_(
+					"Row {0}: Purchase Invoice {1} of Examiner Remuneration Claim {2} cannot add a charge ({3})."
+				).format(row.idx, invoice.name, claim.name, row.account_head)
+			)
 
 
 def tax_accounts(company):
@@ -208,7 +250,9 @@ def tax_accounts(company):
 	accounts = set(frappe.get_all("Account", {"company": company, "account_type": "Tax"}, pluck="name"))
 	if frappe.db.exists("DocType", "GST Account"):
 		fields = ["cgst_account", "sgst_account", "igst_account", "cess_account", "cess_non_advol_account"]
-		for row in frappe.get_all("GST Account", {"parenttype": "GST Settings", "company": company}, fields, as_list=True):
+		for row in frappe.get_all(
+			"GST Account", {"parenttype": "GST Settings", "company": company}, fields, as_list=True
+		):
 			accounts |= {account for account in row if account}
 	return accounts
 
@@ -218,7 +262,11 @@ def refuse_invoice_cancel(invoice, method=None):
 	the claim never stays submitted (holding its work) over a cancelled invoice."""
 	name = paid_claim(invoice)
 	if name:
-		frappe.throw(_("Purchase Invoice {0} pays Examiner Remuneration Claim {1}: cancel the claim first.").format(invoice.name, name))
+		frappe.throw(
+			_("Purchase Invoice {0} pays Examiner Remuneration Claim {1}: cancel the claim first.").format(
+				invoice.name, name
+			)
+		)
 
 
 # ---- setup --------------------------------------------------------------------------------------------------------

@@ -21,7 +21,8 @@ from collections import namedtuple
 from frappe.utils import flt
 
 Policy = namedtuple(
-	"Policy", "direct_weight indirect_weight cia_weight ese_weight student_threshold bands target_level survey_scale",
+	"Policy",
+	"direct_weight indirect_weight cia_weight ese_weight student_threshold bands target_level survey_scale",
 	defaults=(5,),
 )  # bands: ((level, minimum % of students), ...); survey_scale: the highest rating of the survey's scale
 
@@ -113,7 +114,11 @@ def co_result(cia, ese, indirect_average, policy):
 	cia_level, ese_level = level_for(cia[2], policy.bands), level_for(ese[2], policy.bands)
 	direct = weighted([(cia_level, policy.cia_weight), (ese_level, policy.ese_weight)])
 	indirect = indirect_level(indirect_average, policy.survey_scale, top_level(policy.bands))
-	final = weighted([(direct, policy.direct_weight), (indirect, policy.indirect_weight)]) if direct is not None else None
+	final = (
+		weighted([(direct, policy.direct_weight), (indirect, policy.indirect_weight)])
+		if direct is not None
+		else None
+	)
 	notes = [
 		note for note, missing in ((NO_CIA, cia[2] is None), (NO_ESE, ese[2] is None), (NO_INDIRECT, indirect is None), (NO_DIRECT, direct is None))
 		if missing
@@ -135,8 +140,16 @@ def po_direct(cells):
 
 def po_result(direct, indirect_average, scale, top, indirect_weight, target_level):
 	indirect = indirect_level(indirect_average, scale, top)
-	final = weighted([(direct, 100 - indirect_weight), (indirect, indirect_weight)]) if direct is not None else None
-	notes = [note for note, missing in ((NOT_MAPPED, direct is None), (NO_EXIT_SURVEY, indirect is None)) if missing]
+	final = (
+		weighted([(direct, 100 - indirect_weight), (indirect, indirect_weight)])
+		if direct is not None
+		else None
+	)
+	notes = [
+		note
+		for note, missing in ((NOT_MAPPED, direct is None), (NO_EXIT_SURVEY, indirect is None))
+		if missing
+	]
 	return Result(
 		direct_level=direct, indirect_percent=survey_percent(indirect_average, scale), indirect_level=indirect, final_level=final,
 		target_level=target_level, target_met=int(final is not None and final >= target_level),
@@ -153,6 +166,8 @@ def shown(row):
 	"""A stored result row with its missing figures as None (a Float column stores None as 0)."""
 	row = dict(row)
 	for field, flags in FLAGS.items():
-		if field in row and not any(row.get(flag) for flag in ((flags,) if isinstance(flags, str) else flags)):
+		if field in row and not any(
+			row.get(flag) for flag in ((flags,) if isinstance(flags, str) else flags)
+		):
 			row[field] = None
 	return row

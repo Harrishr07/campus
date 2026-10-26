@@ -43,6 +43,10 @@ def data(filters):
 		query["academic_year"] = filters.academic_year
 	rows = frappe.get_list("Fee Concession", query, FIELDS, order_by="creation desc", limit=0)
 	for row in rows:
-		row["concession"] = f"{row.percent}%" if row.concession_type == "Percent" else frappe.format_value(row.amount, "Currency")
+		row["concession"] = (
+			f"{row.percent}%"
+			if row.concession_type == "Percent"
+			else frappe.format_value(row.amount, "Currency")
+		)
 		row["state"] = {0: _("Awaiting approval"), 2: _("Cancelled")}.get(row.docstatus) or _(row.status)
 	return rows

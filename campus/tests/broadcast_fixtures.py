@@ -25,7 +25,9 @@ def ensure(doctype, filters, values=None):
 	name = frappe.db.exists(doctype, filters)
 	if name:
 		return name
-	return frappe.get_doc({"doctype": doctype, **filters, **(values or {})}).insert(ignore_permissions=True).name
+	return (
+		frappe.get_doc({"doctype": doctype, **filters, **(values or {})}).insert(ignore_permissions=True).name
+	)
 
 
 def make_login(email, role, companies=(COLLEGE,)):
@@ -75,7 +77,9 @@ def make_guardian(first_name, students, user=None):
 	).insert(ignore_permissions=True)
 	for student in students:
 		doc = frappe.get_doc("Student", student)
-		doc.append("guardians", {"guardian": guardian.name, "guardian_name": first_name, "relation": "Father"})
+		doc.append(
+			"guardians", {"guardian": guardian.name, "guardian_name": first_name, "relation": "Father"}
+		)
 		doc.save(ignore_permissions=True)
 	return guardian.name
 
@@ -100,7 +104,11 @@ def setup_world():
 	"""Idempotent: companies, programs, students (and their guardians), a group, departments, employees, logins."""
 	make_company(COLLEGE, "T11C")
 	make_company(OTHER_COLLEGE, "T11O")
-	ensure("Academic Year", {"academic_year_name": YEAR}, {"year_start_date": add_days(today(), -100), "year_end_date": add_days(today(), 200)})
+	ensure(
+		"Academic Year",
+		{"academic_year_name": YEAR},
+		{"year_start_date": add_days(today(), -100), "year_end_date": add_days(today(), 200)},
+	)
 	for program in (CSE, ECE):
 		ensure("Program", {"program_name": program}, {"oc_company": COLLEGE})
 	make_login(STUDENT_USER, "Student")
@@ -121,7 +129,9 @@ def setup_world():
 	for department in (DEPARTMENT, OTHER_DEPARTMENT):
 		ensure("Department", {"department_name": department, "company": COLLEGE})
 	s["dept"] = frappe.db.get_value("Department", {"department_name": DEPARTMENT, "company": COLLEGE})
-	s["other_dept"] = frappe.db.get_value("Department", {"department_name": OTHER_DEPARTMENT, "company": COLLEGE})
+	s["other_dept"] = frappe.db.get_value(
+		"Department", {"department_name": OTHER_DEPARTMENT, "company": COLLEGE}
+	)
 	s["emp_1"] = make_employee("T11Ravi", s["dept"])
 	s["emp_2"] = make_employee("T11Meena", s["dept"])
 	s["emp_other"] = make_employee("T11Kumar", s["other_dept"])

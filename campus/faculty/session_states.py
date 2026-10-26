@@ -36,7 +36,9 @@ def validate_session(doc, method=None):
 		return
 	if not (doc.oc_state_reason or "").strip() or not doc.has_value_changed("oc_state_reason"):
 		frappe.throw(
-			_("Attendance is marked for {0}: give the reason for changing the state of {1}.").format(", ".join(touched), doc.name or _("this session"))
+			_("Attendance is marked for {0}: give the reason for changing the state of {1}.").format(
+				", ".join(touched), doc.name or _("this session")
+			)
 		)
 	doc.flags.log_state_change = touched
 
@@ -56,7 +58,10 @@ def refuse_second_makeup(doc):
 	target = doc.oc_makeup_for
 	frappe.db.get_value("Course Schedule", target, "name", for_update=True)
 	other = frappe.db.get_value(
-		"Course Schedule", {"oc_session_state": MAKEUP, "oc_makeup_for": target, "name": ["!=", doc.name or ""]}, "name", for_update=True
+		"Course Schedule",
+		{"oc_session_state": MAKEUP, "oc_makeup_for": target, "name": ["!=", doc.name or ""]},
+		"name",
+		for_update=True,
 	)
 	if other:
 		frappe.throw(_("{0} already has a Makeup session: {1}.").format(target, other))
@@ -67,7 +72,10 @@ def check_link(doc, fieldname):
 	other = doc.get(fieldname)
 	if not other:
 		frappe.throw(_("{0} is needed for a {1} session.").format(label, _(doc.oc_session_state)))
-	if other == doc.name or frappe.db.get_value("Course Schedule", other, "student_group") != doc.student_group:
+	if (
+		other == doc.name
+		or frappe.db.get_value("Course Schedule", other, "student_group") != doc.student_group
+	):
 		frappe.throw(_("{0} must be another session of {1}.").format(label, doc.student_group))
 
 
@@ -79,11 +87,16 @@ def log_state_change(doc, method=None):
 		return
 	doc.flags.log_state_change = None
 	before, reason = describe(doc.get_doc_before_save()), doc.oc_state_reason.strip()
-	doc.add_comment("Info", _("Session state changed from {0} to {1}: {2}").format(before, describe(doc), reason))
+	doc.add_comment(
+		"Info", _("Session state changed from {0} to {1}: {2}").format(before, describe(doc), reason)
+	)
 	for name in touched:
 		if name != doc.name:
 			frappe.get_doc("Course Schedule", name).add_comment(
-				"Info", _("{0} changed from {1} to {2}, which concerns this session: {3}").format(doc.name, before, describe(doc), reason)
+				"Info",
+				_("{0} changed from {1} to {2}, which concerns this session: {3}").format(
+					doc.name, before, describe(doc), reason
+				),
 			)
 
 
@@ -112,10 +125,16 @@ def check_held(course_schedule, state):
 	"""check_markable, and refuse a session a held Makeup replaces (an approved correction re-checks this)."""
 	check_markable(course_schedule, state)
 	makeup = frappe.db.get_value(
-		"Course Schedule", {"oc_session_state": MAKEUP, "oc_makeup_for": course_schedule, "schedule_date": ["<=", today()]}, "name"
+		"Course Schedule",
+		{"oc_session_state": MAKEUP, "oc_makeup_for": course_schedule, "schedule_date": ["<=", today()]},
+		"name",
 	)
 	if makeup:
-		frappe.throw(_("{0} is replaced by the Makeup session {1}; its attendance cannot be changed.").format(course_schedule, makeup))
+		frappe.throw(
+			_("{0} is replaced by the Makeup session {1}; its attendance cannot be changed.").format(
+				course_schedule, makeup
+			)
+		)
 
 
 def mark_conducted(course_schedule, state):

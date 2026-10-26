@@ -203,8 +203,15 @@ class TestInstitution(CampusTestCase):
 	def make_workspace_pack(self, roles=()):
 		if not frappe.db.exists("Workspace", WORKSPACE):
 			frappe.get_doc(
-				{"doctype": "Workspace", "name": WORKSPACE, "label": WORKSPACE, "title": WORKSPACE,
-				 "public": 1, "module": "Campus Platform", "content": "[]"}
+				{
+					"doctype": "Workspace",
+					"name": WORKSPACE,
+					"label": WORKSPACE,
+					"title": WORKSPACE,
+					"public": 1,
+					"module": "Campus Platform",
+					"content": "[]",
+				}
 			).insert()
 		pack = frappe.get_doc("Module Pack", "HOSTEL")
 		pack.workspaces = []
@@ -247,20 +254,30 @@ class TestInstitution(CampusTestCase):
 			workspaces={"pages": [{"name": WORKSPACE}, {"name": "Other"}], "private_pages": []},
 			module_sidebars={
 				# the hidden workspace's own sidebar (its Home)
-				"Area": {"module": "Campus Platform", "workspaces": [WORKSPACE], "items": [hidden_link, section, other]},
+				"Area": {
+					"module": "Campus Platform",
+					"workspaces": [WORKSPACE],
+					"items": [hidden_link, section, other],
+				},
 				# the same module's sidebar as Frappe ships it to a user without the workspace role: Home gone
 				"Route Only": {"module": "Campus Platform", "workspaces": [], "items": [thing]},
 				"Mixed": {"module": "Other Module", "workspaces": ["Other"], "items": [other, hidden_link]},
 			},
 			entity_module={"Thing": "Area", "Route Thing": "Route Only", "Other Thing": "Mixed"},
-			canonical_shell={"DocType": {"Thing": "Area", "Route Thing": "Route Only", "Other Thing": "Mixed"}},
+			canonical_shell={
+				"DocType": {"Thing": "Area", "Route Thing": "Route Only", "Other Thing": "Mixed"}
+			},
 			home_shell="Area",
-			dock={"campus": [
-				{"link_type": "Workspace", "link_to": WORKSPACE},
-				{"link_type": "Sidebar", "link_to": "Area"},
-				{"link_type": "Sidebar", "link_to": "Mixed"},
-			]},
-			app_data=[{"app_name": "campus", "dock": [{"link_type": "Workspace", "link_to": WORKSPACE}, other]}],
+			dock={
+				"campus": [
+					{"link_type": "Workspace", "link_to": WORKSPACE},
+					{"link_type": "Sidebar", "link_to": "Area"},
+					{"link_type": "Sidebar", "link_to": "Mixed"},
+				]
+			},
+			app_data=[
+				{"app_name": "campus", "dock": [{"link_type": "Workspace", "link_to": WORKSPACE}, other]}
+			],
 			desktop_icons=[
 				{"label": "Direct", "link_type": "Workspace Sidebar", "link_to": WORKSPACE},
 				{"label": "Mixed", "link_type": "Workspace Sidebar", "link_to": "Other"},

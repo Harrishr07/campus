@@ -5,7 +5,10 @@ import frappe
 from frappe import _
 
 COMPANY_FIELD = {"Employee": "company", "Student": "oc_company"}
-KINDS = {"Employee": ("employee", "Employee", "employee_name"), "Student": ("student", "Student", "student_name")}
+KINDS = {
+	"Employee": ("employee", "Employee", "employee_name"),
+	"Student": ("student", "Student", "student_name"),
+}
 
 
 def validate_contributors(rows, type_field, name_field, label, company):
@@ -23,9 +26,13 @@ def validate_contributors(rows, type_field, name_field, label, company):
 			link_field, doctype, source = KINDS[kind]
 			if not row.get(link_field):
 				frappe.throw(_("Row {0}: choose the {1}.").format(row.idx, _(doctype)))
-			person = frappe.db.get_value(doctype, row.get(link_field), [source, COMPANY_FIELD[doctype]], as_dict=True)
+			person = frappe.db.get_value(
+				doctype, row.get(link_field), [source, COMPANY_FIELD[doctype]], as_dict=True
+			)
 			if person[COMPANY_FIELD[doctype]] != company:
-				frappe.throw(_("Row {0}: {1} does not belong to {2}.").format(row.idx, row.get(link_field), company))
+				frappe.throw(
+					_("Row {0}: {1} does not belong to {2}.").format(row.idx, row.get(link_field), company)
+				)
 			row.set(name_field, person[source])
 			key = (kind, row.get(link_field))
 		else:

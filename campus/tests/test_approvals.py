@@ -100,7 +100,9 @@ class TestApprovalFlow(ApprovalTestCase):
 	def test_an_approver_who_cannot_open_the_document_is_dropped_when_others_remain(self):
 		frappe.get_doc("User", fx.DEAN).add_roles("Accounts User")
 		frappe.get_doc("User", fx.OTHER_DELEGATE).add_roles("Accounts User")  # restricted to another company
-		fx.make_policy("APR Test Mixed Readers", [fx.level("Role", "Accounts User", limit_to_company=0)], priority=99)
+		fx.make_policy(
+			"APR Test Mixed Readers", [fx.level("Role", "Accounts User", limit_to_company=0)], priority=99
+		)
 		_doc, name = self.new_request()
 		approvers = frappe.get_all("Approval Request Approver", {"parent": name}, pluck="user")
 		self.assertIn(fx.DEAN, approvers)
@@ -109,7 +111,11 @@ class TestApprovalFlow(ApprovalTestCase):
 	def test_too_few_readable_approvers_are_refused_naming_the_blind_ones(self):
 		frappe.get_doc("User", fx.DEAN).add_roles("Accounts User")
 		frappe.get_doc("User", fx.OTHER_DELEGATE).add_roles("Accounts User")
-		fx.make_policy("APR Test Too Few", [fx.level("Role", "Accounts User", min_approvals=50, limit_to_company=0)], priority=99)
+		fx.make_policy(
+			"APR Test Too Few",
+			[fx.level("Role", "Accounts User", min_approvals=50, limit_to_company=0)],
+			priority=99,
+		)
 		doc = fx.make_document(60000, self.department)
 		with self.assertRaisesRegex(frappe.ValidationError, "Approvers .*cannot open"):
 			request_approval(fx.DOCTYPE, doc.name)
@@ -362,6 +368,10 @@ class TestBeforeApprovalRequestHook(ApprovalTestCase):
 		doc = fx.make_document(60000, self.department, notes="refuse-request")
 		with self.assertRaises(frappe.ValidationError):
 			request_approval(fx.DOCTYPE, doc.name)
-		self.assertFalse(frappe.db.exists("Approval Request", {"reference_doctype": fx.DOCTYPE, "reference_name": doc.name}))
+		self.assertFalse(
+			frappe.db.exists(
+				"Approval Request", {"reference_doctype": fx.DOCTYPE, "reference_name": doc.name}
+			)
+		)
 		doc.db_set("notes", "fine")
 		self.assertTrue(request_approval(fx.DOCTYPE, doc.name))

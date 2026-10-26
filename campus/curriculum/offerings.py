@@ -24,8 +24,17 @@ def generate_offerings(curriculum, academic_term, sections):
 	doc = frappe.get_doc("Curriculum", curriculum)
 	frappe.has_permission("Curriculum", "read", doc=doc, throw=True)
 	if doc.status not in OFFERABLE:
-		frappe.throw(_("Curriculum {0} is {1}; offerings need an Approved or Effective curriculum.").format(doc.name, _(doc.status)))
-	term = frappe.db.get_value("Academic Term", academic_term, ["academic_year", "term_name", "term_start_date", "oc_semester_parity"], as_dict=True)
+		frappe.throw(
+			_("Curriculum {0} is {1}; offerings need an Approved or Effective curriculum.").format(
+				doc.name, _(doc.status)
+			)
+		)
+	term = frappe.db.get_value(
+		"Academic Term",
+		academic_term,
+		["academic_year", "term_name", "term_start_date", "oc_semester_parity"],
+		as_dict=True,
+	)
 	if not term:
 		frappe.throw(_("Academic Term {0} does not exist.").format(frappe.bold(academic_term)))
 	sections = parse_sections(sections)
@@ -59,7 +68,9 @@ def parse_sections(sections):
 def seat_caps(curriculum):
 	return {
 		g.name: cint(g.seat_cap_per_course)
-		for g in frappe.get_all("Elective Group", filters={"curriculum": curriculum}, fields=["name", "seat_cap_per_course"])
+		for g in frappe.get_all(
+			"Elective Group", filters={"curriculum": curriculum}, fields=["name", "seat_cap_per_course"]
+		)
 	}
 
 

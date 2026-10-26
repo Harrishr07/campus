@@ -204,7 +204,15 @@ TEMPLATES = {
 			],
 			"components": ["fees_category", "amount"],
 		},
-		"required": ["company", "program", "academic_year", "receivable_account", "cost_center", "fees_category", "amount"],
+		"required": [
+			"company",
+			"program",
+			"academic_year",
+			"receivable_account",
+			"cost_center",
+			"fees_category",
+			"amount",
+		],
 	},
 	"Opening Fee Balances": {
 		"doctype": "Sales Invoice",
@@ -248,7 +256,12 @@ def download_import_template(template: str, file_type: str = "CSV"):
 # file is opened.
 IMPORT_CHECK_ROLE = "Admission Officer"
 IMPORT_CHECK_RIGHTS = {"read": 1, "report": 1}  # no write/create: the officer cannot start or stop an import
-FIRST_CUT_RIGHTS = {"read": 1, "write": 1, "create": 1, "report": 1}  # the earlier rule, which patch narrow_officer_rights trims
+FIRST_CUT_RIGHTS = {
+	"read": 1,
+	"write": 1,
+	"create": 1,
+	"report": 1,
+}  # the earlier rule, which patch narrow_officer_rights trims
 OWN_IMPORTS_EXEMPT = ("System Manager",)  # Data Import's own role reads every import
 
 
@@ -264,7 +277,9 @@ def grant_import_check_rights():
 	)  # fmt: skip
 	if rule:
 		if rule.if_owner and all(rule[right] == value for right, value in FIRST_CUT_RIGHTS.items()):
-			frappe.db.set_value("Custom DocPerm", rule.name, {"if_owner": 0, "write": 0, "create": 0, "export": 0})
+			frappe.db.set_value(
+				"Custom DocPerm", rule.name, {"if_owner": 0, "write": 0, "create": 0, "export": 0}
+			)
 			frappe.clear_cache(doctype="Data Import")
 		return
 	setup_custom_perms("Data Import")  # copies the standard rules first, so System Manager keeps its own
@@ -563,7 +578,13 @@ class OpeningBalanceChecks(RowChecks):
 		found = super().run(record)
 		if record["row"] in self.other_rows:
 			return found
-		return found + self.opening(record) + self.student(record) + self.accounts(record) + self.deposits(record)
+		return (
+			found
+			+ self.opening(record)
+			+ self.student(record)
+			+ self.accounts(record)
+			+ self.deposits(record)
+		)
 
 	def opening(self, record):
 		return [

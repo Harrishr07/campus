@@ -17,8 +17,20 @@ from campus.student_services.attendance_rules import (
 )
 
 COUNTING = {"od_counts": 1, "medical_counts": 1}
-R2022 = {"formula": "sum_based", "overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 0, **COUNTING}
-R2026 = {"formula": "course_average", "overall_min_pct": 80, "medical_band_min_pct": 70, "per_course_min_pct": 75, **COUNTING}
+R2022 = {
+	"formula": "sum_based",
+	"overall_min_pct": 75,
+	"medical_band_min_pct": 65,
+	"per_course_min_pct": 0,
+	**COUNTING,
+}
+R2026 = {
+	"formula": "course_average",
+	"overall_min_pct": 80,
+	"medical_band_min_pct": 70,
+	"per_course_min_pct": 75,
+	**COUNTING,
+}
 R2026_BANDS = [(80, 85, 2), (86, 90, 3), (91, 95, 4), (96, None, 5)]
 
 # name, courses [(conducted, attended, approved leave)], R2022 overall %, R2022 status, R2026 overall %, R2026 status.
@@ -91,7 +103,16 @@ class TestLeaveKindsAndMarks(UnitTestCase):
 
 	def test_attendance_mark_bands(self):
 		for pct, marks in [
-			(79.4, 0), (79.5, 2), (80, 2), (85.4, 2), (85.5, 3), (90, 3), (90.5, 4), (95.4, 4), (95.5, 5), (100, 5),
+			(79.4, 0),
+			(79.5, 2),
+			(80, 2),
+			(85.4, 2),
+			(85.5, 3),
+			(90, 3),
+			(90.5, 4),
+			(95.4, 4),
+			(95.5, 5),
+			(100, 5),
 		]:
 			with self.subTest(pct=pct):
 				self.assertEqual(attendance_marks(R2026_BANDS, pct), marks)

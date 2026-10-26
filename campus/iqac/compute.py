@@ -25,7 +25,10 @@ CHUNK = 10
 
 def formula_nodes(framework):
 	return frappe.get_all(
-		"Framework Node", {"framework": framework, "node_type": "Metric", "formula": ["is", "set"]}, pluck="name", order_by="code"
+		"Framework Node",
+		{"framework": framework, "node_type": "Metric", "formula": ["is", "set"]},
+		pluck="name",
+		order_by="code",
 	)
 
 
@@ -74,14 +77,21 @@ def compute_node_everywhere(cycle, node, done, nodes):
 	"""The college's Metric Value of `node`, and a row per programme department when the node is department-wise."""
 	names = [compute_node(cycle, node, done, nodes)]
 	if frappe.db.get_value("Framework Node", node, "department_wise"):
-		names += [compute_node(cycle, node, done, nodes, department) for department in programme_departments(cycle.company)]
+		names += [
+			compute_node(cycle, node, done, nodes, department)
+			for department in programme_departments(cycle.company)
+		]
 	return names
 
 
 def programme_departments(company):
 	"""Departments that own programmes of the college."""
 	return frappe.get_all(
-		"Program", {"oc_company": company, "department": ["is", "set"]}, pluck="department", distinct=True, order_by="department"
+		"Program",
+		{"oc_company": company, "department": ["is", "set"]},
+		pluck="department",
+		distinct=True,
+		order_by="department",
 	)
 
 
@@ -96,8 +106,12 @@ def compute_node(cycle, node, done=None, nodes=None, department=None):
 	if (node, department) in done:
 		return done[(node, department)]
 	if node_doc.framework != cycle.framework or not node_doc.formula:
-		frappe.throw(_("{0} has no formula in framework {1}.").format(frappe.bold(node), frappe.bold(cycle.framework)))
-	done[(node, department)] = None  # a node met again before it finishes is a cycle that validation should have refused
+		frappe.throw(
+			_("{0} has no formula in framework {1}.").format(frappe.bold(node), frappe.bold(cycle.framework))
+		)
+	done[(node, department)] = (
+		None  # a node met again before it finishes is a cycle that validation should have refused
+	)
 	nodes = nodes or framework_nodes(cycle.framework, lock=False)
 	inputs = {key: input_of(cycle, key, nodes, done, department) for key in referenced_keys(node_doc.formula)}
 	try:
@@ -114,7 +128,13 @@ def compute_node(cycle, node, done=None, nodes=None, department=None):
 		note_source_change(metric, value, inputs)
 	else:
 		metric.update(
-			{"computed_value": value, "computed_at": computed_at, "snapshot": json.dumps(snapshot, indent=1), "source_changed": 0, "recomputed_value": None}
+			{
+				"computed_value": value,
+				"computed_at": computed_at,
+				"snapshot": json.dumps(snapshot, indent=1),
+				"source_changed": 0,
+				"recomputed_value": None,
+			}
 		)
 		metric.flags.engine_write = True
 		metric.save(ignore_permissions=True)
@@ -130,11 +150,16 @@ def input_of(cycle, key, nodes, done, department=None):
 	name = compute_node(cycle, f"{cycle.framework}-{code}", done, nodes, department)
 	if name is None:
 		frappe.throw(_("Node {0} uses itself in its formula.").format(frappe.bold(code)))
-	return {"value": frappe.db.get_value("Metric Value", name, "value"), "records": [{"doctype": "Metric Value", "name": name}]}
+	return {
+		"value": frappe.db.get_value("Metric Value", name, "value"),
+		"records": [{"doctype": "Metric Value", "name": name}],
+	}
 
 
 def metric_value(cycle, node_doc, department=None):
 	name = f"{cycle}-{node_doc.code}" + (f"-{department}" if department else "")
 	if frappe.db.exists("Metric Value", name):
 		return frappe.get_doc("Metric Value", name, for_update=True)
-	return frappe.new_doc("Metric Value").update({"cycle": cycle, "node": node_doc.name, "department": department})
+	return frappe.new_doc("Metric Value").update(
+		{"cycle": cycle, "node": node_doc.name, "department": department}
+	)

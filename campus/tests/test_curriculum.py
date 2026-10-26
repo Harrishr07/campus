@@ -156,7 +156,9 @@ class TestCurriculum(CampusTestCase):
 	def test_range_165_to_170_enforced_once_approved(self):
 		for total in (165, 167, 170):
 			frappe.db.delete("Curriculum", {"program": PROGRAM})
-			frappe.db.delete("Curriculum Course", {"parenttype": "Curriculum", "parent": ["like", f"{ABBR}-%"]})
+			frappe.db.delete(
+				"Curriculum Course", {"parenttype": "Curriculum", "parent": ["like", f"{ABBR}-%"]}
+			)
 			self.advance(self.make(in_range_rows(total)), "Approved")
 		for total, word in ((164, "below"), (171, "above")):
 			frappe.db.delete("Curriculum", {"program": PROGRAM})
@@ -173,7 +175,10 @@ class TestCurriculum(CampusTestCase):
 		self.assertTrue(any("below" in message.get("message", "") for message in frappe.get_message_log()))
 
 	def test_category_shortfalls_listed_when_approving(self):
-		doc = self.make(in_range_rows(167), requirements=[{"category": "PCC", "min_credits": 200}, {"category": "HSMC", "min_credits": 10}])
+		doc = self.make(
+			in_range_rows(167),
+			requirements=[{"category": "PCC", "min_credits": 200}, {"category": "HSMC", "min_credits": 10}],
+		)
 		doc.status = "Approved"
 		with self.assertRaises(frappe.ValidationError) as ctx:
 			doc.save()
@@ -232,7 +237,17 @@ class TestCurriculum(CampusTestCase):
 	def test_elective_group_must_match_curriculum_and_semester(self):
 		doc = self.make()
 		group = self.make_group(doc, semester=1)
-		doc.append("courses", row(COURSES[2], semester=2, is_elective=1, elective_group=group.name, credits_override=1, credits=0))
+		doc.append(
+			"courses",
+			row(
+				COURSES[2],
+				semester=2,
+				is_elective=1,
+				elective_group=group.name,
+				credits_override=1,
+				credits=0,
+			),
+		)
 		self.assert_save_fails(doc, "another curriculum or semester")
 		doc.courses[-1].semester = 1
 		doc.courses[-1].is_elective = 0
@@ -276,7 +291,10 @@ class TestCurriculum(CampusTestCase):
 	def test_new_version_copies_into_a_draft_and_remaps_groups(self):
 		doc = self.make()
 		group = self.make_group(doc)
-		doc.append("courses", row(COURSES[2], is_elective=1, elective_group=group.name, credits_override=1, credits=0))
+		doc.append(
+			"courses",
+			row(COURSES[2], is_elective=1, elective_group=group.name, credits_override=1, credits=0),
+		)
 		doc.save()
 		self.advance(doc, "Approved")
 		self.advance(doc, "Effective")
@@ -301,7 +319,9 @@ class TestCurriculum(CampusTestCase):
 		v2 = frappe.get_doc("Curriculum", create_new_version(v1.name))
 		self.advance(v2, "Approved")
 		self.advance(v2, "Effective")
-		statuses = frappe.get_all("Curriculum", filters={"program": PROGRAM}, fields=["version", "status"], order_by="version")
+		statuses = frappe.get_all(
+			"Curriculum", filters={"program": PROGRAM}, fields=["version", "status"], order_by="version"
+		)
 		self.assertEqual([(s.version, s.status) for s in statuses], [(1, "Superseded"), (2, "Effective")])
 		v1.reload()
 		v1.courses[0].lecture_periods = 1
@@ -350,7 +370,16 @@ class TestCurriculum(CampusTestCase):
 			requirements=[{"category": "PCC", "min_credits": 2}],
 		)  # fmt: skip
 		html = frappe.get_print("Curriculum", doc.name, "Curriculum Structure")
-		for text in ("Semester 1", "Semester 2", COURSES[0], "Semester total", "Category-wise credits", "PCC", "BSC", "AC"):
+		for text in (
+			"Semester 1",
+			"Semester 2",
+			COURSES[0],
+			"Semester total",
+			"Category-wise credits",
+			"PCC",
+			"BSC",
+			"AC",
+		):
 			self.assertIn(text, html)
 		self.assertIn("Total credits (counted)", html)
 		self.assertRegex(html, r"Total credits \(counted\)</th>\s*<th class=\"text-right\">8")

@@ -35,7 +35,10 @@ def deciding_rounds(marks, method):
 	if len(marks) == 2:
 		return tuple(sorted(marks))
 	if method == AVERAGE_OF_CLOSEST_TWO:
-		pair = min(combinations(sorted(marks), 2), key=lambda p: (abs(marks[p[0]] - marks[p[1]]), -(marks[p[0]] + marks[p[1]])))
+		pair = min(
+			combinations(sorted(marks), 2),
+			key=lambda p: (abs(marks[p[0]] - marks[p[1]]), -(marks[p[0]] + marks[p[1]])),
+		)
 		return tuple(pair)
 	third = marks[3]
 	nearer = min((1, 2), key=lambda r: (abs(marks[r] - third), -marks[r]))

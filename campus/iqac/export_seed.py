@@ -30,7 +30,13 @@ def seed_export_templates():
 		if frappe.db.exists("Export Template", template):
 			continue
 		if not frappe.db.exists("Accreditation Framework", framework):
-			frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": framework, "framework_code": framework}).insert(ignore_permissions=True)
+			frappe.get_doc(
+				{
+					"doctype": "Accreditation Framework",
+					"framework_name": framework,
+					"framework_code": framework,
+				}
+			).insert(ignore_permissions=True)
 		make_template(template, framework, "Excel", EMPTY_NOTE.format(framework), [])
 
 
@@ -47,8 +53,18 @@ def make_template(name, framework, export_format, description, rows):
 
 def answer_nodes():
 	"""Answer nodes of the AQAR framework in code order (Extended Profile first), each with whether it has a Data Template slot."""
-	with_slot = set(frappe.get_all("Framework Node Evidence Slot", {"parenttype": "Framework Node", "slot_name": "Data Template"}, pluck="parent"))
-	nodes = frappe.get_all("Framework Node", {"framework": FRAMEWORK, "node_type": ["in", ANSWER_NODES]}, ["name", "code", "node_type"])
+	with_slot = set(
+		frappe.get_all(
+			"Framework Node Evidence Slot",
+			{"parenttype": "Framework Node", "slot_name": "Data Template"},
+			pluck="parent",
+		)
+	)
+	nodes = frappe.get_all(
+		"Framework Node",
+		{"framework": FRAMEWORK, "node_type": ["in", ANSWER_NODES]},
+		["name", "code", "node_type"],
+	)
 	for node in nodes:
 		node.data_sheet = int(node.name in with_slot and node.node_type == "Metric")
 	return sorted(nodes, key=lambda n: (n.node_type != "Extended Profile", natural(n.code)))
@@ -62,12 +78,27 @@ def excel_rows(nodes):
 	"""Sheet `Extended Profile` and one `Criterion <n>` per criterion; label in column A, value in column B."""
 	used, rows = {}, []
 	for node in nodes:
-		sheet = "Extended Profile" if node.node_type == "Extended Profile" else f"Criterion {node.code.split('.')[0]}"
+		sheet = (
+			"Extended Profile"
+			if node.node_type == "Extended Profile"
+			else f"Criterion {node.code.split('.')[0]}"
+		)
 		used[sheet] = used.get(sheet, FIRST_ROW - 1) + 1
-		rows.append({"node": node.name, "sheet": sheet, "cell": f"B{used[sheet]}", "label_cell": f"A{used[sheet]}", "data_sheet": node.data_sheet})
+		rows.append(
+			{
+				"node": node.name,
+				"sheet": sheet,
+				"cell": f"B{used[sheet]}",
+				"label_cell": f"A{used[sheet]}",
+				"data_sheet": node.data_sheet,
+			}
+		)
 	return rows
 
 
 def pdf_rows(nodes):
 	"""Extended Profile, then Part B (every criterion's metrics in code order); the cover block is Part A."""
-	return [{"node": n.name, "section": "Extended Profile" if n.node_type == "Extended Profile" else "Part B"} for n in nodes]
+	return [
+		{"node": n.name, "section": "Extended Profile" if n.node_type == "Extended Profile" else "Part B"}
+		for n in nodes
+	]

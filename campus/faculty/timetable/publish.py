@@ -26,21 +26,35 @@ def publish_timetable(timetable):
 	doc = frappe.get_doc("Timetable", timetable)
 	doc.check_permission("write")
 	preflight(doc)
-	frappe.db.set_value("Timetable", timetable, {"publish_state": "Queued", "publish_error": None}, update_modified=False)
+	frappe.db.set_value(
+		"Timetable", timetable, {"publish_state": "Queued", "publish_error": None}, update_modified=False
+	)
 	frappe.enqueue(
-		"campus.faculty.timetable.publish.publish_job", queue=QUEUE, timeout=3600, now=frappe.in_test, enqueue_after_commit=True, timetable=timetable
+		"campus.faculty.timetable.publish.publish_job",
+		queue=QUEUE,
+		timeout=3600,
+		now=frappe.in_test,
+		enqueue_after_commit=True,
+		timetable=timetable,
 	)
 
 
 def publish_job(timetable, as_of=None):
 	"""The job: publish, or record why not. A failure rolls back to the start and leaves the old schedules as they were."""
 	frappe.db.savepoint(SAVEPOINT)
-	frappe.db.set_value("Timetable", timetable, {"publish_state": "Publishing", "publish_error": None}, update_modified=False)
+	frappe.db.set_value(
+		"Timetable", timetable, {"publish_state": "Publishing", "publish_error": None}, update_modified=False
+	)
 	try:
 		publish_now(timetable, as_of=as_of)
 	except Exception as error:
 		frappe.db.rollback(save_point=SAVEPOINT)
-		frappe.db.set_value("Timetable", timetable, {"publish_state": "Failed", "publish_error": str(error)[:1000]}, update_modified=False)
+		frappe.db.set_value(
+			"Timetable",
+			timetable,
+			{"publish_state": "Failed", "publish_error": str(error)[:1000]},
+			update_modified=False,
+		)
 	if not frappe.in_test:
 		frappe.db.commit()  # nosemgrep: the worker publishes its outcome; tests run in one rolled-back transaction
 
@@ -50,7 +64,12 @@ def preflight(doc):
 	doc.check_hard_constraints()
 	missing = sorted(t for t in {e.faculty for e in doc.entries} if not instructor_of(t))
 	if missing:
-		frappe.throw(_("No Instructor record for {0}, so their classes cannot be scheduled.").format(", ".join(missing)), title=_("Cannot Publish"))
+		frappe.throw(
+			_("No Instructor record for {0}, so their classes cannot be scheduled.").format(
+				", ".join(missing)
+			),
+			title=_("Cannot Publish"),
+		)
 	clashes = cross_timetable_clashes(doc)
 	if clashes:
 		frappe.throw("<br>".join(clashes[:12]), title=_("Clashes with Another Published Timetable"))
@@ -63,12 +82,21 @@ def instructor_of(employee):
 def cross_timetable_clashes(doc):
 	"""Teacher or room used at the same time by another published Timetable of the company and term."""
 	others = frappe.get_all(
-		"Timetable", {"company": doc.company, "academic_term": doc.academic_term, "status": ["in", PUBLISHED], "name": ["!=", doc.name]}, pluck="name"
+		"Timetable",
+		{
+			"company": doc.company,
+			"academic_term": doc.academic_term,
+			"status": ["in", PUBLISHED],
+			"name": ["!=", doc.name],
+		},
+		pluck="name",
 	)
 	if not others:
 		return []
 	rows = frappe.get_all(
-		"Timetable Entry", {"parent": ["in", others]}, ["parent", "faculty", "room", "day", "from_time", "to_time", "offering"]
+		"Timetable Entry",
+		{"parent": ["in", others]},
+		["parent", "faculty", "room", "day", "from_time", "to_time", "offering"],
 	)
 	found = []
 	for mine in doc.entries:
@@ -77,12 +105,23 @@ def cross_timetable_clashes(doc):
 				continue
 			for what, label in (("faculty", _("Teacher")), ("room", _("Room"))):
 				if other[what] == mine.get(what):
-					found.append(_("{0} {1} is also booked on {2} {3} in {4} ({5}).").format(label, mine.get(what), mine.day, to_timedelta(mine.from_time), other.parent, other.offering))
+					found.append(
+						_("{0} {1} is also booked on {2} {3} in {4} ({5}).").format(
+							label,
+							mine.get(what),
+							mine.day,
+							to_timedelta(mine.from_time),
+							other.parent,
+							other.offering,
+						)
+					)
 	return found
 
 
 def overlaps(a, b):
-	return to_timedelta(a.from_time) < to_timedelta(b.to_time) and to_timedelta(b.from_time) < to_timedelta(a.to_time)
+	return to_timedelta(a.from_time) < to_timedelta(b.to_time) and to_timedelta(b.from_time) < to_timedelta(
+		a.to_time
+	)
 
 
 def publish_now(timetable, as_of=None):
@@ -90,7 +129,9 @@ def publish_now(timetable, as_of=None):
 	frappe.db.get_value("Timetable", timetable, "name", for_update=True)  # one publish at a time
 	doc = frappe.get_doc("Timetable", timetable, for_update=True)
 	preflight(doc)
-	term = frappe.db.get_value("Academic Term", doc.academic_term, ["term_start_date", "term_end_date"], as_dict=True)
+	term = frappe.db.get_value(
+		"Academic Term", doc.academic_term, ["term_start_date", "term_end_date"], as_dict=True
+	)
 	start = max(getdate(as_of or today()), getdate(term.term_start_date))
 	kept, removed = remove_future_schedules(doc.name, start)
 	created = create_schedules(doc, start, getdate(term.term_end_date), kept)
@@ -104,9 +145,17 @@ def publish_now(timetable, as_of=None):
 def remove_future_schedules(timetable, start):
 	"""Delete the timetable's unmarked schedules from `start`; returns ({(group, date, from_time)} of those kept, count deleted)."""
 	schedules = frappe.get_all(
-		"Course Schedule", {"oc_timetable": timetable, "schedule_date": [">=", start]}, ["name", "student_group", "schedule_date", "from_time"]
+		"Course Schedule",
+		{"oc_timetable": timetable, "schedule_date": [">=", start]},
+		["name", "student_group", "schedule_date", "from_time"],
 	)
-	marked = set(frappe.get_all("Student Attendance", {"course_schedule": ["in", [s.name for s in schedules] or [""]]}, pluck="course_schedule"))
+	marked = set(
+		frappe.get_all(
+			"Student Attendance",
+			{"course_schedule": ["in", [s.name for s in schedules] or [""]]},
+			pluck="course_schedule",
+		)
+	)
 	kept, removed = set(), 0
 	for schedule in schedules:
 		if schedule.name in marked or not delete_schedule(schedule.name):

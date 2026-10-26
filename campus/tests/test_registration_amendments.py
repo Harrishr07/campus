@@ -4,8 +4,8 @@ are cumulative over active registrations, and the window deadline holds for amen
 import frappe
 from frappe.utils import add_days, today
 
-from campus.tests.test_registration import COLLEGE, PROGRAM, RegistrationTestCase
 from campus.tests.factories import make_user
+from campus.tests.test_registration import COLLEGE, PROGRAM, RegistrationTestCase
 from campus.tests.test_regulation import enroll, make_year, year_name
 
 RE_ENROLMENT_YEARS = ("2020", "2021", "2023", "2026")  # years make_year knows; the first enrolment is 2022
@@ -26,7 +26,9 @@ class TestEnrollmentBinding(RegistrationTestCase):
 
 	def re_enroll(self, student):
 		"""Enroll the student again, in a year not used before."""
-		taken = frappe.get_all("Program Enrollment", {"student": self.students[student].name}, pluck="academic_year")
+		taken = frappe.get_all(
+			"Program Enrollment", {"student": self.students[student].name}, pluck="academic_year"
+		)
 		year = next(y for y in RE_ENROLMENT_YEARS if year_name(y) not in taken)
 		make_year(year)
 		return enroll(self.students[student], PROGRAM, year).name
@@ -49,8 +51,11 @@ class TestEnrollmentBinding(RegistrationTestCase):
 		newer = self.re_enroll(4)
 		frappe.get_doc(
 			{
-				"doctype": "Course Enrollment", "student": self.students[4].name, "course": "REG C",
-				"program_enrollment": newer, "enrollment_date": today(),
+				"doctype": "Course Enrollment",
+				"student": self.students[4].name,
+				"course": "REG C",
+				"program_enrollment": newer,
+				"enrollment_date": today(),
 			}
 		).insert()
 		doc.cancel()
@@ -181,7 +186,10 @@ class TestLateRegistration(RegistrationTestCase):
 		self.window.reload()
 		with self.assertRaisesRegex(frappe.ValidationError, "not open"):
 			self.registration([("REG C", "Regular")], date="2022-06-10", late_reason=None)
-		self.assertEqual(self.regular("REG C", date="2022-06-10", late_reason="Backdated").late_approved_by, "Administrator")
+		self.assertEqual(
+			self.regular("REG C", date="2022-06-10", late_reason="Backdated").late_approved_by,
+			"Administrator",
+		)
 
 	def test_adding_a_course_to_a_late_draft_needs_the_late_role_again(self):
 		doc = self.late(late_reason="Medical leave in the window")
@@ -195,7 +203,9 @@ class TestLateRegistration(RegistrationTestCase):
 	def test_authorised_late_registration_keeps_approver_and_reason(self):
 		doc = self.late(late_reason="Medical leave in the window")
 		doc.reload()
-		self.assertEqual((doc.late_approved_by, doc.late_reason), ("Administrator", "Medical leave in the window"))
+		self.assertEqual(
+			(doc.late_approved_by, doc.late_reason), ("Administrator", "Medical leave in the window")
+		)
 
 	def test_user_without_the_late_role_cannot_authorise(self):
 		make_user("reg-late-clerk@example.com", [COLLEGE])

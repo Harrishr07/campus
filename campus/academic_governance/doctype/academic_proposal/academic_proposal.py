@@ -10,7 +10,14 @@ from frappe.utils import today
 
 from campus.academic_governance import proposal_approval, proposals
 
-SERVER_FIELDS = ("status", "submitted_on", "current_stage", "current_body_type", "approved_on", "approving_resolution")
+SERVER_FIELDS = (
+	"status",
+	"submitted_on",
+	"current_stage",
+	"current_body_type",
+	"approved_on",
+	"approving_resolution",
+)
 SUBJECT_FIELDS = ("proposal_type", "company", "department", "regulation", "curriculum")
 
 
@@ -41,7 +48,9 @@ class AcademicProposal(Document):
 			self.set("stage_resolutions", [])
 			return
 		if before.status in ("Approved", "Rejected"):
-			frappe.throw(_("{0} is {1} and cannot be changed.").format(frappe.bold(self.name), _(before.status)))
+			frappe.throw(
+				_("{0} is {1} and cannot be changed.").format(frappe.bold(self.name), _(before.status))
+			)
 		self.update({field: before.get(field) for field in SERVER_FIELDS})
 		self.set("stage_resolutions", [row.as_dict() for row in before.stage_resolutions])
 
@@ -52,21 +61,35 @@ class AcademicProposal(Document):
 		changed = [f for f in SUBJECT_FIELDS if self.get(f) != before.get(f)]
 		changed += [t for t in ("batches", "courses") if listed(self, t) != listed(before, t)]
 		if changed:
-			frappe.throw(_("The route has started; {0} can no longer change.").format(", ".join(_(self.meta.get_label(f)) for f in changed)))
+			frappe.throw(
+				_("The route has started; {0} can no longer change.").format(
+					", ".join(_(self.meta.get_label(f)) for f in changed)
+				)
+			)
 
 	def validate_subject(self):
 		kind = self.proposal_type_doc
-		curriculum = self.curriculum and frappe.db.get_value("Curriculum", self.curriculum, ["regulation", "status"], as_dict=True)
+		curriculum = self.curriculum and frappe.db.get_value(
+			"Curriculum", self.curriculum, ["regulation", "status"], as_dict=True
+		)
 		if kind.requires_curriculum and not self.curriculum:
 			frappe.throw(_("A {0} proposal needs a Curriculum Draft.").format(_(self.proposal_type)))
 		if curriculum:
 			self.regulation = self.regulation or curriculum.regulation
 			if curriculum.regulation != self.regulation:
-				frappe.throw(_("Curriculum {0} belongs to regulation {1}, not {2}.").format(self.curriculum, curriculum.regulation, self.regulation))
+				frappe.throw(
+					_("Curriculum {0} belongs to regulation {1}, not {2}.").format(
+						self.curriculum, curriculum.regulation, self.regulation
+					)
+				)
 		if kind.changes_regulation and not self.regulation:
 			frappe.throw(_("A {0} proposal needs a Regulation.").format(_(self.proposal_type)))
 		if curriculum and self.status == "Draft" and curriculum.status not in proposal_approval.OPEN_STATUSES:
-			frappe.throw(_("Curriculum {0} is {1}; propose a new version instead.").format(frappe.bold(self.curriculum), _(curriculum.status)))
+			frappe.throw(
+				_("Curriculum {0} is {1}; propose a new version instead.").format(
+					frappe.bold(self.curriculum), _(curriculum.status)
+				)
+			)
 		self.validate_company()
 		self.validate_batches()
 
@@ -74,7 +97,11 @@ class AcademicProposal(Document):
 		for doctype, name in (("Department", self.department), ("Regulation", self.regulation)):
 			company = name and frappe.db.get_value(doctype, name, "company")
 			if company and company != self.company:
-				frappe.throw(_("{0} {1} belongs to {2}, not {3}.").format(_(doctype), frappe.bold(name), company, self.company))
+				frappe.throw(
+					_("{0} {1} belongs to {2}, not {3}.").format(
+						_(doctype), frappe.bold(name), company, self.company
+					)
+				)
 
 	def validate_batches(self):
 		years = listed(self, "batches")
@@ -97,13 +124,21 @@ class AcademicProposal(Document):
 		if self.curriculum:
 			status = frappe.db.get_value("Curriculum", self.curriculum, "status")
 			if status not in proposal_approval.OPEN_STATUSES:
-				frappe.throw(_("Curriculum {0} is {1}; propose a new version instead.").format(frappe.bold(self.curriculum), _(status)))
+				frappe.throw(
+					_("Curriculum {0} is {1}; propose a new version instead.").format(
+						frappe.bold(self.curriculum), _(status)
+					)
+				)
 			if not self.batches:
 				frappe.throw(_("List the batches this curriculum is effective for."))
 		if self.proposal_type_doc.changes_regulation:
 			status = frappe.db.get_value("Regulation", self.regulation, "status")
 			if status not in proposal_approval.OPEN_STATUSES:
-				frappe.throw(_("Regulation {0} is {1}; amend it as a new version and propose that.").format(frappe.bold(self.regulation), _(status)))
+				frappe.throw(
+					_("Regulation {0} is {1}; amend it as a new version and propose that.").format(
+						frappe.bold(self.regulation), _(status)
+					)
+				)
 
 	@frappe.whitelist()
 	def advance_stage(self):
@@ -116,9 +151,9 @@ class AcademicProposal(Document):
 		found = proposals.find_resolution(self, self.current_body_type, previous)
 		if not found:
 			frappe.throw(
-				_("No resolution of a quorate meeting of {0} decides this proposal yet. Record it in the meeting's resolutions first.").format(
-					frappe.bold(self.current_body_type)
-				),
+				_(
+					"No resolution of a quorate meeting of {0} decides this proposal yet. Record it in the meeting's resolutions first."
+				).format(frappe.bold(self.current_body_type)),
 				title=_("Resolution Needed"),
 			)
 		frappe.db.savepoint("academic_proposal_advance")
@@ -130,7 +165,9 @@ class AcademicProposal(Document):
 		return self.status
 
 	def record_stage(self, found, route):
-		self.append("stage_resolutions", {**found, "stage": self.current_stage, "body_type": self.current_body_type})
+		self.append(
+			"stage_resolutions", {**found, "stage": self.current_stage, "body_type": self.current_body_type}
+		)
 		if found.decision == "Rejected":
 			self.status = "Rejected"
 		elif self.current_stage < len(route):
@@ -139,7 +176,11 @@ class AcademicProposal(Document):
 		else:
 			self.validate_ready_for_approval()
 			proposal_approval.apply(self, self.proposal_type_doc, found.resolution_no)
-			self.status, self.approved_on, self.approving_resolution = "Approved", found.resolution_date, found.resolution_no
+			self.status, self.approved_on, self.approving_resolution = (
+				"Approved",
+				found.resolution_date,
+				found.resolution_no,
+			)
 		self.save_as_server()
 
 	def save_as_server(self):

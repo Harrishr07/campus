@@ -182,7 +182,9 @@ def seed_regulation(regulation, code):
 		if not frappe.db.exists(doctype, {"regulation": regulation}):
 			frappe.get_doc(values(regulation, code)).insert(ignore_permissions=True)
 	for template in cia_templates(regulation, code):
-		if not frappe.db.exists("CIA Component Template", {"regulation": regulation, "course_type": template["course_type"]}):
+		if not frappe.db.exists(
+			"CIA Component Template", {"regulation": regulation, "course_type": template["course_type"]}
+		):
 			frappe.get_doc(template).insert(ignore_permissions=True)
 
 
@@ -196,22 +198,39 @@ def fill_lateral_distinction_years():
 	company suffix ignored) their lateral-entry limit. Rows already set are left alone. DML only; run by a patch."""
 	for code, years in LATERAL_DISTINCTION_YEARS.items():
 		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name")
-		rules = frappe.get_all("Classification Rule", {"regulation": ["in", regulations or [""]]}, pluck="name")
+		rules = frappe.get_all(
+			"Classification Rule", {"regulation": ["in", regulations or [""]]}, pluck="name"
+		)
 		for name in frappe.get_all(
 			"Classification Rule Class",
-			{"parenttype": "Classification Rule", "parent": ["in", rules or [""]], "class_name": DISTINCTION, "max_years_lateral": 0},
+			{
+				"parenttype": "Classification Rule",
+				"parent": ["in", rules or [""]],
+				"class_name": DISTINCTION,
+				"max_years_lateral": 0,
+			},
 			pluck="name",
 		):
-			frappe.db.set_value("Classification Rule Class", name, "max_years_lateral", years, update_modified=False)
+			frappe.db.set_value(
+				"Classification Rule Class", name, "max_years_lateral", years, update_modified=False
+			)
 
 
 def fill_honours_credits():
 	"""Classification Rules seeded before honours_credits existed keep 0 (no Honours variant): give those of each
 	HONOURS_CREDITS regulation (by code, the company suffix ignored) their value. DML only; run by a patch."""
 	for code, credits in HONOURS_CREDITS.items():
-		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name") if credits else []
-		for name in frappe.get_all("Classification Rule", {"regulation": ["in", regulations or [""]], "honours_credits": 0}, pluck="name"):
-			frappe.db.set_value("Classification Rule", name, "honours_credits", credits, update_modified=False)
+		regulations = (
+			frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name") if credits else []
+		)
+		for name in frappe.get_all(
+			"Classification Rule",
+			{"regulation": ["in", regulations or [""]], "honours_credits": 0},
+			pluck="name",
+		):
+			frappe.db.set_value(
+				"Classification Rule", name, "honours_credits", credits, update_modified=False
+			)
 
 
 def fill_revaluation_rules():
@@ -221,6 +240,8 @@ def fill_revaluation_rules():
 	for code, values in REVALUATION_RULES.items():
 		regulations = frappe.get_all("Regulation", {"code": ["like", f"{code}%"]}, pluck="name")
 		for name in frappe.get_all(
-			"Exam Rule Set", {"regulation": ["in", regulations or [""]], "revaluation_window_days": 0}, pluck="name"
+			"Exam Rule Set",
+			{"regulation": ["in", regulations or [""]], "revaluation_window_days": 0},
+			pluck="name",
 		):
 			frappe.db.set_value("Exam Rule Set", name, values, update_modified=False)

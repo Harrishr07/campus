@@ -6,7 +6,10 @@ ALL_STATUSES = ["Affiliated", "Autonomous", "Deemed"]
 AUTONOMOUS_ONLY = ["Autonomous", "Deemed"]
 
 SEED_PACKS = {
-	"COE": ("Controller of Examinations", ALL_STATUSES),  # M06-10: CIA and the university exchange in Affiliated mode
+	"COE": (
+		"Controller of Examinations",
+		ALL_STATUSES,
+	),  # M06-10: CIA and the university exchange in Affiliated mode
 	"GOVERNANCE": ("Academic Governance", AUTONOMOUS_ONLY),
 	"HOSTEL": ("Hostel", ALL_STATUSES),
 	"TRANSPORT": ("Transport", ALL_STATUSES),

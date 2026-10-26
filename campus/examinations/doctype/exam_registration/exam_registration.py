@@ -20,7 +20,6 @@ from frappe.utils import cstr, flt
 from campus.examinations import registration_rules as rules
 from campus.examinations.affiliation import AUTONOMOUS, examination_mode
 
-
 SERVER_FIELDS = ("confirmed", "confirmed_on", "late_days", "exam_fee", "late_fee", "fee_total", "fee_invoice")
 ROW_FIELDS = ("course", "course_offering", "kind")
 
@@ -34,10 +33,16 @@ class ExamRegistration(Document):
 		self.name = registration_name(self.exam_session, self.student)
 
 	def validate(self):
-		session = frappe.db.get_value("Exam Session", self.exam_session, ["company", "academic_term", "examination_mode"], as_dict=True)
+		session = frappe.db.get_value(
+			"Exam Session", self.exam_session, ["company", "academic_term", "examination_mode"], as_dict=True
+		)
 		self.company, self.academic_term = session.company, session.academic_term
 		if frappe.db.get_value("Student", self.student, "oc_company") != self.company:
-			frappe.throw(_("Student {0} does not belong to {1}.").format(frappe.bold(self.student), frappe.bold(self.company)))
+			frappe.throw(
+				_("Student {0} does not belong to {1}.").format(
+					frappe.bold(self.student), frappe.bold(self.company)
+				)
+			)
 		if self.is_new():
 			self.check_mode(session.examination_mode or AUTONOMOUS)
 		if self.detained and not (self.detention_reason or "").strip():
@@ -82,7 +87,9 @@ class ExamRegistration(Document):
 		seen = set()
 		for row in self.courses:
 			if row.course in seen:
-				frappe.throw(_("Row {0}: {1} is already registered.").format(row.idx, frappe.bold(row.course)))
+				frappe.throw(
+					_("Row {0}: {1} is already registered.").format(row.idx, frappe.bold(row.course))
+				)
 			seen.add(row.course)
 		before = self.get_doc_before_save()
 		if before and before.confirmed and {r.course for r in before.courses} != seen:

@@ -32,7 +32,15 @@ from frappe.utils import now_datetime, strip_html
 from campus.campus_platform.company_scope import permitted_companies
 from campus.curriculum import attainment_access
 from campus.curriculum import attainment_rules as rules
-from campus.curriculum.outcomes import CELL, MATRIX, code_order, course_outcomes, matrix_for, normalise_code, programme_outcomes
+from campus.curriculum.outcomes import (
+	CELL,
+	MATRIX,
+	code_order,
+	course_outcomes,
+	matrix_for,
+	normalise_code,
+	programme_outcomes,
+)
 
 POLICY, CO_RUN, PO_RUN = "Attainment Policy", "CO Attainment Run", "PO Attainment Run"
 SNAPSHOT = "CO Attainment Snapshot"
@@ -51,7 +59,9 @@ def policy_for(regulation):
 	"""The active Attainment Policy of `regulation`; refused when the regulation has none."""
 	name = frappe.db.get_value(POLICY, {"regulation": regulation, "disabled": 0})
 	if not name:
-		frappe.throw(_("Regulation {0} has no Attainment Policy. Create one first.").format(frappe.bold(regulation)))
+		frappe.throw(
+			_("Regulation {0} has no Attainment Policy. Create one first.").format(frappe.bold(regulation))
+		)
 	return name
 
 
@@ -82,9 +92,17 @@ def set_co_scope(doc):
 		["group_based_on", "course", "oc_curriculum", "academic_year", "academic_term", "oc_company"], as_dict=True,
 	)  # fmt: skip
 	if not group or group.group_based_on != "Course":
-		frappe.throw(_("{0} is not a course offering (a Student Group based on Course).").format(frappe.bold(doc.course_offering)))
+		frappe.throw(
+			_("{0} is not a course offering (a Student Group based on Course).").format(
+				frappe.bold(doc.course_offering)
+			)
+		)
 	if not group.oc_curriculum:
-		frappe.throw(_("{0} was not generated from a curriculum, so it has no course outcomes.").format(frappe.bold(doc.course_offering)))
+		frappe.throw(
+			_("{0} was not generated from a curriculum, so it has no course outcomes.").format(
+				frappe.bold(doc.course_offering)
+			)
+		)
 	program, regulation = frappe.db.get_value("Curriculum", group.oc_curriculum, ["program", "regulation"])
 	doc.update(
 		{
@@ -102,7 +120,11 @@ def set_po_scope(doc):
 	doc.company = frappe.db.get_value("Program", doc.program, "oc_company")
 	doc.regulation = resolve_regulation(doc.company, doc.program, doc.batch)
 	if not doc.regulation:
-		frappe.throw(_("No effective regulation of {0} covers batch {1}.").format(frappe.bold(doc.program), frappe.bold(doc.batch)))
+		frappe.throw(
+			_("No effective regulation of {0} covers batch {1}.").format(
+				frappe.bold(doc.program), frappe.bold(doc.batch)
+			)
+		)
 	doc.policy = policy_for(doc.regulation)
 	if doc.exit_survey:
 		check_exit_survey(doc)
@@ -114,18 +136,33 @@ EXIT_AUDIENCES = ("Students", "Alumni")
 def check_exit_survey(doc):
 	"""A programme exit survey is a closed Students / Alumni campaign of the college whose Audience Rule is this
 	programme's: a college-wide campaign would mix other programmes' answers into PO1 ... (they share the NBA codes)."""
-	campaign = frappe.db.get_value("Feedback Campaign", doc.exit_survey, ["company", "end_date", "audience", "audience_rule"], as_dict=True)
+	campaign = frappe.db.get_value(
+		"Feedback Campaign",
+		doc.exit_survey,
+		["company", "end_date", "audience", "audience_rule"],
+		as_dict=True,
+	)
 	if not campaign or campaign.company != doc.company:
-		frappe.throw(_("{0} is not a feedback campaign of {1}.").format(frappe.bold(doc.exit_survey), frappe.bold(doc.company)))
-	rule_program = frappe.db.get_value("Audience Rule", campaign.audience_rule, "program") if campaign.audience_rule else None
-	if campaign.audience not in EXIT_AUDIENCES or rule_program != doc.program:
 		frappe.throw(
-			_("{0} is not an exit survey of programme {1}: it needs a Students or Alumni audience with an Audience Rule of that programme.").format(
-				frappe.bold(doc.exit_survey), frappe.bold(doc.program)
+			_("{0} is not a feedback campaign of {1}.").format(
+				frappe.bold(doc.exit_survey), frappe.bold(doc.company)
 			)
 		)
+	rule_program = (
+		frappe.db.get_value("Audience Rule", campaign.audience_rule, "program")
+		if campaign.audience_rule
+		else None
+	)
+	if campaign.audience not in EXIT_AUDIENCES or rule_program != doc.program:
+		frappe.throw(
+			_(
+				"{0} is not an exit survey of programme {1}: it needs a Students or Alumni audience with an Audience Rule of that programme."
+			).format(frappe.bold(doc.exit_survey), frappe.bold(doc.program))
+		)
 	if not campaign.end_date or str(campaign.end_date) >= frappe.utils.today():
-		frappe.throw(_("Only a closed campaign counts: {0} is still open.").format(frappe.bold(doc.exit_survey)))
+		frappe.throw(
+			_("Only a closed campaign counts: {0} is still open.").format(frappe.bold(doc.exit_survey))
+		)
 
 
 def check_one_live(doc, filters, lock):
@@ -136,7 +173,9 @@ def check_one_live(doc, filters, lock):
 		filters["name"] = ["!=", doc.name]
 	other = frappe.db.get_value(doc.doctype, filters, "name", for_update=True)
 	if other:
-		frappe.throw(_("{0} already exists for this scope. Cancel or amend it instead.").format(frappe.bold(other)))
+		frappe.throw(
+			_("{0} already exists for this scope. Cancel or amend it instead.").format(frappe.bold(other))
+		)
 
 
 # ---- queueing (bulk runner) ---------------------------------------------------------------
@@ -166,23 +205,42 @@ def start_term_runs(company, academic_term):
 	frappe.has_permission(CO_RUN, "create", throw=True)
 	check_company(company)
 	names, skipped = [], []
-	filters = {"group_based_on": "Course", "academic_term": academic_term, "oc_company": company, "oc_curriculum": ["is", "set"]}
+	filters = {
+		"group_based_on": "Course",
+		"academic_term": academic_term,
+		"oc_company": company,
+		"oc_curriculum": ["is", "set"],
+	}
 	managed = attainment_access.managed_programs(frappe.session.user)
 	if managed is not None:  # an HOD: their department's programmes only
 		filters["program"] = ["in", managed or [""]]
-	for offering in frappe.get_all("Student Group", filters, ["name", "course", "oc_curriculum"], order_by="name"):
+	for offering in frappe.get_all(
+		"Student Group", filters, ["name", "course", "oc_curriculum"], order_by="name"
+	):
 		regulation = frappe.db.get_value("Curriculum", offering.oc_curriculum, "regulation")
-		if not matrix_for(offering.course, offering.oc_curriculum) or not frappe.db.exists(POLICY, {"regulation": regulation, "disabled": 0}):
+		if not matrix_for(offering.course, offering.oc_curriculum) or not frappe.db.exists(
+			POLICY, {"regulation": regulation, "disabled": 0}
+		):
 			skipped.append(offering.name)
 			continue
 		if frappe.db.exists(CO_RUN, {"course_offering": offering.name, "docstatus": 1}):
 			continue
 		draft = frappe.db.get_value(CO_RUN, {"course_offering": offering.name, "docstatus": 0})
-		names.append(draft or frappe.get_doc({"doctype": CO_RUN, "course_offering": offering.name}).insert().name)
+		names.append(
+			draft or frappe.get_doc({"doctype": CO_RUN, "course_offering": offering.name}).insert().name
+		)
 	if not names:
-		frappe.throw(_("No offering of {0} needs a run: each needs an approved CO-PO Matrix and an active Attainment Policy.").format(academic_term))
+		frappe.throw(
+			_(
+				"No offering of {0} needs a run: each needs an approved CO-PO Matrix and an active Attainment Policy."
+			).format(academic_term)
+		)
 	if skipped:
-		frappe.msgprint(_("Left out, no approved CO-PO Matrix or no active Attainment Policy: {0}").format(", ".join(skipped)))
+		frappe.msgprint(
+			_("Left out, no approved CO-PO Matrix or no active Attainment Policy: {0}").format(
+				", ".join(skipped)
+			)
+		)
 	return queue_co_runs(names)
 
 
@@ -218,7 +276,11 @@ def compute_or_fail(doctype, name, compute):
 	except Exception as e:
 		frappe.db.rollback(save_point=SAVEPOINT)
 		frappe.clear_messages()
-		frappe.db.set_value(doctype, name, {"status": "Failed", "error": strip_html(str(e))[:1000] or _("Computation failed.")})
+		frappe.db.set_value(
+			doctype,
+			name,
+			{"status": "Failed", "error": strip_html(str(e))[:1000] or _("Computation failed.")},
+		)
 
 
 def draft(doctype, name):
@@ -241,21 +303,52 @@ def compute_co_run(name):
 	values = policy_values(policy)
 	cos = course_outcomes(doc.course, doc.curriculum)
 	if not cos:
-		frappe.throw(_("Define the course outcomes of {0} in {1} first.").format(frappe.bold(doc.course), frappe.bold(doc.curriculum)))
+		frappe.throw(
+			_("Define the course outcomes of {0} in {1} first.").format(
+				frappe.bold(doc.course), frappe.bold(doc.curriculum)
+			)
+		)
 	data = offering_assessment(doc.course_offering)
 	survey = {normalise_code(code): score for code, score in indirect_co_scores(doc.course_offering).items()}
 	doc.results, snapshot = [], {}
 	for co in cos:
-		tools = {tool: tool_inputs([r for r in data[tool] if normalise_code(r["course_outcome"]) == co.co_code], values.student_threshold) for tool in TOOLS}
+		tools = {
+			tool: tool_inputs(
+				[r for r in data[tool] if normalise_code(r["course_outcome"]) == co.co_code],
+				values.student_threshold,
+			)
+			for tool in TOOLS
+		}
 		score = survey.get(co.co_code)
 		average = score["average"] if score and not score["suppressed"] else None
 		result = rules.co_result(tools["cia"].attainment, tools["ese"].attainment, average, values)
 		doc.append("results", {**result_fields(result), "course_outcome": co.name, "co_code": co.co_code,
 			"indirect_responses": score["responses"] if score else None, "indirect_suppressed": score["suppressed"] if score else 0})  # fmt: skip
-		snapshot[co.co_code] = {**{tool: tools[tool].snapshot for tool in TOOLS}, "indirect": survey_entry(score, values.survey_scale)}
+		snapshot[co.co_code] = {
+			**{tool: tools[tool].snapshot for tool in TOOLS},
+			"indirect": survey_entry(score, values.survey_scale),
+		}
 	batches = batch_counts(data.students)
-	shared = {"exam_sessions": data.exam_sessions, "batches": batches, "ese_basis": ESE_BASIS, "policy": policy_snapshot(policy)}
-	doc.update({f: policy.get(f) for f in ("direct_weight", "indirect_weight", "cia_weight", "ese_weight", "student_threshold", "target_level", "survey_scale")})
+	shared = {
+		"exam_sessions": data.exam_sessions,
+		"batches": batches,
+		"ese_basis": ESE_BASIS,
+		"policy": policy_snapshot(policy),
+	}
+	doc.update(
+		{
+			f: policy.get(f)
+			for f in (
+				"direct_weight",
+				"indirect_weight",
+				"cia_weight",
+				"ese_weight",
+				"student_threshold",
+				"target_level",
+				"survey_scale",
+			)
+		}
+	)
 	doc.update(
 		{
 			"students": len(data.students), "batch": majority_batch(batches), "matrix": matrix_for(doc.course, doc.curriculum),
@@ -273,16 +366,25 @@ def survey_entry(score, scale):
 	"""The survey score as recorded, its percent on the policy's rating scale."""
 	if not score:
 		return score
-	return {**score, "percent": rules.survey_percent(score["average"], scale) if not score["suppressed"] else None}
+	return {
+		**score,
+		"percent": rules.survey_percent(score["average"], scale) if not score["suppressed"] else None,
+	}
 
 
 def save_input_snapshot(run, snapshot):
 	"""Write the run's per-student snapshot (CO Attainment Snapshot, readable by System Manager, COE and Dean only)."""
-	values = {"course_offering": run.course_offering, "company": run.company, "snapshot": json.dumps(snapshot)}
+	values = {
+		"course_offering": run.course_offering,
+		"company": run.company,
+		"snapshot": json.dumps(snapshot),
+	}
 	if frappe.db.exists(SNAPSHOT, run.name):
 		frappe.db.set_value(SNAPSHOT, run.name, values)
 	else:
-		frappe.get_doc({"doctype": SNAPSHOT, "co_attainment_run": run.name, **values}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": SNAPSHOT, "co_attainment_run": run.name, **values}).insert(
+			ignore_permissions=True
+		)
 
 
 def input_snapshot(run):
@@ -335,7 +437,11 @@ def compute_po_run(name):
 	doc = draft(PO_RUN, name)
 	policy = frappe.get_doc(POLICY, doc.policy)
 	runs, cells = co_cells(doc)
-	survey = {normalise_code(c): s for c, s in campaign_outcome_scores(doc.exit_survey).items()} if doc.exit_survey else {}
+	survey = (
+		{normalise_code(c): s for c, s in campaign_outcome_scores(doc.exit_survey).items()}
+		if doc.exit_survey
+		else {}
+	)
 	values = policy_values(policy)
 	top = rules.top_level(values.bands)
 	doc.results, snapshot_cells = [], {}
@@ -344,11 +450,15 @@ def compute_po_run(name):
 		score = survey.get(outcome.code)
 		average = score["average"] if score and not score["suppressed"] else None
 		direct = rules.po_direct([(c.final, c.correlation) for c in mapped])
-		result = rules.po_result(direct, average, values.survey_scale, top, policy.po_indirect_weight, policy.po_target_level)
+		result = rules.po_result(
+			direct, average, values.survey_scale, top, policy.po_indirect_weight, policy.po_target_level
+		)
 		doc.append("results", {**result_fields(result), "outcome_type": outcome.doctype, "outcome": outcome.name, "outcome_code": outcome.code,
 			"courses": len({c.course for c in mapped}), "total_correlation": sum(c.correlation for c in mapped),
 			"indirect_responses": score["responses"] if score else None, "indirect_suppressed": score["suppressed"] if score else 0})  # fmt: skip
-		snapshot_cells[outcome.code] = [[c.co_code, c.final, c.correlation, c.course, c.sections] for c in mapped]
+		snapshot_cells[outcome.code] = [
+			[c.co_code, c.final, c.correlation, c.course, c.sections] for c in mapped
+		]
 	without_matrix = [r.name for r in runs if not r.matrix]
 	doc.update(
 		{
@@ -373,14 +483,27 @@ def co_cells(doc):
 	filters = {"docstatus": 1, "program": doc.program, "batch": doc.batch, "regulation": doc.regulation}
 	if doc.academic_year:
 		filters["academic_year"] = doc.academic_year
-	runs = frappe.get_all(CO_RUN, filters, ["name", "course", "course_offering", "academic_year", "matrix", "students"], order_by="name")
+	runs = frappe.get_all(
+		CO_RUN,
+		filters,
+		["name", "course", "course_offering", "academic_year", "matrix", "students"],
+		order_by="name",
+	)
 	finals = {
 		(r.parent, r.course_outcome): r
 		for r in frappe.get_all(CO_RESULT, {"parenttype": CO_RUN, "parent": ["in", [r.name for r in runs] or [""]]}, ["parent", "course_outcome", "co_code", "final_level", "assessed"])
 	}  # fmt: skip
-	approved = set(frappe.get_all(MATRIX, {"name": ["in", [r.matrix for r in runs if r.matrix] or [""]], "docstatus": 1}, pluck="name"))
+	approved = set(
+		frappe.get_all(
+			MATRIX,
+			{"name": ["in", [r.matrix for r in runs if r.matrix] or [""]], "docstatus": 1},
+			pluck="name",
+		)
+	)
 	for run in runs:
-		if run.matrix not in approved:  # cancelled since: the run counts nowhere and is listed in the warnings
+		if (
+			run.matrix not in approved
+		):  # cancelled since: the run counts nowhere and is listed in the warnings
 			run.matrix = None
 	matrix_cells = {}
 	for cell in frappe.get_all(
@@ -403,8 +526,11 @@ def co_cells(doc):
 			if per_section:
 				cells.setdefault(cell.outcome, []).append(
 					frappe._dict(
-						co_code=finals[(per_section[0][0], cell.course_outcome)].co_code, correlation=cell.correlation, course=course,
-						final=rules.combine_sections([(f, n) for _run, f, n in per_section]), sections=per_section,
+						co_code=finals[(per_section[0][0], cell.course_outcome)].co_code,
+						correlation=cell.correlation,
+						course=course,
+						final=rules.combine_sections([(f, n) for _run, f, n in per_section]),
+						sections=per_section,
 					)
 				)
 	return runs, cells
@@ -435,7 +561,10 @@ def course_attainment_sheet(doc):
 	from `questions_used` (no student data)."""
 	snapshot = frappe.parse_json(doc.questions_used or "{}") or {}
 	cos = snapshot.get("cos") or {}
-	questions = {code: {tool: ", ".join(cos[code].get(tool) or []) or "-" for tool in TOOLS} for code in sorted(cos, key=code_order)}
+	questions = {
+		code: {tool: ", ".join(cos[code].get(tool) or []) or "-" for tool in TOOLS}
+		for code in sorted(cos, key=code_order)
+	}
 	return frappe._dict(
 		instructors=", ".join(offering_instructors([doc.course_offering]).get(doc.course_offering, [])),
 		questions=questions, bands=(snapshot.get("policy") or {}).get("bands", []), sessions=", ".join(snapshot.get("exam_sessions") or []),

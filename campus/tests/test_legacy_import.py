@@ -415,8 +415,15 @@ class TestOpeningBalances(LegacyFixture):
 		self.assertEqual(checks(self.validate(self.row(self.a, is_opening="No"))), [(2, "not_opening")])
 
 	def test_a_caution_deposit_is_not_an_opening_fee_balance(self):
-		deposit = {"item_code": category_for_type("Caution Deposit"), "qty": "1", "rate": "5000", "income_account": "Temporary Opening - LIC"}
-		issues = self.validate(self.row(self.a), deposit, self.row(self.b, item_code=category_for_type("Caution Deposit")))
+		deposit = {
+			"item_code": category_for_type("Caution Deposit"),
+			"qty": "1",
+			"rate": "5000",
+			"income_account": "Temporary Opening - LIC",
+		}
+		issues = self.validate(
+			self.row(self.a), deposit, self.row(self.b, item_code=category_for_type("Caution Deposit"))
+		)
 		self.assertEqual(checks(issues), [(3, "caution_deposit"), (4, "caution_deposit")])
 
 	def test_a_student_already_given_an_opening_balance(self):
@@ -478,7 +485,10 @@ class TestImportCheckAccess(CampusTestCase):
 		frappe.db.savepoint("import_check_access")
 		self.addCleanup(frappe.db.rollback, save_point="import_check_access")
 		self.addCleanup(frappe.set_user, "Administrator")
-		self.officer, self.other = "legacy.import.officer@example.com", "legacy.import.other-officer@example.com"
+		self.officer, self.other = (
+			"legacy.import.officer@example.com",
+			"legacy.import.other-officer@example.com",
+		)
 		for user in (self.officer, self.other):
 			frappe.get_doc(
 				{"doctype": "User", "email": user, "first_name": "officer", "send_welcome_email": 0, "roles": [{"role": legacy_import.IMPORT_CHECK_ROLE}]}
@@ -488,7 +498,9 @@ class TestImportCheckAccess(CampusTestCase):
 		from frappe.desk.query_report import get_report_doc
 
 		# made by Administrator, then owned by the officer: creating one needs import rights on the template's doctype
-		own = frappe.get_doc({"doctype": "Data Import", "reference_doctype": "Student", "import_type": "Insert New Records"}).insert()
+		own = frappe.get_doc(
+			{"doctype": "Data Import", "reference_doctype": "Student", "import_type": "Insert New Records"}
+		).insert()
 		frappe.db.set_value("Data Import", own.name, "owner", self.officer)
 		frappe.set_user(self.officer)
 		self.assertEqual(get_report_doc("Import Check").name, "Import Check")
@@ -499,4 +511,6 @@ class TestImportCheckAccess(CampusTestCase):
 		self.assertFalse(frappe.has_permission("Data Import", "read", own.name))
 		self.assertEqual(frappe.get_list("Data Import", pluck="name"), [])
 		frappe.set_user("Administrator")
-		self.assertIn(own.name, frappe.get_list("Data Import", pluck="name"))  # System Manager reads every import
+		self.assertIn(
+			own.name, frappe.get_list("Data Import", pluck="name")
+		)  # System Manager reads every import

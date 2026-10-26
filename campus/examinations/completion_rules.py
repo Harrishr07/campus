@@ -47,7 +47,11 @@ def evaluate(curriculum_rows, minimums, counting, total_required, passed, recogn
 		for label, required, got in specialisations
 	]
 	complete = bool(curriculum_rows) and not missing and all(r["status"] != SHORT for r in categories)
-	return {"result": COMPLETE if complete else INCOMPLETE, "categories": categories, "missing_courses": sorted(missing)}
+	return {
+		"result": COMPLETE if complete else INCOMPLETE,
+		"categories": categories,
+		"missing_courses": sorted(missing),
+	}
 
 
 def cleared_credits(row, passed, recognised):
@@ -61,7 +65,12 @@ def cleared_credits(row, passed, recognised):
 
 
 def requirement(category, required, earned):
-	return {"category": category, "required": flt(required), "earned": flt(earned), "status": SHORT if flt(earned) < flt(required) else MET}
+	return {
+		"category": category,
+		"required": flt(required),
+		"earned": flt(earned),
+		"status": SHORT if flt(earned) < flt(required) else MET,
+	}
 
 
 def category_order(curriculum_rows, minimums):

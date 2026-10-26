@@ -28,7 +28,9 @@ def ensure_mentoring_roles():
 	"""The roles the mentoring DocTypes' permissions name; they must exist before the DocTypes sync."""
 	for role in MENTORING_ROLES:
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 
 
 def seed_follow_up_template():
@@ -52,7 +54,9 @@ def seed_follow_up_template():
 
 def student_department(student):
 	"""The department of the programme of the student's latest submitted enrollment."""
-	program = frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc")
+	program = frappe.db.get_value(
+		"Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc"
+	)
 	return program and frappe.db.get_value("Program", program, "department")
 
 
@@ -70,16 +74,41 @@ def send_follow_up_reminders(on_date=None):
 
 
 def note_follow_ups(window):
-	rows = frappe.get_all(NOTE, {"follow_up_date": window}, ["name", "student_name", "author", "follow_up_date"])
-	return [reminder(NOTE, r.name, r.student_name, r.author, r.follow_up_date, "follow-up", f"follow-up:{r.follow_up_date}") for r in rows]
+	rows = frappe.get_all(
+		NOTE, {"follow_up_date": window}, ["name", "student_name", "author", "follow_up_date"]
+	)
+	return [
+		reminder(
+			NOTE,
+			r.name,
+			r.student_name,
+			r.author,
+			r.follow_up_date,
+			"follow-up",
+			f"follow-up:{r.follow_up_date}",
+		)
+		for r in rows
+	]
 
 
 def action_follow_ups(window):
-	rows = frappe.get_all(NOTE_ACTION, {"parenttype": NOTE, "due_date": window, "done": 0}, ["name", "parent", "action_owner", "due_date"])
+	rows = frappe.get_all(
+		NOTE_ACTION,
+		{"parenttype": NOTE, "due_date": window, "done": 0},
+		["name", "parent", "action_owner", "due_date"],
+	)
 	parents = list({r.parent for r in rows}) or [""]
 	students = dict(frappe.get_all(NOTE, {"name": ["in", parents]}, ["name", "student_name"], as_list=True))
 	return [
-		reminder(NOTE, r.parent, students.get(r.parent), r.action_owner, r.due_date, "agreed action", f"action:{r.name}:{r.due_date}")
+		reminder(
+			NOTE,
+			r.parent,
+			students.get(r.parent),
+			r.action_owner,
+			r.due_date,
+			"agreed action",
+			f"action:{r.name}:{r.due_date}",
+		)
 		for r in rows
 	]
 
@@ -90,19 +119,39 @@ def interaction_follow_ups(window):
 		["name", "student_name", "follow_up_owner", "follow_up_due"],
 	)  # fmt: skip
 	return [
-		reminder(INTERACTION, r.name, r.student_name, r.follow_up_owner, r.follow_up_due, "parent follow-up", f"follow-up:{r.follow_up_due}")
+		reminder(
+			INTERACTION,
+			r.name,
+			r.student_name,
+			r.follow_up_owner,
+			r.follow_up_due,
+			"parent follow-up",
+			f"follow-up:{r.follow_up_due}",
+		)
 		for r in rows
 	]
 
 
 def reminder(doctype, name, student_name, user, due_date, kind, token):
-	return frappe._dict(doctype=doctype, name=name, student_name=student_name, user=user, due_date=due_date, kind=kind, token=token)
+	return frappe._dict(
+		doctype=doctype,
+		name=name,
+		student_name=student_name,
+		user=user,
+		due_date=due_date,
+		kind=kind,
+		token=token,
+	)
 
 
 def remind(item):
-	stand_in = frappe._dict(doctype=item.doctype, name=item.name, student_name=item.student_name)  # never the note text
+	stand_in = frappe._dict(
+		doctype=item.doctype, name=item.name, student_name=item.student_name
+	)  # never the note text
 	context = {"due_date": item.due_date, "kind": item.kind, "dedupe_token": item.token}
 	try:
 		send(FOLLOW_UP_EVENT, stand_in, [f"User:{item.user}"], context=context)
 	except (frappe.ValidationError, frappe.OutgoingEmailError):
-		frappe.log_error(title=f"Mentoring follow-up reminder failed for {item.doctype} {item.name}")  # keep the rest going
+		frappe.log_error(
+			title=f"Mentoring follow-up reminder failed for {item.doctype} {item.name}"
+		)  # keep the rest going

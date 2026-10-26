@@ -32,22 +32,40 @@ def generate(roster):
 	taught, away = own_courses(faculty, doc.exam_session), leave_days(faculty, halls)
 	duties, unfilled = invigilation_rules.assign(halls, faculty, taught, away, doc.invigilators_per_hall)
 	if unfilled:
-		names = ", ".join(sorted({f"{h.room} ({frappe.utils.formatdate(h.date)} {h.slot})" for h in unfilled}))
+		names = ", ".join(
+			sorted({f"{h.room} ({frappe.utils.formatdate(h.date)} {h.slot})" for h in unfilled})
+		)
 		frappe.throw(_("No free invigilator for {0}. Add faculty to the pool.").format(names))
-	people = dict(frappe.get_all("Employee", {"name": ["in", faculty or [""]]}, ["name", "employee_name"], as_list=True))
+	people = dict(
+		frappe.get_all("Employee", {"name": ["in", faculty or [""]]}, ["name", "employee_name"], as_list=True)
+	)
 	doc.set(
 		"duties",
-		[{"exam_date": h.date, "slot": h.slot, "room": h.room, "employee": e, "employee_name": people.get(e)} for h, e in duties],
+		[
+			{
+				"exam_date": h.date,
+				"slot": h.slot,
+				"room": h.room,
+				"employee": e,
+				"employee_name": people.get(e),
+			}
+			for h, e in duties
+		],
 	)
-	gaps = invigilation_rules.spread(duties, invigilation_rules.eligible_faculty(halls, faculty, taught, away))
+	gaps = invigilation_rules.spread(
+		duties, invigilation_rules.eligible_faculty(halls, faculty, taught, away)
+	)
 	doc.duty_spread = max(gaps.values(), default=0)
 	doc.flags.generating = True
 	doc.save()
 	for slot, gap in gaps.items():
 		if gap > 1:
 			frappe.msgprint(
-				_("{0} duties differ by {1} between faculty: leave or own-course exclusions leave no fairer roster. Widen the pool.").format(slot, gap),
-				indicator="orange", alert=True,
+				_(
+					"{0} duties differ by {1} between faculty: leave or own-course exclusions leave no fairer roster. Widen the pool."
+				).format(slot, gap),
+				indicator="orange",
+				alert=True,
 			)
 	return len(doc.duties)
 
@@ -56,7 +74,9 @@ def session_halls(exam_session):
 	"""invigilation_rules.Hall of every hall with a seated student in the session's Seating Plans."""
 	halls = {}
 	for plan in frappe.get_all("Seating Plan", {"exam_session": exam_session}, ["name", "exam_date", "slot"]):
-		for seat in frappe.get_all("Seating Plan Seat", {"parenttype": "Seating Plan", "parent": plan.name}, ["room", "course"]):
+		for seat in frappe.get_all(
+			"Seating Plan Seat", {"parenttype": "Seating Plan", "parent": plan.name}, ["room", "course"]
+		):
 			halls.setdefault((str(plan.exam_date), plan.slot, seat.room), set()).add(seat.course)
 	return [invigilation_rules.Hall(d, s, r, frozenset(c)) for (d, s, r), c in halls.items()]
 
@@ -64,7 +84,11 @@ def session_halls(exam_session):
 def company_teachers(company):
 	instructors = frappe.get_all("Instructor", {"employee": ["is", "set"]}, pluck="employee")
 	return sorted(
-		frappe.get_all("Employee", {"name": ["in", instructors or [""]], "company": company, "status": "Active"}, pluck="name")
+		frappe.get_all(
+			"Employee",
+			{"name": ["in", instructors or [""]], "company": company, "status": "Active"},
+			pluck="name",
+		)
 	)
 
 
@@ -74,9 +98,15 @@ def own_courses(faculty, exam_session):
 	taught = {}
 	for employee in faculty:
 		instructors = frappe.get_all("Instructor", {"employee": employee}, pluck="name") or [""]
-		groups = frappe.get_all("Student Group Instructor", {"instructor": ["in", instructors], "parenttype": "Student Group"}, pluck="parent")
+		groups = frappe.get_all(
+			"Student Group Instructor",
+			{"instructor": ["in", instructors], "parenttype": "Student Group"},
+			pluck="parent",
+		)
 		taught[employee] = set(
-			frappe.get_all("Student Group", {"name": ["in", groups or [""]], "academic_term": term}, pluck="course")
+			frappe.get_all(
+				"Student Group", {"name": ["in", groups or [""]], "academic_term": term}, pluck="course"
+			)
 		)
 	return taught
 

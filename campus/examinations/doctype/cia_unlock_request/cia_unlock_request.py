@@ -26,14 +26,20 @@ class CIAUnlockRequest(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
-		if not is_approved(self):  # without a policy the engine would submit directly: an unlock always needs one
+		if not is_approved(
+			self
+		):  # without a policy the engine would submit directly: an unlock always needs one
 			frappe.throw(
-				_("A CIA Unlock Request is submitted only by its approval. Set up an Approval Policy for CIA Unlock Request."),
+				_(
+					"A CIA Unlock Request is submitted only by its approval. Set up an Approval Policy for CIA Unlock Request."
+				),
 				title=_("Approval Required"),
 			)
 
 	def check_window(self):
 		if cia.lock_state(self.cia_schedule) == cia.OPEN:
-			frappe.throw(_("The CIA of {0} is still open for entry; no unlock is needed.").format(self.course_offering))
+			frappe.throw(
+				_("The CIA of {0} is still open for entry; no unlock is needed.").format(self.course_offering)
+			)
 		if get_datetime(self.unlock_until) <= now_datetime():
 			frappe.throw(_("Unlock Until must be in the future."))

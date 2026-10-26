@@ -59,7 +59,14 @@ class CompletionCase(GraduationFixture):
 		return frappe.db.get_value("Student", self.students[key], "oc_academic_status")
 
 	def make_list(self, convocation_date=None):
-		doc = frappe.get_doc({"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM, "convocation_date": convocation_date}).insert()
+		doc = frappe.get_doc(
+			{
+				"doctype": "Convocation List",
+				"company": COLLEGE,
+				"program": PROGRAM,
+				"convocation_date": convocation_date,
+			}
+		).insert()
 		convocation.fill_graduates(doc.name)
 		return frappe.get_doc("Convocation List", doc.name)
 
@@ -100,14 +107,22 @@ class CompletionCase(GraduationFixture):
 class TestCompletionCheck(CompletionCase):
 	def test_a_complete_check_is_recorded_per_category(self):
 		check = self.check("dist")
-		self.assertEqual((check.result, check.missing_courses, check.program, check.curriculum), ("Complete", "", PROGRAM, self.curriculum("dist")))
+		self.assertEqual(
+			(check.result, check.missing_courses, check.program, check.curriculum),
+			("Complete", "", PROGRAM, self.curriculum("dist")),
+		)
 		pcc = self.category(check, "PCC")
 		self.assertEqual((pcc.earned_credits, pcc.status), (12, "Met"))
 
 	def test_a_rerun_with_the_same_outcome_records_nothing_new(self):
 		first = self.check("dist")
 		self.assertEqual(self.check("dist").name, first.name)
-		frappe.db.set_value("Student Result", {"student": self.students["dist"], "exam_session": self.s2}, "pending_ratification", 1)
+		frappe.db.set_value(
+			"Student Result",
+			{"student": self.students["dist"], "exam_session": self.s2},
+			"pending_ratification",
+			1,
+		)
 		second = self.check("dist")
 		self.assertNotEqual(second.name, first.name)
 		self.assertEqual(frappe.db.count("Completion Check", {"student": self.students["dist"]}), 2)
@@ -125,7 +140,12 @@ class TestCompletionCheck(CompletionCase):
 		self.assertEqual(self.status("dist"), "Active")
 
 	def test_a_result_pending_ratification_is_not_counted(self):
-		frappe.db.set_value("Student Result", {"student": self.students["dist"], "exam_session": self.s2}, "pending_ratification", 1)
+		frappe.db.set_value(
+			"Student Result",
+			{"student": self.students["dist"], "exam_session": self.s2},
+			"pending_ratification",
+			1,
+		)
 		check = self.check("dist")
 		self.assertEqual((check.result, check.missing_courses), ("Incomplete", "GRD C3, GRD C4"))
 		self.assertEqual(self.category(check, "PCC").earned_credits, 6)
@@ -159,7 +179,9 @@ class TestCompletionCheck(CompletionCase):
 	def test_honours_credits_are_shown_and_do_not_block_the_degree(self):
 		check = self.check("partial")
 		honours = self.category(check, "Honours")
-		self.assertEqual((honours.required_credits, honours.earned_credits, honours.status), (18, 9, "Not Required"))
+		self.assertEqual(
+			(honours.required_credits, honours.earned_credits, honours.status), (18, 9, "Not Required")
+		)
 		self.assertEqual(check.result, "Complete")
 
 	def test_a_check_cannot_be_edited_or_deleted(self):
@@ -179,7 +201,9 @@ class TestAwardEligibility(CompletionCase):
 			hold = self.row(doc, "dist").award_hold
 			self.assertIn("Dues outstanding (Grad Test College: ", hold)
 			self.assertIn("2,500", hold)
-			self.assertEqual((self.status("cleared"), self.row(doc, "cleared").award_hold), ("Award Eligible", None))
+			self.assertEqual(
+				(self.status("cleared"), self.row(doc, "cleared").award_hold), ("Award Eligible", None)
+			)
 			doc.db_set("convocation_date", today())
 			result = convocation.graduate(doc.name)
 		self.assertEqual(self.status("dist"), "Study Completed")
@@ -194,7 +218,9 @@ class TestAwardEligibility(CompletionCase):
 		self.assertEqual(affiliation.status, "Expired")
 		doc = self.make_list()
 		hold = self.row(doc, "dist").award_hold
-		self.assertIn("The Affiliation document GRD-AFF-1 of University for Grad Test BE is not in force", hold)
+		self.assertIn(
+			"The Affiliation document GRD-AFF-1 of University for Grad Test BE is not in force", hold
+		)
 		self.assertIn("Expired", hold)
 		self.assertEqual(self.status("dist"), "Study Completed")
 		renewed = frappe.get_doc(
@@ -214,12 +240,16 @@ class TestAwardEligibility(CompletionCase):
 	def test_a_programme_without_an_authority_is_held(self):
 		frappe.db.delete("Degree Awarding Authority", {"company": COLLEGE, "program": PROGRAM})
 		doc = self.make_list()
-		self.assertIn("No Degree Awarding Authority is set for Grad Test BE", self.row(doc, "dist").award_hold)
+		self.assertIn(
+			"No Degree Awarding Authority is set for Grad Test BE", self.row(doc, "dist").award_hold
+		)
 
 	def test_the_authority_is_checked_again_on_the_convocation_date(self):
 		doc = self.make_list()
 		self.assertEqual(self.status("dist"), "Award Eligible")
-		frappe.db.set_value("Official Document", {"reference_no": "GRD-AFF-1"}, "valid_to", add_days(today(), -3))
+		frappe.db.set_value(
+			"Official Document", {"reference_no": "GRD-AFF-1"}, "valid_to", add_days(today(), -3)
+		)
 		doc.db_set("convocation_date", add_days(today(), -2))
 		result = convocation.graduate(doc.name)
 		self.assertEqual(result["graduated"], 0)
@@ -234,13 +264,19 @@ class TestAwardEligibility(CompletionCase):
 			convocation.fill_graduates(doc.name)
 		self.assertEqual(self.status("dist"), "Study Completed")
 		last = self.last_transition("dist")
-		self.assertEqual((last.kind, last.from_status, last.to_status), ("Reversal", "Award Eligible", "Study Completed"))
+		self.assertEqual(
+			(last.kind, last.from_status, last.to_status), ("Reversal", "Award Eligible", "Study Completed")
+		)
 
 	def test_the_listed_row_links_its_completion_check(self):
 		doc = self.make_list()
 		check = completion.latest_check(self.students["dist"])
 		self.assertEqual((self.row(doc, "dist").completion_check, check.result), (check.name, "Complete"))
-		first = frappe.get_all("Lifecycle Transition", {"student": self.students["dist"], "to_status": "Study Completed"}, pluck="reason")
+		first = frappe.get_all(
+			"Lifecycle Transition",
+			{"student": self.students["dist"], "to_status": "Study Completed"},
+			pluck="reason",
+		)
 		self.assertIn(check.name, first[0])
 
 
@@ -276,7 +312,9 @@ class TestAlumni(CompletionCase):
 	def test_in_on_convocation_mode_the_daily_job_moves_graduates_left_behind(self):
 		self.settings("Days After Graduation", 30)
 		held = getdate(add_days(today(), -3))
-		convocation.graduate(self.make_list(held).name)  # graduated before the college switched to "On Convocation"
+		convocation.graduate(
+			self.make_list(held).name
+		)  # graduated before the college switched to "On Convocation"
 		self.settings("On Convocation")
 		self.assertGreaterEqual(completion.move_graduates_to_alumni(), 5)
 		self.assertEqual(self.lifecycle_tail("dist"), ("Graduated", "Alumni", held))
@@ -294,7 +332,9 @@ class TestBulkAndScope(CompletionCase):
 	def test_a_bulk_run_records_each_students_outcome(self):
 		run = self.run_bulk()
 		self.assertEqual((run.status, run.total, run.done, run.failed), ("Completed", 7, 7, 0))
-		outcomes = dict(frappe.get_all("Completion Check", {"bulk_run": run.name}, ["student", "result"], as_list=True))
+		outcomes = dict(
+			frappe.get_all("Completion Check", {"bulk_run": run.name}, ["student", "result"], as_list=True)
+		)
 		self.assertEqual(outcomes[self.students["dist"]], "Complete")
 		self.assertEqual(outcomes[self.students["arrear"]], "Incomplete")
 		self.assertEqual(len(outcomes), 7)
@@ -302,7 +342,9 @@ class TestBulkAndScope(CompletionCase):
 	def test_a_second_run_records_every_students_outcome(self):
 		first = self.run_bulk()
 		second = self.run_bulk()
-		outcomes = dict(frappe.get_all("Completion Check", {"bulk_run": second.name}, ["student", "result"], as_list=True))
+		outcomes = dict(
+			frappe.get_all("Completion Check", {"bulk_run": second.name}, ["student", "result"], as_list=True)
+		)
 		self.assertEqual(len(outcomes), 7)
 		self.assertEqual(outcomes[self.students["arrear"]], "Incomplete")
 		self.assertEqual(frappe.db.count("Completion Check", {"bulk_run": first.name}), 7)
@@ -342,7 +384,9 @@ class TestBulkAndScope(CompletionCase):
 		self.check("arrear")
 		frappe.set_user(COE_USER)
 		rows = completion_status.execute({"company": COLLEGE})[1]
-		mine = next(r for r in rows if r["batch"] == frappe.db.get_value("Student", self.students["dist"], "oc_batch"))
+		mine = next(
+			r for r in rows if r["batch"] == frappe.db.get_value("Student", self.students["dist"], "oc_batch")
+		)
 		self.assertEqual((mine["checked"], mine["complete"], mine["incomplete"]), (2, 1, 1))
 		self.assertTrue(frappe.get_list("Completion Check", {"student": self.students["dist"]}))
 		frappe.set_user(OTHER_COE)
@@ -385,7 +429,9 @@ class TestFixRound1(CompletionCase):
 				self.draft("arrear", "GRD C4", evidence=evidence)
 
 	def test_the_course_must_be_on_the_students_curriculum(self):
-		with self.assertRaisesRegex(frappe.ValidationError, "not a course of the student's Effective curriculum"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "not a course of the student's Effective curriculum"
+		):
 			self.draft("arrear", "GRD H1")
 
 	def test_another_colleges_coe_cannot_record_one(self):
@@ -409,15 +455,27 @@ class TestFixRound1(CompletionCase):
 
 	def test_mark_graduated_runs_the_completion_check_again(self):
 		doc = self.make_list(today())
-		frappe.db.set_value("Student Result", {"student": self.students["dist"], "exam_session": self.s2}, "pending_ratification", 1)
+		frappe.db.set_value(
+			"Student Result",
+			{"student": self.students["dist"], "exam_session": self.s2},
+			"pending_ratification",
+			1,
+		)
 		result = convocation.graduate(doc.name)
-		self.assertEqual((result["graduated"], [r["student"] for r in result["refused"]]), (4, [self.students["dist"]]))
-		self.assertIn("is Incomplete: Mandatory courses not cleared: GRD C3, GRD C4", result["refused"][0]["reason"])
+		self.assertEqual(
+			(result["graduated"], [r["student"] for r in result["refused"]]), (4, [self.students["dist"]])
+		)
+		self.assertIn(
+			"is Incomplete: Mandatory courses not cleared: GRD C3, GRD C4", result["refused"][0]["reason"]
+		)
 		self.assertEqual(self.status("dist"), "Award Eligible")
 
 	def test_the_authority_is_that_of_the_given_programme(self):
 		self.assertIsNone(completion.award_refusal(self.students["dist"], today(), PROGRAM))
-		self.assertIn("No Degree Awarding Authority is set for Grd Other BE", completion.award_refusal(self.students["dist"], today(), "Grd Other BE"))
+		self.assertIn(
+			"No Degree Awarding Authority is set for Grd Other BE",
+			completion.award_refusal(self.students["dist"], today(), "Grd Other BE"),
+		)
 
 	def test_the_authority_fits_the_awarding_body_and_is_kept_by_the_principal(self):
 		authority = frappe.get_doc("Degree Awarding Authority", {"company": COLLEGE, "program": PROGRAM})

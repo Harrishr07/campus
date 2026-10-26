@@ -25,7 +25,11 @@ class ExportTemplate(Document):
 
 	def validate_node(self, row):
 		if frappe.db.get_value("Framework Node", row.node, "framework") != self.framework:
-			frappe.throw(_("Row {0}: {1} is not a node of {2}.").format(row.idx, frappe.bold(row.node), frappe.bold(self.framework)))
+			frappe.throw(
+				_("Row {0}: {1} is not a node of {2}.").format(
+					row.idx, frappe.bold(row.node), frappe.bold(self.framework)
+				)
+			)
 
 	def validate_excel_row(self, row, seen):
 		sheet = (row.sheet or "").strip()
@@ -40,7 +44,11 @@ class ExportTemplate(Document):
 				frappe.throw(_("Row {0}: {1} is not a cell like B7.").format(row.idx, frappe.bold(cell)))
 			key = (sheet.lower(), cell.strip().upper())
 			if key in seen:
-				frappe.throw(_("Row {0}: {1} on {2} is already used by another mapping.").format(row.idx, frappe.bold(cell), frappe.bold(sheet)))
+				frappe.throw(
+					_("Row {0}: {1} on {2} is already used by another mapping.").format(
+						row.idx, frappe.bold(cell), frappe.bold(sheet)
+					)
+				)
 			seen.add(key)
 		row.sheet, row.cell = sheet, row.cell.strip().upper()
 		row.label_cell = row.label_cell.strip().upper() if row.label_cell else None

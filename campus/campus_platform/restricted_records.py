@@ -44,7 +44,9 @@ def file_permission_query(user=None, doctype=None):
 def file_has_permission(doc, ptype=None, user=None, debug=False):
 	"""Owning the File (e.g. a mentor who has since been reallocated) is not enough: the record decides."""
 	if doc.attached_to_doctype in restricted_doctypes():
-		return reference_allows(doc.attached_to_doctype, doc.attached_to_name, "write" if ptype in WRITE_TYPES else "read", user)
+		return reference_allows(
+			doc.attached_to_doctype, doc.attached_to_name, "write" if ptype in WRITE_TYPES else "read", user
+		)
 	return url_readable(doc.file_url, user, exclude=doc.name)
 
 
@@ -76,26 +78,42 @@ class PrivateAttachmentMixin:
 		if self.attached_to_doctype in restricted_doctypes():
 			self.is_private = 1
 		elif restricted_attachments(self.file_url, exclude=self.name):
-			frappe.throw(_("This file belongs to a confidential record and cannot be made public."), frappe.PermissionError)
+			frappe.throw(
+				_("This file belongs to a confidential record and cannot be made public."),
+				frappe.PermissionError,
+			)
 
 	def refuse_foreign_copy(self):
 		"""Frappe lets the owner of the first row add another row for a private URL; the record decides instead."""
 		if not url_readable(self.file_url, exclude=self.name):
-			frappe.throw(_("This file belongs to a confidential record you cannot read."), frappe.PermissionError)
+			frappe.throw(
+				_("This file belongs to a confidential record you cannot read."), frappe.PermissionError
+			)
 
 	def refuse_orphaning_copies(self):
 		"""The guard follows the attached row: deleting it would leave other rows with its URL unguarded."""
 		if self.attached_to_doctype not in restricted_doctypes() or not self.file_url:
 			return
-		others = frappe.get_all("File", {"file_url": self.file_url, "name": ["!=", self.name]}, pluck="attached_to_doctype")
+		others = frappe.get_all(
+			"File", {"file_url": self.file_url, "name": ["!=", self.name]}, pluck="attached_to_doctype"
+		)
 		if any(doctype not in restricted_doctypes() for doctype in others):
-			frappe.throw(_("Delete the other File rows with this URL first: it belongs to a confidential record."), frappe.PermissionError)
+			frappe.throw(
+				_("Delete the other File rows with this URL first: it belongs to a confidential record."),
+				frappe.PermissionError,
+			)
 
 	def refuse_detaching(self):
 		before = self.get_doc_before_save()
 		if before and before.attached_to_doctype in restricted_doctypes():
-			if (before.attached_to_doctype, before.attached_to_name) != (self.attached_to_doctype, self.attached_to_name):
-				frappe.throw(_("A file of a confidential record cannot be moved to another record."), frappe.PermissionError)
+			if (before.attached_to_doctype, before.attached_to_name) != (
+				self.attached_to_doctype,
+				self.attached_to_name,
+			):
+				frappe.throw(
+					_("A file of a confidential record cannot be moved to another record."),
+					frappe.PermissionError,
+				)
 
 
 def block_share(doc, method=None):
@@ -103,7 +121,9 @@ def block_share(doc, method=None):
 	if doc.share_doctype in restricted_doctypes():
 		frappe.throw(_("{0} records cannot be shared.").format(_(doc.share_doctype)), frappe.PermissionError)
 	if doc.share_doctype == "File" and doc.share_name:
-		attached_to, file_url = frappe.db.get_value("File", doc.share_name, ["attached_to_doctype", "file_url"]) or (None, None)
+		attached_to, file_url = frappe.db.get_value(
+			"File", doc.share_name, ["attached_to_doctype", "file_url"]
+		) or (None, None)
 		if attached_to in restricted_doctypes() or restricted_attachments(file_url):
 			frappe.throw(_("A file of a confidential record cannot be shared."), frappe.PermissionError)
 
@@ -134,7 +154,11 @@ def zip_files(files: str):
 	from frappe.core.api.file import zip_files as frappe_zip_files
 
 	names = frappe.parse_json(files) or []
-	readable = [n for n in names if isinstance(n, str) and frappe.db.exists("File", n) and frappe.has_permission("File", "read", doc=n)]
+	readable = [
+		n
+		for n in names
+		if isinstance(n, str) and frappe.db.exists("File", n) and frappe.has_permission("File", "read", doc=n)
+	]
 	return frappe_zip_files(frappe.as_json(readable))
 
 
@@ -165,14 +189,26 @@ def get_open_count(doctype: str, name: str | int, items: str | list[str] | None 
 
 def permitted_external_count(doctype, name, links):
 	fieldname = links.get("non_standard_fieldnames", {}).get(doctype, links.get("fieldname"))
-	if not fieldname or not frappe.get_meta(doctype).has_field(fieldname) or not frappe.has_permission(doctype, "read"):
+	if (
+		not fieldname
+		or not frappe.get_meta(doctype).has_field(fieldname)
+		or not frappe.has_permission(doctype, "read")
+	):
 		return None
 	filters = {fieldname: name, **(notifications.get_dynamic_link_filters(doctype, links, fieldname) or {})}
 	count = len(frappe.get_list(doctype, filters=filters, pluck="name", limit=100, order_by=None))
 	if not count:
 		return None
 	open_filters = notifications.get_filters_for(doctype)
-	open_count = len(frappe.get_list(doctype, filters={**filters, **open_filters}, pluck="name", limit=100, order_by=None)) if open_filters else 0
+	open_count = (
+		len(
+			frappe.get_list(
+				doctype, filters={**filters, **open_filters}, pluck="name", limit=100, order_by=None
+			)
+		)
+		if open_filters
+		else 0
+	)
 	return {"doctype": doctype, "count": count, "open_count": open_count}
 
 

@@ -45,12 +45,19 @@ def data(filters):
 	conditions = {"company": filters.company}
 	if filters.course_offering:
 		conditions["course_offering"] = filters.course_offering
-	rows = sheet_rows(filters, conditions) + deadline_rows(filters, conditions) + unlock_rows(filters, conditions)
+	rows = (
+		sheet_rows(filters, conditions)
+		+ deadline_rows(filters, conditions)
+		+ unlock_rows(filters, conditions)
+	)
 	return sorted(rows, key=lambda row: (row["timestamp"], row["event"]))
 
 
 def sheet_rows(filters, conditions):
-	sheets = {s.name: s.course_offering for s in frappe.get_list(SHEET, filters=conditions, fields=["name", "course_offering"])}
+	sheets = {
+		s.name: s.course_offering
+		for s in frappe.get_list(SHEET, filters=conditions, fields=["name", "course_offering"])
+	}
 	rows = []
 	for version in versions(SHEET, list(sheets), filters):
 		labels = row_labels(version.docname)
@@ -79,16 +86,25 @@ def cia_changes(changes, labels):
 def row_labels(sheet):
 	"""{child row name: (student, "component question")} of a sheet's current rows."""
 	labels = {}
-	for row in frappe.get_all("Mark Sheet CIA Mark", {"parent": sheet, "parenttype": SHEET}, ["name", "student", "component", "question"]):
+	for row in frappe.get_all(
+		"Mark Sheet CIA Mark",
+		{"parent": sheet, "parenttype": SHEET},
+		["name", "student", "component", "question"],
+	):
 		labels[row.name] = (row.student, f"{row.component} {row.question}")
-	for row in frappe.get_all("Mark Sheet Entry Row", {"parent": sheet, "parenttype": SHEET}, ["name", "student"]):
+	for row in frappe.get_all(
+		"Mark Sheet Entry Row", {"parent": sheet, "parenttype": SHEET}, ["name", "student"]
+	):
 		labels[row.name] = (row.student, "")
 	return labels
 
 
 def deadline_rows(filters, conditions):
 	"""Moves of a CIA Schedule's entry deadline (only possible before it has passed)."""
-	schedules = {s.name: s.course_offering for s in frappe.get_list(cia.SCHEDULE, filters=conditions, fields=["name", "course_offering"])}
+	schedules = {
+		s.name: s.course_offering
+		for s in frappe.get_list(cia.SCHEDULE, filters=conditions, fields=["name", "course_offering"])
+	}
 	rows = []
 	for version in versions(cia.SCHEDULE, list(schedules), filters):
 		for field, old, new in json.loads(version.data).get("changed", []):
@@ -104,7 +120,9 @@ def unlock_rows(filters, conditions):
 	requests = {
 		r.name: r
 		for r in frappe.get_list(
-			cia.UNLOCK, filters=conditions, fields=["name", "course_offering", "owner", "creation", "reason", "unlock_until"]
+			cia.UNLOCK,
+			filters=conditions,
+			fields=["name", "course_offering", "owner", "creation", "reason", "unlock_until"],
 		)
 	}
 	rows = [
@@ -145,7 +163,9 @@ def versions(doctype, names, filters):
 		conditions.append(["creation", ">=", getdate(filters.from_date)])
 	if filters.to_date:
 		conditions.append(["creation", "<", add_days(getdate(filters.to_date), 1)])
-	return frappe.get_all("Version", conditions, ["docname", "owner", "creation", "data"], order_by="creation")
+	return frappe.get_all(
+		"Version", conditions, ["docname", "owner", "creation", "data"], order_by="creation"
+	)
 
 
 def in_range(timestamp, filters):

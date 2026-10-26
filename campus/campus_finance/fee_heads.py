@@ -33,8 +33,12 @@ def seed_fee_categories():
 			ensure_item(head)
 			frappe.get_doc(
 				{
-					"doctype": "Fee Category", "category_name": head, "description": head, "oc_fee_head_type": head,
-					"oc_refundable": refundable, "oc_gst_applicable": gst,
+					"doctype": "Fee Category",
+					"category_name": head,
+					"description": head,
+					"oc_fee_head_type": head,
+					"oc_refundable": refundable,
+					"oc_gst_applicable": gst,
 				}
 			).insert(ignore_permissions=True)
 		elif not frappe.db.get_value("Fee Category", name, "oc_fee_head_type"):
@@ -48,10 +52,12 @@ def ensure_item_prerequisites():
 	if not frappe.db.exists("Item Group", "Fee Component"):
 		parent = "All Item Groups"
 		if not frappe.db.exists("Item Group", parent):
-			frappe.get_doc({"doctype": "Item Group", "item_group_name": parent, "is_group": 1}).insert(ignore_permissions=True)
-		frappe.get_doc({"doctype": "Item Group", "item_group_name": "Fee Component", "parent_item_group": parent}).insert(
-			ignore_permissions=True
-		)
+			frappe.get_doc({"doctype": "Item Group", "item_group_name": parent, "is_group": 1}).insert(
+				ignore_permissions=True
+			)
+		frappe.get_doc(
+			{"doctype": "Item Group", "item_group_name": "Fee Component", "parent_item_group": parent}
+		).insert(ignore_permissions=True)
 
 
 def ensure_item(head):
@@ -63,8 +69,13 @@ def ensure_item(head):
 	if frappe.db.exists("Item", head):
 		return
 	item = {
-		"doctype": "Item", "item_code": head, "item_group": "Fee Component", "description": head,
-		"is_sales_item": 1, "is_stock_item": 0, "stock_uom": "Nos",
+		"doctype": "Item",
+		"item_code": head,
+		"item_group": "Fee Component",
+		"description": head,
+		"is_sales_item": 1,
+		"is_stock_item": 0,
+		"stock_uom": "Nos",
 	}
 	if frappe.get_meta("Item").has_field("gst_hsn_code"):
 		item["gst_hsn_code"] = ensure_sac_code()
@@ -74,7 +85,11 @@ def ensure_item(head):
 def ensure_sac_code():
 	if not frappe.db.exists("GST HSN Code", SAC_EDUCATION):
 		frappe.get_doc(
-			{"doctype": "GST HSN Code", "hsn_code": SAC_EDUCATION, "description": "Other education and training services"}
+			{
+				"doctype": "GST HSN Code",
+				"hsn_code": SAC_EDUCATION,
+				"description": "Other education and training services",
+			}
 		).insert(ignore_permissions=True)
 	return SAC_EDUCATION
 
@@ -149,5 +164,7 @@ def validate_fee_structure(doc, method=None):
 		)
 		if not account or not is_liability(account):
 			frappe.throw(
-				_("Row {0}: set a liability account as the {1} default for {2}.").format(row.idx, row.fees_category, doc.company)
+				_("Row {0}: set a liability account as the {1} default for {2}.").format(
+					row.idx, row.fees_category, doc.company
+				)
 			)

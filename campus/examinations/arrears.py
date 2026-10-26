@@ -47,7 +47,9 @@ def passed_courses(student):
 
 def published_outcomes(student):
 	"""[(course, result)] of `student` from the published Student Results, oldest result first."""
-	result, course_row, session = (frappe.qb.DocType(n) for n in ("Student Result", "Student Result Course", "Exam Session"))
+	result, course_row, session = (
+		frappe.qb.DocType(n) for n in ("Student Result", "Student Result Course", "Exam Session")
+	)
 	return (
 		frappe.qb.from_(result)
 		.join(course_row)

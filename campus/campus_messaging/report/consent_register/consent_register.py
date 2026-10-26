@@ -16,13 +16,25 @@ def execute(filters=None):
 def columns():
 	return [
 		{"fieldname": "party_type", "label": _("Party Type"), "fieldtype": "Data", "width": 100},
-		{"fieldname": "party", "label": _("Party"), "fieldtype": "Dynamic Link", "options": "party_type", "width": 160},
+		{
+			"fieldname": "party",
+			"label": _("Party"),
+			"fieldtype": "Dynamic Link",
+			"options": "party_type",
+			"width": 160,
+		},
 		{"fieldname": "channel", "label": _("Channel"), "fieldtype": "Data", "width": 90},
 		{"fieldname": "purpose", "label": _("Purpose"), "fieldtype": "Data", "width": 110},
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 100},
 		{"fieldname": "source", "label": _("Source"), "fieldtype": "Data", "width": 140},
 		{"fieldname": "timestamp", "label": _("Recorded At"), "fieldtype": "Datetime", "width": 160},
-		{"fieldname": "company", "label": _("Company"), "fieldtype": "Link", "options": "Company", "width": 180},
+		{
+			"fieldname": "company",
+			"label": _("Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"width": 180,
+		},
 	]
 
 

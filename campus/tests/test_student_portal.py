@@ -3,14 +3,26 @@
 import frappe
 from frappe.utils import add_days, now_datetime, today
 
-from campus.campus_platform.verification import verify  # noqa: F401  (keeps the QR hooks loaded as in production)
+from campus.campus_platform.verification import (
+	verify,  # noqa: F401  (keeps the QR hooks loaded as in production)
+)
 from campus.student_services import portal
 from campus.student_services.api import attendance_summary
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.factories import make_company
 from campus.tests.test_attendance_eligibility import RULES
-from campus.tests.test_results import COLLEGE, FACULTY, GUARDIAN_USER, STUDENT_22_USER, STUDENT_26_USER, ExamFixture, make_login
-from campus.www.campus_portal import circulars as circulars_page, fees as fees_page, index as index_page
+from campus.tests.test_results import (
+	COLLEGE,
+	FACULTY,
+	GUARDIAN_USER,
+	STUDENT_22_USER,
+	STUDENT_26_USER,
+	ExamFixture,
+	make_login,
+)
+from campus.www.campus_portal import circulars as circulars_page
+from campus.www.campus_portal import fees as fees_page
+from campus.www.campus_portal import index as index_page
 
 TRUST = "Portal Test Trust"
 BOTH_GUARDIAN_USER = "portal-both-guardian@example.com"
@@ -38,7 +50,11 @@ class PortalFixture(ExamFixture):
 		frappe.db.delete("Attendance Rule", {"regulation": ["like", "%-EXM"]})
 		for regulation, rule in (("R2022-EXM", RULES["R2022"]), ("R2026-EXM", RULES["R2026"])):
 			frappe.get_doc(
-				{"doctype": "Attendance Rule", "regulation": frappe.db.get_value("Regulation", {"name": ["like", f"{regulation}%"]}), **rule}
+				{
+					"doctype": "Attendance Rule",
+					"regulation": frappe.db.get_value("Regulation", {"name": ["like", f"{regulation}%"]}),
+					**rule,
+				}
 			).insert()
 		make_login(BOTH_GUARDIAN_USER, "Guardian")
 		make_login(NO_LINK_USER, "Student")
@@ -62,7 +78,8 @@ class TestPortalOwnership(PortalFixture):
 		self.assertEqual([s.name for s in portal.linked_students(STUDENT_22_USER)], [self.s22.name])
 		self.assertEqual([s.name for s in portal.linked_students(GUARDIAN_USER)], [self.s22.name])
 		self.assertEqual(
-			sorted(s.name for s in portal.linked_students(BOTH_GUARDIAN_USER)), sorted([self.s22.name, self.s26.name])
+			sorted(s.name for s in portal.linked_students(BOTH_GUARDIAN_USER)),
+			sorted([self.s22.name, self.s26.name]),
 		)
 		self.assertEqual(portal.linked_students(NO_LINK_USER), [])
 
@@ -84,13 +101,26 @@ class TestPortalOwnership(PortalFixture):
 
 	def test_the_student_role_reads_and_prints_its_invoices_but_cannot_write_or_export_them(self):
 		"""Step 14: Education's Student rule on Sales Invoice is narrowed to read and print (the portal receipt)."""
-		for ptype, expected in (("read", True), ("print", True), ("write", False), ("export", False), ("email", False), ("share", False)):
+		for ptype, expected in (
+			("read", True),
+			("print", True),
+			("write", False),
+			("export", False),
+			("email", False),
+			("share", False),
+		):
 			self.assertEqual(
-				frappe.has_permission("Sales Invoice", ptype, "PORTAL-INV-1", user=STUDENT_22_USER), expected, ptype
+				frappe.has_permission("Sales Invoice", ptype, "PORTAL-INV-1", user=STUDENT_22_USER),
+				expected,
+				ptype,
 			)
-		self.assertFalse(frappe.has_permission("Sales Invoice", "read", "PORTAL-INV-3", user=STUDENT_22_USER))  # a classmate's
+		self.assertFalse(
+			frappe.has_permission("Sales Invoice", "read", "PORTAL-INV-3", user=STUDENT_22_USER)
+		)  # a classmate's
 		self.as_user(STUDENT_22_USER)
-		self.assertEqual(sorted(frappe.get_list("Sales Invoice", pluck="name")), ["PORTAL-INV-1", "PORTAL-INV-2"])
+		self.assertEqual(
+			sorted(frappe.get_list("Sales Invoice", pluck="name")), ["PORTAL-INV-1", "PORTAL-INV-2"]
+		)
 
 	def test_attendance_is_own_only_and_works_without_student_read_permission(self):
 		self.as_user(STUDENT_22_USER)
@@ -116,12 +146,16 @@ class TestPortalOwnership(PortalFixture):
 		self.publish(add_days(now_datetime(), -1))
 		self.as_user(STUDENT_22_USER)
 		results = portal.get_results()["results"]
-		self.assertEqual([r["name"] for r in results], [self.result(self.s22).name])  # the earlier session is unpublished
+		self.assertEqual(
+			[r["name"] for r in results], [self.result(self.s22).name]
+		)  # the earlier session is unpublished
 		self.assertEqual({c["course"]: c["grade"] for c in results[0]["courses"]}["EXM TH"], "B+")
 		self.assertIn("Grade%20Sheet", results[0]["grade_sheet_url"])
 		with self.assertRaises(frappe.PermissionError):
 			portal.get_results(self.s26.name)
-		self.assertFalse(frappe.has_permission("Student Result", "read", self.result(self.s26), user=STUDENT_22_USER))
+		self.assertFalse(
+			frappe.has_permission("Student Result", "read", self.result(self.s26), user=STUDENT_22_USER)
+		)
 		self.as_user(STUDENT_26_USER)
 		self.assertEqual([r["name"] for r in portal.get_results()["results"]], [self.result(self.s26).name])
 		with self.assertRaises(frappe.PermissionError):
@@ -150,9 +184,13 @@ class TestPortalOwnership(PortalFixture):
 		):
 			self.as_user(user)
 			mine = {self.s22.name, self.s26.name}
-			self.assertEqual(sorted(frappe.get_list("Student", {"name": ["in", list(mine)]}, pluck="name")), visible, user)
+			self.assertEqual(
+				sorted(frappe.get_list("Student", {"name": ["in", list(mine)]}, pluck="name")), visible, user
+			)
 			for student in mine - set(visible):
-				self.assertFalse(frappe.has_permission("Student", "read", student, user=user), (user, student))
+				self.assertFalse(
+					frappe.has_permission("Student", "read", student, user=user), (user, student)
+				)
 				with self.assertRaises(frappe.PermissionError):
 					frappe.get_doc("Student", student).check_permission("read")
 		self.as_user(STUDENT_22_USER)
@@ -225,7 +263,9 @@ class TestPortalPages(PortalFixture):
 		self.assertEqual(self.context(circulars_page, STUDENT_22_USER).circulars, [])
 
 	def test_students_and_guardians_land_on_the_portal(self):
-		self.assertEqual(frappe.get_hooks("get_website_user_home_page")[-1], "campus.student_services.portal.home_page")
+		self.assertEqual(
+			frappe.get_hooks("get_website_user_home_page")[-1], "campus.student_services.portal.home_page"
+		)
 		self.assertEqual(portal.home_page(STUDENT_22_USER), "campus-portal")
 		self.assertEqual(portal.home_page(GUARDIAN_USER), "campus-portal")
 

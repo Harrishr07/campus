@@ -61,7 +61,9 @@ def validate_job_applicant(doc, method=None):
 def employee_shortfalls(doc):
 	if doc.oc_staff_type != "Teaching" or not doc.oc_cadre:
 		return []
-	return qualification_shortfalls(doc, cadre_rule(doc.company, doc.oc_cadre, doc.date_of_joining or today()))
+	return qualification_shortfalls(
+		doc, cadre_rule(doc.company, doc.oc_cadre, doc.date_of_joining or today())
+	)
 
 
 def require_principal_override(doc, failures):
@@ -72,7 +74,10 @@ def require_principal_override(doc, failures):
 			title=_("Qualification Below Norm"),
 		)  # fmt: skip
 	if frappe.session.user not in resolve_position("PRINCIPAL", doc.company):
-		frappe.throw(_("Only the Principal of {0} can override the qualification check.").format(doc.company), frappe.PermissionError)
+		frappe.throw(
+			_("Only the Principal of {0} can override the qualification check.").format(doc.company),
+			frappe.PermissionError,
+		)
 	doc.oc_qualification_override_by = frappe.session.user
 
 

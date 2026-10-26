@@ -33,7 +33,13 @@ def open_concessions(student, company, posting_date):
 		frappe.qb.from_(concession)
 		.join(year)
 		.on(year.name == concession.academic_year)
-		.select(concession.name, concession.fee_category, concession.concession_type, concession.percent, concession.amount)
+		.select(
+			concession.name,
+			concession.fee_category,
+			concession.concession_type,
+			concession.percent,
+			concession.amount,
+		)
 		.where(concession.docstatus == 1)
 		.where(concession.status == OPEN)
 		.where(concession.student == student)
@@ -48,9 +54,13 @@ def open_concessions(student, company, posting_date):
 def live_for_invoice(name, doc):
 	"""Whether concession `name` may discount `doc`: submitted, and either open or already consumed by this invoice,
 	and of the invoice's student and company."""
-	found = frappe.db.get_value("Fee Concession", name, ["docstatus", "status", "applied_invoice", "student", "company"], as_dict=True)
+	found = frappe.db.get_value(
+		"Fee Concession", name, ["docstatus", "status", "applied_invoice", "student", "company"], as_dict=True
+	)
 	return bool(
-		found and found.docstatus == 1 and (found.student, found.company) == (doc.get("student"), doc.company)
+		found
+		and found.docstatus == 1
+		and (found.student, found.company) == (doc.get("student"), doc.company)
 		and (found.status == OPEN or found.applied_invoice == doc.name)
 	)
 
@@ -82,15 +92,26 @@ def apply_to_invoice(doc, method=None):
 	for concession in open_concessions(doc.student, doc.company, doc.posting_date):
 		if concession.name in tagged:
 			continue
-		category = frappe.db.get_value("Fee Category", concession.fee_category, ["item", "oc_concession_allowed"], as_dict=True)
+		category = frappe.db.get_value(
+			"Fee Category", concession.fee_category, ["item", "oc_concession_allowed"], as_dict=True
+		)
 		if not category.oc_concession_allowed:
 			continue
 		item = category.item
-		line = next((r for r in doc.items if r.item_code == item and not r.get("oc_fee_concession") and flt(r.rate) > 0), None)
+		line = next(
+			(
+				r
+				for r in doc.items
+				if r.item_code == item and not r.get("oc_fee_concession") and flt(r.rate) > 0
+			),
+			None,
+		)
 		if not line:
 			continue
 		unit = flt(line.price_list_rate) or flt(line.rate)
-		discount = concession_discount(unit * flt(line.qty), concession.concession_type, concession.percent, concession.amount)
+		discount = concession_discount(
+			unit * flt(line.qty), concession.concession_type, concession.percent, concession.amount
+		)
 		if discount <= 0:
 			continue
 		line.price_list_rate = unit
@@ -106,14 +127,31 @@ def mark_applied(doc, method=None):
 		if not name:
 			continue
 		found = frappe.db.get_value(
-			"Fee Concession", name, ["docstatus", "status", "applied_invoice", "student", "company"], as_dict=True, for_update=True
+			"Fee Concession",
+			name,
+			["docstatus", "status", "applied_invoice", "student", "company"],
+			as_dict=True,
+			for_update=True,
 		)  # re-read under the lock: the tag on the line is only a claim
-		if not (found and found.docstatus == 1 and (found.student, found.company) == (doc.get("student"), doc.company)):
+		if not (
+			found
+			and found.docstatus == 1
+			and (found.student, found.company) == (doc.get("student"), doc.company)
+		):
 			frappe.throw(_("Fee Concession {0} cannot discount this invoice.").format(name))
 		if found.status != OPEN and found.applied_invoice != doc.name:
-			frappe.throw(_("Fee Concession {0} is already applied to {1}.").format(name, found.applied_invoice))
+			frappe.throw(
+				_("Fee Concession {0} is already applied to {1}.").format(name, found.applied_invoice)
+			)
 		frappe.db.set_value(
-			"Fee Concession", name, {"status": APPLIED, "applied_invoice": doc.name, "discount_amount": flt(row.discount_amount) * flt(row.qty)}, update_modified=False
+			"Fee Concession",
+			name,
+			{
+				"status": APPLIED,
+				"applied_invoice": doc.name,
+				"discount_amount": flt(row.discount_amount) * flt(row.qty),
+			},
+			update_modified=False,
 		)
 
 
@@ -122,7 +160,10 @@ def release(doc, method=None):
 	for name in {row.get("oc_fee_concession") for row in doc.items if row.get("oc_fee_concession")}:
 		if frappe.db.get_value("Fee Concession", name, "applied_invoice", for_update=True) == doc.name:
 			frappe.db.set_value(
-				"Fee Concession", name, {"status": OPEN, "applied_invoice": None, "discount_amount": 0}, update_modified=False
+				"Fee Concession",
+				name,
+				{"status": OPEN, "applied_invoice": None, "discount_amount": 0},
+				update_modified=False,
 			)
 
 

@@ -17,7 +17,9 @@ def execute(filters=None):
 def data(filters):
 	by_department = {}
 	for teacher in staffing.teachers(filters.company, filters.academic_year, filters.department):
-		row = by_department.setdefault(teacher.department, {"department": teacher.department, "teachers": 0, "phd": 0})
+		row = by_department.setdefault(
+			teacher.department, {"department": teacher.department, "teachers": 0, "phd": 0}
+		)
 		row["teachers"] += 1
 		row["phd"] += int(staffing.has_phd(teacher, filters.academic_year))
 	rows = [by_department[d] for d in sorted(by_department, key=lambda d: d or "")]

@@ -11,7 +11,9 @@ def execute(filters=None):
 	filters = report_filters(filters)
 	if not filters:
 		return columns(), []
-	return columns(), staffing.student_teacher_ratio(filters.company, filters.academic_year, filters.department)
+	return columns(), staffing.student_teacher_ratio(
+		filters.company, filters.academic_year, filters.department
+	)
 
 
 def columns():

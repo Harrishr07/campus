@@ -36,17 +36,23 @@ class ResearchProposal(ApprovableDocument, Document):
 		super().before_submit()
 		if not is_approved(self):
 			frappe.throw(
-				_("{0} needs internal review: set up an Approval Policy for Research Proposal and request approval.").format(
-					self.name
-				)
+				_(
+					"{0} needs internal review: set up an Approval Policy for Research Proposal and request approval."
+				).format(self.name)
 			)
 		self.status = "Approved"
 
 	def before_update_after_submit(self):
 		before = self.get_doc_before_save()
-		changed = [field for field in AGENCY_FIELDS if before and str(before.get(field) or "") != str(self.get(field) or "")]
+		changed = [
+			field
+			for field in AGENCY_FIELDS
+			if before and str(before.get(field) or "") != str(self.get(field) or "")
+		]
 		if changed:
-			frappe.throw(_("Use Submit to Agency or Record Outcome to change {0}.").format(", ".join(changed)))
+			frappe.throw(
+				_("Use Submit to Agency or Record Outcome to change {0}.").format(", ".join(changed))
+			)
 
 	def on_cancel(self):
 		self.db_set("status", "Cancelled")
@@ -62,14 +68,20 @@ class ResearchProposal(ApprovableDocument, Document):
 		self.check_permission("submit")
 		status = self.locked_status()
 		if self.docstatus != 1 or not is_approved(self):
-			frappe.throw(_("{0} can be submitted to the agency only after internal approval.").format(self.name))
+			frappe.throw(
+				_("{0} can be submitted to the agency only after internal approval.").format(self.name)
+			)
 		if status != "Approved":
 			frappe.throw(_("{0} is already {1}.").format(self.name, _(status).lower()))
 		submission_date = getdate(submission_date or today())
 		if submission_date > getdate(today()):
 			frappe.throw(_("The submission date can't be in the future."))
 		self.db_set(
-			{"status": "Submitted to Agency", "submission_date": submission_date, "agency_reference": agency_reference}
+			{
+				"status": "Submitted to Agency",
+				"submission_date": submission_date,
+				"agency_reference": agency_reference,
+			}
 		)
 		self.add_comment(
 			"Info",
@@ -88,7 +100,9 @@ class ResearchProposal(ApprovableDocument, Document):
 			frappe.throw(_("Record the outcome once {0} is submitted to the agency.").format(self.name))
 		outcome_date = getdate(outcome_date or today())
 		self.db_set({"status": outcome, "outcome": outcome, "outcome_date": outcome_date})
-		self.add_comment("Info", _("Agency outcome: {0} on {1}.").format(_(outcome), frappe.format(outcome_date, "Date")))
+		self.add_comment(
+			"Info", _("Agency outcome: {0} on {1}.").format(_(outcome), frappe.format(outcome_date, "Date"))
+		)
 
 	def locked_status(self):
 		"""The stored status, read under a row lock so two clicks can't both pass the status check."""
@@ -97,11 +111,18 @@ class ResearchProposal(ApprovableDocument, Document):
 	def set_from_call(self):
 		"""Agency, scheme and deadline come from the call; posted values are ignored."""
 		call = frappe.db.get_value(
-			"Research Call", self.research_call, ["funding_agency", "funding_scheme", "deadline"], as_dict=True
+			"Research Call",
+			self.research_call,
+			["funding_agency", "funding_scheme", "deadline"],
+			as_dict=True,
 		)
 		if not call:
 			frappe.throw(_("Research Call {0} does not exist.").format(self.research_call))
-		self.funding_agency, self.funding_scheme, self.deadline = call.funding_agency, call.funding_scheme, call.deadline
+		self.funding_agency, self.funding_scheme, self.deadline = (
+			call.funding_agency,
+			call.funding_scheme,
+			call.deadline,
+		)
 
 	def check_investigators(self):
 		co_pis = [row.employee for row in self.co_investigators]
@@ -111,19 +132,26 @@ class ResearchProposal(ApprovableDocument, Document):
 			frappe.throw(_("A co-investigator is listed more than once."))
 		companies = dict(
 			frappe.get_all(
-				"Employee", {"name": ["in", [self.principal_investigator, *co_pis]]}, ["name", "company"], as_list=True
+				"Employee",
+				{"name": ["in", [self.principal_investigator, *co_pis]]},
+				["name", "company"],
+				as_list=True,
 			)
 		)
 		outside = [e for e in [self.principal_investigator, *co_pis] if companies.get(e) != self.company]
 		if outside:
-			frappe.throw(_("Investigators {0} are not employees of {1}.").format(", ".join(outside), self.company))
+			frappe.throw(
+				_("Investigators {0} are not employees of {1}.").format(", ".join(outside), self.company)
+			)
 
 	def check_budget(self):
 		if not self.budget:
 			frappe.throw(_("Enter the budget by head."))
 		scheme_heads = set(
 			frappe.get_all(
-				"Funding Scheme Head", {"parent": self.funding_scheme, "parenttype": "Funding Scheme"}, pluck="budget_head"
+				"Funding Scheme Head",
+				{"parent": self.funding_scheme, "parenttype": "Funding Scheme"},
+				pluck="budget_head",
 			)
 		)
 		seen = set()
@@ -135,7 +163,9 @@ class ResearchProposal(ApprovableDocument, Document):
 					)
 				)
 			if row.budget_head in seen:
-				frappe.throw(_("Row {0}: budget head {1} is listed more than once.").format(row.idx, row.budget_head))
+				frappe.throw(
+					_("Row {0}: budget head {1} is listed more than once.").format(row.idx, row.budget_head)
+				)
 			seen.add(row.budget_head)
 			if flt(row.amount) <= 0:
 				frappe.throw(_("Row {0}: enter an amount for {1}.").format(row.idx, row.budget_head))

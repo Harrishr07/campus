@@ -62,13 +62,18 @@ def matrix_key(company, program, academic_year):
 def find_matrix(company, program, academic_year, for_update=False):
 	"""Name of the Seat Matrix of the combination, or None. `for_update` takes the row lock."""
 	return frappe.db.get_value(
-		"Seat Matrix", {"matrix_key": matrix_key(company, program, academic_year)}, "name", for_update=for_update
+		"Seat Matrix",
+		{"matrix_key": matrix_key(company, program, academic_year)},
+		"name",
+		for_update=for_update,
 	)
 
 
 def counts_in_matrix(quota):
 	"""False for quotas outside the sanctioned intake (supernumerary or not counted in the matrix)."""
-	flags = frappe.get_cached_value("Admission Quota", quota, ["is_supernumerary", "counts_in_seat_matrix"], as_dict=True)
+	flags = frappe.get_cached_value(
+		"Admission Quota", quota, ["is_supernumerary", "counts_in_seat_matrix"], as_dict=True
+	)
 	return bool(flags) and not flags.is_supernumerary and bool(flags.counts_in_seat_matrix)
 
 
@@ -91,7 +96,9 @@ def lock_matrices(doc):
 	"""Lock the Seat Matrix of the enrollment (and of its stored values, if they differ) in matrix_key order."""
 	keys = {matrix_key(doc.oc_company, doc.program, doc.academic_year)}
 	if not doc.is_new():
-		stored = frappe.db.get_value("Program Enrollment", doc.name, ["oc_company", "program", "academic_year"])
+		stored = frappe.db.get_value(
+			"Program Enrollment", doc.name, ["oc_company", "program", "academic_year"]
+		)
 		if stored:
 			keys.add(matrix_key(*stored))
 	for key in sorted(keys):
@@ -141,9 +148,16 @@ def refresh_cache_of(doc, method=None):
 
 def refresh_cache(matrix, company, program, academic_year):
 	live = live_counts(company, program, academic_year)
-	for row in frappe.get_all("Seat Matrix Row", {"parent": matrix}, ["name", "quota", "category", "sanctioned"], limit=0):
+	for row in frappe.get_all(
+		"Seat Matrix Row", {"parent": matrix}, ["name", "quota", "category", "sanctioned"], limit=0
+	):
 		filled = live.get((row.quota, row.category), 0)
-		frappe.db.set_value("Seat Matrix Row", row.name, {"filled": filled, "vacant": (row.sanctioned or 0) - filled}, update_modified=False)
+		frappe.db.set_value(
+			"Seat Matrix Row",
+			row.name,
+			{"filled": filled, "vacant": (row.sanctioned or 0) - filled},
+			update_modified=False,
+		)
 
 
 def live_counts(company, program, academic_year):
@@ -229,7 +243,13 @@ def refresh_allotted(company, program, academic_year):
 		return
 	allotted = count_allotted(program, academic_year)
 	for row in frappe.get_all("Seat Matrix Row", {"parent": name}, ["name", "quota", "category"], limit=0):
-		frappe.db.set_value("Seat Matrix Row", row.name, "allotted", allotted.get((row.quota, row.category), 0), update_modified=False)
+		frappe.db.set_value(
+			"Seat Matrix Row",
+			row.name,
+			"allotted",
+			allotted.get((row.quota, row.category), 0),
+			update_modified=False,
+		)
 
 
 def validate_rows(matrix):
@@ -242,7 +262,9 @@ def validate_rows(matrix):
 		if (row.sanctioned or 0) < 0:
 			frappe.throw(_("Row {0}: sanctioned seats cannot be negative.").format(row.idx))
 		if not frappe.db.get_value("Admission Quota", row.quota, "counts_in_seat_matrix"):
-			frappe.throw(_("Row {0}: quota {1} is not counted in the seat matrix.").format(row.idx, row.quota))
+			frappe.throw(
+				_("Row {0}: quota {1} is not counted in the seat matrix.").format(row.idx, row.quota)
+			)
 
 
 def check_seat_available(program, academic_year, quota, category, applicant=None, justification=None):
@@ -253,8 +275,12 @@ def check_seat_available(program, academic_year, quota, category, applicant=None
 	matrix = find_matrix(company, program, academic_year, for_update=True)
 	row = matrix and locked_row(matrix, quota, category)  # sanctioned, re-read under the lock
 	if not row:
-		return check_unconfigured(company, program, academic_year, quota, category, applicant, matrix, justification)
-	live = live_counts(company, program, academic_year).get((quota, category), 0)  # the truth: never the cached filled
+		return check_unconfigured(
+			company, program, academic_year, quota, category, applicant, matrix, justification
+		)
+	live = live_counts(company, program, academic_year).get(
+		(quota, category), 0
+	)  # the truth: never the cached filled
 	if vacancy(row, live) > 0:
 		return True
 	require_override(
@@ -264,7 +290,18 @@ def check_seat_available(program, academic_year, quota, category, applicant=None
 		_("Seat Matrix Full"),
 		justification,
 	)
-	log_override(company, program, academic_year, quota, category, applicant, ROW_FULL, row.sanctioned, live, justification)
+	log_override(
+		company,
+		program,
+		academic_year,
+		quota,
+		category,
+		applicant,
+		ROW_FULL,
+		row.sanctioned,
+		live,
+		justification,
+	)
 	return "override"
 
 
@@ -274,7 +311,9 @@ def check_unconfigured(company, program, academic_year, quota, category, applica
 		return True
 	if matrix:
 		reason = NO_ROW
-		message = _("The Seat Matrix of {0} ({1}) has no row for {2} / {3}.").format(program, academic_year, quota, category)
+		message = _("The Seat Matrix of {0} ({1}) has no row for {2} / {3}.").format(
+			program, academic_year, quota, category
+		)
 	else:
 		reason = NO_MATRIX
 		message = _("No Seat Matrix is set up for {0} ({1}).").format(program, academic_year)
@@ -295,7 +334,9 @@ def require_override(message, title, justification):
 		frappe.throw(_("{0} Type the justification for the seat override.").format(message), title=title)
 
 
-def log_override(company, program, academic_year, quota, category, applicant, reason, sanctioned, filled, justification):
+def log_override(
+	company, program, academic_year, quota, category, applicant, reason, sanctioned, filled, justification
+):
 	"""Record the override. It never changes the matrix: the approved intake stays as sanctioned."""
 	frappe.get_doc(
 		{

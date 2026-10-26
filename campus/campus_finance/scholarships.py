@@ -52,9 +52,15 @@ def renewal_reasons(arrear_count, max_arrears, attendance_pct, min_attendance_pc
 		reasons.append(_("{0} arrear(s) pending; the scheme allows {1}.").format(arrear_count, max_arrears))
 	if flt(min_attendance_pct):
 		if attendance_pct is None:
-			reasons.append(_("No attendance record to check against the required {0}%.").format(flt(min_attendance_pct)))
+			reasons.append(
+				_("No attendance record to check against the required {0}%.").format(flt(min_attendance_pct))
+			)
 		elif flt(attendance_pct) < flt(min_attendance_pct):
-			reasons.append(_("Attendance {0}% is below the required {1}%.").format(flt(attendance_pct), flt(min_attendance_pct)))
+			reasons.append(
+				_("Attendance {0}% is below the required {1}%.").format(
+					flt(attendance_pct), flt(min_attendance_pct)
+				)
+			)
 	return reasons
 
 
@@ -80,7 +86,10 @@ def renewal_check(student, scheme):
 
 	_term, attendance = latest_attendance(student) if flt(scheme.renewal_min_attendance_pct) else (None, None)
 	return renewal_reasons(
-		len(arrear_courses(student)), scheme.renewal_max_arrears or 0, attendance, scheme.renewal_min_attendance_pct
+		len(arrear_courses(student)),
+		scheme.renewal_max_arrears or 0,
+		attendance,
+		scheme.renewal_min_attendance_pct,
 	)
 
 
@@ -94,17 +103,28 @@ def disbursed_total(application):
 		application,
 		as_dict=True,
 	)
-	live = [r.amount for r in rows if frappe.db.get_value(r.voucher_type, r.voucher, "docstatus", for_update=True) == 1]
+	live = [
+		r.amount
+		for r in rows
+		if frappe.db.get_value(r.voucher_type, r.voucher, "docstatus", for_update=True) == 1
+	]
 	return flt(sum(live), 2)
 
 
 def open_invoices(student, company):
 	"""[(invoice, outstanding)] of the student's open invoices of `company`, oldest first, each read under its row lock."""
 	candidates = sorted(
-		(i for i in student_invoices(student, outstanding_only=True) if i.company == company and not i.is_return),
+		(
+			i
+			for i in student_invoices(student, outstanding_only=True)
+			if i.company == company and not i.is_return
+		),
 		key=lambda i: (i.posting_date, i.name),
 	)
-	locked = ((i.name, frappe.db.get_value("Sales Invoice", i.name, "outstanding_amount", for_update=True)) for i in candidates)
+	locked = (
+		(i.name, frappe.db.get_value("Sales Invoice", i.name, "outstanding_amount", for_update=True))
+		for i in candidates
+	)
 	return [(name, flt(outstanding, 2)) for name, outstanding in locked if flt(outstanding) > 0]
 
 
@@ -123,7 +143,11 @@ def disburse(application, amount, reference_no=None):
 		frappe.throw(_("The disbursement amount must be positive."))
 	paid = disbursed_total(doc.name)
 	if amount > flt(doc.sanctioned_amount - paid, 2) + CENT:
-		frappe.throw(_("Only {0} of the sanctioned {1} is left to disburse.").format(flt(doc.sanctioned_amount - paid, 2), doc.sanctioned_amount))
+		frappe.throw(
+			_("Only {0} of the sanctioned {1} is left to disburse.").format(
+				flt(doc.sanctioned_amount - paid, 2), doc.sanctioned_amount
+			)
+		)
 	scheme = frappe.get_doc("Scholarship Scheme", doc.scheme)
 	allocations, left = allocate(amount, open_invoices(doc.student, doc.company))
 	make = make_payment_entry if scheme.scheme_type == GOVERNMENT else make_journal_entry
@@ -141,7 +165,9 @@ def disburse(application, amount, reference_no=None):
 
 def refresh_totals(application):
 	"""Store the live disbursed total and the status on the application."""
-	sanctioned = frappe.db.get_value("Scholarship Application", application, "sanctioned_amount", for_update=True)
+	sanctioned = frappe.db.get_value(
+		"Scholarship Application", application, "sanctioned_amount", for_update=True
+	)
 	total = disbursed_total(application)
 	frappe.db.set_value(
 		"Scholarship Application", application,
@@ -154,7 +180,9 @@ def receivable_of(customer, company):
 	"""The receivable account of `customer` in `company` (the party's own, else the company default)."""
 	account = get_party_account("Customer", customer, company)
 	if not account:
-		frappe.throw(_("Company {0} has no receivable account for {1}.").format(frappe.bold(company), customer))
+		frappe.throw(
+			_("Company {0} has no receivable account for {1}.").format(frappe.bold(company), customer)
+		)
 	return account
 
 
@@ -172,7 +200,9 @@ def make_payment_entry(application, scheme, amount, allocations, left, reference
 			],
 		}
 	)  # fmt: skip
-	payment.flags.ignore_permissions = True  # every input is server-resolved; the caller was checked in `disburse`
+	payment.flags.ignore_permissions = (
+		True  # every input is server-resolved; the caller was checked in `disburse`
+	)
 	payment.flags.skip_fee_receipt = True
 	payment.insert()
 	return PAYMENT_ENTRY, payment.submit().name
@@ -182,7 +212,10 @@ def make_journal_entry(application, scheme, amount, allocations, left, reference
 	"""Waive `amount` of the student's dues: debit the scheme's expense account, credit the receivable; returns ("Journal Entry", name)."""
 	customer = student_customer(application.student)
 	receivable = receivable_of(customer, application.company)
-	credits = [{"reference_type": "Sales Invoice", "reference_name": name, "credit_in_account_currency": part} for name, part in allocations]
+	credits = [
+		{"reference_type": "Sales Invoice", "reference_name": name, "credit_in_account_currency": part}
+		for name, part in allocations
+	]
 	if left > 0:
 		credits.append({"credit_in_account_currency": left})  # no invoice left to settle: credit on account
 	entry = frappe.get_doc(
@@ -204,7 +237,9 @@ def make_journal_entry(application, scheme, amount, allocations, left, reference
 def student_customer(student):
 	customer = frappe.db.get_value("Student", student, "customer")
 	if not customer:
-		frappe.throw(_("Student {0} has no Customer, so nothing can be credited.").format(frappe.bold(student)))
+		frappe.throw(
+			_("Student {0} has no Customer, so nothing can be credited.").format(frappe.bold(student))
+		)
 	return customer
 
 
@@ -216,15 +251,22 @@ def block_amend(doc, method=None):
 	"""Doc event (Payment Entry / Journal Entry validate): a cancelled disbursement voucher is redone with Disburse, not
 	amended, because an amended voucher would credit the student again with no disbursement row to count against the cap."""
 	if doc.get("amended_from") and frappe.db.exists(
-		"Scholarship Disbursement", {"voucher_type": doc.doctype, "voucher": doc.amended_from, "parenttype": "Scholarship Application"}
+		"Scholarship Disbursement",
+		{"voucher_type": doc.doctype, "voucher": doc.amended_from, "parenttype": "Scholarship Application"},
 	):
-		frappe.throw(_("{0} was a scholarship disbursement; do not amend it, disburse again with Disburse.").format(doc.amended_from))
+		frappe.throw(
+			_("{0} was a scholarship disbursement; do not amend it, disburse again with Disburse.").format(
+				doc.amended_from
+			)
+		)
 
 
 def refresh_after_voucher_cancel(doc, method=None):
 	"""Doc event (Payment Entry / Journal Entry on_cancel): a cancelled disbursement voucher stops counting."""
 	for application in frappe.get_all(
-		"Scholarship Disbursement", {"voucher_type": doc.doctype, "voucher": doc.name, "parenttype": "Scholarship Application"}, pluck="parent"
+		"Scholarship Disbursement",
+		{"voucher_type": doc.doctype, "voucher": doc.name, "parenttype": "Scholarship Application"},
+		pluck="parent",
 	):
 		frappe.db.get_value("Scholarship Application", application, "name", for_update=True)
 		refresh_totals(application)

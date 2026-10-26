@@ -31,27 +31,51 @@ class CondonationRequest(ApprovableDocument, Document):
 
 	def before_cancel(self):
 		if self.fee_invoice and frappe.db.get_value("Sales Invoice", self.fee_invoice, "docstatus") == 1:
-			frappe.throw(_("Cancel or credit the fee invoice {0} before cancelling this condonation.").format(self.fee_invoice))
+			frappe.throw(
+				_("Cancel or credit the fee invoice {0} before cancelling this condonation.").format(
+					self.fee_invoice
+				)
+			)
 
 	def set_company(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to request condonation for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to request condonation for {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		self.company = student.oc_company
 
 	def check_duplicate(self):
 		if frappe.db.exists(
 			"Condonation Request",
-			{"student": self.student, "academic_term": self.academic_term, "docstatus": ["<", 2], "name": ["!=", self.name]},
+			{
+				"student": self.student,
+				"academic_term": self.academic_term,
+				"docstatus": ["<", 2],
+				"name": ["!=", self.name],
+			},
 		):
-			frappe.throw(_("{0} already has a condonation request for {1}.").format(frappe.bold(self.student), self.academic_term))
+			frappe.throw(
+				_("{0} already has a condonation request for {1}.").format(
+					frappe.bold(self.student), self.academic_term
+				)
+			)
 
 	def check_band(self):
 		"""Only the medical band may be condoned; the fee and the percentage are read from the current attendance."""
 		summary = summarise(self.student, self.academic_term, term_window(self.academic_term), {})
 		if summary["band_status"] == SHORTAGE:
-			frappe.throw(_("{0} is below the medical band and is detained (SA); condonation is not available.").format(frappe.bold(self.student)))
+			frappe.throw(
+				_("{0} is below the medical band and is detained (SA); condonation is not available.").format(
+					frappe.bold(self.student)
+				)
+			)
 		if summary["band_status"] != MEDICAL_BAND:
-			frappe.throw(_("{0} meets the attendance requirement for {1}; no condonation is needed.").format(frappe.bold(self.student), self.academic_term))
+			frappe.throw(
+				_("{0} meets the attendance requirement for {1}; no condonation is needed.").format(
+					frappe.bold(self.student), self.academic_term
+				)
+			)
 		self.overall_pct = summary["overall_pct"]
 		self.fee_amount = rule_values(self.student)["condonation_fee"]

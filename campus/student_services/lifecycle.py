@@ -29,7 +29,15 @@ def rule_name(from_status, to_status):
 	return f"{from_status or NEW_RECORD} to {to_status}"
 
 
-def transition(student, to_status, effective_date=None, reason=None, source=None, approved_by=None, program_enrollment=None):
+def transition(
+	student,
+	to_status,
+	effective_date=None,
+	reason=None,
+	source=None,
+	approved_by=None,
+	program_enrollment=None,
+):
 	"""Move `student` to `to_status` from `effective_date` (default today); returns the Lifecycle Transition name.
 
 	`source` is the document causing the change (a Document or (doctype, name)). `approved_by` defaults to the
@@ -38,7 +46,12 @@ def transition(student, to_status, effective_date=None, reason=None, source=None
 	source_doctype, source_name = source_ref(source)
 	current = lock_student(student)
 	latest = latest_transition(student)
-	if latest and source_name and (latest.source_doctype, latest.source_name, latest.to_status) == (source_doctype, source_name, to_status):
+	if (
+		latest
+		and source_name
+		and (latest.source_doctype, latest.source_name, latest.to_status)
+		== (source_doctype, source_name, to_status)
+	):
 		if current.status == to_status:
 			return latest.name  # a retry of the same change
 	effective = getdate(effective_date or today())
@@ -61,12 +74,16 @@ def revert(source, reason, student=None, legacy_status=None, statuses=None):
 	is left alone when that is its current status. Otherwise a change that is no longer the latest, or a Migrated
 	record with no `legacy_status`, throws. An Initial record is never undone."""
 	source_doctype, source_name = source_ref(source)
-	student = student or frappe.db.get_value(LOG, {"source_doctype": source_doctype, "source_name": source_name}, "student")
+	student = student or frappe.db.get_value(
+		LOG, {"source_doctype": source_doctype, "source_name": source_name}, "student"
+	)
 	if not student:
 		return None
 	current = lock_student(student)
 	live = live_history(student)
-	from_source = [row for row in live if (row.source_doctype, row.source_name) == (source_doctype, source_name)]
+	from_source = [
+		row for row in live if (row.source_doctype, row.source_name) == (source_doctype, source_name)
+	]
 	if not from_source:
 		return None
 	latest = live[-1]
@@ -98,7 +115,9 @@ def restored_status(record, legacy_status):
 	if record.kind == MIGRATED and legacy_status:
 		return legacy_status
 	frappe.throw(
-		_("The {0} record {1} of {2} cannot be undone automatically.").format(_(record.kind), record.name, frappe.bold(record.student))
+		_("The {0} record {1} of {2} cannot be undone automatically.").format(
+			_(record.kind), record.name, frappe.bold(record.student)
+		)
 	)
 
 
@@ -107,7 +126,9 @@ def current_status(student):
 
 
 def check(student, from_status, to_status, effective, latest):
-	problem = rules.refusal(permitted_moves(), from_status, to_status, effective, latest and latest.effective_date)
+	problem = rules.refusal(
+		permitted_moves(), from_status, to_status, effective, latest and latest.effective_date
+	)
 	if problem == rules.UNKNOWN_STATUS:
 		frappe.throw(_("{0} is not a lifecycle status.").format(frappe.bold(to_status)))
 	if problem == rules.SAME_STATUS:
@@ -121,13 +142,19 @@ def check(student, from_status, to_status, effective, latest):
 	if problem == rules.BEFORE_LATEST:
 		frappe.throw(
 			_("The effective date {0} is before the last status change of {1} ({2} from {3}).").format(
-				frappe.format(effective, "Date"), frappe.bold(student), latest.to_status, frappe.format(latest.effective_date, "Date")
+				frappe.format(effective, "Date"),
+				frappe.bold(student),
+				latest.to_status,
+				frappe.format(latest.effective_date, "Date"),
 			)
 		)
 
 
 def permitted_moves():
-	return {(row.from_status or rules.NEW, row.to_status) for row in frappe.get_all(RULE, {"enabled": 1}, ["from_status", "to_status"])}
+	return {
+		(row.from_status or rules.NEW, row.to_status)
+		for row in frappe.get_all(RULE, {"enabled": 1}, ["from_status", "to_status"])
+	}
 
 
 def lock_student(student):
@@ -151,8 +178,16 @@ def live_history(student, lock=True):
 	query = (
 		frappe.qb.from_(log)
 		.select(
-			log.name, log.student, log.kind, log.from_status, log.to_status, log.effective_date,
-			log.source_doctype, log.source_name, log.program_enrollment, log.reverses,
+			log.name,
+			log.student,
+			log.kind,
+			log.from_status,
+			log.to_status,
+			log.effective_date,
+			log.source_doctype,
+			log.source_name,
+			log.program_enrollment,
+			log.reverses,
 		)  # fmt: skip
 		.where(log.student == student)
 		.orderby(log.creation)
@@ -169,7 +204,18 @@ def last_change_date(student):
 	return live[-1].effective_date if live else None
 
 
-def write(student, current, to_status, effective, kind, reason, source, approved_by, program_enrollment, reverses=None):
+def write(
+	student,
+	current,
+	to_status,
+	effective,
+	kind,
+	reason,
+	source,
+	approved_by,
+	program_enrollment,
+	reverses=None,
+):
 	frappe.db.set_value("Student", student, FIELD, to_status)
 	return insert_log(
 		student, current.company, current.status, to_status, effective, kind, reason, source, approved_by,
@@ -177,7 +223,19 @@ def write(student, current, to_status, effective, kind, reason, source, approved
 	).name  # fmt: skip
 
 
-def insert_log(student, company, from_status, to_status, effective, kind, reason, source, approved_by, program_enrollment, reverses=None):
+def insert_log(
+	student,
+	company,
+	from_status,
+	to_status,
+	effective,
+	kind,
+	reason,
+	source,
+	approved_by,
+	program_enrollment,
+	reverses=None,
+):
 	doc = frappe.get_doc(
 		{
 			"doctype": LOG, "student": student, "company": company, "from_status": from_status or rules.NEW,
@@ -194,7 +252,10 @@ def insert_log(student, company, from_status, to_status, effective, kind, reason
 
 def latest_enrollment(student):
 	return frappe.db.get_value(
-		"Program Enrollment", {"student": student, "docstatus": 1}, "name", order_by="enrollment_date desc, creation desc"
+		"Program Enrollment",
+		{"student": student, "docstatus": 1},
+		"name",
+		order_by="enrollment_date desc, creation desc",
 	)
 
 
@@ -217,12 +278,16 @@ def validate_student(doc, method=None):
 		problem = rules.refusal(permitted_moves(), rules.NEW, doc.get(FIELD), None, None)
 		if problem:
 			frappe.throw(
-				_("A new student cannot start as {0}: no enabled Lifecycle Transition Rule permits it.").format(_(doc.get(FIELD)))
+				_(
+					"A new student cannot start as {0}: no enabled Lifecycle Transition Rule permits it."
+				).format(_(doc.get(FIELD)))
 			)
 		doc.set(DETAINED, 0)  # only the Progression Run detains
 	elif doc.has_value_changed(FIELD):
 		frappe.throw(
-			_("The lifecycle status changes only through a lifecycle transition (admission, break, rejoin, cancellation, TC, convocation), not by editing the Student.")
+			_(
+				"The lifecycle status changes only through a lifecycle transition (admission, break, rejoin, cancellation, TC, convocation), not by editing the Student."
+			)
 		)
 	elif doc.has_value_changed(DETAINED):
 		frappe.throw(_("Detained is set by the Progression Run only, not by editing the Student."))
@@ -262,12 +327,22 @@ def migrate_break_statuses():
 	rejoin restores a valid one (Long Absent and Detained: Active). A student detained before a break still open
 	keeps the detention (oc_detained). Idempotent: mapped values are left alone."""
 	breaks = frappe.get_all(
-		"Break of Study", {"previous_status": ["not in", [*rules.STATUSES, ""]]}, ["name", "student", "docstatus", "previous_status"]
+		"Break of Study",
+		{"previous_status": ["not in", [*rules.STATUSES, ""]]},
+		["name", "student", "docstatus", "previous_status"],
 	)
 	for row in breaks:
 		if row.previous_status == rules.LEGACY_DETAINED and row.docstatus == 1 and open_break(row.student):
-			frappe.db.set_value("Student", row.student, DETAINED, 1, update_modified=False)  # detained before the break
-		frappe.db.set_value("Break of Study", row.name, "previous_status", rules.migrated_status(row.previous_status), update_modified=False)
+			frappe.db.set_value(
+				"Student", row.student, DETAINED, 1, update_modified=False
+			)  # detained before the break
+		frappe.db.set_value(
+			"Break of Study",
+			row.name,
+			"previous_status",
+			rules.migrated_status(row.previous_status),
+			update_modified=False,
+		)
 
 
 def migrate_student(student):
@@ -279,7 +354,10 @@ def migrate_student(student):
 		open_break=bool(facts.open_break), convocation=bool(facts.convocation),
 	)  # fmt: skip
 	source, effective, evidence = migration_evidence(status, facts)
-	detained = rules.LEGACY_DETAINED in (current.status, facts.open_break and facts.open_break.previous_status)
+	detained = rules.LEGACY_DETAINED in (
+		current.status,
+		facts.open_break and facts.open_break.previous_status,
+	)
 	frappe.db.set_value("Student", student, {FIELD: status, DETAINED: int(detained)}, update_modified=False)
 	reason = _("Migrated from the academic status {0}").format(current.status or _("(blank)"))
 	insert_log(
@@ -290,16 +368,30 @@ def migrate_student(student):
 
 
 def legacy_facts(student):
-	row = frappe.db.get_value("Student", student, ["joining_date", "oc_batch", "creation", "leaving_certificate_number", "date_of_leaving"], as_dict=True)
+	row = frappe.db.get_value(
+		"Student",
+		student,
+		["joining_date", "oc_batch", "creation", "leaving_certificate_number", "date_of_leaving"],
+		as_dict=True,
+	)
 	row.cancellation = frappe.db.get_value(
-		"Admission Cancellation", {"student": student, "docstatus": 1}, ["name", "cancellation_date"], as_dict=True
+		"Admission Cancellation",
+		{"student": student, "docstatus": 1},
+		["name", "cancellation_date"],
+		as_dict=True,
 	)
 	row.tc = row.leaving_certificate_number and frappe.db.get_value(
-		"Certificate Request", {"student": student, "certificate_number": row.leaving_certificate_number, "docstatus": 1}, "name"
+		"Certificate Request",
+		{"student": student, "certificate_number": row.leaving_certificate_number, "docstatus": 1},
+		"name",
 	)
 	row.open_break = open_break(student)
-	parent = frappe.db.get_value("Convocation List Graduate", {"student": student, "parenttype": "Convocation List"}, "parent")
-	row.convocation = parent and frappe.db.get_value("Convocation List", parent, ["name", "convocation_date", "creation"], as_dict=True)
+	parent = frappe.db.get_value(
+		"Convocation List Graduate", {"student": student, "parenttype": "Convocation List"}, "parent"
+	)
+	row.convocation = parent and frappe.db.get_value(
+		"Convocation List", parent, ["name", "convocation_date", "creation"], as_dict=True
+	)
 	return row
 
 
@@ -307,10 +399,14 @@ def open_break(student):
 	"""The student's approved Break of Study with no approved rejoin, or None."""
 	if not frappe.db.table_exists("Break of Study"):
 		return None
-	rejoined = frappe.get_all("Rejoin Application", {"student": student, "docstatus": 1}, pluck="break_of_study")
+	rejoined = frappe.get_all(
+		"Rejoin Application", {"student": student, "docstatus": 1}, pluck="break_of_study"
+	)
 	return frappe.db.get_value(
-		"Break of Study", {"student": student, "docstatus": 1, "name": ["not in", rejoined or [""]]},
-		["name", "from_date", "previous_status"], as_dict=True,
+		"Break of Study",
+		{"student": student, "docstatus": 1, "name": ["not in", rejoined or [""]]},
+		["name", "from_date", "previous_status"],
+		as_dict=True,
 	)
 
 
@@ -318,12 +414,22 @@ def migration_evidence(status, facts):
 	"""(source, effective date, reason suffix) of a migrated status from the record that shows it."""
 	started = start_date(facts.joining_date, facts.oc_batch, facts.creation)
 	if status == rules.CANCELLED:
-		return ("Admission Cancellation", facts.cancellation.name), getdate(facts.cancellation.cancellation_date), ""
+		return (
+			("Admission Cancellation", facts.cancellation.name),
+			getdate(facts.cancellation.cancellation_date),
+			"",
+		)
 	if status == rules.AWARD_ELIGIBLE:
 		return ("Convocation List", facts.convocation.name), listing_date(facts.convocation), ""
 	if status == rules.WITHDRAWN:
-		source = ("Certificate Request", facts.tc) if facts.tc else (None, None)  # a TC number with no request: no source
-		return source, getdate(facts.date_of_leaving or started), _(" (transfer certificate {0})").format(facts.leaving_certificate_number)
+		source = (
+			("Certificate Request", facts.tc) if facts.tc else (None, None)
+		)  # a TC number with no request: no source
+		return (
+			source,
+			getdate(facts.date_of_leaving or started),
+			_(" (transfer certificate {0})").format(facts.leaving_certificate_number),
+		)
 	if status == rules.ON_BREAK and facts.open_break:
 		return ("Break of Study", facts.open_break.name), getdate(facts.open_break.from_date), ""
 	return (None, None), started, ""

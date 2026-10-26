@@ -33,9 +33,15 @@ def sanction_rows(sanction, company, due_days):
 		due_date = add_days(end, due_days)
 		rows.append(
 			{
-				"sanction": sanction.name, "title": sanction.title, "funding_agency": sanction.funding_agency,
-				"pi_name": sanction.pi_name, "from_date": start, "to_date": end, "due_date": due_date,
-				"status": _(status(certificate, end, due_date)), "certificate": certificate and certificate.name,
+				"sanction": sanction.name,
+				"title": sanction.title,
+				"funding_agency": sanction.funding_agency,
+				"pi_name": sanction.pi_name,
+				"from_date": start,
+				"to_date": end,
+				"due_date": due_date,
+				"status": _(status(certificate, end, due_date)),
+				"certificate": certificate and certificate.name,
 			}  # fmt: skip
 		)
 	return rows
@@ -62,7 +68,12 @@ def periods(sanction, company):
 def covering_certificate(sanction, period_end):
 	found = frappe.get_list(
 		"Utilisation Certificate",
-		{"sanction": sanction, "docstatus": 1, "from_date": ["<=", period_end], "to_date": [">=", period_end]},
+		{
+			"sanction": sanction,
+			"docstatus": 1,
+			"from_date": ["<=", period_end],
+			"to_date": [">=", period_end],
+		},
 		["name", "source_changed"],
 		limit=1,
 	)
@@ -79,7 +90,13 @@ def status(certificate, period_end, due_date):
 
 def columns():
 	def col(fieldname, label, fieldtype="Data", width=120, options=None):
-		return {"fieldname": fieldname, "label": _(label), "fieldtype": fieldtype, "width": width, "options": options}
+		return {
+			"fieldname": fieldname,
+			"label": _(label),
+			"fieldtype": fieldtype,
+			"width": width,
+			"options": options,
+		}
 
 	return [
 		col("sanction", "Sanction", "Link", 150, "Sanction"),

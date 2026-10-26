@@ -12,8 +12,8 @@ from campus.student_services import grievances, portal
 from campus.student_services.report.grievance_sla import grievance_sla
 from campus.student_services.setup import GRIEVANCE_POLICY
 from campus.tests.approval_fixtures import level, make_department
-from campus.tests.factories import make_user
 from campus.tests.broadcast_fixtures import make_guardian
+from campus.tests.factories import make_user
 from campus.tests.finance_factories import make_enrolled_students, make_finance_company, make_year_and_program
 from campus.tests.test_results import make_login
 from campus.tests.utils import CampusTestCase
@@ -22,7 +22,12 @@ COLLEGE = "Grievance Test College"
 YEAR, PROGRAM = "Grievance Test 2026", "Grievance Test BE"
 POLICY, ICC_POLICY = "GRV Test Escalation", "GRV Test Committee"
 EVALUATION, ICC, STAFF_ONLY = "GRV Test Evaluation", "GRV Test ICC", "GRV Test Staff Only"
-HOD, COE, PRINCIPAL, COMMITTEE = "grv-hod@example.com", "grv-coe@example.com", "grv-principal@example.com", "grv-committee@example.com"
+HOD, COE, PRINCIPAL, COMMITTEE = (
+	"grv-hod@example.com",
+	"grv-coe@example.com",
+	"grv-principal@example.com",
+	"grv-committee@example.com",
+)
 STUDENT_A, STUDENT_B = "grv-student-a@example.com", "grv-student-b@example.com"
 HOD_B, GUARDIAN = "grv-hod-b@example.com", "grv-guardian@example.com"
 BLANK_HOD, SYSTEM_MANAGER = "grv-hod-blank@example.com", "grv-sysmgr@example.com"
@@ -33,14 +38,26 @@ def make_category(name, policy, **values):
 	if frappe.db.exists("Grievance Type", name):
 		frappe.delete_doc("Grievance Type", name, force=True)
 	return frappe.get_doc(
-		{"doctype": "Grievance Type", "__newname": name, "oc_applies_to_students": 1, "oc_escalation_policy": policy, **values}
+		{
+			"doctype": "Grievance Type",
+			"__newname": name,
+			"oc_applies_to_students": 1,
+			"oc_escalation_policy": policy,
+			**values,
+		}
 	).insert()
 
 
 def hold(position, scope, user):
 	if not frappe.db.exists("Position Holder", {"position": position, "scope_value": scope}):
 		frappe.get_doc(
-			{"doctype": "Position Holder", "position": position, "scope_value": scope, "user": user, "from_date": add_days(today(), -30)}
+			{
+				"doctype": "Position Holder",
+				"position": position,
+				"scope_value": scope,
+				"user": user,
+				"from_date": add_days(today(), -30),
+			}
 		).insert()
 
 
@@ -90,14 +107,21 @@ class GrievanceFixture(CampusTestCase):
 		frappe.db.delete("Approval Level", {"parent": name})
 		frappe.db.delete("Approval Policy", {"name": name})
 		frappe.get_doc(
-			{"doctype": "Approval Policy", "policy_name": name, "document_type": "Student Grievance", "levels": levels}
+			{
+				"doctype": "Approval Policy",
+				"policy_name": name,
+				"document_type": "Student Grievance",
+				"levels": levels,
+			}
 		).insert()
 
 	def raise_for(self, student=None, category=EVALUATION):
 		return grievances.open_grievance(student or self.a, category, "Marks were not added up correctly.")
 
 	def request_of(self, grievance):
-		return frappe.get_doc("Approval Request", frappe.db.get_value("Approval Request", {"reference_name": grievance.name}))
+		return frappe.get_doc(
+			"Approval Request", frappe.db.get_value("Approval Request", {"reference_name": grievance.name})
+		)
 
 	def make_overdue(self, request):
 		frappe.db.set_value("Approval Request", request.name, "due_at", add_to_date(now_datetime(), hours=-1))
@@ -107,7 +131,9 @@ class GrievanceFixture(CampusTestCase):
 class TestEscalation(GrievanceFixture):
 	def test_raising_starts_the_first_level_with_the_hod_of_the_students_department(self):
 		grievance = self.raise_for()
-		self.assertEqual((grievance.status, grievance.company, grievance.department), ("Open", COLLEGE, self.department))
+		self.assertEqual(
+			(grievance.status, grievance.company, grievance.department), ("Open", COLLEGE, self.department)
+		)
 		request = self.request_of(grievance)
 		self.assertEqual((request.status, request.current_level, request.policy), ("Pending", 1, POLICY))
 		self.assertEqual([r.user for r in request.approvers], [HOD])
@@ -157,12 +183,16 @@ class TestEscalation(GrievanceFixture):
 		self.assertFalse(grievances.escalate(request.name))
 
 	def test_a_level_that_cannot_resolve_approvers_fails_without_moving_and_does_not_stop_the_job(self):
-		frappe.db.set_value("Position Holder", {"position": "COE", "scope_value": COLLEGE}, "to_date", add_days(today(), -1))
+		frappe.db.set_value(
+			"Position Holder", {"position": "COE", "scope_value": COLLEGE}, "to_date", add_days(today(), -1)
+		)
 		request = self.request_of(self.raise_for())
 		self.make_overdue(request)
 		with patch("campus.student_services.grievances.frappe.log_error") as log:
 			grievances.escalate_overdue()
-		self.assertEqual(self.request_of(frappe.get_doc("Student Grievance", request.reference_name)).current_level, 1)
+		self.assertEqual(
+			self.request_of(frappe.get_doc("Student Grievance", request.reference_name)).current_level, 1
+		)
 		log.assert_called_once()
 		self.assertEqual(frappe.db.get_value("Student Grievance", request.reference_name, "docstatus"), 0)
 
@@ -253,7 +283,10 @@ class TestPortal(GrievanceFixture):
 	def test_a_student_raises_and_lists_their_grievance(self):
 		frappe.set_user(STUDENT_A)
 		row = portal.raise_grievance(EVALUATION, "  Revaluation result is missing.  ")
-		self.assertEqual((row["category"], row["status"], row["description"]), (EVALUATION, "Open", "Revaluation result is missing."))
+		self.assertEqual(
+			(row["category"], row["status"], row["description"]),
+			(EVALUATION, "Open", "Revaluation result is missing."),
+		)
 		mine = portal.my_grievances()
 		self.assertEqual([g["name"] for g in mine["grievances"]], [row["name"]])
 		frappe.set_user(STUDENT_B)
@@ -300,7 +333,10 @@ class TestSlaReport(GrievanceFixture):
 		frappe.set_user(HOD)
 		grievances.resolve(closed.name, "Done.")
 		rows = {r["name"]: r for r in self.run_report()}
-		self.assertEqual((rows[late.name]["current_level"], rows[late.name]["escalations"], rows[late.name]["sla"]), (2, 1, "Overdue"))
+		self.assertEqual(
+			(rows[late.name]["current_level"], rows[late.name]["escalations"], rows[late.name]["sla"]),
+			(2, 1, "Overdue"),
+		)
 		self.assertEqual((rows[fresh.name]["current_level"], rows[fresh.name]["sla"]), (1, "Within SLA"))
 		self.assertEqual((rows[closed.name]["sla"], rows[closed.name]["due_at"]), ("Closed", None))
 
@@ -322,13 +358,20 @@ class TestSetup(CampusTestCase):
 
 	def test_the_default_policy_is_hod_coe_principal_with_sla_hours(self):
 		policy = frappe.get_doc("Approval Policy", GRIEVANCE_POLICY)
-		self.assertEqual([(lv.approver, lv.sla_hours) for lv in policy.levels], [("HOD", 48), ("COE", 48), ("PRINCIPAL", 72)])
-		self.assertEqual(frappe.db.get_value("Grievance Type", "Evaluation", "oc_escalation_policy"), GRIEVANCE_POLICY)
+		self.assertEqual(
+			[(lv.approver, lv.sla_hours) for lv in policy.levels],
+			[("HOD", 48), ("COE", 48), ("PRINCIPAL", 72)],
+		)
+		self.assertEqual(
+			frappe.db.get_value("Grievance Type", "Evaluation", "oc_escalation_policy"), GRIEVANCE_POLICY
+		)
 
 
 class TestFixRound1(GrievanceFixture):
 	def seat_ended(self, position, scope):
-		frappe.db.set_value("Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1))
+		frappe.db.set_value(
+			"Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1)
+		)
 
 	def test_the_generic_escalation_job_leaves_grievances_to_the_grievance_job(self):
 		grievance = self.raise_for()
@@ -394,8 +437,12 @@ class TestFixRound1(GrievanceFixture):
 		grievance = self.raise_for(self.a)  # department A
 		for user, expected in ((HOD, True), (HOD_B, False), (COE, False), (PRINCIPAL, True)):
 			frappe.set_user(user)
-			self.assertEqual(grievance.name in frappe.get_list("Student Grievance", pluck="name"), expected, user)
-			self.assertEqual(frappe.has_permission("Student Grievance", "read", grievance.name), expected, user)
+			self.assertEqual(
+				grievance.name in frappe.get_list("Student Grievance", pluck="name"), expected, user
+			)
+			self.assertEqual(
+				frappe.has_permission("Student Grievance", "read", grievance.name), expected, user
+			)
 			frappe.set_user("Administrator")
 		with self.assertRaises(frappe.PermissionError):
 			frappe.set_user(HOD_B)
@@ -421,10 +468,11 @@ class TestFixRound1(GrievanceFixture):
 			grievances.open_grievance(self.a, EVALUATION, "x" * 5001)
 
 
-
 class TestFinalReviewFixes(GrievanceFixture):
 	def seat_ended(self, position, scope):
-		frappe.db.set_value("Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1))
+		frappe.db.set_value(
+			"Position Holder", {"position": position, "scope_value": scope}, "to_date", add_days(today(), -1)
+		)
 
 	def test_a_hod_with_a_blank_scope_cannot_open_a_grievance_without_department(self):
 		frappe.db.set_value("Program", PROGRAM, "department", None)
@@ -432,7 +480,9 @@ class TestFinalReviewFixes(GrievanceFixture):
 		self.assertFalse(grievance.department)
 		make_user(BLANK_HOD, [COLLEGE])
 		hold("HOD", make_department("Grievance Test MECH", COLLEGE), BLANK_HOD)
-		frappe.db.set_value("Position Holder", {"user": BLANK_HOD, "position": "HOD"}, "scope_value", None)  # a broken seat
+		frappe.db.set_value(
+			"Position Holder", {"user": BLANK_HOD, "position": "HOD"}, "scope_value", None
+		)  # a broken seat
 		frappe.set_user(BLANK_HOD)
 		self.assertIn("HOD", frappe.get_roles())
 		self.assertFalse(frappe.has_permission("Student Grievance", "read", grievance.name))
@@ -459,11 +509,15 @@ class TestFinalReviewFixes(GrievanceFixture):
 		kwargs = log.call_args.kwargs
 		self.assertIn(grievance.name, kwargs["title"])
 		self.assertTrue(kwargs["message"])  # an explicit message: no traceback with context
-		self.assertEqual((kwargs["reference_doctype"], kwargs["reference_name"]), ("Student Grievance", grievance.name))
+		self.assertEqual(
+			(kwargs["reference_doctype"], kwargs["reference_name"]), ("Student Grievance", grievance.name)
+		)
 		self.assertEqual(frappe.local.message_log, [])
 
 	def unroutable_category(self):
-		self.make_policy(HOD_ONLY_POLICY, [level("Position", "HOD", title="HOD", scope_field="department", sla_hours=24)])
+		self.make_policy(
+			HOD_ONLY_POLICY, [level("Position", "HOD", title="HOD", scope_field="department", sla_hours=24)]
+		)
 		make_category(STAFF_ONLY, HOD_ONLY_POLICY)
 		self.seat_ended("HOD", self.department)
 		frappe.db.delete("Has Role", {"parent": COMMITTEE, "role": "Grievance Committee"})
@@ -494,7 +548,12 @@ class TestFinalReviewFixes(GrievanceFixture):
 		self.assertEqual((request.current_level, request.escalated), (3, 1))
 		reminders = [s for s in notified_grievance(PRINCIPAL) if s.startswith("Overdue grievance")]
 		self.assertEqual(len(reminders), 1)
-		self.assertEqual([a.action for a in request.actions].count(rules.ESCALATE), 2)  # a reminder is not an escalation
+		self.assertEqual(
+			[a.action for a in request.actions].count(rules.ESCALATE), 2
+		)  # a reminder is not an escalation
+
 
 def notified_grievance(user):
-	return frappe.get_all("Notification Log", filters={"for_user": user, "document_type": "Student Grievance"}, pluck="subject")
+	return frappe.get_all(
+		"Notification Log", filters={"for_user": user, "document_type": "Student Grievance"}, pluck="subject"
+	)

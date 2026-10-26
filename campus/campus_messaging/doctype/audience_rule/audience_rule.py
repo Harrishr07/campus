@@ -35,7 +35,11 @@ class AudienceRule(Document):
 		if not value:
 			frappe.throw(_("{0} is required for this rule type.").format(_(self.meta.get_label(fieldname))))
 		if doctype and frappe.db.get_value(doctype, value, COMPANY_FIELD[doctype]) != self.company:
-			frappe.throw(_("{0} {1} does not belong to {2}.").format(_(doctype), frappe.bold(value), frappe.bold(self.company)))
+			frappe.throw(
+				_("{0} {1} does not belong to {2}.").format(
+					_(doctype), frappe.bold(value), frappe.bold(self.company)
+				)
+			)
 
 	def resolve(self):
 		return audience.resolve(self)

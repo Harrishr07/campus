@@ -28,7 +28,9 @@ class TestBudgetControl(SanctionFixtures):
 		super().setUpClass()
 		if not frappe.db.exists("Supplier", SUPPLIER):
 			group = frappe.db.get_value("Supplier Group", {"is_group": 0}, "name")
-			frappe.get_doc({"doctype": "Supplier", "supplier_name": SUPPLIER, "supplier_group": group}).insert()
+			frappe.get_doc(
+				{"doctype": "Supplier", "supplier_name": SUPPLIER, "supplier_group": group}
+			).insert()
 		if not frappe.db.exists("Item", ITEM):
 			group = frappe.db.get_value("Item Group", {"is_group": 0}, "name")
 			frappe.get_doc(
@@ -38,7 +40,9 @@ class TestBudgetControl(SanctionFixtures):
 	def setUp(self):
 		super().setUp()
 		self.equipment_account = f"Capital Equipment - {ABBR}"
-		self.creditors = frappe.db.get_value("Account", {"company": COLLEGE, "account_type": "Payable", "is_group": 0})
+		self.creditors = frappe.db.get_value(
+			"Account", {"company": COLLEGE, "account_type": "Payable", "is_group": 0}
+		)
 		frappe.db.set_value("Company", COLLEGE, "default_payable_account", self.creditors)
 
 	def submitted_sanction(self, **values):
@@ -50,11 +54,23 @@ class TestBudgetControl(SanctionFixtures):
 	def journal(self, sanction, account, amount, head=None, posting_date=None, **row):
 		return frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": posting_date or today(),
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": posting_date or today(),
 				"accounts": [
-					{"account": account, "debit_in_account_currency": amount, "cost_center": sanction.cost_center,
-					 "project": sanction.project, BUDGET_HEAD_FIELD: head, **row},
-					{"account": self.bank, "credit_in_account_currency": amount, "cost_center": sanction.cost_center},
+					{
+						"account": account,
+						"debit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
+						BUDGET_HEAD_FIELD: head,
+						**row,
+					},
+					{
+						"account": self.bank,
+						"credit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+					},
 				],
 			}  # fmt: skip
 		).insert()
@@ -68,8 +84,12 @@ class TestBudgetControl(SanctionFixtures):
 	def invoice(self, sanction, lines):
 		return frappe.get_doc(
 			{
-				"doctype": "Purchase Invoice", "company": COLLEGE, "supplier": SUPPLIER, "posting_date": today(),
-				"set_posting_time": 1, "credit_to": self.creditors,
+				"doctype": "Purchase Invoice",
+				"company": COLLEGE,
+				"supplier": SUPPLIER,
+				"posting_date": today(),
+				"set_posting_time": 1,
+				"credit_to": self.creditors,
 				"items": [self.item_row(sanction, *line) for line in lines],
 			}  # fmt: skip
 		).insert()
@@ -77,26 +97,43 @@ class TestBudgetControl(SanctionFixtures):
 	def order(self, sanction, lines):
 		return frappe.get_doc(
 			{
-				"doctype": "Purchase Order", "company": COLLEGE, "supplier": SUPPLIER, "transaction_date": today(),
-				"schedule_date": today(), "items": [self.item_row(sanction, *line) for line in lines],
+				"doctype": "Purchase Order",
+				"company": COLLEGE,
+				"supplier": SUPPLIER,
+				"transaction_date": today(),
+				"schedule_date": today(),
+				"items": [self.item_row(sanction, *line) for line in lines],
 			}  # fmt: skip
 		).insert()
 
 	def reappropriation(self, sanction, from_head, to_head, amount, fiscal_year=None, **values):
 		return frappe.get_doc(
 			{
-				"doctype": "Re-appropriation Request", "sanction": sanction.name, "fiscal_year": fiscal_year or self.year1.name,
-				"from_head": from_head, "to_head": to_head, "amount": amount, "agency_letter_no": "DST/RA/1",
-				"agency_letter_date": today(), "agency_approval_letter": "/files/ra-letter.pdf", **values,
+				"doctype": "Re-appropriation Request",
+				"sanction": sanction.name,
+				"fiscal_year": fiscal_year or self.year1.name,
+				"from_head": from_head,
+				"to_head": to_head,
+				"amount": amount,
+				"agency_letter_no": "DST/RA/1",
+				"agency_letter_date": today(),
+				"agency_approval_letter": "/files/ra-letter.pdf",
+				**values,
 			}  # fmt: skip
 		).insert()
 
 	def head_amounts(self, sanction):
-		rows = frappe.get_all("Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, ["budget_head", "fiscal_year", "amount"])
+		rows = frappe.get_all(
+			"Sanction Head",
+			{"parent": sanction.name, "parenttype": "Sanction"},
+			["budget_head", "fiscal_year", "amount"],
+		)
 		return {(row.budget_head, row.fiscal_year): row.amount for row in rows}
 
 	def budget(self, sanction, account):
-		name = frappe.db.get_value("Budget", {"cost_center": sanction.cost_center, "account": account, "docstatus": 1})
+		name = frappe.db.get_value(
+			"Budget", {"cost_center": sanction.cost_center, "account": account, "docstatus": 1}
+		)
 		return frappe.get_doc("Budget", name) if name else None
 
 	def distribution(self, budget):
@@ -111,7 +148,8 @@ class TestBudgetControl(SanctionFixtures):
 			field = frappe.get_meta(doctype).get_field(BUDGET_HEAD_FIELD)
 			self.assertEqual((field.fieldtype, field.options), ("Link", "Grant Budget Head"), doctype)
 		self.assertEqual(
-			set(budget_head_fields()), {"Purchase Order Item", "Purchase Invoice Item", "Journal Entry Account", "Expense Claim Detail"}
+			set(budget_head_fields()),
+			{"Purchase Order Item", "Purchase Invoice Item", "Journal Entry Account", "Expense Claim Detail"},
 		)
 
 	# tagging and head -> account validation
@@ -139,15 +177,21 @@ class TestBudgetControl(SanctionFixtures):
 
 	def test_head_only_on_lines_of_a_sanction(self):
 		sanction = self.submitted_sanction()
-		other_cc = frappe.db.get_value("Cost Center", {"company": COLLEGE, "is_group": 0, "name": ["!=", sanction.cost_center]})
+		other_cc = frappe.db.get_value(
+			"Cost Center", {"company": COLLEGE, "is_group": 0, "name": ["!=", sanction.cost_center]}
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "only on lines of a sanctioned project"):
-			self.journal(sanction, self.consumables_account, 100, self.consumables, cost_center=other_cc, project=None)
+			self.journal(
+				sanction, self.consumables_account, 100, self.consumables, cost_center=other_cc, project=None
+			)
 
 	def test_line_on_the_sanction_cost_centre_takes_its_project_and_must_not_mix_sanctions(self):
 		sanction = self.submitted_sanction()
 		entry = self.journal(sanction, self.consumables_account, 100, self.consumables, project=None)
 		self.assertEqual(entry.accounts[0].project, sanction.project)
-		other_cc = frappe.db.get_value("Cost Center", {"company": COLLEGE, "is_group": 0, "name": ["!=", sanction.cost_center]})
+		other_cc = frappe.db.get_value(
+			"Cost Center", {"company": COLLEGE, "is_group": 0, "name": ["!=", sanction.cost_center]}
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "cost centre"):
 			self.journal(sanction, self.consumables_account, 100, self.consumables, cost_center=other_cc)
 
@@ -160,7 +204,13 @@ class TestBudgetControl(SanctionFixtures):
 	def test_spend_outside_the_sanction_period_is_refused(self):
 		sanction = self.submitted_sanction()
 		with self.assertRaisesRegex(frappe.ValidationError, "outside the sanction period"):
-			self.journal(sanction, self.consumables_account, 100, self.consumables, posting_date=add_days(self.year1.start, -1))
+			self.journal(
+				sanction,
+				self.consumables_account,
+				100,
+				self.consumables,
+				posting_date=add_days(self.year1.start, -1),
+			)
 
 	def test_revenue_spend_in_a_year_without_a_budget_is_refused(self):
 		sanction = self.submitted_sanction()
@@ -184,8 +234,18 @@ class TestBudgetControl(SanctionFixtures):
 		sanction = self.submitted_sanction()
 		claim = frappe.get_doc(
 			{
-				"doctype": "Expense Claim", "company": COLLEGE, "posting_date": today(), "project": sanction.project,
-				"expenses": [{"default_account": self.travel_account, "cost_center": sanction.cost_center, "amount": 100, "sanctioned_amount": 100}],
+				"doctype": "Expense Claim",
+				"company": COLLEGE,
+				"posting_date": today(),
+				"project": sanction.project,
+				"expenses": [
+					{
+						"default_account": self.travel_account,
+						"cost_center": sanction.cost_center,
+						"amount": 100,
+						"sanctioned_amount": 100,
+					}
+				],
 			}  # fmt: skip
 		)
 		with self.assertRaisesRegex(frappe.ValidationError, "Budget Head"):
@@ -232,7 +292,9 @@ class TestBudgetControl(SanctionFixtures):
 			with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
 				entry.submit()
 		self.assertIn(sanction.name, locked)
-		self.journal(sanction, self.equipment_account, 100000, self.equipment).submit()  # exactly up to 500000
+		self.journal(
+			sanction, self.equipment_account, 100000, self.equipment
+		).submit()  # exactly up to 500000
 
 	def test_capital_order_and_its_invoice_count_once(self):
 		sanction = self.submitted_sanction()
@@ -252,9 +314,13 @@ class TestBudgetControl(SanctionFixtures):
 	def test_cancelling_a_capital_credit_is_checked(self):
 		sanction = self.submitted_sanction()
 		self.journal(sanction, self.equipment_account, 500000, self.equipment).submit()
-		credit = self.journal(sanction, self.equipment_account, -100000, self.equipment)  # e.g. a supplier credit
+		credit = self.journal(
+			sanction, self.equipment_account, -100000, self.equipment
+		)  # e.g. a supplier credit
 		credit.submit()
-		self.journal(sanction, self.equipment_account, 100000, self.equipment).submit()  # the head is full again
+		self.journal(
+			sanction, self.equipment_account, 100000, self.equipment
+		).submit()  # the head is full again
 		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
 			credit.reload().cancel()  # would bring spending back to 600000
 		self.assertEqual(frappe.db.get_value("Journal Entry", credit.name, "docstatus"), 1)
@@ -322,7 +388,9 @@ class TestBudgetControl(SanctionFixtures):
 		sanction = self.submitted_sanction()
 		order = self.order(sanction, [(self.consumables_account, 1000, self.consumables)])
 		order.submit()
-		frappe.db.set_value("Purchase Order Item", order.items[0].name, BUDGET_HEAD_FIELD, self.equipment)  # a stale tag
+		frappe.db.set_value(
+			"Purchase Order Item", order.items[0].name, BUDGET_HEAD_FIELD, self.equipment
+		)  # a stale tag
 		with self.assertRaisesRegex(frappe.ValidationError, "RSA Equipment"):
 			self.update_order_items(order.reload(), 900)
 
@@ -356,12 +424,18 @@ class TestBudgetControl(SanctionFixtures):
 		self.assertEqual(amounts[(self.travel, self.year1.name)], 50000)
 		self.assertEqual(frappe.db.get_value("Sanction", sanction.name, "total_sanctioned"), 850000)
 		travel = self.budget(sanction, self.travel_account)
-		self.assertEqual((travel.budget_amount, self.distribution(travel)[getdate(self.year1.start)]), (70000, 50000))
+		self.assertEqual(
+			(travel.budget_amount, self.distribution(travel)[getdate(self.year1.start)]), (70000, 50000)
+		)
 		self.assertEqual(self.budget(sanction, self.consumables_account).budget_amount, 280000)
-		comments = frappe.get_all("Comment", {"reference_doctype": "Sanction", "reference_name": sanction.name}, pluck="content")
+		comments = frappe.get_all(
+			"Comment", {"reference_doctype": "Sanction", "reference_name": sanction.name}, pluck="content"
+		)
 		self.assertTrue([c for c in comments if request.name in c and "DST/RA/1" in c])
 
-		self.journal(sanction, self.travel_account, 20000, self.travel).submit()  # the new travel limit applies
+		self.journal(
+			sanction, self.travel_account, 20000, self.travel
+		).submit()  # the new travel limit applies
 		with self.assertRaises(BudgetError):
 			self.journal(sanction, self.travel_account, 1, self.travel).submit()
 		self.journal(sanction, self.consumables_account, 180000, self.consumables).submit()
@@ -419,18 +493,33 @@ class TestBudgetControl(SanctionFixtures):
 
 		with patch.object(frappe.db, "sql", side_effect=spy):
 			request.submit()
+
 		def locking(q):
 			return "for update" in q.lower()
 
 		start = next(i for i, q in enumerate(queries) if "from `tabsanction`" in q.lower() and locking(q))
 		after_lock = queries[start:]
 		# campus's own Budget reads (ERPNext's Budget controller has plain reads of its own, e.g. its duplicate check)
-		budget_reads = [q for q in after_lock if "from `tabbudget`" in q.lower() and ("`cost_center`" in q or "`name` = %s" in q)]
+		budget_reads = [
+			q
+			for q in after_lock
+			if "from `tabbudget`" in q.lower() and ("`cost_center`" in q or "`name` = %s" in q)
+		]
 		self.assertTrue(budget_reads)
-		self.assertEqual([q for q in budget_reads if not locking(q)], [], "Budget reads after the sanction lock are locking")
-		head_reads = [q for q in after_lock if q.lstrip().lower().startswith("select") and "`tabsanction head`" in q.lower()]
+		self.assertEqual(
+			[q for q in budget_reads if not locking(q)],
+			[],
+			"Budget reads after the sanction lock are locking",
+		)
+		head_reads = [
+			q
+			for q in after_lock
+			if q.lstrip().lower().startswith("select") and "`tabsanction head`" in q.lower()
+		]
 		self.assertTrue(head_reads)
-		self.assertEqual([q for q in head_reads if not locking(q)], [], "Sanction Head reads after the lock are locking")
+		self.assertEqual(
+			[q for q in head_reads if not locking(q)], [], "Sanction Head reads after the lock are locking"
+		)
 
 	def test_cancelling_a_reappropriation_restores_the_limits(self):
 		sanction = self.submitted_sanction()
@@ -438,6 +527,9 @@ class TestBudgetControl(SanctionFixtures):
 		request.submit()
 		request.cancel()
 		amounts = self.head_amounts(sanction)
-		self.assertEqual((amounts[(self.consumables, self.year1.name)], amounts[(self.travel, self.year1.name)]), (200000, 30000))
+		self.assertEqual(
+			(amounts[(self.consumables, self.year1.name)], amounts[(self.travel, self.year1.name)]),
+			(200000, 30000),
+		)
 		self.assertEqual(self.budget(sanction, self.travel_account).budget_amount, 50000)
 		self.assertEqual(self.budget(sanction, self.consumables_account).budget_amount, 300000)

@@ -29,7 +29,12 @@ def load(ctx):
 				add_member(ctx, spec, test_passwords, result)
 	profile_staff = [u for u in ctx.profile["users"] if u.get("instructor")]
 	for index, spec in enumerate(profile_staff):
-		set_personnel_details(ctx, spec["key"], spec["name"], "Professor" if spec.get("position") else DESIGNATIONS[1 + index % 2])
+		set_personnel_details(
+			ctx,
+			spec["key"],
+			spec["name"],
+			"Professor" if spec.get("position") else DESIGNATIONS[1 + index % 2],
+		)
 	ctx.result_links = result["reset_links"]
 
 
@@ -70,7 +75,13 @@ def set_personnel_details(ctx, key, name, designation, person=None):
 	if not employee:
 		return
 	person = person or ctx.people.make(f"profile-{key}", 1990, 1968)
-	wanted = {"designation": designation, "employment_type": "Full-time", "oc_staff_type": "Teaching", "gender": person.gender, "date_of_birth": person.date_of_birth}
+	wanted = {
+		"designation": designation,
+		"employment_type": "Full-time",
+		"oc_staff_type": "Teaching",
+		"gender": person.gender,
+		"date_of_birth": person.date_of_birth,
+	}
 	stored = frappe.db.get_value("Employee", employee, list(wanted), as_dict=True)
 	if any(stored[field] != value and str(stored[field]) != str(value) for field, value in wanted.items()):
 		frappe.db.set_value("Employee", employee, wanted)

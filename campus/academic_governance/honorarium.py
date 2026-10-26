@@ -23,9 +23,20 @@ def draft_purchase_invoice(claim):
 	)  # fmt: skip
 	invoice.append("items", line(items.honorarium_item, _("Honorarium"), claim.honorarium, claim.tds_section))
 	if flt(claim.daily_allowance):
-		invoice.append("items", line(items.daily_allowance_item, _("Daily Allowance"), claim.daily_allowance, claim.tds_section))
+		invoice.append(
+			"items",
+			line(items.daily_allowance_item, _("Daily Allowance"), claim.daily_allowance, claim.tds_section),
+		)
 	if flt(claim.travel_allowance):
-		invoice.append("items", line(items.travel_item, _("Travel Allowance"), claim.travel_allowance, None if claim.ta_exempt() else claim.tds_section))
+		invoice.append(
+			"items",
+			line(
+				items.travel_item,
+				_("Travel Allowance"),
+				claim.travel_allowance,
+				None if claim.ta_exempt() else claim.tds_section,
+			),
+		)
 	invoice.flags.ignore_permissions = True
 	invoice.insert()
 	return invoice
@@ -35,7 +46,11 @@ def service_items(claim):
 	"""The Items of the lines the claim needs, from Governance Settings (one per line: ERPNext refuses a repeated Item);
 	throws naming a missing one, or an Item without the HSN/SAC code india_compliance requires on the invoice."""
 	settings = frappe.get_single("Governance Settings")
-	needed = {"honorarium_item": True, "travel_item": flt(claim.travel_allowance), "daily_allowance_item": flt(claim.daily_allowance)}
+	needed = {
+		"honorarium_item": True,
+		"travel_item": flt(claim.travel_allowance),
+		"daily_allowance_item": flt(claim.daily_allowance),
+	}
 	items = frappe._dict()
 	for fieldname, is_needed in needed.items():
 		if not is_needed:
@@ -43,8 +58,14 @@ def service_items(claim):
 		label, items[fieldname] = _(settings.meta.get_label(fieldname)), settings.get(fieldname)
 		if not items[fieldname]:
 			frappe.throw(_("Set the {0} in Governance Settings.").format(label))
-		if frappe.get_meta("Item").has_field("gst_hsn_code") and not frappe.db.get_value("Item", items[fieldname], "gst_hsn_code"):
-			frappe.throw(_("Item {0} ({1} in Governance Settings) has no HSN/SAC code.").format(items[fieldname], label))
+		if frappe.get_meta("Item").has_field("gst_hsn_code") and not frappe.db.get_value(
+			"Item", items[fieldname], "gst_hsn_code"
+		):
+			frappe.throw(
+				_("Item {0} ({1} in Governance Settings) has no HSN/SAC code.").format(
+					items[fieldname], label
+				)
+			)
 	return items
 
 
@@ -68,7 +89,9 @@ def refresh_claim(invoice, method=None):
 	"""Purchase Invoice on_submit / on_cancel: the claim it pays follows its figures. A submitted amendment of the
 	claim's cancelled invoice becomes the claim's invoice; a cancelled invoice leaves nothing payable."""
 	links = [invoice.name, invoice.amended_from] if invoice.amended_from else [invoice.name]
-	claim = frappe.db.get_value("Honorarium Claim", {"purchase_invoice": ["in", links], "docstatus": 1}, "name", for_update=True)
+	claim = frappe.db.get_value(
+		"Honorarium Claim", {"purchase_invoice": ["in", links], "docstatus": 1}, "name", for_update=True
+	)
 	if not claim:
 		return
 	if invoice.docstatus == 2:
@@ -116,4 +139,3 @@ def seed_honorarium_policy():
 			"levels": [{"approver_type": "Role", "approver": "Accounts Manager", "limit_to_company": 1, "title": "Accounts", "sla_hours": 72}],
 		}
 	).insert(ignore_permissions=True)  # fmt: skip
-

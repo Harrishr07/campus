@@ -46,7 +46,10 @@ def parse_courses(courses):
 def invoice_state(invoice):
 	"""{name, outstanding_amount, currency, can_pay} of a fee invoice, or None."""
 	row = invoice and frappe.db.get_value(
-		"Sales Invoice", invoice, ["name", "company", "docstatus", "is_return", "outstanding_amount", "currency"], as_dict=True
+		"Sales Invoice",
+		invoice,
+		["name", "company", "docstatus", "is_return", "outstanding_amount", "currency"],
+		as_dict=True,
 	)
 	if not row:
 		return None
@@ -125,7 +128,9 @@ def apply_withdrawal(exam_session, courses, reason, student=None):
 			"courses": [{"course": course} for course in parse_courses(courses)],
 		}
 	)  # fmt: skip
-	doc.flags.ignore_permissions = True  # portal roles hold no right on the doctype; every value is checked server-side
+	doc.flags.ignore_permissions = (
+		True  # portal roles hold no right on the doctype; every value is checked server-side
+	)
 	doc.insert()
 	start_request(doc)
 	return withdrawal_row(doc.reload())
@@ -154,7 +159,9 @@ def apply_revaluation(exam_session, application_type, courses, student=None):
 	"""The student applies for a Photocopy, Revaluation or Review of courses of a released result."""
 	student = resolve_student(student)
 	require_the_student(student)
-	return with_invoice(exams.apply_revaluation(student, exam_session, application_type, parse_courses(courses)))
+	return with_invoice(
+		exams.apply_revaluation(student, exam_session, application_type, parse_courses(courses))
+	)
 
 
 @frappe.whitelist(methods=["POST"])

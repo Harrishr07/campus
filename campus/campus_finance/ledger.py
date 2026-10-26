@@ -12,7 +12,17 @@ import frappe
 from frappe.utils import flt
 
 OTHER = "Other"
-INVOICE_FIELDS = ["name", "company", "posting_date", "due_date", "currency", "grand_total", "outstanding_amount", "status", "is_return"]
+INVOICE_FIELDS = [
+	"name",
+	"company",
+	"posting_date",
+	"due_date",
+	"currency",
+	"grand_total",
+	"outstanding_amount",
+	"status",
+	"is_return",
+]
 
 
 def student_invoices(student, outstanding_only=False):
@@ -28,7 +38,10 @@ def student_invoices(student, outstanding_only=False):
 	invoices = frappe.get_all("Sales Invoice", {**filters, "student": student}, INVOICE_FIELDS, limit=0)
 	if customer:
 		invoices += frappe.get_all(
-			"Sales Invoice", {**filters, "customer": customer, "student": ["in", ["", None]]}, INVOICE_FIELDS, limit=0
+			"Sales Invoice",
+			{**filters, "customer": customer, "student": ["in", ["", None]]},
+			INVOICE_FIELDS,
+			limit=0,
 		)
 	return sorted(invoices, key=lambda i: (i.posting_date, i.name), reverse=True)
 
@@ -63,7 +76,9 @@ def head_shares(invoices):
 	for invoice in invoices:
 		by_head = amounts.get(invoice) or {OTHER: 0}
 		total = sum(by_head.values())
-		shares[invoice] = [(head, amount / total if total else 1 / len(by_head)) for head, amount in by_head.items()]
+		shares[invoice] = [
+			(head, amount / total if total else 1 / len(by_head)) for head, amount in by_head.items()
+		]
 	return shares
 
 
@@ -84,7 +99,11 @@ def outstanding_lines(student, companies=None):
 	reduced the invoice (payments) is spread over the heads pro rata. A credit note that carries its own
 	outstanding is an invoice of its own, split over its own lines.
 	"""
-	invoices = [i for i in student_invoices(student, outstanding_only=True) if companies is None or i.company in companies]
+	invoices = [
+		i
+		for i in student_invoices(student, outstanding_only=True)
+		if companies is None or i.company in companies
+	]
 	notes = credit_notes_against([i.name for i in invoices])
 	shares = head_shares([i.name for i in invoices] + [n.name for n in notes])
 	lines = []
@@ -160,19 +179,32 @@ def ledger_rows(student, companies=None):
 	student's Customer. Invoices and credit notes are listed once per fee head, the others as one row with no head.
 	"""
 	own = {i.name for i in student_invoices(student)}
-	entries = [e for e in party_entries(student, own, companies) if e.voucher_type != "Sales Invoice" or e.voucher_no in own]
+	entries = [
+		e
+		for e in party_entries(student, own, companies)
+		if e.voucher_type != "Sales Invoice" or e.voucher_no in own
+	]
 	shares = head_shares(sorted(own))
 	currencies, rows, balance = {}, [], 0
 	for entry in sorted(entries, key=lambda e: (e.posting_date, e.creation)):
-		currency = currencies.setdefault(entry.company, frappe.get_cached_value("Company", entry.company, "default_currency"))
+		currency = currencies.setdefault(
+			entry.company, frappe.get_cached_value("Company", entry.company, "default_currency")
+		)
 		for head, debit, credit in entry_parts(entry, shares):
 			if not (debit or credit):
 				continue
 			balance += debit - credit
 			rows.append(
 				{
-					"posting_date": entry.posting_date, "company": entry.company, "head": head, "currency": currency,
-					"voucher_type": entry.voucher_type, "voucher_no": entry.voucher_no, "debit": debit, "credit": credit, "balance": flt(balance, 2),
+					"posting_date": entry.posting_date,
+					"company": entry.company,
+					"head": head,
+					"currency": currency,
+					"voucher_type": entry.voucher_type,
+					"voucher_no": entry.voucher_no,
+					"debit": debit,
+					"credit": credit,
+					"balance": flt(balance, 2),
 				}
 			)
 	return rows
@@ -188,7 +220,10 @@ def party_entries(student, invoices, companies):
 	entries = frappe.get_all("GL Entry", {**base, "party": customer}, fields, limit=0) if customer else []
 	if invoices:
 		entries += frappe.get_all(
-			"GL Entry", {**base, "voucher_type": "Sales Invoice", "voucher_no": ["in", sorted(invoices)]}, fields, limit=0
+			"GL Entry",
+			{**base, "voucher_type": "Sales Invoice", "voucher_no": ["in", sorted(invoices)]},
+			fields,
+			limit=0,
 		)
 	return list({e.name: e for e in entries}.values())
 
@@ -197,5 +232,8 @@ def entry_parts(entry, shares):
 	"""[(head, debit, credit)] of one GL entry: split over heads for an invoice, whole otherwise."""
 	if entry.voucher_type != "Sales Invoice":
 		return [("", flt(entry.debit), flt(entry.credit))]
-	debits, credits = split(entry.debit, shares[entry.voucher_no]), split(entry.credit, shares[entry.voucher_no])
+	debits, credits = (
+		split(entry.debit, shares[entry.voucher_no]),
+		split(entry.credit, shares[entry.voucher_no]),
+	)
 	return [(head, debit, credit) for (head, debit), (_head, credit) in zip(debits, credits, strict=True)]

@@ -9,7 +9,7 @@
 			var name = block.dataset.question;
 			var picked = block.querySelector("input:checked");
 			var text = block.querySelector("textarea");
-			answers[name] = picked ? picked.value : (text ? text.value : null);
+			answers[name] = picked ? picked.value : text ? text.value : null;
 		});
 		var body = new FormData();
 		body.append("campaign", form.dataset.campaign);
@@ -18,12 +18,17 @@
 			body.append("member", form.dataset.member);
 			body.append("signature", form.dataset.signature);
 		}
-		cpPost("campus.iqac.feedback.submit_response", body, form.querySelector(".cp-message"),
-			form.querySelector("button[type=submit]"), function () {
+		cpPost(
+			"campus.iqac.feedback.submit_response",
+			body,
+			form.querySelector(".cp-message"),
+			form.querySelector("button[type=submit]"),
+			function () {
 				var note = document.createElement("p");
 				note.className = "cp-empty";
 				note.textContent = form.dataset.thanks;
-				form.replaceWith(note);  // no reload: nothing more is requested after the answer
-			});
+				form.replaceWith(note); // no reload: nothing more is requested after the answer
+			}
+		);
 	});
 })();

@@ -23,7 +23,11 @@ from campus.tests.utils import CampusTestCase
 
 COLLEGE, TRUST = "Gateway Test College", "Gateway Test Trust"
 YEAR, PROGRAM = "Gateway Test 2026", "Gateway Test BE"
-STUDENT_USER, GUARDIAN_USER, STRANGER = "gw-student@example.com", "gw-guardian@example.com", "gw-stranger@example.com"
+STUDENT_USER, GUARDIAN_USER, STRANGER = (
+	"gw-student@example.com",
+	"gw-guardian@example.com",
+	"gw-stranger@example.com",
+)
 ACCOUNTS_USER = "gw-accounts@example.com"
 URL = "https://pay.example.test/checkout/"
 SECRETS = {}
@@ -35,7 +39,14 @@ def make_gateway_account(company, bank, gateway="Razorpay"):
 	if name:
 		return name
 	doc = frappe.get_doc(
-		{"doctype": "Payment Gateway Account", "payment_gateway": gateway, "payment_account": bank, "company": company, "currency": "INR", "is_default": 1}
+		{
+			"doctype": "Payment Gateway Account",
+			"payment_gateway": gateway,
+			"payment_account": bank,
+			"company": company,
+			"currency": "INR",
+			"is_default": 1,
+		}
 	)
 	doc.flags.ignore_links = True
 	return doc.insert().name
@@ -66,7 +77,9 @@ class GatewayFixture(CampusTestCase):
 		cls.college = make_finance_company(COLLEGE, "GWC")
 		cls.trust = make_finance_company(TRUST, "GWT")
 		if not frappe.db.exists("Party Type", "Customer"):
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+			frappe.get_doc(
+				{"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}
+			).insert()
 		make_year_and_program(COLLEGE, PROGRAM, YEAR)
 		_group, students = make_enrolled_students(COLLEGE, PROGRAM, YEAR, 2, "GwStu")
 		cls.a, cls.b = students
@@ -105,7 +118,9 @@ class GatewayFixture(CampusTestCase):
 
 	def request_of(self, invoice):
 		return frappe.get_all(
-			"Payment Request", {"reference_name": invoice.name, "docstatus": 1}, ["name", "payment_gateway_account", "payment_account", "company", "grand_total", "status"]
+			"Payment Request",
+			{"reference_name": invoice.name, "docstatus": 1},
+			["name", "payment_gateway_account", "payment_account", "company", "grand_total", "status"],
 		)
 
 
@@ -115,13 +130,24 @@ class TestPayNow(GatewayFixture):
 		url = self.link(invoice)
 		(request,) = self.request_of(invoice)
 		self.assertEqual(url, URL + request.name)
-		self.assertEqual((request.payment_gateway_account, request.payment_account, request.company, flt(request.grand_total)), (self.college_account, self.college["bank"], COLLEGE, 5000))
+		self.assertEqual(
+			(
+				request.payment_gateway_account,
+				request.payment_account,
+				request.company,
+				flt(request.grand_total),
+			),
+			(self.college_account, self.college["bank"], COLLEGE, 5000),
+		)
 
 	def test_a_trust_invoice_is_paid_through_the_trusts_gateway_account(self):
 		invoice = self.invoice(self.a, TRUST, 3000, "Hostel")
 		self.link(invoice)
 		(request,) = self.request_of(invoice)
-		self.assertEqual((request.payment_gateway_account, request.payment_account, request.company), (self.trust_account, self.trust["bank"], TRUST))
+		self.assertEqual(
+			(request.payment_gateway_account, request.payment_account, request.company),
+			(self.trust_account, self.trust["bank"], TRUST),
+		)
 
 	def test_a_guardian_pays_a_wards_invoice(self):
 		invoice = self.invoice(self.b, COLLEGE)
@@ -142,12 +168,16 @@ class TestPayNow(GatewayFixture):
 		frappe.db.set_value("Sales Invoice", invoice.name, "outstanding_amount", 0)
 		with self.assertRaisesRegex(frappe.ValidationError, "Nothing is due"):
 			self.link(invoice)
-		note = finance.make_credit_note(frappe.get_doc("Sales Invoice", self.invoice(self.a, COLLEGE, 1000).name), 500)
+		note = finance.make_credit_note(
+			frappe.get_doc("Sales Invoice", self.invoice(self.a, COLLEGE, 1000).name), 500
+		)
 		with self.assertRaises(frappe.PermissionError):
 			self.link(note)
 
 	def test_a_company_without_a_gateway_gets_no_link_and_never_another_companys(self):
-		frappe.db.set_value("Payment Gateway Account", self.trust_account, "company", COLLEGE)  # the trust now has none
+		frappe.db.set_value(
+			"Payment Gateway Account", self.trust_account, "company", COLLEGE
+		)  # the trust now has none
 		frappe.db.set_value("Payment Gateway Account", self.trust_account, "is_default", 0)
 		invoice = self.invoice(self.a, TRUST, 3000, "Hostel")
 		with self.assertRaisesRegex(frappe.ValidationError, "no payment gateway"):
@@ -213,20 +243,38 @@ class TestGuardianInvoiceAccess(GatewayFixture):
 
 	def test_a_guardian_has_read_alone_on_sales_invoice(self):
 		ward = self.invoice(self.b, COLLEGE)
-		for ptype in ("write", "create", "submit", "cancel", "delete", "report", "export", "import", "share", "print", "email"):
+		for ptype in (
+			"write",
+			"create",
+			"submit",
+			"cancel",
+			"delete",
+			"report",
+			"export",
+			"import",
+			"share",
+			"print",
+			"email",
+		):
 			with self.subTest(ptype=ptype):
 				self.assertFalse(frappe.has_permission("Sales Invoice", ptype, user=GUARDIAN_USER))
-				self.assertFalse(frappe.has_permission("Sales Invoice", ptype, doc=ward.name, user=GUARDIAN_USER))
+				self.assertFalse(
+					frappe.has_permission("Sales Invoice", ptype, doc=ward.name, user=GUARDIAN_USER)
+				)
 
 	def test_a_desk_users_invoice_access_is_unchanged(self):
 		ward, other = self.invoice(self.b, COLLEGE), self.invoice(self.a, COLLEGE)
 		both = {"name": ["in", [ward.name, other.name]]}
 		listed = self.as_user(ACCOUNTS_USER, frappe.get_list, "Sales Invoice", filters=both, pluck="name")
-		self.assertEqual(set(listed), {ward.name, other.name})  # Accounts User also holding Guardian is not narrowed
+		self.assertEqual(
+			set(listed), {ward.name, other.name}
+		)  # Accounts User also holding Guardian is not narrowed
 		self.assertEqual(self.as_user(ACCOUNTS_USER, frappe.client.get_count, "Sales Invoice", both), 2)
 		for ptype in ("read", "write", "report", "print"):
 			with self.subTest(ptype=ptype):
-				self.assertTrue(frappe.has_permission("Sales Invoice", ptype, doc=other.name, user=ACCOUNTS_USER))
+				self.assertTrue(
+					frappe.has_permission("Sales Invoice", ptype, doc=other.name, user=ACCOUNTS_USER)
+				)
 
 
 class TestWebhook(GatewayFixture):
@@ -250,7 +298,10 @@ class TestWebhook(GatewayFixture):
 		secret = SECRETS[account] if secret is None else secret
 		headers = {"X-Razorpay-Signature": signed(body, secret)}
 		frappe.set_user(user)
-		with patch.object(frappe, "request", SimpleNamespace(get_data=lambda: body)), patch.object(frappe, "get_request_header", headers.get):
+		with (
+			patch.object(frappe, "request", SimpleNamespace(get_data=lambda: body)),
+			patch.object(frappe, "get_request_header", headers.get),
+		):
 			try:
 				return gateways.webhook(account)
 			finally:
@@ -258,17 +309,31 @@ class TestWebhook(GatewayFixture):
 
 	def payment_entries(self, invoice):
 		return frappe.get_all(
-			"Payment Entry Reference", {"reference_name": invoice.name, "docstatus": 1}, ["parent", "allocated_amount"]
+			"Payment Entry Reference",
+			{"reference_name": invoice.name, "docstatus": 1},
+			["parent", "allocated_amount"],
 		)
 
 	def test_a_captured_payment_marks_the_invoice_paid(self):
 		invoice, request = self.pay_request()
-		self.assertEqual(self.deliver(request.payment_gateway_account, captured(request.name, 5000)), {"status": "accepted"})
+		self.assertEqual(
+			self.deliver(request.payment_gateway_account, captured(request.name, 5000)),
+			{"status": "accepted"},
+		)
 		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount")), 0)
 		self.assertEqual(frappe.db.get_value("Payment Request", request.name, "status"), "Paid")
 		(entry,) = self.payment_entries(invoice)
 		payment = frappe.get_doc("Payment Entry", entry.parent)
-		self.assertEqual((payment.docstatus, payment.company, payment.payment_type, payment.paid_to, flt(payment.paid_amount)), (1, COLLEGE, "Receive", self.college["bank"], 5000))
+		self.assertEqual(
+			(
+				payment.docstatus,
+				payment.company,
+				payment.payment_type,
+				payment.paid_to,
+				flt(payment.paid_amount),
+			),
+			(1, COLLEGE, "Receive", self.college["bank"], 5000),
+		)
 		self.assertEqual((payment.oc_student, payment.reference_no), (self.a, request.name))
 		self.assertTrue(payment.oc_receipt_no)
 
@@ -278,7 +343,10 @@ class TestWebhook(GatewayFixture):
 		self.deliver(request.payment_gateway_account, body)
 		self.deliver(request.payment_gateway_account, body)  # the gateway retries the same delivery
 		self.deliver(request.payment_gateway_account, captured(request.name, 5000, "pay_retry"))
-		self.assertEqual(gateways.settle_payment(request.payment_gateway_account, request.name, 5000, "INR", "pay_1"), {"status": "duplicate"})
+		self.assertEqual(
+			gateways.settle_payment(request.payment_gateway_account, request.name, 5000, "INR", "pay_1"),
+			{"status": "duplicate"},
+		)
 		self.assertEqual(len(self.payment_entries(invoice)), 1)
 		self.assertEqual(flt(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount")), 0)
 
@@ -288,8 +356,13 @@ class TestWebhook(GatewayFixture):
 		with self.assertRaises(frappe.PermissionError):
 			self.deliver(account, captured(request.name, 5000), secret="guessed")
 		with self.assertRaises(frappe.PermissionError):
-			self.deliver(account, captured(request.name, 5000), secret=SECRETS[self.trust_account])  # the other company's secret
-		with patch.dict(frappe.conf, {"campus_gateway_secrets": {}}), self.assertRaises(frappe.PermissionError):
+			self.deliver(
+				account, captured(request.name, 5000), secret=SECRETS[self.trust_account]
+			)  # the other company's secret
+		with (
+			patch.dict(frappe.conf, {"campus_gateway_secrets": {}}),
+			self.assertRaises(frappe.PermissionError),
+		):
 			self.deliver(account, captured(request.name, 5000))  # no secret configured: fail closed
 		with self.assertRaises(frappe.PermissionError):
 			self.deliver("No Such Account", captured(request.name, 5000), secret="x")
@@ -300,7 +373,9 @@ class TestWebhook(GatewayFixture):
 		invoice, request = self.pay_request()
 		self.deliver(self.trust_account, captured(request.name, 5000))  # signed with the trust's own secret
 		self.assertFalse(self.payment_entries(invoice))
-		self.assertEqual(gateways.settle_payment(self.trust_account, request.name, 5000), {"status": "ignored"})
+		self.assertEqual(
+			gateways.settle_payment(self.trust_account, request.name, 5000), {"status": "ignored"}
+		)
 
 	def test_a_wrong_amount_is_refused(self):
 		invoice, request = self.pay_request()
@@ -334,18 +409,27 @@ class TestWebhook(GatewayFixture):
 		with patch.object(frappe, "enqueue") as enqueue:
 			self.deliver(request.payment_gateway_account, captured(request.name, 5000))
 		enqueue.assert_called_once()
-		self.assertEqual((enqueue.call_args.args[0], enqueue.call_args.kwargs["enqueue_after_commit"]), (gateways.JOB, True))
+		self.assertEqual(
+			(enqueue.call_args.args[0], enqueue.call_args.kwargs["enqueue_after_commit"]),
+			(gateways.JOB, True),
+		)
 		self.assertFalse(self.payment_entries(invoice))
 
 	def not_settled_logs(self):
-		return [SimpleNamespace(error=log["message"]) for log in self.logs if log["title"] == "Payment not settled"]
+		return [
+			SimpleNamespace(error=log["message"])
+			for log in self.logs
+			if log["title"] == "Payment not settled"
+		]
 
 	def test_a_payment_in_another_currency_is_not_settled(self):
 		invoice, request = self.pay_request()
 		for currency in ("USD", None):  # a missing currency is refused too
 			self.deliver(request.payment_gateway_account, captured(request.name, 5000, currency=currency))
 		self.assertFalse(self.payment_entries(invoice))
-		self.assertEqual(len(self.not_settled_logs()), 2)  # logged, not raised: a raise would roll the log back
+		self.assertEqual(
+			len(self.not_settled_logs()), 2
+		)  # logged, not raised: a raise would roll the log back
 
 	def test_a_capture_for_a_cancelled_or_unknown_request_is_logged_not_lost(self):
 		invoice, request = self.pay_request()
@@ -354,7 +438,9 @@ class TestWebhook(GatewayFixture):
 		self.deliver(request.payment_gateway_account, captured("ACC-PRQ-NOPE", 5000, "pay_unknown"))
 		logs = [row.error for row in self.not_settled_logs()]
 		self.assertEqual(len(logs), 2)
-		self.assertTrue(any("pay_cancelled" in text for text in logs) and any("pay_unknown" in text for text in logs))
+		self.assertTrue(
+			any("pay_cancelled" in text for text in logs) and any("pay_unknown" in text for text in logs)
+		)
 		self.assertFalse(self.payment_entries(invoice))
 
 	def test_a_second_distinct_capture_on_a_paid_request_is_logged_and_a_repeat_is_not(self):
