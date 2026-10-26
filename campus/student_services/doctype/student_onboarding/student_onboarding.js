@@ -36,7 +36,7 @@ frappe.ui.form.on("Student Onboarding", {
 		}
 		frm.call({
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
-			args: { template: current_template },
+			args: { student: current_student, template: current_template },
 			callback(r) {
 				if (
 					frm.doc.student !== current_student ||

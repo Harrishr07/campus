@@ -50,11 +50,9 @@ function setup_guardians_filter(frm) {
 	if (!frm.fields_dict.guardians || !frm.fields_dict.guardians.grid) return;
 
 	const filter_fn = function (doc, cdt, cdn) {
-		const row = cdt && cdn ? locals[cdt]?.[cdn] : null;
-		const current = row ? row.guardian : null;
 		const already_selected = (doc.guardians || [])
-			.map((d) => d.guardian)
-			.filter((g) => Boolean(g) && g !== current);
+			.filter((d) => (!cdn || d.name !== cdn) && Boolean(d.guardian))
+			.map((d) => d.guardian);
 
 		const filters = {};
 		if (already_selected.length > 0) {

@@ -520,7 +520,9 @@ class TestFinalReviewFixes(GrievanceFixture):
 		)
 		make_category(STAFF_ONLY, HOD_ONLY_POLICY)
 		self.seat_ended("HOD", self.department)
-		frappe.db.delete("Has Role", {"parent": COMMITTEE, "role": "Grievance Committee"})
+		frappe.db.delete(
+			"Has Role", {"parenttype": "User", "role": "Grievance Committee"}
+		)  # nobody, not only this class's member
 
 	def test_with_no_committee_an_unrouted_grievance_goes_to_the_principal(self):
 		self.unroutable_category()

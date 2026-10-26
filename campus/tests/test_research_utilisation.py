@@ -720,10 +720,10 @@ class TestUtilisationCertificate(SanctionFixtures):
 		html = frappe.get_print(DOCTYPE, uc.name, print_format="Utilisation Certificate")
 		self.assertIn("GFR 12-A", html)
 		self.assertIn("placeholder", html.lower())
-		self.assertTrue("516,000" in html or "5,16,000" in html)
+		self.assertRegex(html, r"5,?16,000")  # western or lakh grouping, as the currency formats it
 		soe = frappe.get_print(DOCTYPE, uc.name, print_format="Statement of Expenditure")
 		self.assertIn(self.consumables, soe)
-		self.assertTrue("270,000" in soe or "2,70,000" in soe)
+		self.assertRegex(soe, r"2,?70,000")
 
 	def test_grant_ledger_by_head_matches_the_certificate(self):
 		from campus.research.report.grant_ledger_by_head.grant_ledger_by_head import execute
