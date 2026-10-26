@@ -23,16 +23,26 @@ class TestStudentGuardianFix(FrappeTestCase):
 
 	def test_student_guardian_property_setter_applied_when_field_exists(self):
 		"""When Student Guardian fields exist, property setters for fetch_from are set."""
+		mock_meta = MagicMock()
+		mock_meta.has_field.return_value = True
 		with (
-			patch("frappe.db.exists", return_value=True),
+			patch("frappe.get_meta", return_value=mock_meta),
+			patch("frappe.db.get_value", return_value=None),
 			patch(
 				"frappe.custom.doctype.property_setter.property_setter.make_property_setter"
 			) as mock_setter,
 		):
 			setup_student_guardian_fetch()
-			self.assertGreaterEqual(mock_setter.call_count, 1)
-			called_doctypes = [call[0][0] for call in mock_setter.call_args_list]
-			self.assertTrue(all(dt == "Student Guardian" for dt in called_doctypes))
+			expected = {
+				"guardian_name": "guardian.guardian_name",
+				"email_address": "guardian.email_address",
+				"mobile_number": "guardian.mobile_number",
+			}
+			self.assertEqual(mock_setter.call_count, len(expected))
+			called_mappings = {call.args[1]: call.args[3] for call in mock_setter.call_args_list}
+			self.assertEqual(called_mappings, expected)
+			self.assertTrue(all(call.args[0] == "Student Guardian" for call in mock_setter.call_args_list))
+			self.assertTrue(all(call.args[2] == "fetch_from" for call in mock_setter.call_args_list))
 
 	def test_guardian_details_fetched_into_student_record(self):
 		"""Creating a Guardian, adding to Student, and saving populates fetched name, email and mobile."""
