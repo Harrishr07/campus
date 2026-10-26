@@ -1,10 +1,9 @@
-"""Tests for BUG-08: Student mobile number sanitization and floating-point decimal suffix (.0) removal."""
+from unittest.mock import MagicMock, patch
 
 try:
 	from frappe.tests.utils import FrappeTestCase
 except ImportError:
 	from unittest import TestCase as FrappeTestCase
-
 
 from campus.campus_platform.sanitize import clean_mobile_number, validate_mobile
 from campus.admissions.allotment_import import coerce
@@ -12,22 +11,25 @@ from campus.admissions.allotment_import import coerce
 
 class TestMobileSanitization(FrappeTestCase):
 	def test_clean_mobile_number_variations(self):
-		"""clean_mobile_number removes float artifacts, spaces, hyphens, and retains valid phone formats."""
+		"""clean_mobile_number drops trailing .0 or .00 and int-casts whole floats, leaving other formats untouched."""
 		cases = [
 			(6380168782.0, "6380168782"),
 			("6380168782.0", "6380168782"),
 			("6380168780.0", "6380168780"),
 			("6380168782.00", "6380168782"),
 			("6380168782", "6380168782"),
-			("+91 6380168782", "+916380168782"),
+			("+91 6380168782", "+91 6380168782"),
 			("+916380168782.0", "+916380168782"),
-			(" 6380168782.0 ", "6380168782"),
-			("63801-68782", "6380168782"),
+			("9876543210/9123456780", "9876543210/9123456780"),
+			("(044) 2345-6789 ext 12", "(044) 2345-6789 ext 12"),
+			(6380168782.5, "6380168782.5"),
+			("6.380168782e+09", "6.380168782e+09"),
 			(None, ""),
 			("", ""),
 		]
 		for inp, expected in cases:
 			self.assertEqual(clean_mobile_number(inp), expected, f"Failed on input {inp}")
+
 
 	def test_validate_mobile_doc_event_hook(self):
 		"""validate_mobile hook sanitizes mobile fields in memory on doc validation."""

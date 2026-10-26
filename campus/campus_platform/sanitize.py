@@ -1,12 +1,6 @@
 """Universal data sanitization utilities and doc_events hooks for OneBook Campus."""
 
-import re
-
-try:
-	import frappe
-except ImportError:
-	frappe = None
-
+import frappe
 
 MOBILE_FIELDS = {
 	"Student": ["student_mobile_number"],
@@ -17,42 +11,27 @@ MOBILE_FIELDS = {
 
 
 def clean_mobile_number(val):
-	"""BUG-08: Normalizes a mobile number to a clean digits string without floating-point artifacts (.0).
-
-	Handles:
-	- None / empty string -> ''
-	- float (e.g. 6380168782.0) -> '6380168782'
-	- string with float suffix ('6380168782.0') -> '6380168782'
-	- string with spaces / hyphens ('63801 68782') -> '6380168782'
-	- international prefix ('+919876543210.0') -> '+919876543210'
+	"""BUG-08: Drops a trailing .0 or .00 from mobile numbers resulting from float imports.
+	Leaves all other formats (e.g. extension, multiple numbers, spaces, non-float strings) untouched.
 	"""
 	if val is None:
 		return ""
 
 	if isinstance(val, float):
 		if val.is_integer():
-			val = int(val)
-		else:
-			return ""
+			return str(int(val))
+		return str(val)
 
 	val_str = str(val).strip()
 	if not val_str:
 		return ""
 
-	# Strip Excel float suffix (.0, .00)
+	if val_str.endswith(".00"):
+		return val_str[:-3]
 	if val_str.endswith(".0"):
-		val_str = val_str[:-2].strip()
-	val_str = re.sub(r"\.0+$", "", val_str)
+		return val_str[:-2]
 
-	# Preserve leading + if international format
-	has_plus = val_str.startswith("+")
-
-	# Strip non-digits
-	digits = re.sub(r"[^\d]", "", val_str)
-	if not digits:
-		return ""
-
-	return f"+{digits}" if has_plus else digits
+	return val_str
 
 
 def validate_mobile(doc, method=None):

@@ -46,27 +46,23 @@ def setup_student_services():
 def setup_student_guardian_fetch():
 	"""BUG-07: Ensure Student Guardian child table has fetch_from configured so guardian_name and contact details
 	are auto-populated from the linked Guardian record."""
-	try:
-		from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 
-		fetch_map = {
-			"guardian_name": "guardian.guardian_name",
-			"email_address": "guardian.email_address",
-			"mobile_number": "guardian.mobile_number",
-		}
-		for fieldname, fetch_from in fetch_map.items():
-			if frappe.db.exists("DocField", {"parent": "Student Guardian", "fieldname": fieldname}):
-				make_property_setter(
-					"Student Guardian",
-					fieldname,
-					"fetch_from",
-					fetch_from,
-					"Small Text",
-					validate_fields_for_doctype=False,
-				)
-	except Exception:
-		pass
-
+	fetch_map = {
+		"guardian_name": "guardian.guardian_name",
+		"email_address": "guardian.email_address",
+		"mobile_number": "guardian.mobile_number",
+	}
+	for fieldname, fetch_from in fetch_map.items():
+		if frappe.db.exists("DocField", {"parent": "Student Guardian", "fieldname": fieldname}):
+			make_property_setter(
+				"Student Guardian",
+				fieldname,
+				"fetch_from",
+				fetch_from,
+				"Small Text",
+				validate_fields_for_doctype=False,
+			)
 
 
 def seed_lifecycle_rules():

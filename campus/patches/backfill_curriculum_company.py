@@ -8,12 +8,9 @@ def execute():
 	if not frappe.db.table_exists("Curriculum"):
 		return
 
-	global_default = frappe.db.get_single_value("Global Defaults", "default_company")
-	fallback_company = global_default or frappe.db.get_value("Company", {}, "name")
-
 	curricula = frappe.db.sql(
 		"""
-		SELECT name, program, regulation, owner
+		SELECT name, program, regulation
 		FROM `tabCurriculum`
 		WHERE company IS NULL OR company = ''
 		""",
@@ -29,10 +26,6 @@ def execute():
 			company = frappe.db.get_value("Program", cur.program, "oc_company")
 		if not company and cur.regulation:
 			company = frappe.db.get_value("Regulation", cur.regulation, "company")
-		if not company and cur.owner:
-			company = frappe.db.get_value("User Permission", {"user": cur.owner, "allow": "Company"}, "for_value")
-		if not company:
-			company = fallback_company
 
 		if company:
 			frappe.db.set_value("Curriculum", cur.name, "company", company, update_modified=False)

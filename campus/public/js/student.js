@@ -91,37 +91,6 @@ frappe.ui.form.on("Student Guardian", {
 	guardians_add(frm) {
 		setup_guardians_filter(frm);
 	},
-	guardian(frm, cdt, cdn) {
-		const row = locals[cdt]?.[cdn];
-		if (!row) return;
-
-		if (!row.guardian) {
-			frappe.model.set_value(cdt, cdn, "guardian_name", "");
-			if (frm.fields_dict.guardians?.grid?.fields_map?.email_address) {
-				frappe.model.set_value(cdt, cdn, "email_address", "");
-			}
-			if (frm.fields_dict.guardians?.grid?.fields_map?.mobile_number) {
-				frappe.model.set_value(cdt, cdn, "mobile_number", "");
-			}
-			return;
-		}
-
-		frappe.db
-			.get_value("Guardian", row.guardian, ["guardian_name", "email_address", "mobile_number"])
-			.then((r) => {
-				if (r && r.message) {
-					const data = r.message;
-					if (data.guardian_name) {
-						frappe.model.set_value(cdt, cdn, "guardian_name", data.guardian_name);
-					}
-					if (data.email_address && frm.fields_dict.guardians?.grid?.fields_map?.email_address) {
-						frappe.model.set_value(cdt, cdn, "email_address", data.email_address);
-					}
-					if (data.mobile_number && frm.fields_dict.guardians?.grid?.fields_map?.mobile_number) {
-						frappe.model.set_value(cdt, cdn, "mobile_number", data.mobile_number);
-					}
-				}
-			});
-	},
 });
+
 

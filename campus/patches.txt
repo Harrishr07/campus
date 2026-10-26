@@ -48,4 +48,3 @@ campus.patches.retire_fee_collection_role
 campus.patches.backfill_curriculum_company
 campus.patches.fix_student_guardian_fetch
 campus.patches.clean_student_mobile_numbers
-

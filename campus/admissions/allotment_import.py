@@ -294,7 +294,6 @@ def coerce(fieldname, value):
 	return cstr(value).strip()
 
 
-
 def record(item, status, applicant, message):
 	frappe.get_doc(
 		{

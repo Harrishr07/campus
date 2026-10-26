@@ -50,6 +50,8 @@ def completion_percent(items):
 @frappe.whitelist()
 def get_onboarding_template_details(student=None, template=None):
 	"""Resolves the default template and checklist items for a student or given template."""
+	if student:
+		frappe.has_permission("Student", "read", student, throw=True)
 	if not template and student:
 		company = frappe.db.get_value("Student", student, "oc_company")
 		if company:

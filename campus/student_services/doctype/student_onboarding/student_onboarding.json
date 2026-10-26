@@ -44,6 +44,7 @@
    "fieldtype": "Link",
    "label": "Template",
    "options": "Student Onboarding Template",
+   "read_only": 1,
    "set_only_once": 1
   },
   {

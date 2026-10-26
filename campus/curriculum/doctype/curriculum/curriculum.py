@@ -41,23 +41,7 @@ class Curriculum(Document):
 				title=_("Curriculum Already Exists"),
 			)
 
-	def resolve_company(self):
-		return (
-			self.company
-			or (self.program and frappe.db.get_value("Program", self.program, "oc_company"))
-			or (self.regulation and frappe.db.get_value("Regulation", self.regulation, "company"))
-			or frappe.defaults.get_user_default("Company")
-			or frappe.db.get_single_value("Global Defaults", "default_company")
-			or frappe.db.get_value("Company", {}, "name")
-		)
-
-	def before_insert(self):
-		if not self.company:
-			self.company = self.resolve_company()
-
 	def validate(self):
-		if not self.company:
-			self.company = self.resolve_company()
 		self.validate_status_change()
 		if self.validate_lock():
 			return

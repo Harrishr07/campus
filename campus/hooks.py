@@ -233,9 +233,9 @@ doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.
 doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
 doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
+doc_events["Student"]["validate"].append("campus.campus_platform.sanitize.validate_mobile")
 doc_events["Student"]["validate"].append("campus.student_services.corrections.guard_locked_fields")  # L-08
 doc_events["Student"]["validate"].append("campus.examinations.affiliation.validate_university_register_no")  # M06-10
-doc_events["Student"]["validate"].append("campus.campus_platform.sanitize.validate_mobile")
 doc_events["Guardian"] = {"validate": "campus.campus_platform.sanitize.validate_mobile"}
 
 _after_insert = doc_events["Student"].get("after_insert")
