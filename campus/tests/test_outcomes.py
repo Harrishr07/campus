@@ -6,7 +6,12 @@ from frappe.utils import add_days, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.curriculum import api
-from campus.curriculum.outcomes import NBA_PROGRAM_OUTCOMES, seed_co_po_matrix_policy, seed_program_outcomes, validate_co_tags
+from campus.curriculum.outcomes import (
+	NBA_PROGRAM_OUTCOMES,
+	seed_co_po_matrix_policy,
+	seed_program_outcomes,
+	validate_co_tags,
+)
 from campus.curriculum.report.co_po_coverage import co_po_coverage
 from campus.curriculum.setup import seed_course_categories
 from campus.tests.factories import make_company, make_user
@@ -24,12 +29,19 @@ CO_CODES = ("CO1", "CO2", "CO3")
 
 def make_department(name):
 	existing = frappe.db.get_value("Department", {"department_name": name, "company": COLLEGE})
-	return existing or frappe.get_doc({"doctype": "Department", "department_name": name, "company": COLLEGE}).insert().name
+	return (
+		existing
+		or frappe.get_doc({"doctype": "Department", "department_name": name, "company": COLLEGE})
+		.insert()
+		.name
+	)
 
 
 def make_course(name, department):
 	if not frappe.db.exists("Course", name):
-		frappe.get_doc({"doctype": "Course", "course_name": name, "oc_company": COLLEGE, "department": department}).insert()
+		frappe.get_doc(
+			{"doctype": "Course", "course_name": name, "oc_company": COLLEGE, "department": department}
+		).insert()
 	return name
 
 
@@ -78,9 +90,19 @@ class TestOutcomes(CampusTestCase):
 		if name:
 			return name
 		rows = [{"semester": 3, "course": COURSE, "category": "PCC", "lecture_periods": 3}]
-		return frappe.get_doc(
-			{"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "status": "Draft", "courses": rows}
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Curriculum",
+					"program": PROGRAM,
+					"regulation": regulation,
+					"status": "Draft",
+					"courses": rows,
+				}
+			)
+			.insert()
+			.name
+		)
 
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -91,14 +113,20 @@ class TestOutcomes(CampusTestCase):
 		frappe.db.rollback(save_point="outcomes_test")
 
 	def outcome(self, code, regulation=None):
-		return frappe.db.get_value("Program Outcome", {"program": PROGRAM, "regulation": regulation or self.r22, "po_code": code})
+		return frappe.db.get_value(
+			"Program Outcome", {"program": PROGRAM, "regulation": regulation or self.r22, "po_code": code}
+		)
 
 	def course_outcome(self, code, curriculum=None):
-		return frappe.db.get_value("Course Outcome", {"course": COURSE, "curriculum": curriculum or self.c22, "co_code": code})
+		return frappe.db.get_value(
+			"Course Outcome", {"course": COURSE, "curriculum": curriculum or self.c22, "co_code": code}
+		)
 
 	def matrix(self, curriculum=None, mapped=None):
 		"""A matrix of COURSE with its grid filled; `mapped` is {(CO code, PO/PSO code): correlation}."""
-		doc = frappe.get_doc({"doctype": "CO-PO Matrix", "course": COURSE, "curriculum": curriculum or self.c22}).insert()
+		doc = frappe.get_doc(
+			{"doctype": "CO-PO Matrix", "course": COURSE, "curriculum": curriculum or self.c22}
+		).insert()
 		for row in doc.correlations:
 			row.correlation = (mapped or {}).get((row.co_code, row.outcome_code), 0)
 		doc.save()
@@ -120,7 +148,12 @@ class TestOutcomes(CampusTestCase):
 	# masters
 	def test_nba_program_outcomes_are_seeded_once_per_program_and_regulation(self):
 		seed_program_outcomes(PROGRAM, self.r22)  # again: nothing new
-		codes = frappe.get_all("Program Outcome", {"program": PROGRAM, "regulation": self.r22}, pluck="po_code", order_by="po_code")
+		codes = frappe.get_all(
+			"Program Outcome",
+			{"program": PROGRAM, "regulation": self.r22},
+			pluck="po_code",
+			order_by="po_code",
+		)
 		self.assertEqual(sorted(codes, key=lambda c: int(c[2:])), [f"PO{n}" for n in range(1, 13)])
 		self.assertEqual(len(NBA_PROGRAM_OUTCOMES), 12)
 		po1 = frappe.get_doc("Program Outcome", self.outcome("PO1"))
@@ -136,15 +169,41 @@ class TestOutcomes(CampusTestCase):
 				"statement": "x", "bloom_level": "Apply"}).insert()  # fmt: skip
 		co4 = frappe.get_doc({"doctype": "Course Outcome", "course": COURSE, "curriculum": self.c22, "co_code": "co4",
 			"statement": "x", "bloom_level": "Create"}).insert()  # fmt: skip
-		self.assertEqual((co4.co_code, co4.program, co4.regulation, co4.company), ("CO4", PROGRAM, self.r22, COLLEGE))
+		self.assertEqual(
+			(co4.co_code, co4.program, co4.regulation, co4.company), ("CO4", PROGRAM, self.r22, COLLEGE)
+		)
 
 	def test_a_peo_maps_to_missions_of_its_programme_department(self):
-		mission = frappe.get_doc({"doctype": "Department Mission", "department": self.department, "mission_code": "M1", "statement": "Teach well"}).insert()
-		other = frappe.get_doc({"doctype": "Department Mission", "department": self.other_department, "mission_code": "M1", "statement": "Other"}).insert()
-		peo = {"doctype": "Program Educational Objective", "program": PROGRAM, "regulation": self.r22, "peo_code": "PEO1", "statement": "Graduates will..."}
+		mission = frappe.get_doc(
+			{
+				"doctype": "Department Mission",
+				"department": self.department,
+				"mission_code": "M1",
+				"statement": "Teach well",
+			}
+		).insert()
+		other = frappe.get_doc(
+			{
+				"doctype": "Department Mission",
+				"department": self.other_department,
+				"mission_code": "M1",
+				"statement": "Other",
+			}
+		).insert()
+		peo = {
+			"doctype": "Program Educational Objective",
+			"program": PROGRAM,
+			"regulation": self.r22,
+			"peo_code": "PEO1",
+			"statement": "Graduates will...",
+		}
 		with self.assertRaisesRegex(frappe.ValidationError, "not a mission of"):
-			frappe.get_doc({**peo, "mission_mappings": [{"mission": other.name, "correlation": "2"}]}).insert()
-		doc = frappe.get_doc({**peo, "mission_mappings": [{"mission": mission.name, "correlation": "3"}]}).insert()
+			frappe.get_doc(
+				{**peo, "mission_mappings": [{"mission": other.name, "correlation": "2"}]}
+			).insert()
+		doc = frappe.get_doc(
+			{**peo, "mission_mappings": [{"mission": mission.name, "correlation": "3"}]}
+		).insert()
 		self.assertEqual(doc.mission_mappings[0].correlation, "3")
 
 	# matrix
@@ -152,8 +211,13 @@ class TestOutcomes(CampusTestCase):
 		doc = self.matrix()
 		self.assertEqual(len(doc.correlations), 3 * 14)
 		self.assertEqual({r.co_code for r in doc.correlations}, set(CO_CODES))
-		self.assertEqual({r.outcome_code for r in doc.correlations}, {*(f"PO{n}" for n in range(1, 13)), "PSO1", "PSO2"})
-		self.assertEqual((doc.program, doc.regulation, doc.department, doc.company), (PROGRAM, self.r22, self.department, COLLEGE))
+		self.assertEqual(
+			{r.outcome_code for r in doc.correlations}, {*(f"PO{n}" for n in range(1, 13)), "PSO1", "PSO2"}
+		)
+		self.assertEqual(
+			(doc.program, doc.regulation, doc.department, doc.company),
+			(PROGRAM, self.r22, self.department, COLLEGE),
+		)
 
 	def test_cells_take_0_to_3_and_only_this_curriculums_cos_and_outcomes(self):
 		doc = self.matrix()
@@ -191,7 +255,9 @@ class TestOutcomes(CampusTestCase):
 		doc = frappe.get_doc("CO-PO Matrix", doc.name)
 		doc.correlations[[r.co_code for r in doc.correlations].index("CO3")].correlation = 1
 		doc.save()
-		with self.assertRaisesRegex(frappe.ValidationError, "CO4"):  # a CO missing from the grid maps to nothing too
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "CO4"
+		):  # a CO missing from the grid maps to nothing too
 			request_approval(doc.doctype, doc.name)
 
 	def test_the_hod_of_the_course_department_approves_and_unmapped_pos_are_warned(self):  # AC1
@@ -215,17 +281,29 @@ class TestOutcomes(CampusTestCase):
 		self.assertIn("PO2", warned)
 		self.assertIn("PSO1", warned)
 
-	def test_the_coverage_report_lists_outcomes_with_zero_total_correlation_across_the_curriculum(self):  # AC1
+	def test_the_coverage_report_lists_outcomes_with_zero_total_correlation_across_the_curriculum(
+		self,
+	):  # AC1
 		self.submit_through_hod(self.matrix(mapped={**self.fully_mapped(3), ("CO1", "PSO1"): 1}))
 		columns, rows, message = co_po_coverage.execute({"company": COLLEGE, "curriculum": self.c22})[:3]
 		by_code = {r["outcome_code"]: r for r in rows}
-		self.assertEqual((by_code["PO1"]["total_correlation"], by_code["PO1"]["courses"], by_code["PO1"]["status"]), (9, 1, "Mapped"))
+		self.assertEqual(
+			(by_code["PO1"]["total_correlation"], by_code["PO1"]["courses"], by_code["PO1"]["status"]),
+			(9, 1, "Mapped"),
+		)
 		self.assertEqual(by_code["PSO1"]["total_correlation"], 1)
 		self.assertEqual(by_code["PO2"]["status"], "Not mapped")
 		self.assertIn("PO2", message)
 		self.assertEqual(len(rows), 14)
 		draft = self.matrix(self.c26, mapped={(co, "PO2"): 3 for co in CO_CODES})  # drafts do not count
-		self.assertEqual({r["outcome_code"] for r in co_po_coverage.execute({"company": COLLEGE, "curriculum": self.c26})[1] if r["total_correlation"]}, set())
+		self.assertEqual(
+			{
+				r["outcome_code"]
+				for r in co_po_coverage.execute({"company": COLLEGE, "curriculum": self.c26})[1]
+				if r["total_correlation"]
+			},
+			set(),
+		)
 		self.assertTrue(draft.name)
 
 	def test_the_coverage_report_is_for_permitted_colleges(self):
@@ -268,7 +346,9 @@ class TestOutcomes(CampusTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "CO9"):
 			frappe.get_doc({**item, "course_outcome": "CO9"}).insert()
 		self.assertTrue(frappe.get_doc({**item, "course_outcome": "CO3"}).insert().name)
-		untagged = frappe.get_doc({**item, "course": OTHER_COURSE, "course_outcome": "CO7"}).insert()  # no COs defined yet
+		untagged = frappe.get_doc(
+			{**item, "course": OTHER_COURSE, "course_outcome": "CO7"}
+		).insert()  # no COs defined yet
 		self.assertEqual(untagged.course_outcome, "CO7")
 
 	# prints

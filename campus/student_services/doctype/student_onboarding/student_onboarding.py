@@ -17,14 +17,18 @@ class StudentOnboarding(Document):
 			frappe.throw(_("Row {0}: {1} is mandatory and cannot be waived.").format(row.idx, row.title))
 		if row.status == "Done":
 			if row.requires_attachment and not row.attachment:
-				frappe.throw(_("Row {0}: {1} needs an attachment before it is marked Done.").format(row.idx, row.title))
+				frappe.throw(
+					_("Row {0}: {1} needs an attachment before it is marked Done.").format(row.idx, row.title)
+				)
 			row.done_by = row.done_by or frappe.session.user
 			row.done_on = row.done_on or now_datetime()
 		else:
 			row.done_by = row.done_on = None
 
 	def on_update(self):
-		frappe.db.set_value("Student", self.student, "oc_onboarding_completion", self.completion, update_modified=False)
+		frappe.db.set_value(
+			"Student", self.student, "oc_onboarding_completion", self.completion, update_modified=False
+		)
 
 	def on_trash(self):
 		frappe.db.set_value("Student", self.student, "oc_onboarding_completion", 0, update_modified=False)

@@ -32,6 +32,7 @@ WEEK = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 
 # ---- Lead hooks ---------------------------------------------------------------------------
 
+
 def before_insert(doc, method=None):
 	if frappe.session.user == "Guest":
 		guard_guest_submission(doc)
@@ -65,7 +66,9 @@ def guard_guest_submission(doc):
 	if count == 1:
 		frappe.cache.expire(key, GUEST_WINDOW_SECONDS)
 	if count > GUEST_LIMIT:
-		frappe.throw(_("Too many enquiries from this address. Please try again later."), frappe.RateLimitExceededError)
+		frappe.throw(
+			_("Too many enquiries from this address. Please try again later."), frappe.RateLimitExceededError
+		)
 
 
 # ---- Lead scoping -------------------------------------------------------------------------
@@ -97,6 +100,7 @@ def has_permission(doc, ptype=None, user=None):
 
 # ---- acknowledgement ----------------------------------------------------------------------
 
+
 def whatsapp_number(doc):
 	"""The enquirer's number: Indian numbers as +91 and exactly 10 digits, other + numbers as given, or None."""
 	raw = re.sub(r"[^\d+]", "", doc.whatsapp_no or doc.mobile_no or "")
@@ -121,7 +125,10 @@ def safely(function, *args):
 	try:
 		function(*args)
 	except Exception as error:
-		frappe.log_error(title=f"Enquiry {getattr(function, '__name__', 'step')} failed", message=f"{type(error).__name__}: {error}")
+		frappe.log_error(
+			title=f"Enquiry {getattr(function, '__name__', 'step')} failed",
+			message=f"{type(error).__name__}: {error}",
+		)
 
 
 def ack_limit(fieldname):
@@ -147,11 +154,15 @@ def over_hourly_ceiling(company):
 	key = f"oc-enquiry-ceiling-logged-{company}"
 	if not frappe.cache.get_value(key):
 		frappe.cache.set_value(key, 1, expires_in_sec=3600)
-		frappe.log_error(title="Enquiry acknowledgement ceiling reached", message=f"{company}: {ceiling} acknowledgements in the last hour; further enquiries get no WhatsApp ack.")
+		frappe.log_error(
+			title="Enquiry acknowledgement ceiling reached",
+			message=f"{company}: {ceiling} acknowledgements in the last hour; further enquiries get no WhatsApp ack.",
+		)
 	return True
 
 
 # ---- round-robin assignment ---------------------------------------------------------------
+
 
 def company_officers(company):
 	"""Enabled Admission Officers permitted for the company, in a stable order."""
@@ -162,7 +173,9 @@ def company_officers(company):
 		"User Permission", {"allow": "Company", "for_value": company, "user": ("in", officers or [""])},
 		pluck="user", limit=0,
 	)  # fmt: skip
-	enabled = frappe.get_all("User", {"name": ("in", permitted or [""]), "enabled": 1}, pluck="name", order_by="name", limit=0)
+	enabled = frappe.get_all(
+		"User", {"name": ("in", permitted or [""]), "enabled": 1}, pluck="name", order_by="name", limit=0
+	)
 	return enabled
 
 
@@ -175,7 +188,11 @@ def sync_assignment_rule(company):
 	if rule_is_current(company, officers, for_update=True):
 		return
 	name = RULE_PREFIX + company
-	rule = frappe.get_doc("Assignment Rule", name) if frappe.db.get_value("Assignment Rule", name, "name", for_update=True) else None
+	rule = (
+		frappe.get_doc("Assignment Rule", name)
+		if frappe.db.get_value("Assignment Rule", name, "name", for_update=True)
+		else None
+	)
 	if not rule:
 		if not officers:
 			return
@@ -187,10 +204,18 @@ def sync_assignment_rule(company):
 
 def rule_is_current(company, officers, for_update=False):
 	name = RULE_PREFIX + company
-	row = frappe.db.get_value("Assignment Rule", name, ["name", "disabled"], as_dict=True, for_update=for_update)
+	row = frappe.db.get_value(
+		"Assignment Rule", name, ["name", "disabled"], as_dict=True, for_update=for_update
+	)
 	if not row:
 		return not officers
-	users = frappe.get_all("Assignment Rule User", {"parent": name, "parenttype": "Assignment Rule", "parentfield": "users"}, pluck="user", order_by="idx", limit=0)
+	users = frappe.get_all(
+		"Assignment Rule User",
+		{"parent": name, "parenttype": "Assignment Rule", "parentfield": "users"},
+		pluck="user",
+		order_by="idx",
+		limit=0,
+	)
 	return users == officers and bool(row.disabled) == (not officers)
 
 
@@ -214,11 +239,14 @@ def user_permission_changed(doc, method=None):
 
 def user_changed(doc, method=None):
 	"""Roles or enabled state of a user changed: refresh the rule of every company the user is permitted for."""
-	for company in frappe.get_all("User Permission", {"user": doc.name, "allow": "Company"}, pluck="for_value", limit=0):
+	for company in frappe.get_all(
+		"User Permission", {"user": doc.name, "allow": "Company"}, pluck="for_value", limit=0
+	):
 		safely(sync_assignment_rule, company)
 
 
 # ---- conversion ---------------------------------------------------------------------------
+
 
 def split_name(full_name):
 	"""(first, middle, last): first word, last word, anything between."""
@@ -241,9 +269,13 @@ def convert_lead_to_applicant(lead, academic_year=None):
 	frappe.has_permission("Lead", "write", lead, throw=True)
 	frappe.has_permission("Student Applicant", "create", throw=True)
 	frappe.db.get_value("Lead", lead, "name", for_update=True)  # serialise concurrent conversions
-	existing = frappe.db.get_value("Student Applicant", {"oc_lead": lead}, "name", for_update=True)  # locking read: no stale snapshot
+	existing = frappe.db.get_value(
+		"Student Applicant", {"oc_lead": lead}, "name", for_update=True
+	)  # locking read: no stale snapshot
 	if existing:
-		frappe.db.set_value("Lead", lead, {"oc_applicant": existing, "status": "Converted"})  # heal a lost back-link
+		frappe.db.set_value(
+			"Lead", lead, {"oc_applicant": existing, "status": "Converted"}
+		)  # heal a lost back-link
 		return existing
 	doc = frappe.get_doc("Lead", lead)
 	if not doc.oc_program_interest:

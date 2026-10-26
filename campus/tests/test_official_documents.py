@@ -83,7 +83,13 @@ class OfficialDocumentCase(CampusTestCase):
 
 	def make_profile(self, company, principal, coordinator):
 		frappe.get_doc(
-			{"doctype": "Institution Profile", "company": company, "institution_status": "Autonomous", "principal": principal, "iqac_coordinator": coordinator}
+			{
+				"doctype": "Institution Profile",
+				"company": company,
+				"institution_status": "Autonomous",
+				"principal": principal,
+				"iqac_coordinator": coordinator,
+			}
 		).insert()
 
 	def make_document(self, valid_to_in=100, company=COLLEGE, **values):
@@ -120,7 +126,9 @@ class TestRegister(OfficialDocumentCase):
 			self.make_document(file="/private/../files/aicte-approval.pdf")
 
 	def test_a_program_of_another_company_is_refused(self):
-		program = frappe.get_doc({"doctype": "Program", "program_name": "Official Doc Other BE", "oc_company": OTHER_COLLEGE}).insert()
+		program = frappe.get_doc(
+			{"doctype": "Program", "program_name": "Official Doc Other BE", "oc_company": OTHER_COLLEGE}
+		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.make_document(program=program.name)
 
@@ -183,7 +191,10 @@ class TestExpiryAlerts(OfficialDocumentCase):
 	def test_the_principal_and_the_iqac_coordinator_of_the_company_are_told(self):
 		document = self.make_document(30)
 		register.send_expiry_alerts(today())
-		self.assertEqual({l.recipient.split(":")[-1] for l in self.logs(document, EXPIRING)}, {self.principal, self.coordinator})
+		self.assertEqual(
+			{l.recipient.split(":")[-1] for l in self.logs(document, EXPIRING)},
+			{self.principal, self.coordinator},
+		)
 
 	def test_a_repeat_run_on_the_same_day_does_not_message_twice(self):
 		document = self.make_document(30)
@@ -238,10 +249,15 @@ class TestExpiryAlerts(OfficialDocumentCase):
 
 	def test_an_active_document_past_its_last_day_becomes_expired_once_and_is_kept(self):
 		document = self.make_document(1)
-		frappe.db.set_value("Official Document", document.name, "valid_to", add_days(today(), -1))  # time passed since the save
+		frappe.db.set_value(
+			"Official Document", document.name, "valid_to", add_days(today(), -1)
+		)  # time passed since the save
 		self.assertEqual(register.send_expiry_alerts(today()), 1)
 		self.assertEqual(frappe.db.get_value("Official Document", document.name, "status"), "Expired")
-		self.assertEqual({l.recipient.split(":")[-1] for l in self.logs(document, EXPIRED)}, {self.principal, self.coordinator})
+		self.assertEqual(
+			{l.recipient.split(":")[-1] for l in self.logs(document, EXPIRED)},
+			{self.principal, self.coordinator},
+		)
 		self.assertEqual(register.send_expiry_alerts(today()), 0)  # already expired: not told again
 		self.assertEqual(len(self.logs(document, EXPIRED)), 2)
 		self.assertTrue(frappe.db.exists("Official Document", document.name))

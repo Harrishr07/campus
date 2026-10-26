@@ -51,7 +51,9 @@ class TestMessagingUnits(CampusTestCase):
 
 	def test_quiet_hours_same_day_window_and_unset(self):
 		day = datetime(2026, 10, 4)
-		self.assertEqual(quiet_hours.release_time(day.replace(hour=13), time(12), time(14)), day.replace(hour=14))
+		self.assertEqual(
+			quiet_hours.release_time(day.replace(hour=13), time(12), time(14)), day.replace(hour=14)
+		)
 		self.assertIsNone(quiet_hours.release_time(day.replace(hour=15), time(12), time(14)))
 		self.assertIsNone(quiet_hours.release_time(day, None, None))
 		self.assertIsNone(quiet_hours.release_time(day, time(8), time(8)))
@@ -88,7 +90,11 @@ class TestMessagingUnits(CampusTestCase):
 	def test_sms_adapter_sends_dlt_id_as_configured_param(self):
 		frappe.db.set_single_value(
 			"SMS Settings",
-			{"sms_gateway_url": "https://sms.invalid/send", "message_parameter": "msg", "receiver_parameter": "to"},
+			{
+				"sms_gateway_url": "https://sms.invalid/send",
+				"message_parameter": "msg",
+				"receiver_parameter": "to",
+			},
 		)
 		frappe.db.set_single_value("Messaging Settings", "sms_dlt_param_name", "dlt_te_id")
 		template = frappe._dict(sms_dlt_template_id="1107123", event_key="fees.due")
@@ -96,7 +102,9 @@ class TestMessagingUnits(CampusTestCase):
 		with patch("frappe.core.doctype.sms_settings.sms_settings.send_request") as send_request:
 			channels.send_sms(log, template)
 		params = send_request.call_args.args[1]
-		self.assertEqual((params["msg"], params["to"], params["dlt_te_id"]), ("Hello", "+919800000000", "1107123"))
+		self.assertEqual(
+			(params["msg"], params["to"], params["dlt_te_id"]), ("Hello", "+919800000000", "1107123")
+		)
 
 
 class TestMessagingSend(CampusTestCase):
@@ -142,11 +150,21 @@ class TestMessagingSend(CampusTestCase):
 
 	def logs(self, **filters):
 		return frappe.get_all(
-			"Message Log", filters=filters, fields=["name", "channel", "status", "error", "recipient"], order_by="creation, name"
+			"Message Log",
+			filters=filters,
+			fields=["name", "channel", "status", "error", "recipient"],
+			order_by="creation, name",
 		)
 
 	def send_fees(self, **kwargs):
-		return api.send("fees.due", self.doc, [{"doctype": "Guardian", "name": self.guardian.name}], {"amount": "900"}, now=True, **kwargs)
+		return api.send(
+			"fees.due",
+			self.doc,
+			[{"doctype": "Guardian", "name": self.guardian.name}],
+			{"amount": "900"},
+			now=True,
+			**kwargs,
+		)
 
 	def test_fees_due_goes_out_on_whatsapp(self):
 		with adapters():
@@ -187,8 +205,12 @@ class TestMessagingSend(CampusTestCase):
 		for channel in ("whatsapp", "sms"):
 			frappe.get_doc(
 				{
-					"doctype": "Communication Consent", "party_type": "Guardian", "party": self.guardian.name,
-					"channel": channel, "purpose": "promotional", "status": "Opted Out",
+					"doctype": "Communication Consent",
+					"party_type": "Guardian",
+					"party": self.guardian.name,
+					"channel": channel,
+					"purpose": "promotional",
+					"status": "Opted Out",
 				}
 			).insert()
 		mocks = {c: ok(f"{c}-id") for c in ("whatsapp", "sms")}
@@ -207,16 +229,26 @@ class TestMessagingSend(CampusTestCase):
 			self.assertEqual([l.status for l in self.logs()], ["Skipped"])
 			frappe.get_doc(
 				{
-					"doctype": "Communication Consent", "party_type": "Guardian", "party": self.guardian.name,
-					"channel": "sms", "purpose": "promotional", "status": "Opted In",
+					"doctype": "Communication Consent",
+					"party_type": "Guardian",
+					"party": self.guardian.name,
+					"channel": "sms",
+					"purpose": "promotional",
+					"status": "Opted In",
 				}
 			).insert()
 			api.send("t10.promo", self.doc, [f"Guardian:{self.guardian.name}"], now=True)
 		self.assertEqual([l.status for l in self.logs()], ["Skipped", "Sent"])
 
 	def test_duplicate_consent_record_rejected(self):
-		values = {"doctype": "Communication Consent", "party_type": "Guardian", "party": self.guardian.name,
-			"channel": "sms", "purpose": "promotional", "status": "Opted In"}
+		values = {
+			"doctype": "Communication Consent",
+			"party_type": "Guardian",
+			"party": self.guardian.name,
+			"channel": "sms",
+			"purpose": "promotional",
+			"status": "Opted In",
+		}
 		frappe.get_doc(values).insert()
 		with self.assertRaises(frappe.DuplicateEntryError):
 			frappe.get_doc({**values, "status": "Opted Out"}).insert()
@@ -224,7 +256,7 @@ class TestMessagingSend(CampusTestCase):
 	def test_repeat_send_is_a_no_op_returning_existing_logs(self):
 		sms = ok("sms-id")
 		with adapters(whatsapp=failing(), sms=sms):
-			first = self.send_fees()
+			self.send_fees()
 			second = self.send_fees()
 		self.assertEqual(second, [self.logs(channel="sms")[0].name])
 		self.assertEqual(sms.call_count, 1)
@@ -252,7 +284,10 @@ class TestMessagingSend(CampusTestCase):
 		self.assertIn("அன்புள்ள", message)
 		with adapters():
 			self.send_fees()
-		self.assertNotIn("அன்புள்ள", frappe.db.get_value("Message Log", {"recipient": f"Guardian:{self.guardian.name}"}, "message"))
+		self.assertNotIn(
+			"அன்புள்ள",
+			frappe.db.get_value("Message Log", {"recipient": f"Guardian:{self.guardian.name}"}, "message"),
+		)
 
 	def test_missing_address_is_skipped_and_next_channel_used(self):
 		bare = self.make_guardian("C", mobile=None, email="t10c@example.com")
@@ -267,7 +302,9 @@ class TestMessagingSend(CampusTestCase):
 	def test_phone_and_user_recipients(self):
 		with adapters():
 			api.send("fees.due", self.doc, ["phone:+919800000009"], now=True)
-		self.assertEqual([(l.recipient, l.channel) for l in self.logs()], [("phone:+919800000009", "whatsapp")])
+		self.assertEqual(
+			[(l.recipient, l.channel) for l in self.logs()], [("phone:+919800000009", "whatsapp")]
+		)
 
 	def test_quiet_hours_schedule_non_urgent_and_scheduler_releases(self):
 		self.set_quiet_hours_around_now()
@@ -279,10 +316,14 @@ class TestMessagingSend(CampusTestCase):
 			wa.assert_called_once()  # urgent only
 			scheduled = self.logs(status="Scheduled")
 			self.assertEqual(len(scheduled), 1)
-			self.assertGreater(frappe.db.get_value("Message Log", scheduled[0].name, "send_after"), now_datetime())
+			self.assertGreater(
+				frappe.db.get_value("Message Log", scheduled[0].name, "send_after"), now_datetime()
+			)
 			delivery.dispatch_due()  # not due yet
 			self.assertEqual(wa.call_count, 1)
-			frappe.db.set_value("Message Log", scheduled[0].name, "send_after", now_datetime() - timedelta(minutes=1))
+			frappe.db.set_value(
+				"Message Log", scheduled[0].name, "send_after", now_datetime() - timedelta(minutes=1)
+			)
 			delivery.dispatch_due()
 		self.assertEqual(wa.call_count, 2)
 		self.assertEqual(frappe.db.get_value("Message Log", scheduled[0].name, "status"), "Sent")
@@ -296,7 +337,9 @@ class TestMessagingSend(CampusTestCase):
 
 	def test_failed_push_only_template_logs_not_configured(self):
 		self.make_template("t10.push", channel_list=("push",))
-		user = frappe.get_doc({"doctype": "User", "email": "t10push@example.com", "first_name": "T10", "send_welcome_email": 0}).insert()
+		user = frappe.get_doc(
+			{"doctype": "User", "email": "t10push@example.com", "first_name": "T10", "send_welcome_email": 0}
+		).insert()
 		self.addCleanup(lambda: frappe.delete_doc("User", user.name, force=True))
 		api.send("t10.push", self.doc, [f"User:{user.name}"], now=True)
 		log = self.logs()[0]
@@ -328,9 +371,18 @@ class TestMessagingSend(CampusTestCase):
 		from frappe_whatsapp.utils.webhook import update_message_status
 
 		if not frappe.db.exists("WhatsApp Message", {"message_id": message_id}):
-			with patch.object(WhatsAppMessage, "set_whatsapp_account"), patch.object(WhatsAppMessage, "before_insert"):
+			with (
+				patch.object(WhatsAppMessage, "set_whatsapp_account"),
+				patch.object(WhatsAppMessage, "before_insert"),
+			):
 				frappe.get_doc(
-					{"doctype": "WhatsApp Message", "type": "Outgoing", "to": "+919800000001", "message_id": message_id, "content_type": "text"}
+					{
+						"doctype": "WhatsApp Message",
+						"type": "Outgoing",
+						"to": "+919800000001",
+						"message_id": message_id,
+						"content_type": "text",
+					}
 				).insert()
 		with patch.object(WhatsAppMessage, "set_whatsapp_account"):
 			update_message_status({"statuses": [{"id": message_id, "status": status}]})
@@ -338,7 +390,15 @@ class TestMessagingSend(CampusTestCase):
 	def test_notify_routes_through_messaging_bus_and_falls_back(self):
 		from campus.campus_platform.notify import notify
 
-		user = frappe.get_doc({"doctype": "User", "email": "t10user@example.com", "first_name": "T10", "mobile_no": "+919800000004", "send_welcome_email": 0}).insert()
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": "t10user@example.com",
+				"first_name": "T10",
+				"mobile_no": "+919800000004",
+				"send_welcome_email": 0,
+			}
+		).insert()
 		self.addCleanup(lambda: frappe.delete_doc("User", user.name, force=True))
 		with adapters():
 			notify([user.name], "Approve me", "please", self.doc)
@@ -355,8 +415,14 @@ class TestMessagingSend(CampusTestCase):
 	def test_scheduled_promotional_is_skipped_if_consent_withdrawn_before_release(self):
 		self.make_template("t10.promo", purpose="promotional", channel_list=("sms",))
 		consent_doc = frappe.get_doc(
-			{"doctype": "Communication Consent", "party_type": "Guardian", "party": self.guardian.name,
-				"channel": "sms", "purpose": "promotional", "status": "Opted In"}
+			{
+				"doctype": "Communication Consent",
+				"party_type": "Guardian",
+				"party": self.guardian.name,
+				"channel": "sms",
+				"purpose": "promotional",
+				"status": "Opted In",
+			}
 		).insert()
 		self.set_quiet_hours_around_now()
 		sms = ok("sms-id")
@@ -375,11 +441,17 @@ class TestMessagingSend(CampusTestCase):
 
 		with patch("campus.campus_messaging.api.send", side_effect=RuntimeError("bus down")):
 			notify(["Administrator"], "Approve", "msg", self.doc)  # must not raise
-		self.assertTrue(frappe.db.exists("Error Log", {"method": "Approval notification via messaging failed"}))
+		self.assertTrue(
+			frappe.db.exists("Error Log", {"method": "Approval notification via messaging failed"})
+		)
 
 	def test_template_with_bad_jinja_is_rejected_at_save(self):
-		bad = {"doctype": "Message Template", "event_key": "t10.bad", "channels": [{"channel": "sms"}],
-			"bodies": [{"language": "en", "subject": "S", "body": "Hi {{ doc.name "}]}
+		bad = {
+			"doctype": "Message Template",
+			"event_key": "t10.bad",
+			"channels": [{"channel": "sms"}],
+			"bodies": [{"language": "en", "subject": "S", "body": "Hi {{ doc.name "}],
+		}
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc(bad).insert()
 		bad["bodies"][0]["body"] = "ok"
@@ -396,8 +468,14 @@ class TestMessagingSend(CampusTestCase):
 
 	def test_consent_name_is_deterministic_primary_key(self):
 		doc = frappe.get_doc(
-			{"doctype": "Communication Consent", "party_type": "Guardian", "party": self.guardian.name,
-				"channel": "sms", "purpose": "promotional", "status": "Opted In"}
+			{
+				"doctype": "Communication Consent",
+				"party_type": "Guardian",
+				"party": self.guardian.name,
+				"channel": "sms",
+				"purpose": "promotional",
+				"status": "Opted In",
+			}
 		).insert()
 		self.assertEqual(doc.name, f"Guardian-{self.guardian.name}-sms-promotional")
 
@@ -419,8 +497,12 @@ class TestMessagingSend(CampusTestCase):
 		second = self.make_guardian("E", mobile="+919800000005")
 		self.set_quiet_hours_around_now()
 		with adapters():
-			api.send("fees.due", self.doc, [f"Guardian:{self.guardian.name}", f"Guardian:{second.name}"], now=True)
-			frappe.db.set_value("Message Log", {"status": "Scheduled"}, "send_after", now_datetime() - timedelta(minutes=1))
+			api.send(
+				"fees.due", self.doc, [f"Guardian:{self.guardian.name}", f"Guardian:{second.name}"], now=True
+			)
+			frappe.db.set_value(
+				"Message Log", {"status": "Scheduled"}, "send_after", now_datetime() - timedelta(minutes=1)
+			)
 			real = delivery.dispatch_log
 			calls = []
 

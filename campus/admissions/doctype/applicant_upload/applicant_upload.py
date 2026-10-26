@@ -14,10 +14,14 @@ INPUT_FIELDS = ("company", "academic_year", "upload_file")
 class ApplicantUpload(Document):
 	def validate(self):
 		if self.is_new():
-			self.update({"status": "Draft", "bulk_run": None, "file_sha256": None, "total_rows": 0, "summary": None})
+			self.update(
+				{"status": "Draft", "bulk_run": None, "file_sha256": None, "total_rows": 0, "summary": None}
+			)
 			return
 		if any(self.has_value_changed(f) for f in SYSTEM_FIELDS):
-			frappe.throw(_("The status of an upload is set by Validate and Import only."), frappe.PermissionError)
+			frappe.throw(
+				_("The status of an upload is set by Validate and Import only."), frappe.PermissionError
+			)
 		if not any(self.has_value_changed(f) for f in INPUT_FIELDS):
 			return
 		if self.status not in ("Draft", "Validated"):

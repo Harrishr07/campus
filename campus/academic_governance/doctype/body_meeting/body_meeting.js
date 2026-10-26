@@ -13,5 +13,10 @@ frappe.ui.form.on("Body Meeting", {
 });
 
 function send_notice(frm, override_reason) {
-	frm.call({ method: "send_notice", doc: frm.doc, args: { override_reason }, freeze: true }).then(() => frm.reload_doc());
+	frm.call({
+		method: "send_notice",
+		doc: frm.doc,
+		args: { override_reason },
+		freeze: true,
+	}).then(() => frm.reload_doc());
 }

@@ -44,7 +44,14 @@ from campus.examinations.courses import offering_course
 IMPORT, ROW, RESULT = "University Result Import", "University Result Import Row", "Student Result"
 HANDLER = "campus.examinations.university_import.import_student"
 KEY = "campus.examinations.university_import.item_key"
-VALID, CORRECTION, UNCHANGED, REJECTED, IMPORTED, ERROR = "Valid", "Correction", "Unchanged", "Rejected", "Imported", "Error"
+VALID, CORRECTION, UNCHANGED, REJECTED, IMPORTED, ERROR = (
+	"Valid",
+	"Correction",
+	"Unchanged",
+	"Rejected",
+	"Imported",
+	"Error",
+)
 QUEUED = (VALID, CORRECTION)
 WRITTEN = (IMPORTED, UNCHANGED)
 SPECIAL_GRADES = {"AB": "AB", "SA": "SA", **{code: "WD" for code in rules.WITHDRAWAL_CODES}}
@@ -63,7 +70,14 @@ def validate_import(name):
 	if not doc.result_file:
 		frappe.throw(_("Attach the university's result file first."))
 	frappe.db.set_value(IMPORT, name, {"status": VALIDATING, "summary": _("Checking the file...")})
-	frappe.enqueue(PREVIEW_JOB, queue="long", name=name, job_id=preview_job_id(name), deduplicate=True, enqueue_after_commit=True)
+	frappe.enqueue(
+		PREVIEW_JOB,
+		queue="long",
+		name=name,
+		job_id=preview_job_id(name),
+		deduplicate=True,
+		enqueue_after_commit=True,
+	)
 	return VALIDATING
 
 
@@ -83,7 +97,15 @@ def run_preview(name):
 		check = RowCheck(doc, fmt)
 		for row_no, values in records:
 			save_row(doc, row_no, values, check.preview(row_no, values))
-		frappe.db.set_value(IMPORT, name, {"status": "Validated", "total_rows": len(records), "file_sha256": hashlib.sha256(content).hexdigest()})
+		frappe.db.set_value(
+			IMPORT,
+			name,
+			{
+				"status": "Validated",
+				"total_rows": len(records),
+				"file_sha256": hashlib.sha256(content).hexdigest(),
+			},
+		)
 		refresh_summary(name)
 	except Exception as error:  # noqa: BLE001 - recorded on the import, never left Validating
 		frappe.db.rollback(save_point=PREVIEW_SAVEPOINT)
@@ -100,9 +122,18 @@ def preview_job_id(name):
 def start_import(name):
 	"""Queue the students of the Valid and Correction rows; returns the Bulk Run name (None when nothing is to write)."""
 	doc = locked_import(name, ("Validated",), _("Validate the import first; an import is run once."))
-	if frappe.db.exists(ROW, {"university_result_import": name, "status": CORRECTION}) and not (doc.correction_reason or "").strip():
+	if (
+		frappe.db.exists(ROW, {"university_result_import": name, "status": CORRECTION})
+		and not (doc.correction_reason or "").strip()
+	):
 		frappe.throw(_("Some rows change results already imported: give the Correction Reason first."))
-	students = frappe.get_all(ROW, {"university_result_import": name, "status": ["in", QUEUED]}, pluck="student", distinct=True, order_by="student")
+	students = frappe.get_all(
+		ROW,
+		{"university_result_import": name, "status": ["in", QUEUED]},
+		pluck="student",
+		distinct=True,
+		order_by="student",
+	)
 	frappe.db.set_value(IMPORT, name, "status", "Importing")
 	if not students:
 		refresh_status(name)
@@ -157,18 +188,27 @@ class RowCheck:
 		if missing:
 			return rejected(_("Required: {0}.").format(", ".join(missing)))
 		register_no = values["University Register No"]
-		student = frappe.db.get_value("Student", {UNIVERSITY_REGISTER_FIELD: register_no, "oc_company": self.doc.company}, "name")
+		student = frappe.db.get_value(
+			"Student", {UNIVERSITY_REGISTER_FIELD: register_no, "oc_company": self.doc.company}, "name"
+		)
 		if not student:
-			return rejected(_("No student of this college has university register number {0}.").format(register_no))
+			return rejected(
+				_("No student of this college has university register number {0}.").format(register_no)
+			)
 		course = self.codes.ours("Course", values["Course Code"])
 		if not course or not frappe.db.exists("Course", course):
-			return rejected(_("Course code {0} is not mapped to one of our courses.").format(values["Course Code"]), student=student)
+			return rejected(
+				_("Course code {0} is not mapped to one of our courses.").format(values["Course Code"]),
+				student=student,
+			)
 		found = {"student": student, "course": course}
 		if (student, course) in self.seen:
 			return rejected(_("Repeats row {0}.").format(self.seen[(student, course)]), **found)
 		self.seen[(student, course)] = row_no
 		if not registered_course(student, self.doc.exam_session, course):
-			return rejected(_("{0} is not registered for {1} in this session.").format(student, course), **found)
+			return rejected(
+				_("{0} is not registered for {1} in this session.").format(student, course), **found
+			)
 		try:
 			found.update(self.outcome(student, values))
 		except frappe.ValidationError as error:
@@ -176,7 +216,11 @@ class RowCheck:
 		latest = latest_course_row(student, self.doc.exam_session, course)
 		if latest and same_outcome(latest, found):
 			return {**found, "status": UNCHANGED, "message": _("Already imported.")}
-		return {**found, "status": CORRECTION if latest else VALID, "message": _("Changes the imported result.") if latest else None}
+		return {
+			**found,
+			"status": CORRECTION if latest else VALID,
+			"message": _("Changes the imported result.") if latest else None,
+		}
 
 	def outcome(self, student, values):
 		"""{grade, result, cia, ese, total} of a row: our grade letter, our result and the marks as numbers."""
@@ -189,9 +233,13 @@ class RowCheck:
 		if values.get("Result"):
 			stated = self.codes.ours("Result", values["Result"])
 			if stated not in university_files.RESULT_CODES:
-				raise frappe.ValidationError(_("Result {0} is not in the code mapping.").format(values["Result"]))
+				raise frappe.ValidationError(
+					_("Result {0} is not in the code mapping.").format(values["Result"])
+				)
 			if stated != result:
-				raise frappe.ValidationError(_("Grade {0} means {1}, but the result says {2}.").format(grade, result, stated))
+				raise frappe.ValidationError(
+					_("Grade {0} means {1}, but the result says {2}.").format(grade, result, stated)
+				)
 		marks = {}
 		for source, field in (("CIA", "cia"), ("ESE", "ese"), ("Total", "total")):
 			text = values.get(source)
@@ -223,10 +271,17 @@ def rejected(message, **found):
 
 def registered_course(student, exam_session, course):
 	"""The student's confirmed, eligible Exam Registration course row of the session ({course_offering, kind}) or None."""
-	registration = frappe.db.get_value("Exam Registration", {"exam_session": exam_session, "student": student, "confirmed": 1})
+	registration = frappe.db.get_value(
+		"Exam Registration", {"exam_session": exam_session, "student": student, "confirmed": 1}
+	)
 	return registration and frappe.db.get_value(
 		"Exam Registration Course",
-		{"parent": registration, "parenttype": "Exam Registration", "course": course, "eligibility": "Eligible"},
+		{
+			"parent": registration,
+			"parenttype": "Exam Registration",
+			"course": course,
+			"eligibility": "Eligible",
+		},
 		["course_offering", "kind"],
 		as_dict=True,
 	)
@@ -235,13 +290,18 @@ def registered_course(student, exam_session, course):
 def latest_course_row(student, exam_session, course):
 	latest = frappe.db.get_value(RESULT, {"student": student, "exam_session": exam_session, "is_latest": 1})
 	return latest and frappe.db.get_value(
-		"Student Result Course", {"parent": latest, "parenttype": RESULT, "course": course}, list(COMPARED), as_dict=True
+		"Student Result Course",
+		{"parent": latest, "parenttype": RESULT, "course": course},
+		list(COMPARED),
+		as_dict=True,
 	)
 
 
 def same_outcome(row, found):
 	return all(
-		(flt(row.get(f)) == flt(found.get(f))) if f in ("cia", "ese", "total") else cstr(row.get(f)) == cstr(found.get(f))
+		(flt(row.get(f)) == flt(found.get(f)))
+		if f in ("cia", "ese", "total")
+		else cstr(row.get(f)) == cstr(found.get(f))
 		for f in COMPARED
 	)
 
@@ -279,8 +339,14 @@ def import_student(item, run):
 		frappe.db.rollback(save_point=SAVEPOINT)
 		outcome, result = (ERROR, cstr(e)), None
 	for row in rows:
-		status, message = outcome if isinstance(outcome, tuple) else (outcome.get(row.course, UNCHANGED), None)
-		frappe.db.set_value(ROW, row.name, {"status": status, "message": (message or None) and message[:500], "student_result": result})
+		status, message = (
+			outcome if isinstance(outcome, tuple) else (outcome.get(row.course, UNCHANGED), None)
+		)
+		frappe.db.set_value(
+			ROW,
+			row.name,
+			{"status": status, "message": (message or None) and message[:500], "student_result": result},
+		)
 	refresh_status(item["import"])
 
 
@@ -289,16 +355,25 @@ def write_result(import_name, student, rows):
 
 	A result already there is never edited: any change makes version n+1. Only a change to a course row that was
 	there needs the import's correction reason; courses added by a later instalment do not."""
-	doc = frappe.db.get_value(IMPORT, import_name, ["name", "exam_session", "correction_reason"], as_dict=True)
+	doc = frappe.db.get_value(
+		IMPORT, import_name, ["name", "exam_session", "correction_reason"], as_dict=True
+	)
 	session = frappe.db.get_value(
-		"Exam Session", doc.exam_session, ["name", "company", "academic_term", "examination_mode"], as_dict=True, for_update=True
+		"Exam Session",
+		doc.exam_session,
+		["name", "company", "academic_term", "examination_mode"],
+		as_dict=True,
+		for_update=True,
 	)
 	if session.examination_mode != AFFILIATED:
 		frappe.throw(_("{0} is not an Affiliated session.").format(session.name))
 	table = frappe.qb.DocType(RESULT)
 	versions = (
-		frappe.qb.from_(table).select(table.name, table.version, table.is_latest)
-		.where((table.student == student) & (table.exam_session == session.name)).for_update().run(as_dict=True)
+		frappe.qb.from_(table)
+		.select(table.name, table.version, table.is_latest)
+		.where((table.student == student) & (table.exam_session == session.name))
+		.for_update()
+		.run(as_dict=True)
 	)  # fmt: skip  (locking read: another import may have added a version)
 	latest = next((v for v in versions if v.is_latest), None)
 	old = frappe.get_doc(RESULT, latest.name) if latest else None
@@ -316,7 +391,11 @@ def write_result(import_name, student, rows):
 		return changed, old.name
 	reason = (doc.correction_reason or "").strip()
 	if corrected and not reason:
-		frappe.throw(_("This changes the imported result of {0}; give the import a Correction Reason.").format(", ".join(corrected)))
+		frappe.throw(
+			_("This changes the imported result of {0}; give the import a Correction Reason.").format(
+				", ".join(corrected)
+			)
+		)
 	values = writer.values(list(courses.values()))
 	values.update({"source": UNIVERSITY, "university_result_import": import_name, "pending_ratification": 0})
 	if not old:
@@ -327,7 +406,9 @@ def write_result(import_name, student, rows):
 	log = result_rules.change_log(results.summary(old.as_dict()), results.summary(values))
 	note = _("Correction: {0}").format(reason) if corrected else _("Courses added by {0}").format(import_name)
 	result = new_result(student, session, max(v.version or 0 for v in versions) + 1)
-	result.update({**values, "previous_version": old.name, "change_log": "\n".join(filter(None, [log, note]))})
+	result.update(
+		{**values, "previous_version": old.name, "change_log": "\n".join(filter(None, [log, note]))}
+	)
 	frappe.db.set_value(RESULT, old.name, "is_latest", 0, update_modified=False)
 	result.insert(ignore_permissions=True)
 	return changed, result.name
@@ -369,7 +450,9 @@ class ResultValues:
 			"courses": rows,
 			"sgpa": rules.sgpa([(r["credits"], r["grade_point"], passed(r)) for r in current if r["in_gpa"]]),
 			"credits_earned": sum(r["credits"] for r in current if passed(r)),
-			"cgpa": rules.cgpa([(r["course"], r["credits"], r["grade_point"], passed(r)) for r in attempts if r["in_gpa"]]),
+			"cgpa": rules.cgpa(
+				[(r["course"], r["credits"], r["grade_point"], passed(r)) for r in attempts if r["in_gpa"]]
+			),
 			"result": result_rules.overall_result([r["result"] for r in rows]),
 			"arrear_count": len(outstanding_arrears([(r["course"], r["result"]) for r in attempts])),
 			"classification": None,
@@ -410,7 +493,9 @@ def refresh_status(name):
 			frappe.db.rollback(save_point="university_import_publish")
 			frappe.log_error(
 				title=_("Session not published after the university result import {0}").format(name),
-				message=_("{0} was not published: {1}").format(doc.exam_session, frappe.utils.strip_html(cstr(error))),
+				message=_("{0} was not published: {1}").format(
+					doc.exam_session, frappe.utils.strip_html(cstr(error))
+				),
 			)
 
 
@@ -418,7 +503,12 @@ def publish_session(exam_session, result_date):
 	session = frappe.get_doc("Exam Session", exam_session, for_update=True)
 	if session.status == "Published":
 		return
-	session.update({"status": "Published", "publish_at": get_datetime(getdate(result_date)) if result_date else now_datetime()})
+	session.update(
+		{
+			"status": "Published",
+			"publish_at": get_datetime(getdate(result_date)) if result_date else now_datetime(),
+		}
+	)
 	session.flags.university_results = True
 	session.save(ignore_permissions=True)
 
@@ -426,7 +516,11 @@ def publish_session(exam_session, result_date):
 def refresh_summary(name):
 	table = frappe.qb.DocType(ROW)
 	counts = dict(
-		frappe.qb.from_(table).select(table.status, Count("*")).where(table.university_result_import == name).groupby(table.status).run()
+		frappe.qb.from_(table)
+		.select(table.status, Count("*"))
+		.where(table.university_result_import == name)
+		.groupby(table.status)
+		.run()
 	)
 	text = ", ".join(f"{_(status)}: {count}" for status, count in sorted(counts.items()))
 	frappe.db.set_value(IMPORT, name, "summary", text, update_modified=False)
@@ -439,13 +533,27 @@ def reconcile(name):
 	doc = frappe.db.get_value(IMPORT, name, ["status", "bulk_run"], as_dict=True, for_update=True)
 	if not doc or doc.status != "Importing" or not doc.bulk_run:
 		return
-	if frappe.db.get_value("Bulk Run", doc.bulk_run, "status") not in ("Completed", "Completed with errors", "Failed"):
+	if frappe.db.get_value("Bulk Run", doc.bulk_run, "status") not in (
+		"Completed",
+		"Completed with errors",
+		"Failed",
+	):
 		return
-	errors = dict(frappe.get_all("Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], as_list=True, limit=0))
-	interrupted = _("Not imported: the import was interrupted at this row. Import the file again to retry it.")
-	for row in frappe.get_all(ROW, {"university_result_import": name, "status": ["in", QUEUED]}, ["name", "student"]):
+	errors = dict(
+		frappe.get_all(
+			"Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], as_list=True, limit=0
+		)
+	)
+	interrupted = _(
+		"Not imported: the import was interrupted at this row. Import the file again to retry it."
+	)
+	for row in frappe.get_all(
+		ROW, {"university_result_import": name, "status": ["in", QUEUED]}, ["name", "student"]
+	):
 		error = errors.get(item_key({"import": name, "student": row.student}))
-		message = _("Not imported: {0}").format(frappe.utils.strip_html(cstr(error))) if error else interrupted
+		message = (
+			_("Not imported: {0}").format(frappe.utils.strip_html(cstr(error))) if error else interrupted
+		)
 		frappe.db.set_value(ROW, row.name, {"status": ERROR, "message": message[:500]})
 	refresh_status(name)
 
@@ -457,7 +565,11 @@ def reconcile_finished_imports():
 
 	for name in frappe.get_all(IMPORT, {"status": VALIDATING}, pluck="name"):
 		if not is_job_enqueued(preview_job_id(name)):
-			frappe.db.set_value(IMPORT, name, {"status": "Draft", "summary": _("Checking the file was interrupted; validate it again.")})
+			frappe.db.set_value(
+				IMPORT,
+				name,
+				{"status": "Draft", "summary": _("Checking the file was interrupted; validate it again.")},
+			)
 			frappe.db.commit()  # nosemgrep: one import per transaction
 	for name in frappe.get_all(IMPORT, {"status": "Importing"}, pluck="name"):
 		try:
@@ -465,7 +577,10 @@ def reconcile_finished_imports():
 			frappe.db.commit()  # nosemgrep: one import per transaction, a failure must not undo the others
 		except Exception:  # noqa: BLE001
 			frappe.db.rollback()
-			frappe.log_error(title=f"University result import reconcile failed: {name}", message=frappe.get_traceback(with_context=False))
+			frappe.log_error(
+				title=f"University result import reconcile failed: {name}",
+				message=frappe.get_traceback(with_context=False),
+			)
 
 
 def trash_import(doc):
@@ -473,20 +588,30 @@ def trash_import(doc):
 	if doc.status in ("Importing", "Imported", "Partly Imported") or frappe.db.exists(
 		ROW, {"university_result_import": doc.name, "student_result": ["is", "set"]}
 	):
-		frappe.throw(_("{0} has written results: it is kept as their reference.").format(frappe.bold(doc.name)))
+		frappe.throw(
+			_("{0} has written results: it is kept as their reference.").format(frappe.bold(doc.name))
+		)
 	frappe.db.delete(ROW, {"university_result_import": doc.name})
 
 
 def validate_import_doc(doc):
 	"""Controller validate: an Affiliated session and an Import format; status and run fields are the import code's."""
-	session = frappe.db.get_value("Exam Session", doc.exam_session, ["company", "examination_mode"], as_dict=True)
+	session = frappe.db.get_value(
+		"Exam Session", doc.exam_session, ["company", "examination_mode"], as_dict=True
+	)
 	if session.examination_mode != AFFILIATED:
-		frappe.throw(_("{0} is not an Affiliated session; its results are the college's.").format(frappe.bold(doc.exam_session)))
+		frappe.throw(
+			_("{0} is not an Affiliated session; its results are the college's.").format(
+				frappe.bold(doc.exam_session)
+			)
+		)
 	fmt = university_files.format_for(doc.import_format, "Import", session.company)
 	doc.update({"company": session.company, "university": fmt.university})
 	system = ("status", "bulk_run", "file_sha256", "total_rows", "summary")
 	if doc.is_new():
-		doc.update({"status": "Draft", "bulk_run": None, "file_sha256": None, "total_rows": 0, "summary": None})
+		doc.update(
+			{"status": "Draft", "bulk_run": None, "file_sha256": None, "total_rows": 0, "summary": None}
+		)
 		return
 	if any(doc.has_value_changed(f) for f in system):
 		frappe.throw(_("The status of an import is set by Validate and Import only."), frappe.PermissionError)

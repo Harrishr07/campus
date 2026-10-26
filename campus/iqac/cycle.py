@@ -35,7 +35,9 @@ def advance(name, comment=None):
 	blocking failures stop it, warnings need a `comment`."""
 	cycle = authorised(name)
 	if cycle.status == "IQAC Review":
-		frappe.throw(_("{0} is approved only through its approval; use Request Approval.").format(frappe.bold(name)))
+		frappe.throw(
+			_("{0} is approved only through its approval; use Request Approval.").format(frappe.bold(name))
+		)
 	if cycle.status not in FORWARD:
 		frappe.throw(_("{0} is {1}; there is no next step.").format(frappe.bold(name), _(cycle.status)))
 	if cycle.status == "Validating":
@@ -70,7 +72,12 @@ def prepare_values(name):
 	assert_open(cycle)
 	nodes = frappe.get_all(
 		"Framework Node",
-		{"framework": cycle.framework, "node_type": ["in", ANSWER_NODES], "formula": ["is", "not set"], "answer_type": ["is", "set"]},
+		{
+			"framework": cycle.framework,
+			"node_type": ["in", ANSWER_NODES],
+			"formula": ["is", "not set"],
+			"answer_type": ["is", "set"],
+		},
 		["name", "code"],
 		order_by="code",
 	)
@@ -78,7 +85,11 @@ def prepare_values(name):
 	for node in nodes:
 		if frappe.db.exists("Metric Value", f"{name}-{node.code}"):
 			continue
-		made.append(frappe.get_doc({"doctype": "Metric Value", "cycle": name, "node": node.name}).insert(ignore_permissions=True).name)
+		made.append(
+			frappe.get_doc({"doctype": "Metric Value", "cycle": name, "node": node.name})
+			.insert(ignore_permissions=True)
+			.name
+		)
 	return made
 
 

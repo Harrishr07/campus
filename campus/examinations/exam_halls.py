@@ -30,13 +30,19 @@ def room_fields():
 
 def validate_room(doc, method=None):
 	"""Room validate: an Exam Hall with a layout keeps its blocked seats inside the grid and its capacity in step."""
-	if doc.get("oc_room_type") != EXAM_HALL or not (cint(doc.get("oc_seat_rows")) and cint(doc.get("oc_seat_columns"))):
+	if doc.get("oc_room_type") != EXAM_HALL or not (
+		cint(doc.get("oc_seat_rows")) and cint(doc.get("oc_seat_columns"))
+	):
 		return
 	rows, columns, seen = cint(doc.oc_seat_rows), cint(doc.oc_seat_columns), set()
 	for seat in doc.get("oc_blocked_seats") or []:
 		position = (cint(seat.seat_row), cint(seat.seat_column))
 		if not (1 <= position[0] <= rows and 1 <= position[1] <= columns):
-			frappe.throw(_("Blocked seat {0} is outside the {1} x {2} layout.").format(seat_label(*position), rows, columns))
+			frappe.throw(
+				_("Blocked seat {0} is outside the {1} x {2} layout.").format(
+					seat_label(*position), rows, columns
+				)
+			)
 		if position in seen:
 			frappe.throw(_("Blocked seat {0} is listed twice.").format(seat_label(*position)))
 		seen.add(position)
@@ -45,7 +51,9 @@ def validate_room(doc, method=None):
 
 def layout(room):
 	"""(rows, columns, {(row, column) blocked}) of an Exam Hall, or None when the room is not one with a layout."""
-	values = frappe.db.get_value("Room", room, ["oc_room_type", "oc_seat_rows", "oc_seat_columns"], as_dict=True)
+	values = frappe.db.get_value(
+		"Room", room, ["oc_room_type", "oc_seat_rows", "oc_seat_columns"], as_dict=True
+	)
 	if not values or values.oc_room_type != EXAM_HALL or not (values.oc_seat_rows and values.oc_seat_columns):
 		return None
 	blocked = frappe.get_all(

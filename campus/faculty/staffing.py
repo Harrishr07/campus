@@ -44,21 +44,31 @@ def on_roll(employee, year_start):
 
 def left_without_relieving_date(company, academic_year, department=None):
 	"""Teaching employees marked Left with no relieving date: left out of the counts until HR fixes the record."""
-	filters = {**teaching_filters(company, year_bounds(academic_year)[1], department), "status": "Left", "relieving_date": ["is", "not set"]}
-	return frappe.get_list("Employee", filters, ["name", "employee_name"], order_by="name", limit_page_length=0)
+	filters = {
+		**teaching_filters(company, year_bounds(academic_year)[1], department),
+		"status": "Left",
+		"relieving_date": ["is", "not set"],
+	}
+	return frappe.get_list(
+		"Employee", filters, ["name", "employee_name"], order_by="name", limit_page_length=0
+	)
 
 
 def sanctioned_posts(company, academic_year, department=None):
 	filters = {"company": company, "academic_year": academic_year}
 	if department:
 		filters["department"] = department
-	return frappe.get_all("Sanctioned Post", filters, ["name", "department", "cadre", "sanctioned_count"], order_by="department")
+	return frappe.get_all(
+		"Sanctioned Post", filters, ["name", "department", "cadre", "sanctioned_count"], order_by="department"
+	)
 
 
 def has_phd(teacher, academic_year):
 	if teacher.oc_phd_status != "Awarded":
 		return False
-	return not teacher.oc_phd_awarded_on or getdate(teacher.oc_phd_awarded_on) <= year_bounds(academic_year)[1]
+	return (
+		not teacher.oc_phd_awarded_on or getdate(teacher.oc_phd_awarded_on) <= year_bounds(academic_year)[1]
+	)
 
 
 def experience_years(teacher, academic_year):
@@ -70,9 +80,18 @@ def experience_years(teacher, academic_year):
 def students_by_department(company, academic_year):
 	"""{department: distinct students} with a submitted Program Enrollment of the company in the year."""
 	rows = frappe.get_all(
-		"Program Enrollment", {"oc_company": company, "academic_year": academic_year, "docstatus": 1}, ["student", "program"]
+		"Program Enrollment",
+		{"oc_company": company, "academic_year": academic_year, "docstatus": 1},
+		["student", "program"],
 	)
-	departments = dict(frappe.get_all("Program", {"name": ["in", list({r.program for r in rows}) or [""]]}, ["name", "department"], as_list=1))
+	departments = dict(
+		frappe.get_all(
+			"Program",
+			{"name": ["in", list({r.program for r in rows}) or [""]]},
+			["name", "department"],
+			as_list=1,
+		)
+	)
 	students = {}
 	for row in rows:
 		students.setdefault(departments.get(row.program), set()).add(row.student)
@@ -83,12 +102,23 @@ def faculty_vs_sanctioned(company, academic_year, department=None):
 	filled = {}
 	for teacher in teachers(company, academic_year, department):
 		filled.setdefault((teacher.department, teacher.oc_cadre), []).append(teacher.name)
-	posts = {(p.department, p.cadre): p.sanctioned_count for p in sanctioned_posts(company, academic_year, department)}
+	posts = {
+		(p.department, p.cadre): p.sanctioned_count
+		for p in sanctioned_posts(company, academic_year, department)
+	}
 	rows = []
 	for key in sorted(set(posts) | set(filled), key=sort_key):
 		count = len(filled.get(key, []))
 		sanctioned = posts.get(key, 0)
-		rows.append({"department": key[0], "cadre": key[1], "sanctioned": sanctioned, "filled": count, "vacant": max(sanctioned - count, 0)})
+		rows.append(
+			{
+				"department": key[0],
+				"cadre": key[1],
+				"sanctioned": sanctioned,
+				"filled": count,
+				"vacant": max(sanctioned - count, 0),
+			}
+		)
 	return rows
 
 
@@ -107,7 +137,11 @@ def cadre_ratio(company, academic_year, department=None):
 	departments = sorted((set(students) | set(actual)) - {None})
 	rows = []
 	for dept in [d for d in departments if not department or d == department]:
-		required_total = ceil(len(students.get(dept, ())) / norm.student_faculty_ratio) if norm.student_faculty_ratio else 0
+		required_total = (
+			ceil(len(students.get(dept, ())) / norm.student_faculty_ratio)
+			if norm.student_faculty_ratio
+			else 0
+		)
 		for cadre in [c for c in CADRES if c in shares]:
 			required = int(required_total * shares[cadre] / total_share + 0.5)
 			have = actual.get(dept, {}).get(cadre, 0)

@@ -5,8 +5,12 @@ from frappe.tests import UnitTestCase
 from campus.examinations.rules import cgpa, grade, pass_status, round_half_up, sgpa, total_pct
 from campus.examinations.seed import GRADES
 
-R2022 = [dict(zip(("letter", "grade_point", "min_mark", "max_mark", "is_pass"), row)) for row in GRADES["R2022"]]
-R2026 = [dict(zip(("letter", "grade_point", "min_mark", "max_mark", "is_pass"), row)) for row in GRADES["R2026"]]
+R2022 = [
+	dict(zip(("letter", "grade_point", "min_mark", "max_mark", "is_pass"), row)) for row in GRADES["R2022"]
+]
+R2026 = [
+	dict(zip(("letter", "grade_point", "min_mark", "max_mark", "is_pass"), row)) for row in GRADES["R2026"]
+]
 
 
 class TestPassStatus(UnitTestCase):

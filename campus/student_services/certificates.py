@@ -23,8 +23,12 @@ def next_certificate_number(certificate_type, company):
 
 def validate_prefix(prefix):
 	validate_number_prefix(prefix)
-	if "{abbr}" not in prefix or "{yyyy}" not in prefix and "{yy}" not in prefix:
-		frappe.throw(_("The number prefix must contain {abbr} and {yyyy} (or {yy}) so that numbers run per company and year."))
+	if "{abbr}" not in prefix or ("{yyyy}" not in prefix and "{yy}" not in prefix):
+		frappe.throw(
+			_(
+				"The number prefix must contain {abbr} and {yyyy} (or {yy}) so that numbers run per company and year."
+			)
+		)
 
 
 def lock_student(student):
@@ -40,11 +44,17 @@ def check_transfer_allowed(student):
 	current = lock_student(student)
 	if current.leaving_certificate_number:
 		frappe.throw(
-			_("{0} already has transfer certificate {1}.").format(frappe.bold(student), current.leaving_certificate_number)
+			_("{0} already has transfer certificate {1}.").format(
+				frappe.bold(student), current.leaving_certificate_number
+			)
 		)
 	dues = has_dues(student)
 	if dues.blocking > 0:
-		owed = ", ".join(f"{company}: {fmt_money(amount, currency='INR')}" for company, amount in dues.by_company.items() if amount > 0)
+		owed = ", ".join(
+			f"{company}: {fmt_money(amount, currency='INR')}"
+			for company, amount in dues.by_company.items()
+			if amount > 0
+		)
 		frappe.throw(
 			_("A transfer certificate cannot be issued while dues are outstanding ({0}).").format(owed),
 			title=_("Dues Outstanding"),
@@ -64,17 +74,26 @@ def apply_leaving(request):
 		},
 	)  # fmt: skip
 	if lifecycle.current_status(request.student) in lifecycle_rules.ON_ROLL:
-		lifecycle.transition(request.student, lifecycle_rules.WITHDRAWN, leaving_date, request.reason_for_leaving, request)
+		lifecycle.transition(
+			request.student, lifecycle_rules.WITHDRAWN, leaving_date, request.reason_for_leaving, request
+		)
 
 
 def undo_leaving(request):
 	"""A cancelled TC takes back what it wrote (only if it is still the student's current TC), reversing its
 	Withdrawn transition."""
-	if frappe.db.get_value("Student", request.student, "leaving_certificate_number") == request.certificate_number:
+	if (
+		frappe.db.get_value("Student", request.student, "leaving_certificate_number")
+		== request.certificate_number
+	):
 		frappe.db.set_value(
-			"Student", request.student, {"date_of_leaving": None, "leaving_certificate_number": None, "reason_for_leaving": None}
+			"Student",
+			request.student,
+			{"date_of_leaving": None, "leaving_certificate_number": None, "reason_for_leaving": None},
 		)
 		# a TC migrated from before L-01 (Withdrawn, no earlier lifecycle record) goes back to Active, as before L-01
 		lifecycle.revert(
-			request, _("Transfer certificate {0} cancelled").format(request.certificate_number), legacy_status=lifecycle_rules.ACTIVE
+			request,
+			_("Transfer certificate {0} cancelled").format(request.certificate_number),
+			legacy_status=lifecycle_rules.ACTIVE,
 		)

@@ -82,7 +82,11 @@ def check_company_access(company):
 
 def check_admittable(applicant, state):
 	if state.application_status != "Approved":
-		frappe.throw(_("Only an Approved applicant can be admitted; {0} is {1}.").format(applicant, state.application_status))
+		frappe.throw(
+			_("Only an Approved applicant can be admitted; {0} is {1}.").format(
+				applicant, state.application_status
+			)
+		)
 	check_cleared(applicant, state)
 
 
@@ -93,16 +97,22 @@ def check_cleared(applicant, state):
 		frappe.throw(_("Applicant {0} is not Eligible ({1}).").format(applicant, state.oc_eligibility_status))
 	missing = documents.uncleared_mandatory(frappe.get_doc("Student Applicant", applicant))
 	if missing:
-		frappe.throw(_("Applicant {0} has incomplete mandatory documents: {1}.").format(applicant, ", ".join(missing)))
+		frappe.throw(
+			_("Applicant {0} has incomplete mandatory documents: {1}.").format(applicant, ", ".join(missing))
+		)
 	if not state.program or not state.oc_admission_quota or not state.student_category:
-		frappe.throw(_("Applicant {0} needs a program, an admission quota and a student category.").format(applicant))
+		frappe.throw(
+			_("Applicant {0} needs a program, an admission quota and a student category.").format(applicant)
+		)
 	admission_year(state)
 
 
 def admission_year(state):
 	year = state.academic_year or frappe.db.get_single_value("Admission Settings", "active_admission_year")
 	if not year:
-		frappe.throw(_("Set the applicant's academic year or the active admission year in Admission Settings."))
+		frappe.throw(
+			_("Set the applicant's academic year or the active admission year in Admission Settings.")
+		)
 	return year
 
 

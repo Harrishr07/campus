@@ -12,23 +12,31 @@ from frappe.utils import add_days, today
 
 from campus.campus_platform.api import find_policy
 from campus.student_services import portal
-from campus.tests.broadcast_fixtures import make_guardian
-from campus.tests.test_results import make_login
 from campus.tests import demo
 from campus.tests.approval_fixtures import level
+from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.test_grievances import COLLEGE, EVALUATION, GUARDIAN, STUDENT_A, STUDENT_B, GrievanceFixture
+from campus.tests.test_results import make_login
 from campus.tests.test_student_portal import make_invoice
 from campus.www.campus_portal import (
 	certificates as certificates_page,
+)
+from campus.www.campus_portal import (
 	fees as fees_page,
+)
+from campus.www.campus_portal import (
 	grievances as grievances_page,
+)
+from campus.www.campus_portal import (
 	leave as leave_page,
 )
 
 BONAFIDE = "Bonafide"
 POLICY = "Portal Action Certificate Policy"
 BOTH = "pa-both-guardian@example.com"
-PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+PNG = base64.b64decode(
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+)
 
 
 class PortalActionFixture(GrievanceFixture):
@@ -54,12 +62,16 @@ class PortalActionFixture(GrievanceFixture):
 
 	def assert_post_only(self, *methods):
 		for method in methods:
-			self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[method], ["POST"], method.__name__)
+			self.assertEqual(
+				frappe.allowed_http_methods_for_whitelisted_func[method], ["POST"], method.__name__
+			)
 
 	def upload(self, name="note.png", content=PNG):
 		"""Make the current request carry a file."""
 		stream = SimpleNamespace(read=lambda size=-1: content[:size] if size >= 0 else content)
-		patcher = patch.object(portal, "posted_file", return_value=SimpleNamespace(filename=name, stream=stream))
+		patcher = patch.object(
+			portal, "posted_file", return_value=SimpleNamespace(filename=name, stream=stream)
+		)
 		patcher.start()
 		self.addCleanup(patcher.stop)
 
@@ -122,14 +134,19 @@ class TestCertificatesPage(PortalActionFixture):
 		demo.make_certificate_policy()
 		demo.make_certificate_policy()
 		self.assertEqual(frappe.flags.in_import, True)  # restored
-		names = frappe.get_all("Approval Policy", {"policy_name": demo.CERTIFICATE_POLICY, "document_type": "Certificate Request"})
+		names = frappe.get_all(
+			"Approval Policy",
+			{"policy_name": demo.CERTIFICATE_POLICY, "document_type": "Certificate Request"},
+		)
 		self.assertEqual(len(names), 1)
 		policy = frappe.get_doc("Approval Policy", names[0].name)
 		self.assertEqual((policy.enabled, policy.levels[0].limit_to_company), (1, 1))
 		frappe.db.delete("Approval Level", {"parent": POLICY})
 		frappe.db.delete("Approval Policy", {"name": POLICY})
 		request = frappe.new_doc("Certificate Request")
-		request.update({"student": self.a, "certificate_type": BONAFIDE, "needs_approval": 1, "company": COLLEGE})
+		request.update(
+			{"student": self.a, "certificate_type": BONAFIDE, "needs_approval": 1, "company": COLLEGE}
+		)
 		self.assertEqual(find_policy(request).name, policy.name)
 
 
@@ -165,7 +182,10 @@ class TestGrievancesPage(PortalActionFixture):
 		self.upload()
 		row = portal.raise_grievance(EVALUATION, "See the attached note.")
 		file = frappe.db.get_value(
-			"File", {"attached_to_doctype": "Student Grievance", "attached_to_name": row["name"]}, ["is_private", "file_url", "attached_to_field"], as_dict=True
+			"File",
+			{"attached_to_doctype": "Student Grievance", "attached_to_name": row["name"]},
+			["is_private", "file_url", "attached_to_field"],
+			as_dict=True,
 		)
 		self.assertEqual(file.is_private, 1)
 		self.assertTrue(file.file_url.startswith("/private/files/"))
@@ -189,13 +209,26 @@ class TestLeavePage(PortalActionFixture):
 		super().setUp()
 		frappe.db.delete("Holiday List", "PA Holidays")
 		frappe.get_doc(
-			{"doctype": "Holiday List", "holiday_list_name": "PA Holidays", "from_date": add_days(today(), -30), "to_date": add_days(today(), 300)}
+			{
+				"doctype": "Holiday List",
+				"holiday_list_name": "PA Holidays",
+				"from_date": add_days(today(), -30),
+				"to_date": add_days(today(), 300),
+			}
 		).insert()
 		frappe.db.set_value("Company", COLLEGE, "default_holiday_list", "PA Holidays")
 		frappe.db.set_default("company", COLLEGE)
 
 	def apply(self, **values):
-		return portal.apply_leave(**{"from_date": add_days(today(), 3), "to_date": add_days(today(), 4), "leave_kind": "Medical", "reason": "Fever", **values})
+		return portal.apply_leave(
+			**{
+				"from_date": add_days(today(), 3),
+				"to_date": add_days(today(), 4),
+				"leave_kind": "Medical",
+				"reason": "Fever",
+				**values,
+			}
+		)
 
 	def test_a_student_applies_for_leave_as_a_draft_with_its_kind(self):
 		frappe.set_user(STUDENT_A)
@@ -231,10 +264,15 @@ class TestLeavePage(PortalActionFixture):
 		self.upload()
 		row = self.apply()
 		file = frappe.db.get_value(
-			"File", {"attached_to_doctype": "Student Leave Application", "attached_to_name": row["name"]}, ["is_private", "file_url"], as_dict=True
+			"File",
+			{"attached_to_doctype": "Student Leave Application", "attached_to_name": row["name"]},
+			["is_private", "file_url"],
+			as_dict=True,
 		)
 		self.assertEqual(file.is_private, 1)
-		self.assertEqual(frappe.db.get_value("Student Leave Application", row["name"], "oc_certificate"), file.file_url)
+		self.assertEqual(
+			frappe.db.get_value("Student Leave Application", row["name"], "oc_certificate"), file.file_url
+		)
 
 
 class TestFeesAndOnboarding(PortalActionFixture):
@@ -260,12 +298,21 @@ class TestFeesAndOnboarding(PortalActionFixture):
 
 	def test_pay_invoice_is_own_or_ward_only_and_post_only(self):
 		self.assert_post_only(portal.pay_invoice)
-		for user, invoice, student in ((STUDENT_A, "PA-INV-B", None), (STUDENT_A, "PA-INV-A", self.b), (GUARDIAN, "PA-INV-B", None)):
+		for user, invoice, student in (
+			(STUDENT_A, "PA-INV-B", None),
+			(STUDENT_A, "PA-INV-A", self.b),
+			(GUARDIAN, "PA-INV-B", None),
+		):
 			frappe.set_user(user)
 			with self.assertRaises(frappe.PermissionError):
 				portal.pay_invoice(invoice, student)
-		with patch("campus.campus_finance.gateways.new_request") as new, patch("campus.campus_finance.gateways.gateway_account"), patch(
-			"campus.campus_finance.gateways.open_request", return_value=SimpleNamespace(payment_url="https://pay.example/x")
+		with (
+			patch("campus.campus_finance.gateways.new_request") as new,
+			patch("campus.campus_finance.gateways.gateway_account"),
+			patch(
+				"campus.campus_finance.gateways.open_request",
+				return_value=SimpleNamespace(payment_url="https://pay.example/x"),
+			),
 		):
 			for user in (STUDENT_A, GUARDIAN):
 				frappe.set_user(user)
@@ -276,8 +323,12 @@ class TestFeesAndOnboarding(PortalActionFixture):
 		make_login(BOTH, "Guardian")
 		make_guardian("Paboth", [self.a, self.b], user=BOTH)
 		frappe.set_user(BOTH)
-		with patch("campus.campus_finance.gateways.gateway_account"), patch(
-			"campus.campus_finance.gateways.open_request", return_value=SimpleNamespace(payment_url="https://pay.example/x")
+		with (
+			patch("campus.campus_finance.gateways.gateway_account"),
+			patch(
+				"campus.campus_finance.gateways.open_request",
+				return_value=SimpleNamespace(payment_url="https://pay.example/x"),
+			),
 		):
 			self.assertEqual(portal.pay_invoice("PA-INV-B", self.b)["url"], "https://pay.example/x")
 			with self.assertRaises(frappe.PermissionError):

@@ -33,7 +33,12 @@ def data(filters):
 		return []
 	inputs = json.loads(metric.snapshot or "{}").get("inputs", {})
 	return [
-		{"input": key, "input_value": point["value"], "document_type": record["doctype"], "record": record["name"]}
+		{
+			"input": key,
+			"input_value": point["value"],
+			"document_type": record["doctype"],
+			"record": record["name"],
+		}
 		for key, point in inputs.items()
 		for record in point["records"]
 	]

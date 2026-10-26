@@ -14,4 +14,6 @@ class EnquiryFollowupRule(Document):
 			{"company": self.company, "days_after": self.days_after, "name": ("!=", self.name)},
 		)
 		if duplicate:
-			frappe.throw(_("{0} already has a follow-up rule for day {1}.").format(self.company, self.days_after))
+			frappe.throw(
+				_("{0} already has a follow-up rule for day {1}.").format(self.company, self.days_after)
+			)

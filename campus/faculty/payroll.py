@@ -15,7 +15,9 @@ def assign(employee, from_date, base, variable=0):
 
 	Runs with the caller's permissions (HR creates and submits Salary Structure Assignments).
 	"""
-	if not frappe.db.get_value("Employee", employee, "name", for_update=True):  # also serialises one employee's assignments
+	if not frappe.db.get_value(
+		"Employee", employee, "name", for_update=True
+	):  # also serialises one employee's assignments
 		frappe.throw(_("Employee {0} not found.").format(employee), frappe.DoesNotExistError)
 	if not base or base <= 0:
 		frappe.throw(_("Base pay must be more than zero."))
@@ -45,13 +47,17 @@ def existing_assignment(employee, from_date):
 	if not row:
 		return None
 	if row.docstatus == 0:
-		frappe.throw(_("Draft Salary Structure Assignment {0} exists for this date: submit or delete it first.").format(row.name))
+		frappe.throw(
+			_(
+				"Draft Salary Structure Assignment {0} exists for this date: submit or delete it first."
+			).format(row.name)
+		)
 	structure_mode = frappe.db.get_value("Salary Structure", row.salary_structure, "oc_funding_mode")
 	if structure_mode != frappe.db.get_value("Employee", employee, "oc_funding_mode"):
 		frappe.throw(
-			_("Salary Structure Assignment {0} for this date uses {1}, which is not for the employee's funding mode: cancel it first.").format(
-				row.name, row.salary_structure
-			)
+			_(
+				"Salary Structure Assignment {0} for this date uses {1}, which is not for the employee's funding mode: cancel it first."
+			).format(row.name, row.salary_structure)
 		)
 	return row.name
 
@@ -60,18 +66,20 @@ def structure_for(company, funding_mode):
 	if not funding_mode:
 		frappe.throw(_("Set the Funding Mode on the employee before assigning a salary structure."))
 	structures = frappe.get_all(
-		"Salary Structure", {"company": company, "oc_funding_mode": funding_mode, "docstatus": 1, "is_active": "Yes"}, pluck="name"
+		"Salary Structure",
+		{"company": company, "oc_funding_mode": funding_mode, "docstatus": 1, "is_active": "Yes"},
+		pluck="name",
 	)
 	if not structures:
 		frappe.throw(
-			_("No submitted, active Salary Structure for {0} staff in {1}. Review and submit the {0} structure first.").format(
-				_(funding_mode), company
-			)
+			_(
+				"No submitted, active Salary Structure for {0} staff in {1}. Review and submit the {0} structure first."
+			).format(_(funding_mode), company)
 		)
 	if len(structures) > 1:
 		frappe.throw(
-			_("More than one active Salary Structure for {0} staff in {1}: {2}. Set the old ones inactive.").format(
-				_(funding_mode), company, ", ".join(structures)
-			)
+			_(
+				"More than one active Salary Structure for {0} staff in {1}: {2}. Set the old ones inactive."
+			).format(_(funding_mode), company, ", ".join(structures))
 		)
 	return structures[0]

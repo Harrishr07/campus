@@ -27,7 +27,9 @@ def get_context(context):
 		if frappe.db.get_value("Evidence", slug, "kind") == "URL":
 			context.title = frappe.db.get_value("Evidence", slug, "title")
 			context.external_url = target
-			context.external_html = frappe.render_template(EXTERNAL_TEMPLATE, {"title": context.title, "external_url": target})
+			context.external_html = frappe.render_template(
+				EXTERNAL_TEMPLATE, {"title": context.title, "external_url": target}
+			)
 			return
 		frappe.local.flags.redirect_location = target
 		raise frappe.Redirect(302)

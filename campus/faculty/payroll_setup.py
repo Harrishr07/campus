@@ -70,7 +70,9 @@ STRUCTURES = {
 
 
 def setup_payroll():
-	create_custom_fields({"Salary Structure": salary_structure_fields(), "Company": company_fields()}, update=True)
+	create_custom_fields(
+		{"Salary Structure": salary_structure_fields(), "Company": company_fields()}, update=True
+	)
 	seed_salary_components()
 	for company in college_companies():
 		seed_salary_structures(company)
@@ -104,7 +106,12 @@ def seed_salary_components():
 	typed = has_component_type()
 	for name, abbr, kind, component_type, by_payment_days, rounded in COMPONENTS:
 		if frappe.db.exists("Salary Component", name):
-			if typed and component_type and name in (EPF, PT) and not frappe.db.get_value("Salary Component", name, "component_type"):
+			if (
+				typed
+				and component_type
+				and name in (EPF, PT)
+				and not frappe.db.get_value("Salary Component", name, "component_type")
+			):
 				frappe.db.set_value("Salary Component", name, "component_type", component_type)
 			continue
 		frappe.get_doc(
@@ -123,7 +130,9 @@ def has_component_type():
 def college_companies():
 	"""Colleges: companies with an Institution Profile that are not groups (a trust)."""
 	profiles = frappe.get_all("Institution Profile", pluck="company")
-	return frappe.get_all("Company", {"name": ["in", profiles], "is_group": 0}, pluck="name") if profiles else []
+	return (
+		frappe.get_all("Company", {"name": ["in", profiles], "is_group": 0}, pluck="name") if profiles else []
+	)
 
 
 def structure_name(funding_mode, company):
@@ -138,7 +147,9 @@ def seed_salary_structures(company):
 	abbrs = abbreviations()
 	for mode, (earnings, deductions) in STRUCTURES.items():
 		name = structure_name(mode, company)
-		if frappe.db.exists("Salary Structure", name) or frappe.db.exists("Salary Structure", {"company": company, "oc_funding_mode": mode}):
+		if frappe.db.exists("Salary Structure", name) or frappe.db.exists(
+			"Salary Structure", {"company": company, "oc_funding_mode": mode}
+		):
 			continue
 		frappe.get_doc(
 			{
@@ -152,7 +163,10 @@ def seed_salary_structures(company):
 
 def abbreviations():
 	names = {"B": "Basic", "AGP": "Academic Grade Pay", "DA": "Dearness Allowance"}
-	return {key: frappe.db.get_value("Salary Component", name, "salary_component_abbr") or key for key, name in names.items()}
+	return {
+		key: frappe.db.get_value("Salary Component", name, "salary_component_abbr") or key
+		for key, name in names.items()
+	}
 
 
 def rows(components, abbrs):
@@ -193,20 +207,31 @@ def retire_statutory_wiring():
 
 def campus_structures():
 	"""Names of the structures Campus seeded (by their seeded names)."""
-	names = [structure_name(mode, c) for c in frappe.get_all("Company", pluck="name") for mode in FUNDING_MODES]
+	names = [
+		structure_name(mode, c) for c in frappe.get_all("Company", pluck="name") for mode in FUNDING_MODES
+	]
 	return frappe.get_all("Salary Structure", {"name": ["in", names]}, pluck="name") if names else []
 
 
 def swap_draft_rows(structures):
 	"""Draft Campus structures move from HRMS's PF / PT rows to Campus EPF / PT; submitted ones are listed, not changed."""
-	drafts = frappe.get_all("Salary Structure", {"name": ["in", structures or [""]], "docstatus": 0}, pluck="name")
+	drafts = frappe.get_all(
+		"Salary Structure", {"name": ["in", structures or [""]], "docstatus": 0}, pluck="name"
+	)
 	for old, new in SWAPS.items():
 		abbr = frappe.db.get_value("Salary Component", new, "salary_component_abbr")
 		rows = frappe.get_all(
-			"Salary Detail", {"parenttype": "Salary Structure", "parent": ["in", drafts or [""]], "salary_component": old}, pluck="name"
+			"Salary Detail",
+			{"parenttype": "Salary Structure", "parent": ["in", drafts or [""]], "salary_component": old},
+			pluck="name",
 		)
 		for row in rows:
 			frappe.db.set_value("Salary Detail", row, {"salary_component": new, "abbr": abbr})
 	for name in sorted(set(structures) - set(drafts)):
-		if frappe.db.exists("Salary Detail", {"parent": name, "parenttype": "Salary Structure", "salary_component": ["in", list(SWAPS)]}):
-			print(f"Salary Structure {name} is submitted and uses HRMS's Provident Fund / Professional Tax; review it.")
+		if frappe.db.exists(
+			"Salary Detail",
+			{"parent": name, "parenttype": "Salary Structure", "salary_component": ["in", list(SWAPS)]},
+		):
+			print(
+				f"Salary Structure {name} is submitted and uses HRMS's Provident Fund / Professional Tax; review it."
+			)

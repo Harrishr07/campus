@@ -73,7 +73,8 @@ def setup_curriculum_fields():
 		),
 	]  # fmt: skip
 	create_custom_fields(
-		{"Program": program, "Course": course, "Student Group": student_group, "Academic Term": term}, update=True
+		{"Program": program, "Course": course, "Student Group": student_group, "Academic Term": term},
+		update=True,
 	)
 
 

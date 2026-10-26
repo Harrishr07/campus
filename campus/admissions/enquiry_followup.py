@@ -10,7 +10,9 @@ OPEN_STATUSES = ("Lead", "Open", "Replied", "Interested")
 def create_due_todos():
 	"""Scheduled daily; returns the ToDo names created."""
 	created = []
-	for rule in frappe.get_all("Enquiry Follow-up Rule", {"enabled": 1}, ["name", "company", "days_after", "message"], limit=0):
+	for rule in frappe.get_all(
+		"Enquiry Follow-up Rule", {"enabled": 1}, ["name", "company", "days_after", "message"], limit=0
+	):
 		for lead in due_leads(rule):
 			created += remind(rule, lead)
 	return created
@@ -28,7 +30,9 @@ def due_leads(rule):
 
 
 def remind(rule, lead):
-	if frappe.db.exists("ToDo", {"reference_type": "Lead", "reference_name": lead.name, "oc_followup_rule": rule.name}):
+	if frappe.db.exists(
+		"ToDo", {"reference_type": "Lead", "reference_name": lead.name, "oc_followup_rule": rule.name}
+	):
 		return []
 	assignees = frappe.get_all(
 		"ToDo", {"reference_type": "Lead", "reference_name": lead.name, "status": "Open", "oc_followup_rule": ("is", "not set")},

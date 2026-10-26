@@ -75,19 +75,24 @@ def balance(invoice, head, exclude_refund=None, locking=False):
 	outstanding = frappe.db.get_value("Sales Invoice", invoice, "outstanding_amount", for_update=locking)
 	receipts = paid_by_student(invoice, locking=locking)
 	notes = frappe.db.sql(
-		"select name, grand_total from `tabSales Invoice` where return_against = %s and is_return = 1 and docstatus = 1" + lock,
+		"select name, grand_total from `tabSales Invoice` where return_against = %s and is_return = 1 and docstatus = 1"
+		+ lock,
 		invoice,
 		as_dict=True,
 	)
 	earlier = frappe.db.sql(
-		"select fee_head, deduction from `tabFee Refund` where fee_invoice = %s and fee_head = %s and docstatus = 1 and name != %s" + lock,
+		"select fee_head, deduction from `tabFee Refund` where fee_invoice = %s and fee_head = %s and docstatus = 1 and name != %s"
+		+ lock,
 		(invoice, head, exclude_refund or ""),
 		as_dict=True,
 	)
 	notes_total, deducted = credited_to_head(notes, head), flt(sum(row.deduction for row in earlier), 2)
 	paid = paid_for_head(receipts, head, line_amounts([invoice]).get(invoice, {}))
 	return frappe._dict(
-		paid=paid, credit_notes=-notes_total, deductions=deducted, outstanding=flt(outstanding, 2),
+		paid=paid,
+		credit_notes=-notes_total,
+		deductions=deducted,
+		outstanding=flt(outstanding, 2),
 		refunded_before=bool(earlier),
 		available=available_to_refund(paid, notes_total, deducted),
 	)
@@ -96,7 +101,13 @@ def balance(invoice, head, exclude_refund=None, locking=False):
 def credited_to_head(notes, head):
 	"""The (negative) part of the credit notes `notes` [{name, grand_total}] that falls on `head`, by each note's own lines."""
 	shares = head_shares([note.name for note in notes])
-	return flt(sum(note.grand_total * sum(share for name, share in shares[note.name] if name == head) for note in notes), 2)
+	return flt(
+		sum(
+			note.grand_total * sum(share for name, share in shares[note.name] if name == head)
+			for note in notes
+		),
+		2,
+	)
 
 
 # ---- Settling dues -------------------------------------------------------------------------
@@ -182,10 +193,16 @@ def reverse_vouchers(refund):
 	"""Cancel what a Fee Refund made, last made first: the payment (deleted while still a draft; a submitted one blocks
 	the cancel in before_cancel), the set-off and damages entries, then the credit note. Those Accounts cancelled already stay."""
 	if refund.payment_entry:
-		if frappe.db.get_value("Payment Entry", refund.payment_entry, "docstatus", for_update=True) == 0:  # a paid one blocks the cancel
+		if (
+			frappe.db.get_value("Payment Entry", refund.payment_entry, "docstatus", for_update=True) == 0
+		):  # a paid one blocks the cancel
 			frappe.delete_doc("Payment Entry", refund.payment_entry, force=True, ignore_permissions=True)
 			refund.db_set("payment_entry", None)
-	for doctype, name in (("Journal Entry", refund.damages_entry), ("Journal Entry", refund.adjustment_entry), ("Sales Invoice", refund.credit_note)):
+	for doctype, name in (
+		("Journal Entry", refund.damages_entry),
+		("Journal Entry", refund.adjustment_entry),
+		("Sales Invoice", refund.credit_note),
+	):
 		if name and frappe.db.get_value(doctype, name, "docstatus") == 1:
 			voucher = frappe.get_doc(doctype, name)
 			voucher.flags.ignore_permissions = True

@@ -117,7 +117,9 @@ class TestCOResult(UnitTestCase):
 	def test_another_policy_gives_other_levels(self):
 		other = rules.Policy(50, 50, 50, 50, 50, ((1, 30), (2, 40), (3, 50)), 2)
 		result = rules.co_result(cia=(10, 6, 60.0), ese=(9, 4, 44.44), indirect_average=3.6, policy=other)
-		self.assertEqual((result.cia_level, result.ese_level, result.direct_level, result.final_level), (3, 2, 2.5, 2.33))
+		self.assertEqual(
+			(result.cia_level, result.ese_level, result.direct_level, result.final_level), (3, 2, 2.5, 2.33)
+		)
 
 
 class TestPOAttainment(UnitTestCase):
@@ -130,7 +132,9 @@ class TestPOAttainment(UnitTestCase):
 
 	def test_a_course_in_several_sections_is_one_student_weighted_final(self):
 		self.assertEqual(rules.combine_sections([(2.4, 10), (3, 30)]), 2.85)  # (24 + 90) / 40
-		self.assertEqual(rules.combine_sections([(1.8, 60), (1.8, 60), (1.8, 60)]), 1.8)  # 3 sections weigh as one course
+		self.assertEqual(
+			rules.combine_sections([(1.8, 60), (1.8, 60), (1.8, 60)]), 1.8
+		)  # 3 sections weigh as one course
 		self.assertEqual(rules.combine_sections([(2, 10), (None, 30), (3, 0)]), 2)
 		self.assertIsNone(rules.combine_sections([]))
 
@@ -138,15 +142,21 @@ class TestPOAttainment(UnitTestCase):
 		self.assertIsNone(rules.po_direct([]))
 
 	def test_po_final_weighs_in_the_exit_survey(self):
-		result = rules.po_result(direct=2.19, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(
+			direct=2.19, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2
+		)
 		self.assertEqual((result.indirect_level, result.final_level, result.target_met), (2.64, 2.28, 1))
 
 	def test_po_final_without_the_survey_is_the_direct(self):
-		result = rules.po_result(direct=1.7, indirect_average=None, scale=5, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(
+			direct=1.7, indirect_average=None, scale=5, top=3, indirect_weight=20, target_level=2
+		)
 		self.assertEqual((result.final_level, result.target_met, result.gap), (1.7, 0, 0.3))
 
 	def test_an_unmapped_po(self):
-		result = rules.po_result(direct=None, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2)
+		result = rules.po_result(
+			direct=None, indirect_average=4.4, scale=5, top=3, indirect_weight=20, target_level=2
+		)
 		self.assertEqual((result.final_level, result.target_met), (None, 0))
 		self.assertIn(rules.NOT_MAPPED, result.notes)
 
@@ -159,11 +169,15 @@ class TestDecidingRounds(UnitTestCase):
 
 	def test_closest_pair_of_three(self):
 		self.assertEqual(vr.deciding_rounds({1: 0, 2: 31, 3: 29}, vr.AVERAGE_OF_CLOSEST_TWO), (2, 3))
-		self.assertEqual(vr.deciding_rounds({1: 40, 2: 60, 3: 80}, vr.AVERAGE_OF_CLOSEST_TWO), (2, 3))  # tie: higher pair
+		self.assertEqual(
+			vr.deciding_rounds({1: 40, 2: 60, 3: 80}, vr.AVERAGE_OF_CLOSEST_TWO), (2, 3)
+		)  # tie: higher pair
 
 	def test_third_and_nearer(self):
 		self.assertEqual(vr.deciding_rounds({1: 20, 2: 30, 3: 60}, vr.AVERAGE_OF_THIRD_AND_NEARER), (2, 3))
-		self.assertEqual(vr.deciding_rounds({1: 40, 2: 60, 3: 50}, vr.AVERAGE_OF_THIRD_AND_NEARER), (2, 3))  # tie: higher
+		self.assertEqual(
+			vr.deciding_rounds({1: 40, 2: 60, 3: 50}, vr.AVERAGE_OF_THIRD_AND_NEARER), (2, 3)
+		)  # tie: higher
 
 	def test_final_mark_is_the_average_of_the_deciding_rounds(self):
 		self.assertEqual(vr.final_mark({1: 0, 2: 31, 3: 29}, vr.AVERAGE_OF_CLOSEST_TWO), 30)

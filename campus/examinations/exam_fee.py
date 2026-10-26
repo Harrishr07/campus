@@ -77,7 +77,11 @@ def raise_fee(registration):
 		if not values.confirmed or flt(values.fee_total) <= 0 or values.fee_invoice:
 			return
 		invoice = raise_fee_invoice(
-			values.student, EXAM_HEAD, values.fee_total, values.company, _("Exam fee, {0}").format(values.exam_session)
+			values.student,
+			EXAM_HEAD,
+			values.fee_total,
+			values.company,
+			_("Exam fee, {0}").format(values.exam_session),
 		)
 		frappe.db.set_value(DOCTYPE, registration, "fee_invoice", invoice.name)
 	finally:
@@ -97,7 +101,11 @@ def reraise_invoices(exam_session):
 		pluck="name", order_by="name",
 	)  # fmt: skip
 	if not names:
-		frappe.msgprint(_("Every confirmed registration of {0} has its exam fee invoice.").format(frappe.bold(exam_session)))
+		frappe.msgprint(
+			_("Every confirmed registration of {0} has its exam fee invoice.").format(
+				frappe.bold(exam_session)
+			)
+		)
 		return None
 	return run_bulk(RERAISE_RUN, names, RERAISE_HANDLER)
 

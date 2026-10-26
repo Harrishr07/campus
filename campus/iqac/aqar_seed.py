@@ -20,22 +20,38 @@ CRITERIA = {
 	"7": "Institutional Values and Best Practices",
 }
 KEY_INDICATORS = {
-	"1.1": "Curriculum Design and Development", "1.2": "Academic Flexibility", "1.3": "Curriculum Enrichment",
+	"1.1": "Curriculum Design and Development",
+	"1.2": "Academic Flexibility",
+	"1.3": "Curriculum Enrichment",
 	"1.4": "Feedback System",
-	"2.1": "Student Enrolment and Profile", "2.2": "Student Teacher Ratio", "2.3": "Teaching-Learning Process",
-	"2.4": "Teacher Profile and Quality", "2.5": "Evaluation Process and Reforms",
+	"2.1": "Student Enrolment and Profile",
+	"2.2": "Student Teacher Ratio",
+	"2.3": "Teaching-Learning Process",
+	"2.4": "Teacher Profile and Quality",
+	"2.5": "Evaluation Process and Reforms",
 	"2.6": "Student Performance and Learning Outcomes",
-	"3.1": "Promotion of Research", "3.2": "Resource Mobilization for Research", "3.3": "Innovation Ecosystem",
-	"3.4": "Research Publications and Awards", "3.5": "Consultancy", "3.6": "Extension Activities",
+	"3.1": "Promotion of Research",
+	"3.2": "Resource Mobilization for Research",
+	"3.3": "Innovation Ecosystem",
+	"3.4": "Research Publications and Awards",
+	"3.5": "Consultancy",
+	"3.6": "Extension Activities",
 	"3.7": "Collaboration",
-	"4.1": "Physical Facilities", "4.2": "Library as a Learning Resource", "4.3": "IT Infrastructure",
+	"4.1": "Physical Facilities",
+	"4.2": "Library as a Learning Resource",
+	"4.3": "IT Infrastructure",
 	"4.4": "Maintenance of Campus Infrastructure",
-	"5.1": "Student Support", "5.2": "Student Progression", "5.3": "Student Participation and Activities",
+	"5.1": "Student Support",
+	"5.2": "Student Progression",
+	"5.3": "Student Participation and Activities",
 	"5.4": "Alumni Engagement",
-	"6.1": "Institutional Vision and Leadership", "6.2": "Strategy Development and Deployment",
-	"6.3": "Faculty Empowerment Strategies", "6.4": "Financial Management and Resource Mobilization",
+	"6.1": "Institutional Vision and Leadership",
+	"6.2": "Strategy Development and Deployment",
+	"6.3": "Faculty Empowerment Strategies",
+	"6.4": "Financial Management and Resource Mobilization",
 	"6.5": "Internal Quality Assurance System",
-	"7.1": "Institutional Values and Social Responsibilities", "7.2": "Best Practices",
+	"7.1": "Institutional Values and Social Responsibilities",
+	"7.2": "Best Practices",
 	"7.3": "Institutional Distinctiveness",
 }
 # code, title, answer type (N Number, P Percent, C Choice, T Narrative), unit; metrics other than the formula ones are answered by hand
@@ -169,5 +185,7 @@ def seed_nodes():
 		spec["parent"] = spec["code"].rpartition(".")[0] or None
 	for code, title in EXTENDED_PROFILE:
 		profile = node(f"EP-{code}", title, "Extended Profile", answer_type="Number", period="Academic Year")
-		specs.append({**profile, "parent": None, "evidence_slots": evidence_slots("Data Template", url_slot=False)})
+		specs.append(
+			{**profile, "parent": None, "evidence_slots": evidence_slots("Data Template", url_slot=False)}
+		)
 	return specs

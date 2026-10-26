@@ -45,7 +45,9 @@ def linked_students(user=None):
 	own = frappe.get_all("Student", {"user": user}, pluck="name")
 	guardians = frappe.get_all("Guardian", {"user": user}, pluck="name")
 	guarded = (
-		frappe.get_all("Student Guardian", {"guardian": ["in", guardians], "parenttype": "Student"}, pluck="parent")
+		frappe.get_all(
+			"Student Guardian", {"guardian": ["in", guardians], "parenttype": "Student"}, pluck="parent"
+		)
 		if guardians
 		else []
 	)
@@ -84,7 +86,9 @@ def get_fees(student=None):
 	invoices = student_invoices(student)
 	online = {company: can_pay_online(company) for company in {i.company for i in invoices}}
 	for invoice in invoices:
-		invoice["can_pay"] = bool(online[invoice.company] and not invoice.is_return and invoice.outstanding_amount > 0)
+		invoice["can_pay"] = bool(
+			online[invoice.company] and not invoice.is_return and invoice.outstanding_amount > 0
+		)
 	return frappe._dict(
 		student=student,
 		invoices=invoices,
@@ -97,7 +101,9 @@ def get_fees(student=None):
 @frappe.whitelist(methods=["POST"])
 def pay_invoice(invoice, student=None):
 	"""The gateway URL to pay `invoice`. fee_payment_link checks the invoice is the caller's own or a ward's."""
-	student = resolve_student(student)  # a login with no linked student, or a student that is not theirs, is refused
+	student = resolve_student(
+		student
+	)  # a login with no linked student, or a student that is not theirs, is refused
 	owner = frappe.db.get_value("Sales Invoice", invoice, "student")
 	if owner and owner != student:  # the switcher's ward must be the invoice's student
 		frappe.throw(_("You cannot pay this invoice."), frappe.PermissionError)
@@ -114,7 +120,9 @@ def get_attendance(student=None, academic_term=None):
 	student = resolve_student(student)
 	terms = [row.name for row in student_terms(student)]
 	if academic_term and academic_term not in terms:
-		frappe.throw(_("Attendance is not available for term {0}.").format(academic_term), frappe.PermissionError)
+		frappe.throw(
+			_("Attendance is not available for term {0}.").format(academic_term), frappe.PermissionError
+		)
 	academic_term = academic_term or (terms[0] if terms else None)
 	summary = summarise(student, academic_term, term_window(academic_term), {}) if academic_term else None
 	return {"student": student, "terms": terms, "academic_term": academic_term, "summary": summary}
@@ -126,7 +134,9 @@ def get_results(student=None):
 	publication and the version (is_latest); the sessions are read again with examinations.api.released_sessions
 	(Published, publish_at passed), the one release reader of the examination reports."""
 	student = resolve_student(student)
-	rows = frappe.get_list("Student Result", {"student": student}, ["name", "exam_session", "company"], order_by="creation desc")
+	rows = frappe.get_list(
+		"Student Result", {"student": student}, ["name", "exam_session", "company"], order_by="creation desc"
+	)
 	released = {company: set(released_sessions(company)) for company in {row.company for row in rows}}
 	results = []
 	for name in [row.name for row in rows if row.exam_session in released[row.company]]:
@@ -143,7 +153,19 @@ def get_results(student=None):
 				"credits_earned": doc.credits_earned,
 				"grade_sheet_url": grade_sheet_url(doc.name),
 				"courses": [
-					{f: c.get(f) for f in ("course", "credits", "cia", "ese", "total", "grade", "grade_point", "result")}
+					{
+						f: c.get(f)
+						for f in (
+							"course",
+							"credits",
+							"cia",
+							"ese",
+							"total",
+							"grade",
+							"grade_point",
+							"result",
+						)
+					}
 					for c in doc.courses
 				],
 			}
@@ -166,8 +188,10 @@ def certificate_types():
 
 	require_login()
 	return frappe.get_all(
-		"Certificate Type", {"enabled": 1, "name": ["not in", desk_only_certificate_types() or [""]]},
-		["name", "fee_amount", "needs_approval", "is_transfer_certificate"], order_by="name",
+		"Certificate Type",
+		{"enabled": 1, "name": ["not in", desk_only_certificate_types() or [""]]},
+		["name", "fee_amount", "needs_approval", "is_transfer_certificate"],
+		order_by="name",
 	)
 
 
@@ -202,9 +226,9 @@ def check_approval_route(request):
 	request.company = frappe.db.get_value("Student", request.student, "oc_company")
 	if not find_policy(request):
 		frappe.throw(
-			_("{0} certificates need approval, which the college has not set up yet. Please contact the college office.").format(
-				request.certificate_type
-			)
+			_(
+				"{0} certificates need approval, which the college has not set up yet. Please contact the college office."
+			).format(request.certificate_type)
 		)
 
 
@@ -212,8 +236,13 @@ def check_approval_route(request):
 def my_certificates(student=None):
 	"""The student's certificate requests, newest first: state, number and, once issued, the PDF and verification links."""
 	student = resolve_student(student)
-	names = frappe.get_list("Certificate Request", {"student": student}, pluck="name", order_by="creation desc")
-	return {"student": student, "certificates": [certificate_row(frappe.get_doc("Certificate Request", n)) for n in names]}
+	names = frappe.get_list(
+		"Certificate Request", {"student": student}, pluck="name", order_by="creation desc"
+	)
+	return {
+		"student": student,
+		"certificates": [certificate_row(frappe.get_doc("Certificate Request", n)) for n in names],
+	}
 
 
 def certificate_row(request):
@@ -279,7 +308,9 @@ def my_onboarding(student=None):
 	return {
 		"student": student,
 		"completion": doc.completion,
-		"items": [{"title": _(row.title), "mandatory": row.mandatory, "status": row.status} for row in doc.items],
+		"items": [
+			{"title": _(row.title), "mandatory": row.mandatory, "status": row.status} for row in doc.items
+		],
 	}
 
 
@@ -287,7 +318,9 @@ def my_onboarding(student=None):
 def grievance_categories():
 	"""Grievance categories a student may raise: [{name, description}]."""
 	require_login()
-	return frappe.get_all("Grievance Type", {"oc_applies_to_students": 1}, ["name", "description"], order_by="name")
+	return frappe.get_all(
+		"Grievance Type", {"oc_applies_to_students": 1}, ["name", "description"], order_by="name"
+	)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -342,7 +375,10 @@ def my_grievances(student=None):
 	query still applies, so a confidential grievance is listed to the student who raised it and no one else."""
 	student = resolve_student(student)
 	names = frappe.get_list("Student Grievance", {"student": student}, pluck="name", order_by="creation desc")
-	return {"student": student, "grievances": [grievance_row(frappe.get_doc("Student Grievance", n)) for n in names]}
+	return {
+		"student": student,
+		"grievances": [grievance_row(frappe.get_doc("Student Grievance", n)) for n in names],
+	}
 
 
 def grievance_row(grievance):
@@ -377,8 +413,13 @@ def apply_leave(from_date, to_date, leave_kind, reason=None, student=None):
 def my_leaves(student=None):
 	"""The student's leave applications, newest first; the doctype's portal scope still applies."""
 	student = resolve_student(student)
-	names = frappe.get_list("Student Leave Application", {"student": student}, pluck="name", order_by="creation desc")
-	return {"student": student, "leaves": [leave_row(frappe.get_doc("Student Leave Application", n)) for n in names]}
+	names = frappe.get_list(
+		"Student Leave Application", {"student": student}, pluck="name", order_by="creation desc"
+	)
+	return {
+		"student": student,
+		"leaves": [leave_row(frappe.get_doc("Student Leave Application", n)) for n in names],
+	}
 
 
 def leave_row(leave):

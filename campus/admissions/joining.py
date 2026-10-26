@@ -29,11 +29,25 @@ from frappe.utils import add_days, getdate, today
 
 from campus.admissions import numbers
 from campus.admissions import seat_matrix as seats
-from campus.admissions.admit import admission_year, check_cleared, check_company_access, lock_applicant, retry_on_deadlock
+from campus.admissions.admit import (
+	admission_year,
+	check_cleared,
+	check_company_access,
+	lock_applicant,
+	retry_on_deadlock,
+)
 from campus.admissions.reporting import check_late_joining, student_deadline, withdraw_referrals
 from campus.admissions.setup import OFFICER_ROLE
 from campus.campus_finance.api import fee_structure_for
-from campus.student_services.api import ACTIVE, ADMITTED, CANCELLED, JOINED, create_onboarding, last_change_date, transition
+from campus.student_services.api import (
+	ACTIVE,
+	ADMITTED,
+	CANCELLED,
+	JOINED,
+	create_onboarding,
+	last_change_date,
+	transition,
+)
 
 SAVEPOINT = "campus_joining"
 JOINING = (ADMITTED, JOINED)  # statuses a joining starts from (Joined: resuming one that stopped part-way)
@@ -74,7 +88,11 @@ def lock_student(applicant):
 		as_dict=True, for_update=True,
 	)  # fmt: skip
 	if not student:
-		frappe.throw(_("Applicant {0} is not admitted yet: admit them before confirming the joining.").format(applicant))
+		frappe.throw(
+			_("Applicant {0} is not admitted yet: admit them before confirming the joining.").format(
+				applicant
+			)
+		)
 	return student
 
 
@@ -83,7 +101,9 @@ def earlier_result(applicant, student):
 	enrollment = joining_enrollment(applicant)
 	if not enrollment:
 		frappe.throw(
-			_("{0} cannot join: their lifecycle status is {1}.").format(frappe.bold(student.name), _(student.oc_academic_status))
+			_("{0} cannot join: their lifecycle status is {1}.").format(
+				frappe.bold(student.name), _(student.oc_academic_status)
+			)
 		)
 	return result(student.name, enrollment)
 
@@ -106,7 +126,9 @@ def check_joining_date(student, joining_date):
 
 def check_joinable(applicant, state, student):
 	if state.application_status != "Admitted":
-		frappe.throw(_("Only an admitted applicant can join; {0} is {1}.").format(applicant, state.application_status))
+		frappe.throw(
+			_("Only an admitted applicant can join; {0} is {1}.").format(applicant, state.application_status)
+		)
 	if not student.enabled:
 		frappe.throw(_("Student {0} is disabled.").format(student.name))
 	check_cleared(applicant, state)
@@ -115,15 +137,33 @@ def check_joinable(applicant, state, student):
 def join(applicant, state, student, date, justification):
 	year = admission_year(state)
 	assign_numbers(student, state, year)
-	resuming = student.oc_academic_status == JOINED  # only then can the enrollment exist (see joining_enrollment)
-	enrollment = (resuming and joining_enrollment(applicant)) or create_enrollment(applicant, student, state, year, date, justification)
+	resuming = (
+		student.oc_academic_status == JOINED
+	)  # only then can the enrollment exist (see joining_enrollment)
+	enrollment = (resuming and joining_enrollment(applicant)) or create_enrollment(
+		applicant, student, state, year, date, justification
+	)
 	if student.oc_academic_status == ADMITTED:
-		transition(student.name, JOINED, date, _("Joining confirmed"), ("Program Enrollment", enrollment), program_enrollment=enrollment)
+		transition(
+			student.name,
+			JOINED,
+			date,
+			_("Joining confirmed"),
+			("Program Enrollment", enrollment),
+			program_enrollment=enrollment,
+		)
 		withdraw_referrals(student.name)
 	if not admission_invoice(enrollment):
 		create_fee_invoice(student.name, enrollment, state, year)
 	create_onboarding(student.name)  # Education's enrollment submit already set the student's joining date
-	transition(student.name, ACTIVE, date, _("Joining confirmed"), ("Program Enrollment", enrollment), program_enrollment=enrollment)
+	transition(
+		student.name,
+		ACTIVE,
+		date,
+		_("Joining confirmed"),
+		("Program Enrollment", enrollment),
+		program_enrollment=enrollment,
+	)
 	return result(student.name, enrollment)
 
 
@@ -132,9 +172,13 @@ def assign_numbers(student, state, year):
 	settings = frappe.get_doc("Admission Settings")
 	values = {}
 	if not student.oc_register_no:
-		values["oc_register_no"] = numbers.next_number(settings.register_no_pattern, state.oc_company, state.program, year)
+		values["oc_register_no"] = numbers.next_number(
+			settings.register_no_pattern, state.oc_company, state.program, year
+		)
 	if settings.roll_no_pattern and not student.oc_roll_no:
-		values["oc_roll_no"] = numbers.next_number(settings.roll_no_pattern, state.oc_company, state.program, year)
+		values["oc_roll_no"] = numbers.next_number(
+			settings.roll_no_pattern, state.oc_company, state.program, year
+		)
 	if values:
 		frappe.db.set_value("Student", student.name, values)
 
@@ -146,14 +190,17 @@ def joining_enrollment(applicant):
 	of a missing key would gap-lock the unique index, where a concurrent joining inserts its key while holding the
 	Seat Matrix lock this transaction is about to ask for (a deadlock)."""
 	rows = frappe.db.sql(
-		"select name from `tabProgram Enrollment` where oc_joining_key = %s and docstatus = 1 lock in share mode", applicant
+		"select name from `tabProgram Enrollment` where oc_joining_key = %s and docstatus = 1 lock in share mode",
+		applicant,
 	)
 	return rows[0][0] if rows else None
 
 
 def create_enrollment(applicant, student, state, year, date, justification):
 	"""The seat check under the matrix lock (taken before any enrollment row lock), then the submitted enrollment."""
-	seats.check_seat_available(state.program, year, state.oc_admission_quota, state.student_category, applicant, justification)
+	seats.check_seat_available(
+		state.program, year, state.oc_admission_quota, state.student_category, applicant, justification
+	)
 	release_cancelled_key(applicant)
 	enrollment = frappe.get_doc(
 		{
@@ -181,20 +228,30 @@ def carry_joining_key(doc, method=None):
 	joining returns it. The key moves from the cancelled original (cleared there first: the key is unique)."""
 	key = doc.amended_from and frappe.db.get_value("Program Enrollment", doc.amended_from, "oc_joining_key")
 	if key:
-		frappe.db.set_value("Program Enrollment", doc.amended_from, "oc_joining_key", None, update_modified=False)
+		frappe.db.set_value(
+			"Program Enrollment", doc.amended_from, "oc_joining_key", None, update_modified=False
+		)
 		doc.db_set("oc_joining_key", key, update_modified=False)
 
 
 def admission_invoice(enrollment):
-	return frappe.db.get_value("Sales Invoice", {"oc_program_enrollment": enrollment, "docstatus": 1, "is_return": 0}, "name")
+	return frappe.db.get_value(
+		"Sales Invoice", {"oc_program_enrollment": enrollment, "docstatus": 1, "is_return": 0}, "name"
+	)
 
 
 def create_fee_invoice(student, enrollment, state, year):
 	"""Submitted Sales Invoice from the quota/category Fee Structure, flagged with the joining's enrollment; the
 	student's advances (unallocated Payment Entries against their customer) are allocated to it."""
-	name = fee_structure_for(state.program, year, state.oc_admission_quota, state.student_category, state.oc_company)
+	name = fee_structure_for(
+		state.program, year, state.oc_admission_quota, state.student_category, state.oc_company
+	)
 	if not name:
-		frappe.throw(_("No Fee Structure for {0}, {1}, {2} / {3}.").format(state.program, year, state.oc_admission_quota, state.student_category))
+		frappe.throw(
+			_("No Fee Structure for {0}, {1}, {2} / {3}.").format(
+				state.program, year, state.oc_admission_quota, state.student_category
+			)
+		)
 	structure = frappe.get_doc("Fee Structure", name)
 	invoice = frappe.get_doc(
 		{
@@ -209,7 +266,9 @@ def create_fee_invoice(student, enrollment, state, year):
 			],
 		}
 	)  # fmt: skip
-	invoice.flags.ignore_permissions = True  # the officer's role was checked in confirm_joining(); every input is server-side
+	invoice.flags.ignore_permissions = (
+		True  # the officer's role was checked in confirm_joining(); every input is server-side
+	)
 	invoice.insert()
 	return invoice.submit()
 
@@ -235,9 +294,9 @@ def validate_enrollment(doc, method=None):
 	enrollment are not affected."""
 	if doc.is_new() and needs_joining(doc):
 		frappe.throw(
-			_("{0} has not joined yet: the Program Enrollment is created by the joining confirmation, not by hand.").format(
-				frappe.bold(doc.student)
-			),
+			_(
+				"{0} has not joined yet: the Program Enrollment is created by the joining confirmation, not by hand."
+			).format(frappe.bold(doc.student)),
 			title=_("Joining Not Confirmed"),
 		)
 
@@ -247,11 +306,21 @@ def needs_joining(doc):
 		return False
 	if not doc.program or not frappe.db.get_value("Program", doc.program, "oc_company"):
 		return False
-	student = frappe.db.get_value("Student", doc.student, ["oc_academic_status", "student_applicant"], as_dict=True)
+	student = frappe.db.get_value(
+		"Student", doc.student, ["oc_academic_status", "student_applicant"], as_dict=True
+	)
 	if not student:
 		return False
 	if student.oc_academic_status == ADMITTED:
 		return True
-	if student.oc_academic_status != CANCELLED and doc.amended_from and frappe.db.get_value("Program Enrollment", doc.amended_from, "oc_joining_key"):
-		return False  # a joined student's corrected joining enrollment (carry_joining_key moves the key to it)
-	return bool(student.student_applicant) and not frappe.db.exists("Program Enrollment", {"student": doc.student, "docstatus": 1})
+	if (
+		student.oc_academic_status != CANCELLED
+		and doc.amended_from
+		and frappe.db.get_value("Program Enrollment", doc.amended_from, "oc_joining_key")
+	):
+		return (
+			False  # a joined student's corrected joining enrollment (carry_joining_key moves the key to it)
+		)
+	return bool(student.student_applicant) and not frappe.db.exists(
+		"Program Enrollment", {"student": doc.student, "docstatus": 1}
+	)

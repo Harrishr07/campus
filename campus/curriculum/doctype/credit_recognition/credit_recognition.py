@@ -19,7 +19,9 @@ class CreditRecognition(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
-		frappe.db.get_value("Student", self.student, "name", for_update=True)  # one recognition per course at a time
+		frappe.db.get_value(
+			"Student", self.student, "name", for_update=True
+		)  # one recognition per course at a time
 		other = frappe.db.get_value(
 			"Credit Recognition",
 			{"student": self.student, "course": self.course, "docstatus": 1, "name": ["!=", self.name]},
@@ -27,7 +29,11 @@ class CreditRecognition(ApprovableDocument, Document):
 			for_update=True,
 		)
 		if other:
-			frappe.throw(_("{0} is already recognised for {1} by {2}.").format(frappe.bold(self.course), self.student, other))
+			frappe.throw(
+				_("{0} is already recognised for {1} by {2}.").format(
+					frappe.bold(self.course), self.student, other
+				)
+			)
 
 	def before_cancel(self):
 		recognitions.check_cancel(self)

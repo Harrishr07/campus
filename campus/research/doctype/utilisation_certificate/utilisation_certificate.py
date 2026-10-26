@@ -46,7 +46,11 @@ class UtilisationCertificate(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		if not is_approved(self):
-			frappe.throw(_("{0} needs approval by the PI, Accounts and the Principal. Use Request Approval.").format(self.name))
+			frappe.throw(
+				_("{0} needs approval by the PI, Accounts and the Principal. Use Request Approval.").format(
+					self.name
+				)
+			)
 		sanction = lock_sanction(self.sanction)
 		if sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted.").format(self.sanction))
@@ -55,15 +59,15 @@ class UtilisationCertificate(ApprovableDocument, Document):
 		if figures.unreconciled:
 			vouchers = ", ".join(f"{row.voucher_type} {row.voucher_no}" for row in figures.unreconciled[:5])
 			frappe.throw(
-				_("{0} can't be approved: spending on the project without a budget head of Sanction {1} is unreconciled ({2}). Post it to a head or move it off the project first.").format(
-					self.name, self.sanction, vouchers
-				)
+				_(
+					"{0} can't be approved: spending on the project without a budget head of Sanction {1} is unreconciled ({2}). Post it to a head or move it off the project first."
+				).format(self.name, self.sanction, vouchers)
 			)
 		if signature(figures) != signature(self):
 			frappe.throw(
-				_("The ledger of Sanction {0} changed after {1} was sent for approval. Return it for changes and save it again.").format(
-					self.sanction, self.name
-				)
+				_(
+					"The ledger of Sanction {0} changed after {1} was sent for approval. Return it for changes and save it again."
+				).format(self.sanction, self.name)
 			)
 		self.snapshot, self.source_changed, self.source_changed_on = snapshot(figures), 0, None
 		self.set_certifiers()
@@ -104,7 +108,9 @@ class UtilisationCertificate(ApprovableDocument, Document):
 	def check_period(self, sanction):
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("The From Date can't be after the To Date."))
-		if getdate(self.from_date) < getdate(sanction.start_date) or getdate(self.to_date) > getdate(sanction.end_date):
+		if getdate(self.from_date) < getdate(sanction.start_date) or getdate(self.to_date) > getdate(
+			sanction.end_date
+		):
 			frappe.throw(
 				_("The period must be inside the sanction period ({0} to {1}).").format(
 					frappe.format(sanction.start_date, "Date"), frappe.format(sanction.end_date, "Date")
@@ -116,7 +122,9 @@ class UtilisationCertificate(ApprovableDocument, Document):
 			self.version = (frappe.db.get_value(self.doctype, self.amended_from, "version") or 0) + 1
 			return
 		earlier = frappe.get_all(
-			self.doctype, {"sanction": self.sanction, "from_date": self.from_date, "to_date": self.to_date}, pluck="version"
+			self.doctype,
+			{"sanction": self.sanction, "from_date": self.from_date, "to_date": self.to_date},
+			pluck="version",
 		)
 		self.version = max(earlier or [0]) + 1
 
@@ -131,7 +139,13 @@ class UtilisationCertificate(ApprovableDocument, Document):
 		for field in FIGURE_FIELDS:
 			self.set(field, figures[field])
 		self.unreconciled_entries = len(figures.unreconciled)
-		self.set("heads", [{field: row[field] for field in HEAD_FIELDS} | {"currency": self.currency} for row in figures.heads])
+		self.set(
+			"heads",
+			[
+				{field: row[field] for field in HEAD_FIELDS} | {"currency": self.currency}
+				for row in figures.heads
+			],
+		)
 
 	def check_overlap(self):
 		uc = frappe.qb.DocType(self.doctype)
@@ -144,7 +158,11 @@ class UtilisationCertificate(ApprovableDocument, Document):
 			.for_update().run(pluck=True)
 		)  # fmt: skip
 		if other:
-			frappe.throw(_("Utilisation Certificate {0} of Sanction {1} already covers part of this period.").format(other[0], self.sanction))
+			frappe.throw(
+				_("Utilisation Certificate {0} of Sanction {1} already covers part of this period.").format(
+					other[0], self.sanction
+				)
+			)
 
 	def approval_excluded_users(self):
 		"""Who already approved an earlier level of the pending approval: one person certifies at one level only."""
@@ -161,7 +179,9 @@ class UtilisationCertificate(ApprovableDocument, Document):
 		certifiers = [self.get(field) for field in LEVEL_FIELDS.values() if self.get(field)]
 		twice = sorted({user for user in certifiers if certifiers.count(user) > 1})
 		if twice:
-			frappe.throw(_("{0} can't certify {1} at more than one level.").format(", ".join(twice), self.name))
+			frappe.throw(
+				_("{0} can't certify {1} at more than one level.").format(", ".join(twice), self.name)
+			)
 
 	def set_certifiers(self):
 		"""Who approved each level in the approval that is submitting the UC."""
@@ -179,5 +199,7 @@ def certificate_format(scheme, agency):
 		or DEFAULT_FORMAT
 	)
 	if not frappe.db.exists("Print Format", {"name": name, "doc_type": "Utilisation Certificate"}):
-		frappe.throw(_("UC Format {0} is not a print format of Utilisation Certificate.").format(frappe.bold(name)))
+		frappe.throw(
+			_("UC Format {0} is not a print format of Utilisation Certificate.").format(frappe.bold(name))
+		)
 	return name

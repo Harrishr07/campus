@@ -49,5 +49,10 @@ class TestAmountByItem(UnitTestCase):
 
 	def test_a_line_without_an_item_is_reported(self):
 		with self.assertRaises(rr.MissingItem) as caught:
-			rr.amount_by_item([{"item": "VAL", "amount": 50, "activity": "Valuation Round 1"}, {"item": None, "amount": 1, "activity": "Valuation Round 2"}])
+			rr.amount_by_item(
+				[
+					{"item": "VAL", "amount": 50, "activity": "Valuation Round 1"},
+					{"item": None, "amount": 1, "activity": "Valuation Round 2"},
+				]
+			)
 		self.assertEqual(caught.exception.activity, "Valuation Round 2")

@@ -14,7 +14,11 @@ class Hostel(Document):
 	def validate(self):
 		# only when the hostel is made: a lapsed agreement must not block editing or disabling it
 		if self.is_new() and not served_companies(SERVICE, self.company):
-			frappe.throw(_("{0} has no Hostel Shared Service Agreement as provider in force today").format(self.company))
+			frappe.throw(
+				_("{0} has no Hostel Shared Service Agreement as provider in force today").format(
+					self.company
+				)
+			)
 
 	def after_insert(self):
 		location = frappe.get_doc(

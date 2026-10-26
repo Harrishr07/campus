@@ -9,8 +9,18 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
-TAX_FIELDS = ("charge_type", "account_head", "rate", "description", "cost_center", "row_id", "included_in_print_rate")
-DISBURSED = "select 1 from `tabScholarship Disbursement` sd where sd.voucher_type = %s and sd.voucher = {0}.name"
+TAX_FIELDS = (
+	"charge_type",
+	"account_head",
+	"rate",
+	"description",
+	"cost_center",
+	"row_id",
+	"included_in_print_rate",
+)
+DISBURSED = (
+	"select 1 from `tabScholarship Disbursement` sd where sd.voucher_type = %s and sd.voucher = {0}.name"
+)
 
 
 def paid_by_student(invoice, locking=False):
@@ -89,7 +99,9 @@ def check_uniform_tax(invoice, item_codes):
 		return
 	treatments = {(row.item_tax_template, row.item_tax_rate) for row in invoice.items}
 	if len(treatments) > 1:
-		frappe.throw(_("The invoice has lines with different taxes; credit the whole invoice in Accounts instead."))
+		frappe.throw(
+			_("The invoice has lines with different taxes; credit the whole invoice in Accounts instead.")
+		)
 
 
 def credited_gross(invoice, rows):
@@ -117,7 +129,9 @@ def make_refund_payment(credit_note, amount, reference_no, remarks):
 	"""
 	bank = frappe.db.get_value("Company", credit_note.company, "default_bank_account")
 	if not bank:
-		frappe.throw(_("Set a default bank account for {0} to draft the refund payment.").format(credit_note.company))
+		frappe.throw(
+			_("Set a default bank account for {0} to draft the refund payment.").format(credit_note.company)
+		)
 	payment = frappe.get_doc(
 		{
 			"doctype": "Payment Entry", "payment_type": "Pay", "company": credit_note.company, "posting_date": today(),
@@ -145,7 +159,8 @@ def unallocated_advance(customer, company, locking=False):
 		"select pe.payment_type, sum(pe.unallocated_amount) from `tabPayment Entry` pe"
 		" where pe.docstatus = 1 and pe.party_type = 'Customer' and pe.party = %s and pe.company = %s"
 		" and pe.payment_type in ('Receive', 'Pay') and pe.unallocated_amount > 0"
-		f" and not exists ({DISBURSED.format('pe')}) group by pe.payment_type" + (" for update" if locking else ""),
+		f" and not exists ({DISBURSED.format('pe')}) group by pe.payment_type"
+		+ (" for update" if locking else ""),
 		(customer, company, "Payment Entry"),
 	)
 	totals = {payment_type: flt(amount) for payment_type, amount in rows}

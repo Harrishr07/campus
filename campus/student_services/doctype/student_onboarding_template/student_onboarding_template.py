@@ -17,7 +17,9 @@ class StudentOnboardingTemplate(Document):
 			self.check_single_default()
 
 	def check_single_default(self):
-		frappe.db.get_value("Company", self.company, "name", for_update=True)  # one default-setter per company at a time
+		frappe.db.get_value(
+			"Company", self.company, "name", for_update=True
+		)  # one default-setter per company at a time
 		other = frappe.db.get_value(
 			"Student Onboarding Template",
 			{"company": self.company, "is_default": 1, "name": ["!=", self.name or ""]},

@@ -18,8 +18,17 @@ def execute(filters=None):
 
 
 def rows(filters):
-	conditions = {"docstatus": 1, "company": filters.company, **{f: filters[f] for f in FILTERS if filters.get(f)}}
-	runs = {r.name: r for r in frappe.get_list(PO_RUN, filters=conditions, fields=["name", "program", "batch", "academic_year"], order_by="name")}
+	conditions = {
+		"docstatus": 1,
+		"company": filters.company,
+		**{f: filters[f] for f in FILTERS if filters.get(f)},
+	}
+	runs = {
+		r.name: r
+		for r in frappe.get_list(
+			PO_RUN, filters=conditions, fields=["name", "program", "batch", "academic_year"], order_by="name"
+		)
+	}
 	results = frappe.get_all(
 		PO_RESULT, {"parenttype": PO_RUN, "parent": ["in", list(runs) or [""]]},
 		["parent", "outcome_code", "courses", "mapped", "direct_level", "has_indirect", "indirect_level", "final_level", "target_level", "target_met"],
@@ -35,9 +44,27 @@ def rows(filters):
 
 def columns():
 	return [
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 150},
-		{"fieldname": "batch", "label": _("Batch"), "fieldtype": "Link", "options": "Academic Year", "width": 100},
-		{"fieldname": "academic_year", "label": _("Academic Year"), "fieldtype": "Link", "options": "Academic Year", "width": 110},
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 150,
+		},
+		{
+			"fieldname": "batch",
+			"label": _("Batch"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 100,
+		},
+		{
+			"fieldname": "academic_year",
+			"label": _("Academic Year"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 110,
+		},
 		{"fieldname": "outcome_code", "label": _("PO / PSO"), "fieldtype": "Data", "width": 80},
 		{"fieldname": "courses", "label": _("Courses"), "fieldtype": "Int", "width": 80},
 		{"fieldname": "direct_level", "label": _("Direct"), "fieldtype": "Float", "width": 80},

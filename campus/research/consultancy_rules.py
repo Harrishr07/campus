@@ -19,7 +19,11 @@ def check_rule(institution_percent, faculty_percent, staff_percent):
 	if any(not 0 <= p <= 100 for p in percents):
 		frappe.throw(_("Each revenue share must be between 0 and 100%."))
 	if flt(sum(percents), 2) != 100:
-		frappe.throw(_("The institution, faculty and staff shares must total 100% (now {0}%).").format(flt(sum(percents), 2)))
+		frappe.throw(
+			_("The institution, faculty and staff shares must total 100% (now {0}%).").format(
+				flt(sum(percents), 2)
+			)
+		)
 
 
 def check_team(members, pool_percents):
@@ -34,15 +38,23 @@ def check_team(members, pool_percents):
 	for category in CATEGORIES:
 		rows = [m for m in members if m.get("category") == category]
 		if flt(pool_percents.get(category)) and not rows:
-			frappe.throw(_("Add the {0} members who share the {1}% {0} share.").format(_(category).lower(), flt(pool_percents.get(category))))
+			frappe.throw(
+				_("Add the {0} members who share the {1}% {0} share.").format(
+					_(category).lower(), flt(pool_percents.get(category))
+				)
+			)
 		if rows and not flt(pool_percents.get(category)):
-			frappe.throw(_("The {0} share is 0%: remove the {0} members from the team.").format(_(category).lower()))
+			frappe.throw(
+				_("The {0} share is 0%: remove the {0} members from the team.").format(_(category).lower())
+			)
 		if rows and all(not flt(m.get("share_percent")) for m in rows):
 			for row, share in zip(rows, default_shares(len(rows)), strict=True):
-				setattr(row, "share_percent", share)
+				row.share_percent = share
 		total = flt(sum(flt(m.get("share_percent")) for m in rows), 2)
 		if rows and total != 100:
-			frappe.throw(_("The {0} members' shares must total 100% (now {1}%).").format(_(category).lower(), total))
+			frappe.throw(
+				_("The {0} members' shares must total 100% (now {1}%).").format(_(category).lower(), total)
+			)
 
 
 def split_pools(amount, institution_percent, faculty_percent, staff_percent):
@@ -57,7 +69,9 @@ def member_amounts(members, pool_amounts):
 	amounts = [0.0] * len(members)
 	for category in CATEGORIES:
 		indexes = [i for i, m in enumerate(members) if m.get("category") == category]
-		shares = split_among(flt(pool_amounts.get(category)), [members[i].get("share_percent") for i in indexes])
+		shares = split_among(
+			flt(pool_amounts.get(category)), [members[i].get("share_percent") for i in indexes]
+		)
 		for i, share in zip(indexes, shares, strict=True):
 			amounts[i] = share
 	return amounts

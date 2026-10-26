@@ -18,13 +18,42 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "student", "label": _("Student"), "fieldtype": "Link", "options": "Student", "width": 140},
+		{
+			"fieldname": "student",
+			"label": _("Student"),
+			"fieldtype": "Link",
+			"options": "Student",
+			"width": 140,
+		},
 		{"fieldname": "student_name", "label": _("Student Name"), "fieldtype": "Data", "width": 180},
-		{"fieldname": "applicant", "label": _("Student Applicant"), "fieldtype": "Link", "options": "Student Applicant", "width": 140},
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 180},
-		{"fieldname": "reporting_deadline", "label": _("Reporting Deadline"), "fieldtype": "Date", "width": 120},
+		{
+			"fieldname": "applicant",
+			"label": _("Student Applicant"),
+			"fieldtype": "Link",
+			"options": "Student Applicant",
+			"width": 140,
+		},
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 180,
+		},
+		{
+			"fieldname": "reporting_deadline",
+			"label": _("Reporting Deadline"),
+			"fieldtype": "Date",
+			"width": 120,
+		},
 		{"fieldname": "referral_date", "label": _("No-Show From"), "fieldtype": "Date", "width": 120},
-		{"fieldname": "cancellation", "label": _("Draft Cancellation"), "fieldtype": "Link", "options": CANCELLATION, "width": 160},
+		{
+			"fieldname": "cancellation",
+			"label": _("Draft Cancellation"),
+			"fieldtype": "Link",
+			"options": CANCELLATION,
+			"width": 160,
+		},
 	]
 
 
@@ -35,7 +64,10 @@ def data(filters):
 	rows = no_shows(filters.as_of, filters.company)
 	drafts = dict(
 		frappe.get_all(
-			CANCELLATION, {"student": ("in", [r.student for r in rows] or [""]), "docstatus": 0}, ["student", "name"], as_list=True
+			CANCELLATION,
+			{"student": ("in", [r.student for r in rows] or [""]), "docstatus": 0},
+			["student", "name"],
+			as_list=True,
 		)
 	)  # a submitted one has moved the student to Cancelled, off this list
 	for row in rows:

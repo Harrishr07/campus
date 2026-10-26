@@ -28,7 +28,10 @@ def transitions(student):
 	return [
 		(row.from_status or "", row.to_status, row.kind, row.source_doctype)
 		for row in frappe.get_all(
-			LOG, {"student": student}, ["from_status", "to_status", "kind", "source_doctype"], order_by="creation asc, name asc"
+			LOG,
+			{"student": student},
+			["from_status", "to_status", "kind", "source_doctype"],
+			order_by="creation asc, name asc",
 		)
 	]
 
@@ -89,10 +92,14 @@ class TestTransitionService(LifecycleFixture):
 		student = self.student(joining_date="2024-05-15")
 		self.assertEqual(status(student), rules.ACTIVE)
 		log = self.latest(student)
-		self.assertEqual((log.from_status or "", log.to_status, log.kind), ("", rules.ACTIVE, lifecycle.INITIAL))
+		self.assertEqual(
+			(log.from_status or "", log.to_status, log.kind), ("", rules.ACTIVE, lifecycle.INITIAL)
+		)
 		self.assertEqual((log.effective_date, log.company), (getdate("2024-05-15"), COLLEGE))
 		without_joining = self.student()
-		self.assertEqual(self.latest(without_joining).effective_date, getdate("2024-06-01"))  # the batch start, not today
+		self.assertEqual(
+			self.latest(without_joining).effective_date, getdate("2024-06-01")
+		)  # the batch start, not today
 
 	def test_a_student_cannot_start_in_a_status_the_table_does_not_start(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "no enabled Lifecycle Transition Rule"):
@@ -113,7 +120,9 @@ class TestTransitionService(LifecycleFixture):
 		student = self.student()
 		enrollment = self.enroll(student)
 		frappe.set_user(CLERK)
-		name = lifecycle.transition(student, rules.ON_BREAK, "2024-09-01", "Illness", source=("Program Enrollment", enrollment.name))
+		name = lifecycle.transition(
+			student, rules.ON_BREAK, "2024-09-01", "Illness", source=("Program Enrollment", enrollment.name)
+		)
 		frappe.set_user("Administrator")
 		self.assertEqual(status(student), rules.ON_BREAK)
 		log = frappe.get_doc(LOG, name)
@@ -147,7 +156,9 @@ class TestTransitionService(LifecycleFixture):
 
 	def test_a_rule_is_unique_and_names_known_statuses(self):
 		with self.assertRaises(frappe.DuplicateEntryError):
-			frappe.get_doc({"doctype": RULE, "from_status": rules.ACTIVE, "to_status": rules.ON_BREAK}).insert()
+			frappe.get_doc(
+				{"doctype": RULE, "from_status": rules.ACTIVE, "to_status": rules.ON_BREAK}
+			).insert()
 		with self.assertRaisesRegex(frappe.ValidationError, "same"):
 			frappe.get_doc({"doctype": RULE, "from_status": rules.ACTIVE, "to_status": rules.ACTIVE}).insert()
 
@@ -165,7 +176,9 @@ class TestTransitionService(LifecycleFixture):
 		enrollment = self.enroll(student)
 		source = ("Program Enrollment", enrollment.name)
 		first = lifecycle.transition(student, rules.ON_BREAK, "2024-09-01", "Illness", source=source)
-		self.assertEqual(lifecycle.transition(student, rules.ON_BREAK, "2024-09-01", "Illness", source=source), first)
+		self.assertEqual(
+			lifecycle.transition(student, rules.ON_BREAK, "2024-09-01", "Illness", source=source), first
+		)
 		self.assertEqual(len(transitions(student)), 2)
 
 	def test_the_student_row_is_locked_and_the_log_read_with_a_locking_read(self):
@@ -182,7 +195,12 @@ class TestTransitionService(LifecycleFixture):
 		self.assertEqual(calls[0], (("Student", student), True))
 		with patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql:
 			lifecycle.transition(student, rules.ACTIVE, today(), "Back")
-		self.assertTrue(any("tabLifecycle Transition" in str(c.args[0]) and "FOR UPDATE" in str(c.args[0]) for c in sql.call_args_list))
+		self.assertTrue(
+			any(
+				"tabLifecycle Transition" in str(c.args[0]) and "FOR UPDATE" in str(c.args[0])
+				for c in sql.call_args_list
+			)
+		)
 
 	def test_a_reversal_restores_the_status_and_keeps_both_records(self):
 		student = self.student()
@@ -215,7 +233,9 @@ class TestTransitionService(LifecycleFixture):
 		source = ("Program Enrollment", enrollment.name)
 		lifecycle.transition(student, rules.ON_BREAK, "2025-01-10", "Recorded in error", source=source)
 		lifecycle.revert(source, "Wrong date")
-		lifecycle.transition(student, rules.ON_BREAK, "2025-01-05", "The real start")  # before the reversed change
+		lifecycle.transition(
+			student, rules.ON_BREAK, "2025-01-05", "The real start"
+		)  # before the reversed change
 		self.assertEqual(status(student), rules.ON_BREAK)
 
 	def test_detention_is_written_by_the_progression_run_only(self):
@@ -258,19 +278,26 @@ class TestMigration(LifecycleFixture):
 	def test_detained_becomes_active_and_keeps_the_detention(self):
 		student = self.legacy("Detained", joining_date="2024-05-15")
 		lifecycle.migrate_student(student)
-		self.assertEqual(frappe.db.get_value("Student", student, ["oc_academic_status", "oc_detained"]), (rules.ACTIVE, 1))
+		self.assertEqual(
+			frappe.db.get_value("Student", student, ["oc_academic_status", "oc_detained"]), (rules.ACTIVE, 1)
+		)
 		log = self.latest(student)
 		self.assertEqual(
-			(log.from_status, log.to_status, log.kind, log.effective_date), ("Detained", rules.ACTIVE, lifecycle.MIGRATED, getdate("2024-05-15"))
+			(log.from_status, log.to_status, log.kind, log.effective_date),
+			("Detained", rules.ACTIVE, lifecycle.MIGRATED, getdate("2024-05-15")),
 		)
 		self.assertIn("Detained", log.reason)
 
 	def test_a_tc_holder_is_withdrawn_from_the_leaving_date(self):
-		student = self.legacy("Discontinued", leaving_certificate_number="TC/LCC/0001", date_of_leaving="2025-03-31")
+		student = self.legacy(
+			"Discontinued", leaving_certificate_number="TC/LCC/0001", date_of_leaving="2025-03-31"
+		)
 		lifecycle.migrate_student(student)
 		log = self.latest(student)
 		self.assertEqual((status(student), log.effective_date), (rules.WITHDRAWN, getdate("2025-03-31")))
-		self.assertEqual((log.source_doctype, log.source_name), (None, None))  # no Certificate Request has that number
+		self.assertEqual(
+			(log.source_doctype, log.source_name), (None, None)
+		)  # no Certificate Request has that number
 
 	def test_the_old_break_and_completed_values_map_onto_the_new_ones(self):
 		on_break, completed = self.legacy("Break of Study"), self.legacy("Completed")
@@ -298,7 +325,12 @@ class TestStatusSummary(LifecycleFixture):
 		_columns, rows = summary.execute({"company": COLLEGE})
 		by_key = {(row["program"], row["batch"]): row for row in rows}
 		self.assertEqual(
-			(by_key[(PROGRAM, YEAR)]["active"], by_key[(PROGRAM, YEAR)]["on_break"], by_key[(PROGRAM, YEAR)]["total"]), (1, 1, 2)
+			(
+				by_key[(PROGRAM, YEAR)]["active"],
+				by_key[(PROGRAM, YEAR)]["on_break"],
+				by_key[(PROGRAM, YEAR)]["total"],
+			),
+			(1, 1, 2),
 		)
 		self.assertEqual(by_key[(OTHER_PROGRAM, LATER_YEAR)]["active"], 1)
 		self.assertEqual(len(summary.execute({"company": COLLEGE, "program": PROGRAM})[1]), 1)
@@ -324,15 +356,20 @@ class TestAdmissionLifecycle(AdmitTestCase):
 			],
 		)
 		joined = frappe.get_last_doc(LOG, {"student": student, "to_status": rules.JOINED})
-		self.assertEqual((joined.program_enrollment, joined.approved_by), (result["program_enrollment"], OFFICER))
+		self.assertEqual(
+			(joined.program_enrollment, joined.approved_by), (result["program_enrollment"], OFFICER)
+		)
 
 	def test_an_admission_cancellation_records_cancelled(self):
 		result = self.admit_and_join(self.applicant())
 		admission = SimpleNamespace(**result)
 		doc = frappe.get_doc(
 			{
-				"doctype": "Admission Cancellation", "student": admission.student, "program_enrollment": admission.program_enrollment,
-				"cancellation_date": today(), "reason": "Joined another college",
+				"doctype": "Admission Cancellation",
+				"student": admission.student,
+				"program_enrollment": admission.program_enrollment,
+				"cancellation_date": today(),
+				"reason": "Joined another college",
 			}
 		)
 		frappe.set_user(OFFICER)
@@ -341,6 +378,20 @@ class TestAdmissionLifecycle(AdmitTestCase):
 		self.assertEqual(status(admission.student), rules.CANCELLED)
 		log = frappe.get_last_doc(LOG, {"student": admission.student}, order_by="creation desc, name desc")
 		self.assertEqual(
-			(log.from_status, log.to_status, log.source_doctype, log.source_name, log.program_enrollment, log.reason),
-			(rules.ACTIVE, rules.CANCELLED, "Admission Cancellation", doc.name, admission.program_enrollment, "Joined another college"),
+			(
+				log.from_status,
+				log.to_status,
+				log.source_doctype,
+				log.source_name,
+				log.program_enrollment,
+				log.reason,
+			),
+			(
+				rules.ACTIVE,
+				rules.CANCELLED,
+				"Admission Cancellation",
+				doc.name,
+				admission.program_enrollment,
+				"Joined another college",
+			),
 		)

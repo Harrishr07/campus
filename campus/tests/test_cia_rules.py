@@ -28,7 +28,9 @@ class TestCIAConversion(UnitTestCase):
 		self.assertEqual(converted_cia(R2022_THEORY, marks), 21)  # 104 / 200 x 40 = 20.8 -> 21
 
 	def test_r2022_lab_75_plus_25_to_60(self):
-		self.assertEqual(converted_cia(R2022_LAB, {"Observation and Record": 68, "Test": 19}), 52)  # 87 x 0.6 = 52.2
+		self.assertEqual(
+			converted_cia(R2022_LAB, {"Observation and Record": 68, "Test": 19}), 52
+		)  # 87 x 0.6 = 52.2
 		self.assertEqual(converted_cia(R2022_LAB, {"Observation and Record": 75, "Test": 25}), 60)
 
 	def test_r2026_theory_adds_attendance_marks_after_rounding(self):
@@ -42,5 +44,12 @@ class TestCIAConversion(UnitTestCase):
 		self.assertEqual(converted_cia(R2026_THEORY, marks, round_to_integer=False), 28.53)
 
 	def test_component_totals_sum_questions_and_zero_absent_rows(self):
-		rows = [("S1", "Test 1", 15, 0), ("S1", "Test 1", 30, 0), ("S1", "Test 2", 18, 1), ("S2", "Test 1", None, 0)]
-		self.assertEqual(component_totals(rows), {("S1", "Test 1"): 45, ("S1", "Test 2"): 0, ("S2", "Test 1"): 0})
+		rows = [
+			("S1", "Test 1", 15, 0),
+			("S1", "Test 1", 30, 0),
+			("S1", "Test 2", 18, 1),
+			("S2", "Test 1", None, 0),
+		]
+		self.assertEqual(
+			component_totals(rows), {("S1", "Test 1"): 45, ("S1", "Test 2"): 0, ("S2", "Test 1"): 0}
+		)

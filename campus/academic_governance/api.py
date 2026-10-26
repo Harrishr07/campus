@@ -34,7 +34,9 @@ def quorum_rule(body_type):
 
 def approved_proposals(company, academic_year, aqar_category, department=None):
 	"""Names of the Approved Academic Proposals of the AQAR category (Proposal Type) approved within the academic year."""
-	year = frappe.db.get_value("Academic Year", academic_year, ["year_start_date", "year_end_date"], as_dict=True)
+	year = frappe.db.get_value(
+		"Academic Year", academic_year, ["year_start_date", "year_end_date"], as_dict=True
+	)
 	if not year:
 		return []
 	proposal, kind = frappe.qb.DocType("Academic Proposal"), frappe.qb.DocType("Proposal Type")
@@ -53,13 +55,23 @@ def approved_proposals(company, academic_year, aqar_category, department=None):
 def proposal_courses(company, academic_year, aqar_category, department=None):
 	"""Distinct Courses named on the approved proposals of the category (AQAR 1.2.1 new courses)."""
 	names = approved_proposals(company, academic_year, aqar_category, department)
-	return sorted(set(frappe.get_all("Academic Proposal Course", {"parenttype": "Academic Proposal", "parent": ["in", names or [""]]}, pluck="course")))
+	return sorted(
+		set(
+			frappe.get_all(
+				"Academic Proposal Course",
+				{"parenttype": "Academic Proposal", "parent": ["in", names or [""]]},
+				pluck="course",
+			)
+		)
+	)
 
 
 def proposal_programmes(company, academic_year, aqar_category, department=None):
 	"""Distinct Programmes whose curriculum an approved proposal of the category changed (AQAR 1.1.2 syllabus revision)."""
 	names = approved_proposals(company, academic_year, aqar_category, department)
-	curricula = frappe.get_all("Academic Proposal", {"name": ["in", names or [""]], "curriculum": ["is", "set"]}, pluck="curriculum")
+	curricula = frappe.get_all(
+		"Academic Proposal", {"name": ["in", names or [""]], "curriculum": ["is", "set"]}, pluck="curriculum"
+	)
 	return sorted(set(frappe.get_all("Curriculum", {"name": ["in", curricula or [""]]}, pluck="program")))
 
 
@@ -68,7 +80,9 @@ def committee_bodies(company, body_type=None):
 	filters = {"company": company, "enabled": 1, **({"body_type": body_type} if body_type else {})}
 	bodies = frappe.get_list("Body", filters, ["name", "body_type"], order_by="name")
 	for body in bodies:
-		body.min_meetings_per_year = frappe.get_cached_value("Body Type", body.body_type, "min_meetings_per_year")
+		body.min_meetings_per_year = frappe.get_cached_value(
+			"Body Type", body.body_type, "min_meetings_per_year"
+		)
 	return bodies
 
 
@@ -90,7 +104,11 @@ def body_meetings(company, from_date, to_date, body_type):
 def meetings_of(bodies, from_date, to_date):
 	return frappe.get_list(
 		"Body Meeting",
-		{"body": ["in", bodies or [""]], "status": ["!=", "Cancelled"], "meeting_date": ["between", [from_date, to_date]]},
+		{
+			"body": ["in", bodies or [""]],
+			"status": ["!=", "Cancelled"],
+			"meeting_date": ["between", [from_date, to_date]],
+		},
 		["name", "body", "meeting_date", "status"],
 		order_by="meeting_date asc",
 	)
@@ -98,11 +116,24 @@ def meetings_of(bodies, from_date, to_date):
 
 def action_items(company, from_date, to_date, body_type=None):
 	"""Action Items of the company's meetings within the period (the user's readable ones), with the meeting date."""
-	meetings = {m.name: m.meeting_date for m in meetings_of([b.name for b in committee_bodies(company, body_type)], from_date, to_date)}
+	meetings = {
+		m.name: m.meeting_date
+		for m in meetings_of([b.name for b in committee_bodies(company, body_type)], from_date, to_date)
+	}
 	items = frappe.get_list(
 		"Meeting Action Item",
 		{"body_meeting": ["in", list(meetings) or [""]]},
-		["name", "body_meeting", "body", "resolution_no", "action", "responsible", "due_date", "status", "action_taken"],
+		[
+			"name",
+			"body_meeting",
+			"body",
+			"resolution_no",
+			"action",
+			"responsible",
+			"due_date",
+			"status",
+			"action_taken",
+		],
 		order_by="due_date asc",
 	)
 	for item in items:

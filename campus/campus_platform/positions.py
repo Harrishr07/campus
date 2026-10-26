@@ -161,7 +161,9 @@ def ensure_seed_positions():
 	"""Create the standard positions and their roles if missing. Idempotent; never edits existing ones."""
 	for code, title, scope_type, role, single_holder in SEED_POSITIONS:
 		if not frappe.db.exists("Role", role):
-			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+				ignore_permissions=True
+			)
 		if not frappe.db.exists("Position", code):
 			frappe.get_doc(
 				{

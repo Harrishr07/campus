@@ -23,7 +23,9 @@ class Circular(ApprovableDocument, Document):
 		super().validate()
 		rule = frappe.get_doc("Audience Rule", self.audience_rule)
 		if rule.company != self.company:
-			frappe.throw(_("Audience Rule {0} belongs to {1}, not {2}.").format(rule.name, rule.company, self.company))
+			frappe.throw(
+				_("Audience Rule {0} belongs to {1}, not {2}.").format(rule.name, rule.company, self.company)
+			)
 		check_author_audience(rule)
 		audience.ensure_available(rule)
 		if self.publish_until and get_datetime(self.publish_until) <= get_datetime(self.publish_from):
@@ -35,7 +37,9 @@ class Circular(ApprovableDocument, Document):
 
 def publish_if_due(name):
 	"""Notify the audience once, when the circular is approved and its window is open."""
-	docstatus, published_on = frappe.db.get_value("Circular", name, ["docstatus", "published_on"], for_update=True)
+	docstatus, published_on = frappe.db.get_value(
+		"Circular", name, ["docstatus", "published_on"], for_update=True
+	)
 	circular = frappe.get_doc("Circular", name)
 	if docstatus != 1 or published_on or not is_live(circular):
 		return

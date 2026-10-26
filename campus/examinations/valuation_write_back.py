@@ -28,11 +28,23 @@ def write_back_pending(exam_session, course):
 	"""Exam Confidential: queue the write-back of the course's final marks; returns how many scripts were queued."""
 	require_confidential()
 	frappe.db.get_value("Exam Session", exam_session, "name", for_update=True)  # one start at a time
-	statuses = frappe.get_all("Valuation Allocation", {"exam_session": exam_session, "course": course}, pluck="status")
+	statuses = frappe.get_all(
+		"Valuation Allocation", {"exam_session": exam_session, "course": course}, pluck="status"
+	)
 	if not statuses or any(status != "Completed" for status in statuses):
-		frappe.throw(_("Every valuation allocation of {0} must be Completed before its marks are written.").format(course))
-	if frappe.db.exists(DUMMY_NUMBER_MAP, {"exam_session": exam_session, "course": course, "void": 0, "finalised": 0}):
-		frappe.throw(_("Every script of {0} must be bundled and finalised before its marks are written.").format(course))
+		frappe.throw(
+			_("Every valuation allocation of {0} must be Completed before its marks are written.").format(
+				course
+			)
+		)
+	if frappe.db.exists(
+		DUMMY_NUMBER_MAP, {"exam_session": exam_session, "course": course, "void": 0, "finalised": 0}
+	):
+		frappe.throw(
+			_("Every script of {0} must be bundled and finalised before its marks are written.").format(
+				course
+			)
+		)
 	if live_run(RUN_TYPE, exam_session=exam_session, course=course):
 		frappe.throw(_("A write-back of {0} is still running.").format(course))
 	names = frappe.get_all(
@@ -48,11 +60,19 @@ def write_back_pending(exam_session, course):
 
 def write_back_item(name, run):
 	"""Bulk handler (DB only, no commit): write one script's final mark; True when written."""
-	row = frappe.db.get_value(DUMMY_NUMBER_MAP, name, [*dummy_numbers.SCRIPT_FIELDS, "finalised", "ese_written"], as_dict=True, for_update=True)
+	row = frappe.db.get_value(
+		DUMMY_NUMBER_MAP,
+		name,
+		[*dummy_numbers.SCRIPT_FIELDS, "finalised", "ese_written"],
+		as_dict=True,
+		for_update=True,
+	)
 	if not row or not row.finalised or row.ese_written or row.void:
 		return False
 	issue = write_back(row)
-	frappe.db.set_value(DUMMY_NUMBER_MAP, name, {"ese_written": int(not issue), "write_back_issue": issue or None})
+	frappe.db.set_value(
+		DUMMY_NUMBER_MAP, name, {"ese_written": int(not issue), "write_back_issue": issue or None}
+	)
 	return not issue
 
 
@@ -62,7 +82,9 @@ def write_back(row):
 		return _("The result has been run: the mark sheet is locked.")
 	if seating.absent(row.student, row.exam_session, row.course):
 		return _("Marked absent in the exam hall: the absent mark is kept.")
-	sheet_name = frappe.db.get_value(SHEET, {"exam_session": row.exam_session, "course_offering": offering_of(row)})
+	sheet_name = frappe.db.get_value(
+		SHEET, {"exam_session": row.exam_session, "course_offering": offering_of(row)}
+	)
 	sheet = sheet_name and frappe.get_doc(SHEET, sheet_name)
 	mark_row = sheet and next((r for r in sheet.marks if r.student == row.student), None)
 	if not mark_row:

@@ -21,7 +21,11 @@ def comments():
 
 
 COURSE_EXIT = [
-	{"question": f"The course helped me attain CO{n}: (outcome {n} of the course)", "question_type": AGREE, "course_outcome": f"CO{n}"}
+	{
+		"question": f"The course helped me attain CO{n}: (outcome {n} of the course)",
+		"question_type": AGREE,
+		"course_outcome": f"CO{n}",
+	}
 	for n in range(1, 6)
 ] + comments()
 CURRICULUM = [
@@ -56,10 +60,12 @@ TEMPLATES = {
 	),
 	"Feedback Reminder": (
 		"Reminder: {{ doc.campaign_title }}",
-		"If you have not yet given your feedback \"{{ doc.campaign_title }}\", please do so by "
+		'If you have not yet given your feedback "{{ doc.campaign_title }}", please do so by '
 		"{{ frappe.format(doc.end_date, {'fieldtype': 'Date'}) }}: {{ context.link }} (please ignore this if you already have).",
 	),
 }
+
+
 def setup_feedback():
 	seed_feedback_forms()
 	seed_feedback_templates()
@@ -71,7 +77,13 @@ def seed_feedback_forms():
 		if frappe.db.exists("Feedback Form", name):
 			continue
 		frappe.get_doc(
-			{"doctype": "Feedback Form", "form_name": name, "is_placeholder": 1, "description": PLACEHOLDER, "questions": questions}
+			{
+				"doctype": "Feedback Form",
+				"form_name": name,
+				"is_placeholder": 1,
+				"description": PLACEHOLDER,
+				"questions": questions,
+			}
 		).insert(ignore_permissions=True)
 
 

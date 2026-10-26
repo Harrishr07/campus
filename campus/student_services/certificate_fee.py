@@ -16,7 +16,9 @@ FEE_HEAD = "Certificate"
 
 def queue_fee(request):
 	if request.fee_amount:
-		frappe.enqueue(JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, request=request.name)
+		frappe.enqueue(
+			JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, request=request.name
+		)
 
 
 def raise_fee(request):

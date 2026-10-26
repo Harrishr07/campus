@@ -40,7 +40,9 @@ def build_rows(name):
 	"""Draft only: queue the (re)build of the batch's rows (queue long); the batch is Building until it is done."""
 	locked_batch(name, ("Draft",), _("Rows are built while the batch is a Draft."))
 	frappe.db.set_value(BATCH, name, {"status": BUILDING, "summary": _("Building the rows...")})
-	frappe.enqueue(BUILD_JOB, queue="long", name=name, job_id=job_id(name), deduplicate=True, enqueue_after_commit=True)
+	frappe.enqueue(
+		BUILD_JOB, queue="long", name=name, job_id=job_id(name), deduplicate=True, enqueue_after_commit=True
+	)
 	return BUILDING
 
 
@@ -85,7 +87,11 @@ def reconcile_building():
 	for name in frappe.get_all(BATCH, {"status": BUILDING}, pluck="name"):
 		if is_job_enqueued(job_id(name)):
 			continue
-		frappe.db.set_value(BATCH, name, {"status": "Draft", "summary": _("Building the rows was interrupted; build them again.")})
+		frappe.db.set_value(
+			BATCH,
+			name,
+			{"status": "Draft", "summary": _("Building the rows was interrupted; build them again.")},
+		)
 		frappe.db.commit()  # nosemgrep: one batch per transaction
 
 
@@ -99,22 +105,35 @@ def export(name):
 @frappe.whitelist(methods=["POST"])
 def reexport(name):
 	"""Validate the corrected rows again (Rejected and ticked Corrected, or Refused) and export the ones now valid."""
-	batch = locked_batch(name, ("Acknowledged", "Partly Rejected"), _("Re-export after the university acknowledged the last export."))
+	batch = locked_batch(
+		name,
+		("Acknowledged", "Partly Rejected"),
+		_("Re-export after the university acknowledged the last export."),
+	)
 	builder, ready = RowBuilder(batch), []
 	for row in batch.rows:
 		if row.status == REFUSED or (row.status == REJECTED and row.corrected):
-			fresh = builder.row(row.student, frappe._dict(course=row.course, course_offering=row.course_offering, kind=row.kind))
+			fresh = builder.row(
+				row.student,
+				frappe._dict(course=row.course, course_offering=row.course_offering, kind=row.kind),
+			)
 			row.update({f: fresh[f] for f in (*ROW_VALUES, "reason")})
 			if fresh["status"] == READY:
 				ready.append(row)
 	if not ready:  # the refreshed reasons are kept; nothing is sent
 		save(batch)
-		frappe.msgprint(_("No corrected row is ready to export: {0}").format(refused_list(batch)), indicator="orange")
+		frappe.msgprint(
+			_("No corrected row is ready to export: {0}").format(refused_list(batch)), indicator="orange"
+		)
 		return {"file_url": None, "exported": 0, "refused": refused_rows(batch)}
 	for row in ready:
 		if row.rejection_reason:
-			batch.add_comment("Info", _("{0} {1} sent again after the university's rejection: {2}").format(
-				escape_html(row.student), escape_html(row.course), escape_html(row.rejection_reason)))
+			batch.add_comment(
+				"Info",
+				_("{0} {1} sent again after the university's rejection: {2}").format(
+					escape_html(row.student), escape_html(row.course), escape_html(row.rejection_reason)
+				),
+			)
 		row.update({"rejection_reason": None, "corrected": 0})
 	return send(batch, ready)
 
@@ -124,8 +143,19 @@ def record_transmission(name, reference, transmitted_on):
 	"""The exported file was sent to the university under `reference` on `transmitted_on`."""
 	batch = locked_batch(name, (EXPORTED,), _("Record the transmission of an exported batch."))
 	reference = required_text(reference, _("Transmission Reference"))
-	batch.update({"status": "Transmitted", "transmission_reference": reference, "transmitted_on": getdate(transmitted_on)})
-	batch.add_comment("Info", _("Export {0} transmitted on {1}: {2}").format(batch.export_count, batch.transmitted_on, escape_html(reference)))
+	batch.update(
+		{
+			"status": "Transmitted",
+			"transmission_reference": reference,
+			"transmitted_on": getdate(transmitted_on),
+		}
+	)
+	batch.add_comment(
+		"Info",
+		_("Export {0} transmitted on {1}: {2}").format(
+			batch.export_count, batch.transmitted_on, escape_html(reference)
+		),
+	)
 	return save(batch)
 
 
@@ -140,7 +170,12 @@ def record_acknowledgement(name, reference, acknowledged_on):
 	rejected = any(row.status == REJECTED for row in batch.rows)
 	batch.update({"status": "Partly Rejected" if rejected else "Acknowledged", "acknowledgement_reference": reference,
 		"acknowledged_on": getdate(acknowledged_on)})  # fmt: skip
-	batch.add_comment("Info", _("Export {0} acknowledged on {1}: {2}").format(batch.export_count, batch.acknowledged_on, escape_html(reference)))
+	batch.add_comment(
+		"Info",
+		_("Export {0} acknowledged on {1}: {2}").format(
+			batch.export_count, batch.acknowledged_on, escape_html(reference)
+		),
+	)
 	return save(batch)
 
 
@@ -174,7 +209,9 @@ def send(batch, rows):
 	).insert(ignore_permissions=True)  # fmt: skip
 	batch.update({"status": EXPORTED, "exported_file": file.file_url, "transmission_reference": None, "transmitted_on": None,
 		"acknowledgement_reference": None, "acknowledged_on": None})  # fmt: skip
-	batch.add_comment("Info", _("Export {0}: {1} rows on {2}.").format(batch.export_count, len(rows), now_datetime()))
+	batch.add_comment(
+		"Info", _("Export {0}: {1} rows on {2}.").format(batch.export_count, len(rows), now_datetime())
+	)
 	save(batch)
 	refused = refused_rows(batch)
 	if refused:
@@ -183,7 +220,11 @@ def send(batch, rows):
 
 
 def refused_rows(batch):
-	return [{"student": r.student, "course": r.course, "reason": r.reason} for r in batch.rows if r.status in (REFUSED, REJECTED)]
+	return [
+		{"student": r.student, "course": r.course, "reason": r.reason}
+		for r in batch.rows
+		if r.status in (REFUSED, REJECTED)
+	]
 
 
 def save(batch):
@@ -219,11 +260,24 @@ def file_records(batch, rows):
 	fmt = frappe.get_doc("University Exam Format", batch.export_format)
 	students = {
 		s.name: s
-		for s in frappe.get_all("Student", {"name": ["in", [r.student for r in rows]]}, ["name", "student_name", "oc_register_no", "date_of_birth"])
+		for s in frappe.get_all(
+			"Student",
+			{"name": ["in", [r.student for r in rows]]},
+			["name", "student_name", "oc_register_no", "date_of_birth"],
+		)
 	}
-	courses = dict(frappe.get_all("Course", {"name": ["in", [r.course for r in rows]]}, ["name", "course_name"], as_list=True))
+	courses = dict(
+		frappe.get_all(
+			"Course", {"name": ["in", [r.course for r in rows]]}, ["name", "course_name"], as_list=True
+		)
+	)
 	programs = dict(
-		frappe.get_all("Exam Registration", {"exam_session": batch.exam_session, "student": ["in", list(students)]}, ["student", "program"], as_list=True)
+		frappe.get_all(
+			"Exam Registration",
+			{"exam_session": batch.exam_session, "student": ["in", list(students)]},
+			["student", "program"],
+			as_list=True,
+		)
 	)
 	records = []
 	for row in rows:
@@ -254,7 +308,9 @@ class RowBuilder:
 		missing = [s for s in set(students) if s not in self.students]
 		if not missing:
 			return
-		for row in frappe.get_all("Student", {"name": ["in", missing]}, ["name", "student_name", UNIVERSITY_REGISTER_FIELD]):
+		for row in frappe.get_all(
+			"Student", {"name": ["in", missing]}, ["name", "student_name", UNIVERSITY_REGISTER_FIELD]
+		):
 			self.students[row.name] = row
 		self.regulations.update(results.student_regulations(missing))
 
@@ -304,9 +360,13 @@ class RowBuilder:
 		if offering not in self.finals:
 			schedule = cia_schedule(offering)
 			if not schedule:
-				self.finals[offering] = _("{0} has no CIA Schedule, so its CIA is never finalised").format(offering)
+				self.finals[offering] = _("{0} has no CIA Schedule, so its CIA is never finalised").format(
+					offering
+				)
 			elif not schedule.locked_on:
-				self.finals[offering] = _("the CIA of {0} is not finalised (CIA Schedule {1} is not locked)").format(offering, schedule.name)
+				self.finals[offering] = _(
+					"the CIA of {0} is not finalised (CIA Schedule {1} is not locked)"
+				).format(offering, schedule.name)
 			else:
 				self.finals[offering] = None
 		return self.finals[offering]
@@ -314,10 +374,17 @@ class RowBuilder:
 	def offering_marks(self, offering):
 		"""{student: CIA} on the session's sheets of the offering."""
 		if offering not in self.marks:
-			sheets = frappe.get_all("Mark Sheet Entry", {"exam_session": self.batch.exam_session, "course_offering": offering}, pluck="name")
+			sheets = frappe.get_all(
+				"Mark Sheet Entry",
+				{"exam_session": self.batch.exam_session, "course_offering": offering},
+				pluck="name",
+			)
 			self.marks[offering] = dict(
 				frappe.get_all(
-					"Mark Sheet Entry Row", {"parent": ["in", sheets or [""]], "parenttype": "Mark Sheet Entry"}, ["student", "cia"], as_list=True
+					"Mark Sheet Entry Row",
+					{"parent": ["in", sheets or [""]], "parenttype": "Mark Sheet Entry"},
+					["student", "cia"],
+					as_list=True,
 				)
 			)
 		return self.marks[offering]
@@ -334,7 +401,11 @@ class RowBuilder:
 		return self.rule_sets[regulation]
 
 	def arrear_cia(self, student, course):
-		earlier = [r for r in results.earlier_rows(student, self.batch.exam_session, self.term) if r.course == course and r.course_offering]
+		earlier = [
+			r
+			for r in results.earlier_rows(student, self.batch.exam_session, self.term)
+			if r.course == course and r.course_offering
+		]
 		if not earlier:
 			return 0, 0, _("no earlier attempt of {0} to carry the CIA from").format(course)
 		carried = [r.cia for r in earlier if r.result in SAT]
@@ -360,11 +431,19 @@ SERVER_ROW_FIELDS = (
 
 def validate_batch(doc):
 	"""Controller validate: the session is an Affiliated one, the format an Export one; rows and status are the server's."""
-	session = frappe.db.get_value("Exam Session", doc.exam_session, ["company", "academic_term", "examination_mode"], as_dict=True)
+	session = frappe.db.get_value(
+		"Exam Session", doc.exam_session, ["company", "academic_term", "examination_mode"], as_dict=True
+	)
 	if session.examination_mode != AFFILIATED:
-		frappe.throw(_("{0} is not an Affiliated session; its examinations are the college's.").format(frappe.bold(doc.exam_session)))
+		frappe.throw(
+			_("{0} is not an Affiliated session; its examinations are the college's.").format(
+				frappe.bold(doc.exam_session)
+			)
+		)
 	fmt = university_files.format_for(doc.export_format, "Export", session.company)
-	doc.update({"company": session.company, "academic_term": session.academic_term, "university": fmt.university})
+	doc.update(
+		{"company": session.company, "academic_term": session.academic_term, "university": fmt.university}
+	)
 	if doc.is_new():
 		doc.update({**{f: None for f in SERVER_FIELDS}, "status": "Draft", "export_count": 0})
 		doc.set("rows", [])
@@ -393,9 +472,15 @@ def guard_rows(doc, before):
 		if plain(was.rejection_reason) != plain(row.rejection_reason) and not (
 			doc.status == "Transmitted" and row.status == EXPORTED and row.export_no == doc.export_count
 		):
-			frappe.throw(_("Row {0}: enter the university's rejection reason on a row of the transmitted export.").format(row.idx))
+			frappe.throw(
+				_(
+					"Row {0}: enter the university's rejection reason on a row of the transmitted export."
+				).format(row.idx)
+			)
 		if bool(was.corrected) != bool(row.corrected) and row.status != REJECTED:
-			frappe.throw(_("Row {0}: only a row the university rejected is marked corrected.").format(row.idx))
+			frappe.throw(
+				_("Row {0}: only a row the university rejected is marked corrected.").format(row.idx)
+			)
 
 
 def plain(value):

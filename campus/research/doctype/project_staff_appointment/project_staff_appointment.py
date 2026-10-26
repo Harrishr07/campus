@@ -18,13 +18,26 @@ from campus.research.api import check_sanction_open
 from campus.research.budget_control import is_spending_account
 from campus.research.setup import PROJECT_STAFF
 
-SANCTION_FIELDS = ["name", "docstatus", "company", "project", "cost_center", "start_date", "end_date", "project_closure"]
+SANCTION_FIELDS = [
+	"name",
+	"docstatus",
+	"company",
+	"project",
+	"cost_center",
+	"start_date",
+	"end_date",
+	"project_closure",
+]
 
 
 class ProjectStaffAppointment(Document):
 	def validate(self):
 		sanction = self.get_sanction()
-		self.company, self.project, self.cost_center = sanction.company, sanction.project, sanction.cost_center
+		self.company, self.project, self.cost_center = (
+			sanction.company,
+			sanction.project,
+			sanction.cost_center,
+		)
 		self.to_date = sanction.end_date
 		self.check_employee()
 		self.check_period(sanction)
@@ -35,8 +48,13 @@ class ProjectStaffAppointment(Document):
 	def before_submit(self):
 		sanction = self.get_sanction(for_update=True)
 		self.check_one_appointment(lock=True)
-		self.previous_contract_end_date, self.previous_relieving_date, self.previous_designation = frappe.db.get_value(
-			"Employee", self.employee, ["contract_end_date", "relieving_date", "designation"], for_update=True
+		self.previous_contract_end_date, self.previous_relieving_date, self.previous_designation = (
+			frappe.db.get_value(
+				"Employee",
+				self.employee,
+				["contract_end_date", "relieving_date", "designation"],
+				for_update=True,
+			)
 		)
 		frappe.db.set_value(
 			"Employee", self.employee,
@@ -62,24 +80,36 @@ class ProjectStaffAppointment(Document):
 		return bool(
 			frappe.db.get_value(
 				self.doctype,
-				{"employee": self.employee, "docstatus": 1, "name": ["!=", self.name], "from_date": [">", self.from_date]},
-				"name", for_update=True,
+				{
+					"employee": self.employee,
+					"docstatus": 1,
+					"name": ["!=", self.name],
+					"from_date": [">", self.from_date],
+				},
+				"name",
+				for_update=True,
 			)  # fmt: skip
 		)
 
 	def get_sanction(self, for_update=False):
-		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
+		sanction = frappe.db.get_value(
+			"Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update
+		)
 		if not sanction or sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted.").format(self.sanction))
 		check_sanction_open(sanction.name, sanction.project_closure)
 		return sanction
 
 	def check_employee(self):
-		company, employment_type = frappe.db.get_value("Employee", self.employee, ["company", "employment_type"])
+		company, employment_type = frappe.db.get_value(
+			"Employee", self.employee, ["company", "employment_type"]
+		)
 		if company != self.company:
 			frappe.throw(_("Employee {0} is not an employee of {1}.").format(self.employee, self.company))
 		if employment_type != PROJECT_STAFF:
-			frappe.throw(_("Employee {0} must have the employment type {1}.").format(self.employee, _(PROJECT_STAFF)))
+			frappe.throw(
+				_("Employee {0} must have the employment type {1}.").format(self.employee, _(PROJECT_STAFF))
+			)
 
 	def check_period(self, sanction):
 		if not getdate(sanction.start_date) <= getdate(self.from_date) <= getdate(sanction.end_date):
@@ -90,38 +120,62 @@ class ProjectStaffAppointment(Document):
 			)
 
 	def check_structure(self):
-		structure = frappe.db.get_value("Salary Structure", self.salary_structure, ["docstatus", "is_active", "company"], as_dict=True)
-		if not structure or structure.docstatus != 1 or structure.is_active != "Yes" or structure.company != self.company:
-			frappe.throw(_("Salary Structure {0} must be a submitted, active structure of {1}.").format(self.salary_structure, self.company))
+		structure = frappe.db.get_value(
+			"Salary Structure", self.salary_structure, ["docstatus", "is_active", "company"], as_dict=True
+		)
+		if (
+			not structure
+			or structure.docstatus != 1
+			or structure.is_active != "Yes"
+			or structure.company != self.company
+		):
+			frappe.throw(
+				_("Salary Structure {0} must be a submitted, active structure of {1}.").format(
+					self.salary_structure, self.company
+				)
+			)
 
 	def salary_head(self, sanction):
 		"""The one revenue head of the sanction every earning, and every component posting to an expense (an employer
 		contribution), of the structure posts to."""
 		heads = frappe.get_all(
-			"Sanction Head", {"parent": sanction.name, "parenttype": "Sanction", "is_capital": 0}, pluck="budget_head"
+			"Sanction Head",
+			{"parent": sanction.name, "parenttype": "Sanction", "is_capital": 0},
+			pluck="budget_head",
 		)
 		found = set()
 		for component, parentfield in frappe.get_all(
 			"Salary Detail", {"parent": self.salary_structure, "parenttype": "Salary Structure"},
 			["salary_component", "parentfield"], as_list=True,
 		):  # fmt: skip
-			account = frappe.db.get_value("Salary Component Account", {"parent": component, "company": self.company}, "account")
+			account = frappe.db.get_value(
+				"Salary Component Account", {"parent": component, "company": self.company}, "account"
+			)
 			if parentfield != "earnings" and not is_spending_account(account):
 				continue  # a deduction to a payable
 			head = account and frappe.db.get_value(
 				"Grant Budget Head Account",
-				{"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head", "company": self.company, "account": account},
+				{
+					"parent": ["in", heads or [""]],
+					"parenttype": "Grant Budget Head",
+					"company": self.company,
+					"account": account,
+				},
 				"parent",
 			)
 			if not head:
 				frappe.throw(
-					_("Salary component {0} posts to {1}, which is not an account of a budget head of Sanction {2}.").format(
-						component, account or _("no account of {0}").format(self.company), sanction.name
-					)
+					_(
+						"Salary component {0} posts to {1}, which is not an account of a budget head of Sanction {2}."
+					).format(component, account or _("no account of {0}").format(self.company), sanction.name)
 				)
 			found.add(head)
 		if len(found) != 1:
-			frappe.throw(_("The earnings of Salary Structure {0} must post to one budget head of the sanction.").format(self.salary_structure))
+			frappe.throw(
+				_(
+					"The earnings of Salary Structure {0} must post to one budget head of the sanction."
+				).format(self.salary_structure)
+			)
 		return found.pop()
 
 	def check_one_appointment(self, lock=False):
@@ -131,13 +185,19 @@ class ProjectStaffAppointment(Document):
 			"name", for_update=lock,
 		)  # fmt: skip
 		if other:
-			frappe.throw(_("Employee {0} already holds Project Staff Appointment {1}.").format(self.employee, other))
+			frappe.throw(
+				_("Employee {0} already holds Project Staff Appointment {1}.").format(self.employee, other)
+			)
 
 	def make_assignment(self, sanction):
 		assignment = frappe.get_doc(
 			{
-				"doctype": "Salary Structure Assignment", "employee": self.employee, "salary_structure": self.salary_structure,
-				"company": self.company, "from_date": self.from_date, "base": self.base,
+				"doctype": "Salary Structure Assignment",
+				"employee": self.employee,
+				"salary_structure": self.salary_structure,
+				"company": self.company,
+				"from_date": self.from_date,
+				"base": self.base,
 				"currency": frappe.get_cached_value("Company", self.company, "default_currency"),
 				"payroll_cost_centers": [{"cost_center": sanction.cost_center, "percentage": 100}],
 			}  # fmt: skip

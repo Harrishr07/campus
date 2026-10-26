@@ -44,7 +44,11 @@ def lock_examiner(claim):
 
 
 def valuation_work(claim):
-	who = {"employee": claim.employee} if claim.examiner_type == "Internal" else {"external_member": claim.external_member}
+	who = (
+		{"employee": claim.employee}
+		if claim.examiner_type == "Internal"
+		else {"external_member": claim.external_member}
+	)
 	if claim.examiner_user:
 		who["examiner"] = claim.examiner_user
 	allocations = frappe.get_all(
@@ -56,14 +60,21 @@ def valuation_work(claim):
 	valued = {
 		row.allocation: row
 		for row in frappe.get_all(
-			"Valuation Entry", {"allocation": ["in", [a.name for a in allocations]], "docstatus": 1},
-			["allocation", {"COUNT": "name", "as": "scripts"}, {"MAX": "creation", "as": "last_valued"}], group_by="allocation",
+			"Valuation Entry",
+			{"allocation": ["in", [a.name for a in allocations]], "docstatus": 1},
+			["allocation", {"COUNT": "name", "as": "scripts"}, {"MAX": "creation", "as": "last_valued"}],
+			group_by="allocation",
 		)  # fmt: skip
 	}
 	return [
 		line(
-			f"Valuation Round {a.valuation_round}", "Valuation Allocation", a.name, _("Bundle {0}").format(a.bundle),
-			valued[a.name].last_valued, valued[a.name].scripts, ("Valuation", a.bundle, a.valuation_round, a.name),
+			f"Valuation Round {a.valuation_round}",
+			"Valuation Allocation",
+			a.name,
+			_("Bundle {0}").format(a.bundle),
+			valued[a.name].last_valued,
+			valued[a.name].scripts,
+			("Valuation", a.bundle, a.valuation_round, a.name),
 		)
 		for a in allocations
 		if a.name in valued
@@ -81,13 +92,20 @@ def qp_work(claim):
 	setting = set(
 		frappe.get_all(
 			"QP Nomination Setter",
-			{"parenttype": "QP Setter Nomination", "parent": ["in", [n.name for n in nominations] or [""]], "employee": claim.employee},
+			{
+				"parenttype": "QP Setter Nomination",
+				"parent": ["in", [n.name for n in nominations] or [""]],
+				"employee": claim.employee,
+			},
 			pluck="parent",
 		)
 	)
 	lines = []
 	for n in nominations:
-		for activity, applies in ((QP_SETTING, n.name in setting), (QP_SCRUTINY, n.scrutiniser == claim.employee)):
+		for activity, applies in (
+			(QP_SETTING, n.name in setting),
+			(QP_SCRUTINY, n.scrutiniser == claim.employee),
+		):
 			if applies:
 				key = ("QP", claim.exam_session, n.course, activity, claim.employee)
 				lines.append(line(activity, "QP Setter Nomination", n.name, n.course, n.deadline, 1, key))
@@ -99,7 +117,12 @@ def released_papers(exam_session):
 	nomination's deadline, when the paper was set)."""
 	papers = frappe.get_all(
 		"Question Paper",
-		{"exam_session": exam_session, "docstatus": 1, "moderation_status": "Approved", "release_at": ["<=", now_datetime()]},
+		{
+			"exam_session": exam_session,
+			"docstatus": 1,
+			"moderation_status": "Approved",
+			"release_at": ["<=", now_datetime()],
+		},
 		["course", "release_at"],
 	)
 	return {p.course: getdate(p.release_at) for p in papers}
@@ -116,7 +139,12 @@ def invigilation_work(claim):
 	)  # fmt: skip
 	return [
 		line(
-			INVIGILATION, "Invigilation Roster", roster, f"{d.exam_date} {d.slot or ''} {d.room or ''}".strip(), d.exam_date, 1,
+			INVIGILATION,
+			"Invigilation Roster",
+			roster,
+			f"{d.exam_date} {d.slot or ''} {d.room or ''}".strip(),
+			d.exam_date,
+			1,
 			("Invigilation", claim.exam_session, d.exam_date, d.slot, claim.employee),
 		)
 		for d in duties
@@ -163,9 +191,20 @@ def price(company, lines):
 	for row in lines:
 		if row["activity"] not in versions:
 			versions[row["activity"]] = frappe.get_all(
-				"Remuneration Rate", {"company": company, "activity": row["activity"]}, ["name", "from_date", "rate", "item"]
+				"Remuneration Rate",
+				{"company": company, "activity": row["activity"]},
+				["name", "from_date", "rate", "item"],
 			)
 		rate = rules.rate_on(versions[row["activity"]], row["work_date"])
 		if not rate:
-			frappe.throw(_("No Remuneration Rate for {0} in {1} on {2}.").format(_(row["activity"]), company, frappe.format(row["work_date"], "Date")))
-		row.update(rate=rate["rate"], amount=rules.line_amount(row["quantity"], rate["rate"]), remuneration_rate=rate["name"], item=rate["item"])
+			frappe.throw(
+				_("No Remuneration Rate for {0} in {1} on {2}.").format(
+					_(row["activity"]), company, frappe.format(row["work_date"], "Date")
+				)
+			)
+		row.update(
+			rate=rate["rate"],
+			amount=rules.line_amount(row["quantity"], rate["rate"]),
+			remuneration_rate=rate["name"],
+			item=rate["item"],
+		)

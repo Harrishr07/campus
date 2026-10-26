@@ -15,7 +15,9 @@ batch of that cohort apply.
 
 REPEAT, LATE = "repeat", "late"
 EXCEEDS, BAD_DATES, AMBIGUOUS = "exceeds", "bad dates", "ambiguous"
-WITHDRAWN = "WD"  # the Student Result Course result of a withdrawn course (its grade is the regulation's code)
+WITHDRAWN = (
+	"WD"  # the Student Result Course result of a withdrawn course (its grade is the regulation's code)
+)
 YEAR_DAYS = 366  # the longest calendar year: a break of exactly one calendar year always fits
 
 
@@ -81,7 +83,9 @@ def pick_cohort_year(candidates, batch_name, batch_year, cohort_year):
 	if not candidates:
 		return None
 	names = sorted(name for name, _start in candidates)
-	patterned = batch_name.replace(str(batch_year), str(cohort_year)) if str(batch_year) in batch_name else None
+	patterned = (
+		batch_name.replace(str(batch_year), str(cohort_year)) if str(batch_year) in batch_name else None
+	)
 	if patterned in names:
 		return patterned
 	if len({start for _name, start in candidates}) > 1:

@@ -27,7 +27,11 @@ class SharedServiceAgreement(Document):
 		members = [m.company for m in self.members]
 		others = frappe.get_all(
 			"Shared Service Member",
-			filters={"company": ["in", members], "parenttype": self.doctype, "parent": ["!=", self.name or ""]},
+			filters={
+				"company": ["in", members],
+				"parenttype": self.doctype,
+				"parent": ["!=", self.name or ""],
+			},
 			fields=["parent", "company"],
 		)
 		for other in others:

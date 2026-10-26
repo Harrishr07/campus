@@ -32,13 +32,19 @@ def graduate_record(student):
 	regulation = get_regulation(student)
 	attempts = published_attempts(student)
 	semesters = group_semesters(attempts)
-	scheme_counts = frappe.db.get_value("Grading Scheme", {"regulation": regulation}, "count_additional_with_honours")
+	scheme_counts = frappe.db.get_value(
+		"Grading Scheme", {"regulation": regulation}, "count_additional_with_honours"
+	)
 	rule = classification_rule(regulation)
 	consolidated = graduation_rules.consolidate(
 		attempts, registration_types(student), rule.honours_credits if rule else 0, scheme_counts
 	)
 	record = frappe._dict(info, **consolidated, regulation=regulation, semesters=semesters)
-	record.program = semesters[-1].program if semesters else frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1}, "program")
+	record.program = (
+		semesters[-1].program
+		if semesters
+		else frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1}, "program")
+	)
 	record.completion_term = semesters[-1].academic_term if semesters else None
 	record.completed = (
 		bool(semesters) and any(s.is_final_year for s in semesters) and not record.arrears
@@ -68,13 +74,17 @@ def had_arrears(student):
 	history = {}
 	for row in published_attempts(student):
 		history.setdefault(row.course, []).append(row.result)
-	appeared = {course: found for course, found in history.items() if any(r not in rules.NOT_SAT for r in found)}
+	appeared = {
+		course: found for course, found in history.items() if any(r not in rules.NOT_SAT for r in found)
+	}
 	return not rules.passed_at_first_appearance(appeared)  # a course only ever withdrawn from was never sat
 
 
 def required_credits(regulation):
 	"""The regulation's credit total for the degree (Curriculum Rule min_total_credits), or 0 when none is set."""
-	return regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits") or 0
+	return (
+		regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits")
+	) or 0
 
 
 def classification_rule(regulation):
@@ -85,7 +95,8 @@ def classification_rule(regulation):
 def published_attempts(student):
 	"""Course rows of the student's published latest result versions, oldest term first."""
 	result, row, session, term, course = (
-		frappe.qb.DocType(n) for n in (RESULT, "Student Result Course", "Exam Session", "Academic Term", "Course")
+		frappe.qb.DocType(n)
+		for n in (RESULT, "Student Result Course", "Exam Session", "Academic Term", "Course")
 	)
 	return (
 		frappe.qb.from_(result)
@@ -98,11 +109,25 @@ def published_attempts(student):
 		.left_join(course)
 		.on(course.name == row.course)
 		.select(
-			result.name.as_("student_result"), result.exam_session, result.academic_term, result.program, result.sgpa,
-			session.is_final_year, row.course, course.course_name, row.credits, row.grade, row.grade_point, row.result,
+			result.name.as_("student_result"),
+			result.exam_session,
+			result.academic_term,
+			result.program,
+			result.sgpa,
+			session.is_final_year,
+			row.course,
+			course.course_name,
+			row.credits,
+			row.grade,
+			row.grade_point,
+			row.result,
 			row.in_gpa,
 		)  # fmt: skip
-		.where((result.student == student) & (result.is_latest == 1) & (Coalesce(result.pending_ratification, 0) == 0))
+		.where(
+			(result.student == student)
+			& (result.is_latest == 1)
+			& (Coalesce(result.pending_ratification, 0) == 0)
+		)
 		.where((session.status == PUBLISHED) & (session.publish_at <= now_datetime()))
 		.orderby(term.term_start_date)
 		.orderby(result.creation)
@@ -128,7 +153,10 @@ def group_semesters(attempts):
 
 def registration_types(student):
 	"""{course: Additional / Honours / Minor} from the student's submitted Course Registrations."""
-	registration, item = frappe.qb.DocType("Course Registration"), frappe.qb.DocType("Course Registration Item")
+	registration, item = (
+		frappe.qb.DocType("Course Registration"),
+		frappe.qb.DocType("Course Registration Item"),
+	)
 	rows = (
 		frappe.qb.from_(registration)
 		.join(item)

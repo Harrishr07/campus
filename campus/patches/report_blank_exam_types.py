@@ -17,6 +17,9 @@ def execute():
 	if not rows:
 		return
 	lines = [f"{row.parent} semester {row.semester}: {row.course}" for row in rows]
-	message = "Curriculum courses with no exam type (set each explicitly; Result Runs refuse them):\n" + "\n".join(lines)
+	message = (
+		"Curriculum courses with no exam type (set each explicitly; Result Runs refuse them):\n"
+		+ "\n".join(lines)
+	)
 	print(f"campus: {len(rows)} " + message)
 	frappe.log_error(title="Curriculum courses with no exam type", message=message)

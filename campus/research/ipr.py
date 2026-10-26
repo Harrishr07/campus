@@ -6,7 +6,12 @@ from frappe import _
 from frappe.utils import flt, getdate
 
 STAGES = ("Filed", "Published", "Examined", "Granted", "Licensed")
-STAGE_DATES = {"Filed": "filed_date", "Published": "published_date", "Examined": "examined_date", "Granted": "granted_date"}
+STAGE_DATES = {
+	"Filed": "filed_date",
+	"Published": "published_date",
+	"Examined": "examined_date",
+	"Granted": "granted_date",
+}
 LICENSABLE = ("Granted", "Licensed")
 
 
@@ -20,11 +25,17 @@ def check_lifecycle(status, dates, before_status=None, today=None):
 	reached = STAGES.index(stage)
 	previous = None
 	for name in STAGES[: STAGES.index("Licensed")]:
-		field, value = STAGE_DATES[name], dates.get(STAGE_DATES[name])
+		value = dates.get(STAGE_DATES[name])
 		if STAGES.index(name) == reached and not value:
-			frappe.throw(_("Enter the {0} date for a patent that is {1}.").format(_(name).lower(), _(status).lower()))
+			frappe.throw(
+				_("Enter the {0} date for a patent that is {1}.").format(_(name).lower(), _(status).lower())
+			)
 		if value and STAGES.index(name) > reached:
-			frappe.throw(_("The {0} date can't be set while the patent is {1}.").format(_(name).lower(), _(status).lower()))
+			frappe.throw(
+				_("The {0} date can't be set while the patent is {1}.").format(
+					_(name).lower(), _(status).lower()
+				)
+			)
 		if not value:
 			continue
 		if today and getdate(value) > getdate(today):

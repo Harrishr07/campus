@@ -47,7 +47,9 @@ def grant_lab_asset_read():
 	if not frappe.db.exists("Role", LAB_ROLE):  # seeded with the No Dues offices (campus_finance)
 		return
 	for doctype in LAB_ASSET_DOCTYPES:
-		if not frappe.db.exists("DocType", doctype) or frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": LAB_ROLE}):
+		if not frappe.db.exists("DocType", doctype) or frappe.db.exists(
+			"Custom DocPerm", {"parent": doctype, "role": LAB_ROLE}
+		):
 			continue
 		name = add_permission(doctype, LAB_ROLE, 0)  # copies the standard DocPerms first, so none is lost
 		update_custom_docperm(name, {"read": 1, "report": 1, "export": 0})

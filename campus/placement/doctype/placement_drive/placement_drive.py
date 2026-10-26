@@ -7,8 +7,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from campus.placement.eligibility import template_values
 from campus.placement.doctype.recruiter.recruiter import MOU_DEAD
+from campus.placement.eligibility import template_values
 
 
 class PlacementDrive(Document):
@@ -27,22 +27,39 @@ class PlacementDrive(Document):
 			return
 		company = frappe.db.get_value("Placement Eligibility Template", self.eligibility_template, "company")
 		if company != self.company:
-			frappe.throw(_("Template {0} belongs to {1}, not {2}").format(self.eligibility_template, company, self.company))
+			frappe.throw(
+				_("Template {0} belongs to {1}, not {2}").format(
+					self.eligibility_template, company, self.company
+				)
+			)
 		if self.is_new() and self.criteria_untouched():
 			self.update(template_values(self.eligibility_template))
 
 	def criteria_untouched(self):
 		return not (
-			self.min_cgpa or self.any_standing_arrears or self.max_standing_arrears or self.gender or self.programs or self.batches
+			self.min_cgpa
+			or self.any_standing_arrears
+			or self.max_standing_arrears
+			or self.gender
+			or self.programs
+			or self.batches
 		)
 
 	def check_recruiter(self):
-		company, disabled, mou = frappe.db.get_value("Recruiter", self.recruiter, ["company", "disabled", "mou"])
+		company, disabled, mou = frappe.db.get_value(
+			"Recruiter", self.recruiter, ["company", "disabled", "mou"]
+		)
 		if company != self.company:
-			frappe.throw(_("Recruiter {0} belongs to {1}, not {2}").format(self.recruiter, company, self.company))
+			frappe.throw(
+				_("Recruiter {0} belongs to {1}, not {2}").format(self.recruiter, company, self.company)
+			)
 		if disabled and self.has_value_changed("recruiter"):
 			frappe.throw(_("Recruiter {0} is disabled").format(self.recruiter))
-		if self.status == "Open" and mou and frappe.db.get_value("Institutional MoU", mou, "status") in MOU_DEAD:
+		if (
+			self.status == "Open"
+			and mou
+			and frappe.db.get_value("Institutional MoU", mou, "status") in MOU_DEAD
+		):
 			frappe.throw(_("The MoU {0} with {1} is no longer in force").format(mou, self.recruiter))
 
 	def check_rounds(self):

@@ -45,7 +45,10 @@ def minimum_reasons(minimums, category, percent, exam):
 def find_rule(program, regulation=None):
 	"""Enabled rule for `program`: the one naming `regulation`, else the one with a blank regulation."""
 	rules = frappe.get_all(
-		"Eligibility Rule", {"program": program, "enabled": 1}, ["name", "regulation"], order_by="modified desc"
+		"Eligibility Rule",
+		{"program": program, "enabled": 1},
+		["name", "regulation"],
+		order_by="modified desc",
 	)
 	for wanted in (regulation, None):
 		for rule in rules:

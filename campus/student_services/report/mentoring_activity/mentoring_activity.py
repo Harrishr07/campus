@@ -11,7 +11,14 @@ from frappe import _
 from frappe.utils import today
 
 from campus.campus_platform.company_scope import permitted_companies
-from campus.student_services.mentoring import HOD_ROLE, INTERACTION, MENTOR_ROLE, NOTE, COUNSELLOR_ROLE, PRINCIPAL_ROLE
+from campus.student_services.mentoring import (
+	COUNSELLOR_ROLE,
+	HOD_ROLE,
+	INTERACTION,
+	MENTOR_ROLE,
+	NOTE,
+	PRINCIPAL_ROLE,
+)
 from campus.student_services.mentoring_access import hod_departments
 
 # Not Class Advisor: Counselling Note is confidential (campus.setup.permission_matrix.CONFIDENTIAL_READERS)
@@ -32,7 +39,9 @@ def execute(filters=None):
 	frappe.only_for(REPORT_ROLES)
 	check_company(filters.company)
 	filters.departments = department_scope(frappe.session.user)
-	filters.own_mentees = filters.departments == ()  # neither company-wide nor heading a department: own mentees only
+	filters.own_mentees = (
+		filters.departments == ()
+	)  # neither company-wide nor heading a department: own mentees only
 	return columns(), rows(filters)
 
 
@@ -53,13 +62,29 @@ def check_company(company):
 
 def columns():
 	return [
-		{"fieldname": "mentor", "label": _("Mentor"), "fieldtype": "Link", "options": "Employee", "width": 140},
+		{
+			"fieldname": "mentor",
+			"label": _("Mentor"),
+			"fieldtype": "Link",
+			"options": "Employee",
+			"width": 140,
+		},
 		{"fieldname": "mentor_name", "label": _("Mentor Name"), "fieldtype": "Data", "width": 180},
 		{"fieldname": "mentees", "label": _("Mentees"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "note_count", "label": _("Counselling Notes"), "fieldtype": "Int", "width": 140},
 		{"fieldname": "confidential_count", "label": _("Confidential"), "fieldtype": "Int", "width": 110},
-		{"fieldname": "interaction_count", "label": _("Parent Interactions"), "fieldtype": "Int", "width": 150},
-		{"fieldname": "overdue_follow_ups", "label": _("Overdue Follow-ups"), "fieldtype": "Int", "width": 150},
+		{
+			"fieldname": "interaction_count",
+			"label": _("Parent Interactions"),
+			"fieldtype": "Int",
+			"width": 150,
+		},
+		{
+			"fieldname": "overdue_follow_ups",
+			"label": _("Overdue Follow-ups"),
+			"fieldtype": "Int",
+			"width": 150,
+		},
 	]
 
 
@@ -70,12 +95,22 @@ def rows(filters):
 		f" and s.oc_mentor != ''{scoped} group by s.oc_mentor",
 		filters,
 	)
-	count = lambda doctype, date_field, aggregate: counts_by_mentor(per_mentor_sql(doctype, date_field, aggregate, filters), filters)  # noqa: E731
+	count = lambda doctype, date_field, aggregate: counts_by_mentor(
+		per_mentor_sql(doctype, date_field, aggregate, filters), filters
+	)  # noqa: E731
 	notes = count(NOTE, "note_date", "count(*)")
 	confidential = count(NOTE, "note_date", "sum(ifnull(r.is_confidential, 0))")
 	interactions = count(INTERACTION, "interaction_date", "count(*)")
-	overdue = count(INTERACTION, "interaction_date", "sum(ifnull(r.follow_up_done, 0) = 0 and r.follow_up_due < %(today)s)")
-	names = dict(frappe.get_all("Employee", {"name": ["in", list(mentees) or [""]]}, ["name", "employee_name"], as_list=True))
+	overdue = count(
+		INTERACTION,
+		"interaction_date",
+		"sum(ifnull(r.follow_up_done, 0) = 0 and r.follow_up_due < %(today)s)",
+	)
+	names = dict(
+		frappe.get_all(
+			"Employee", {"name": ["in", list(mentees) or [""]]}, ["name", "employee_name"], as_list=True
+		)
+	)
 	return [
 		{
 			"mentor": mentor, "mentor_name": names.get(mentor), "mentees": mentees[mentor], "note_count": notes.get(mentor, 0),

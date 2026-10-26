@@ -9,10 +9,9 @@ from frappe.utils import add_days, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
 from campus.examinations import registration, results
-from campus.student_services import student_records_setup
-from campus.student_services import lifecycle
-from campus.student_services.lifecycle import LOG
+from campus.student_services import lifecycle, student_records_setup
 from campus.student_services.api import pending_bridge_courses, withdrawal_code
+from campus.student_services.lifecycle import LOG
 from campus.tests.approval_fixtures import make_department
 from campus.tests.factories import make_user
 from campus.tests.test_results import COLLEGE, PROGRAM, ExamFixture, make_course
@@ -31,7 +30,11 @@ def hold(position, user, scope):
 
 
 def clear_records():
-	for doctype, child in ((WITHDRAWAL, "Exam Withdrawal Course"), (REJOIN, "Rejoin Bridge Course"), (BREAK, None)):
+	for doctype, child in (
+		(WITHDRAWAL, "Exam Withdrawal Course"),
+		(REJOIN, "Rejoin Bridge Course"),
+		(BREAK, None),
+	):
 		names = frappe.get_all(doctype, {"company": COLLEGE}, pluck="name") or [""]
 		frappe.db.delete("Approval Request", {"reference_doctype": doctype, "reference_name": ["in", names]})
 		if child:
@@ -93,7 +96,14 @@ class StudentRecordsFixture(ExamFixture):
 	def study_break(self, student, from_date, to_date, **extra):
 		frappe.set_user(CLERK)
 		doc = frappe.get_doc(
-			{"doctype": BREAK, "student": student.name, "from_date": from_date, "to_date": to_date, "reason": "Illness", **extra}
+			{
+				"doctype": BREAK,
+				"student": student.name,
+				"from_date": from_date,
+				"to_date": to_date,
+				"reason": "Illness",
+				**extra,
+			}
 		).insert()
 		frappe.set_user("Administrator")
 		return doc
@@ -115,8 +125,13 @@ class TestExamWithdrawal(StudentRecordsFixture):
 		self.run_session()
 		doc = self.approve_fully(self.withdrawal(self.s22, ["EXM LB"]))
 		self.assertEqual(doc.docstatus, 1)
-		request = frappe.get_doc("Approval Request", {"reference_doctype": WITHDRAWAL, "reference_name": doc.name})
-		self.assertEqual([(a.action, a.approver) for a in request.actions if a.level], [("Approve", HOD_USER), ("Approve", PRINCIPAL_USER)])
+		request = frappe.get_doc(
+			"Approval Request", {"reference_doctype": WITHDRAWAL, "reference_name": doc.name}
+		)
+		self.assertEqual(
+			[(a.action, a.approver) for a in request.actions if a.level],
+			[("Approve", HOD_USER), ("Approve", PRINCIPAL_USER)],
+		)
 		result, grades = self.grades(self.s22)
 		self.assertEqual(grades["EXM LB"], ("WD", 0, "WD"))
 		self.assertEqual(grades["EXM TH"], ("B+", 7, "Pass"))
@@ -186,7 +201,9 @@ class TestExamWithdrawal(StudentRecordsFixture):
 			self.withdrawal(self.s22, [BRIDGE_COURSE])
 
 	def test_a_withdrawal_is_only_for_courses_of_the_term(self):
-		doc = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name})
+		doc = frappe.get_doc(
+			"Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}
+		)
 		doc.append("courses", {"course": "EXM PRE", "kind": "Arrear"})
 		doc.save()
 		with self.assertRaisesRegex(frappe.ValidationError, "course of the term"):
@@ -228,7 +245,14 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		self.assertEqual(self.status(self.s22), "On Break")
 		log = frappe.get_last_doc(LOG, {"student": self.s22.name}, order_by="creation desc, name desc")
 		self.assertEqual(
-			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.approved_by),
+			(
+				log.from_status,
+				log.to_status,
+				log.effective_date,
+				log.source_doctype,
+				log.source_name,
+				log.approved_by,
+			),
 			("Active", "On Break", getdate("2025-06-01"), BREAK, doc.name, PRINCIPAL_USER),
 		)
 		doc.cancel()
@@ -240,8 +264,12 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		with self.assertRaisesRegex(frappe.ValidationError, "reason"):
 			self.study_break(self.s22, "2025-06-01", "2026-08-31", exceptional=1)
 		with self.assertRaisesRegex(frappe.ValidationError, "2 year"):
-			self.study_break(self.s22, "2025-06-01", "2027-07-31", exceptional=1, exceptional_reason="Surgery")
-		doc = self.study_break(self.s22, "2025-06-01", "2026-08-31", exceptional=1, exceptional_reason="Surgery")
+			self.study_break(
+				self.s22, "2025-06-01", "2027-07-31", exceptional=1, exceptional_reason="Surgery"
+			)
+		doc = self.study_break(
+			self.s22, "2025-06-01", "2026-08-31", exceptional=1, exceptional_reason="Surgery"
+		)
 		self.assertEqual(self.approve_fully(doc).docstatus, 1)
 
 	def test_earlier_breaks_count_and_a_student_on_break_cannot_take_another(self):
@@ -264,7 +292,10 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		doc.cancel()
 		self.assertEqual(self.status(self.s22), "Active")
 		log = frappe.get_last_doc(LOG, {"student": self.s22.name}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Reversal", "On Break", "Active", doc.name))
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.source_name),
+			("Reversal", "On Break", "Active", doc.name),
+		)
 
 	def pre_l01_break(self, previous):
 		"""A break approved before L-01 as the patch finds it (old academic statuses, no lifecycle record), migrated."""
@@ -282,7 +313,10 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		frappe.get_doc(BREAK, doc.name).cancel()
 		self.assertEqual(self.status(self.s22), "Active")
 		log = frappe.get_last_doc(LOG, {"student": self.s22.name}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "On Break", "Active", migrated.name))
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.reverses),
+			("Reversal", "On Break", "Active", migrated.name),
+		)
 
 	def test_a_detained_student_on_a_migrated_break_keeps_the_detention(self):
 		doc = self.pre_l01_break("Detained")
@@ -293,7 +327,9 @@ class TestBreakOfStudy(StudentRecordsFixture):
 		self.assertEqual(self.status(self.s22), "Active")
 
 	def test_the_follow_up_mapping_fixes_a_site_migrated_by_the_first_patch_body(self):
-		doc = self.pre_l01_break("Long Absent")  # migrated already (has a record), old value left on the break
+		doc = self.pre_l01_break(
+			"Long Absent"
+		)  # migrated already (has a record), old value left on the break
 		frappe.db.set_value(BREAK, doc.name, "previous_status", "Detained")
 		frappe.db.set_value("Student", self.s22.name, "oc_detained", 0)
 		lifecycle.migrate_break_statuses()
@@ -324,9 +360,13 @@ class TestBreakOfStudy(StudentRecordsFixture):
 	def test_students_on_break_are_skipped_by_registration_and_the_result_run(self):
 		self.assertIn(self.s22.name, results.program_students(self.session, PROGRAM))
 		self.approve_fully(self.study_break(self.s22, "2025-06-01", "2025-12-31"))
-		before = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}).modified
+		before = frappe.get_doc(
+			"Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}
+		).modified
 		self.assertIsNone(registration.register(self.s22.name, self.session.name))
-		after = frappe.get_doc("Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}).modified
+		after = frappe.get_doc(
+			"Exam Registration", {"exam_session": self.session.name, "student": self.s22.name}
+		).modified
 		self.assertEqual(before, after)
 		students = results.program_students(self.session, PROGRAM)
 		self.assertNotIn(self.s22.name, students)

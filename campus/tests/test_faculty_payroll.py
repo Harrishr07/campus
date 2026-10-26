@@ -30,7 +30,13 @@ import frappe
 from frappe.utils import flt
 
 from campus.faculty import api, payroll_setup
-from campus.faculty.payroll_setup import EPF, PT, seed_salary_components, seed_salary_structures, structure_name
+from campus.faculty.payroll_setup import (
+	EPF,
+	PT,
+	seed_salary_components,
+	seed_salary_structures,
+	structure_name,
+)
 from campus.tests import demo
 from campus.tests.utils import CampusTestCase
 
@@ -45,15 +51,24 @@ class PayrollFixture(CampusTestCase):
 	def setUp(self):
 		super().setUp()
 		frappe.db.savepoint("payroll_test")
-		self.addCleanup(frappe.db.rollback, save_point="payroll_test")  # tearDown is skipped when setUp raises
+		self.addCleanup(
+			frappe.db.rollback, save_point="payroll_test"
+		)  # tearDown is skipped when setUp raises
 		self.company = demo.ENGINEERING
 		self.aided, self.self_financing = demo.employee_of("faculty_1"), demo.employee_of("faculty_2")
 		seed_salary_components()
 		seed_salary_structures(self.company)
 		self.make_holiday_list()
-		if not frappe.db.exists("Fiscal Year", {"year_start_date": ["<=", START], "year_end_date": [">=", END]}):
+		if not frappe.db.exists(
+			"Fiscal Year", {"year_start_date": ["<=", START], "year_end_date": [">=", END]}
+		):
 			frappe.get_doc(
-				{"doctype": "Fiscal Year", "year": "Payroll Test 2026-27", "year_start_date": "2026-04-01", "year_end_date": "2027-03-31"}
+				{
+					"doctype": "Fiscal Year",
+					"year": "Payroll Test 2026-27",
+					"year_start_date": "2026-04-01",
+					"year_end_date": "2027-03-31",
+				}
 			).insert(ignore_permissions=True)
 
 	def submit_structures(self, company=None):
@@ -62,7 +77,12 @@ class PayrollFixture(CampusTestCase):
 
 	def make_holiday_list(self):
 		holiday_list = frappe.get_doc(
-			{"doctype": "Holiday List", "holiday_list_name": "Payroll Test 2026", "from_date": "2026-01-01", "to_date": "2026-12-31"}
+			{
+				"doctype": "Holiday List",
+				"holiday_list_name": "Payroll Test 2026",
+				"from_date": "2026-01-01",
+				"to_date": "2026-12-31",
+			}
 		).insert(ignore_permissions=True)
 		frappe.get_doc(
 			{
@@ -91,7 +111,14 @@ class PayrollFixture(CampusTestCase):
 
 	def direct_slip(self, employee, start=START, end=END):
 		return frappe.get_doc(
-			{"doctype": "Salary Slip", "employee": employee, "start_date": start, "end_date": end, "posting_date": end, "payroll_frequency": "Monthly"}
+			{
+				"doctype": "Salary Slip",
+				"employee": employee,
+				"start_date": start,
+				"end_date": end,
+				"posting_date": end,
+				"payroll_frequency": "Monthly",
+			}
 		).insert(ignore_permissions=True)
 
 
@@ -99,7 +126,12 @@ AIDED_ROWS = {
 	"Basic": 40000, "Academic Grade Pay": 9000, "Dearness Allowance": 24500, "House Rent Allowance": 4900,
 	"Campus EPF": 1800,
 }  # fmt: skip
-SELF_FINANCING_ROWS = {"Basic": 30000, "Dearness Allowance": 3000, "House Rent Allowance": 3000, "Campus EPF": 1800}
+SELF_FINANCING_ROWS = {
+	"Basic": 30000,
+	"Dearness Allowance": 3000,
+	"House Rent Allowance": 3000,
+	"Campus EPF": 1800,
+}
 
 
 class TestPayrollEntry(PayrollFixture):
@@ -107,11 +139,16 @@ class TestPayrollEntry(PayrollFixture):
 		self.submit_structures()
 		self.assign_demo_staff()
 		entry = self.payroll_entry()
-		slips = {s.employee: frappe.get_doc("Salary Slip", s.name) for s in frappe.get_all("Salary Slip", {"payroll_entry": entry.name}, ["name", "employee"])}
+		slips = {
+			s.employee: frappe.get_doc("Salary Slip", s.name)
+			for s in frappe.get_all("Salary Slip", {"payroll_entry": entry.name}, ["name", "employee"])
+		}
 
 		self.assertEqual(set(slips), {self.aided, self.self_financing})
 		self.assertEqual(self.amounts(slips[self.aided]), (AIDED_ROWS, (78400, 1800, 76600)))
-		self.assertEqual(self.amounts(slips[self.self_financing]), (SELF_FINANCING_ROWS, (36000, 1800, 34200)))
+		self.assertEqual(
+			self.amounts(slips[self.self_financing]), (SELF_FINANCING_ROWS, (36000, 1800, 34200))
+		)
 
 	def test_increment_by_promotion_is_a_new_assignment(self):
 		self.submit_structures()
@@ -129,7 +166,10 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(rows["Basic"], 41200)
 		self.assertEqual(rows["Dearness Allowance"], 25100)
 		self.assertEqual(totals, (80320, 1800, 78520))
-		self.assertEqual(self.amounts(self.direct_slip(self.aided, "2026-07-01", "2026-07-31")), (AIDED_ROWS, (78400, 1800, 76600)))
+		self.assertEqual(
+			self.amounts(self.direct_slip(self.aided, "2026-07-01", "2026-07-31")),
+			(AIDED_ROWS, (78400, 1800, 76600)),
+		)
 
 	def test_pf_on_the_prorated_wage_with_leave_without_pay(self):
 		self.submit_structures()
@@ -139,7 +179,15 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(slip.payment_days, 15)
 		self.assertEqual(
 			self.amounts(slip),
-			({"Basic": 15000, "Dearness Allowance": 1500, "House Rent Allowance": 1500, "Campus EPF": 1800}, (18000, 1800, 16200)),
+			(
+				{
+					"Basic": 15000,
+					"Dearness Allowance": 1500,
+					"House Rent Allowance": 1500,
+					"Campus EPF": 1800,
+				},
+				(18000, 1800, 16200),
+			),
 		)
 
 	def test_pf_under_the_ceiling_with_leave_without_pay(self):
@@ -150,7 +198,15 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(slip.payment_days, 10)
 		self.assertEqual(
 			self.amounts(slip),
-			({"Basic": 10000, "Dearness Allowance": 1000, "House Rent Allowance": 1000, "Campus EPF": 1320}, (12000, 1320, 10680)),
+			(
+				{
+					"Basic": 10000,
+					"Dearness Allowance": 1000,
+					"House Rent Allowance": 1000,
+					"Campus EPF": 1320,
+				},
+				(12000, 1320, 10680),
+			),
 		)
 
 	def test_submitted_slips_carry_campus_epf_as_provident_fund(self):
@@ -158,11 +214,21 @@ class TestPayrollEntry(PayrollFixture):
 		self.submit_structures()
 		self.assign_demo_staff()
 		self.direct_slip(self.self_financing).submit()
-		slip, detail, component = frappe.qb.DocType("Salary Slip"), frappe.qb.DocType("Salary Detail"), frappe.qb.DocType("Salary Component")
+		slip, detail, component = (
+			frappe.qb.DocType("Salary Slip"),
+			frappe.qb.DocType("Salary Detail"),
+			frappe.qb.DocType("Salary Component"),
+		)
 		pf = (
 			frappe.qb.from_(slip)
-			.join(detail).on((detail.parent == slip.name) & (detail.parenttype == "Salary Slip") & (detail.parentfield == "deductions"))
-			.join(component).on(component.name == detail.salary_component)
+			.join(detail)
+			.on(
+				(detail.parent == slip.name)
+				& (detail.parenttype == "Salary Slip")
+				& (detail.parentfield == "deductions")
+			)
+			.join(component)
+			.on(component.name == detail.salary_component)
 			.where((slip.docstatus == 1) & (slip.company == self.company) & (slip.start_date == START))
 			.where(component.component_type == "Provident Fund")
 			.select(slip.employee, detail.salary_component, detail.amount)
@@ -177,15 +243,21 @@ class TestPayrollEntry(PayrollFixture):
 		self.assertEqual(
 			self.amounts(self.direct_slip(employee)),
 			(
-				{"Basic": 12346, "Dearness Allowance": 1235, "House Rent Allowance": 1234.6, "Campus EPF": 1630},
+				{
+					"Basic": 12346,
+					"Dearness Allowance": 1235,
+					"House Rent Allowance": 1234.6,
+					"Campus EPF": 1630,
+				},
 				(14815.6, 1630, 13185.6),
 			),
 		)
 
-
 	def payroll_entry(self):
 		company = frappe.get_cached_doc("Company", self.company)
-		entry = frappe.new_doc("Payroll Entry")  # new_doc: the defaults the employee filter needs (not timesheet-based)
+		entry = frappe.new_doc(
+			"Payroll Entry"
+		)  # new_doc: the defaults the employee filter needs (not timesheet-based)
 		entry.update(
 			{
 				"company": self.company, "posting_date": END, "payroll_frequency": "Monthly",
@@ -193,7 +265,9 @@ class TestPayrollEntry(PayrollFixture):
 				"cost_center": company.cost_center, "payroll_payable_account": company.default_payroll_payable_account,
 			}
 		)  # fmt: skip
-		frappe.db.set_value("Account", entry.payroll_payable_account, "account_type", "Payable")  # a college sets this once (guide step 1)
+		frappe.db.set_value(
+			"Account", entry.payroll_payable_account, "account_type", "Payable"
+		)  # a college sets this once (guide step 1)
 		entry.fill_employee_details()
 		entry.insert(ignore_permissions=True)
 		entry.submit()  # creates the draft slips (fewer than 30 employees: synchronously)
@@ -205,8 +279,13 @@ class TestAssignmentHelper(PayrollFixture):
 		self.submit_structures()
 		self.assign_demo_staff()
 		for employee, mode in ((self.aided, AIDED), (self.self_financing, SELF_FINANCING)):
-			ssa = frappe.get_doc("Salary Structure Assignment", {"employee": employee, "from_date": ASSIGNED_FROM})
-			self.assertEqual((ssa.salary_structure, ssa.company, ssa.docstatus), (structure_name(mode, self.company), self.company, 1))
+			ssa = frappe.get_doc(
+				"Salary Structure Assignment", {"employee": employee, "from_date": ASSIGNED_FROM}
+			)
+			self.assertEqual(
+				(ssa.salary_structure, ssa.company, ssa.docstatus),
+				(structure_name(mode, self.company), self.company, 1),
+			)
 
 	def test_assignment_refuses_bad_input(self):
 		self.submit_structures()
@@ -242,7 +321,9 @@ class TestAssignmentHelper(PayrollFixture):
 		first = api.assign_salary_structure(self.aided, ASSIGNED_FROM, base=40000, variable=9000)
 		again = api.assign_salary_structure(self.aided, ASSIGNED_FROM, base=45000)
 		self.assertEqual(again, first)
-		self.assertEqual(frappe.db.count("Salary Structure Assignment", {"employee": self.aided, "docstatus": ["<", 2]}), 1)
+		self.assertEqual(
+			frappe.db.count("Salary Structure Assignment", {"employee": self.aided, "docstatus": ["<", 2]}), 1
+		)
 		self.assertEqual(frappe.db.get_value("Salary Structure Assignment", first, "base"), 40000)
 
 	def test_only_the_employee_company_structure_is_used(self):
@@ -273,18 +354,33 @@ class TestSeeding(PayrollFixture):
 			self.assertTrue(frappe.db.exists("Salary Component", component))
 		frappe.db.set_value("Salary Component", "Dearness Allowance", "description", "Edited by the college")
 		seed_salary_components()
-		self.assertEqual(frappe.db.get_value("Salary Component", "Dearness Allowance", "description"), "Edited by the college")
+		self.assertEqual(
+			frappe.db.get_value("Salary Component", "Dearness Allowance", "description"),
+			"Edited by the college",
+		)
 
 	def test_campus_statutory_components(self):
-		epf = frappe.db.get_value("Salary Component", EPF, ["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"])
-		pt = frappe.db.get_value("Salary Component", PT, ["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"])
+		epf = frappe.db.get_value(
+			"Salary Component",
+			EPF,
+			["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"],
+		)
+		pt = frappe.db.get_value(
+			"Salary Component",
+			PT,
+			["type", "component_type", "depends_on_payment_days", "round_to_the_nearest_integer"],
+		)
 		self.assertEqual(epf, ("Deduction", "Provident Fund", 0, 1))
 		self.assertEqual(pt, ("Deduction", "Professional Tax", 0, 1))
 
 	def test_hrms_statutory_components_are_never_changed(self):
 		fields = ["component_type", "depends_on_payment_days", "round_to_the_nearest_integer"]
 		for name in ("Provident Fund", "Professional Tax"):
-			frappe.db.set_value("Salary Component", name, {"component_type": "", "depends_on_payment_days": 1, "round_to_the_nearest_integer": 0})
+			frappe.db.set_value(
+				"Salary Component",
+				name,
+				{"component_type": "", "depends_on_payment_days": 1, "round_to_the_nearest_integer": 0},
+			)
 		frappe.db.set_value("Company", self.company, "oc_payroll_templates_seeded", 0)
 		for mode in ("Aided", "Self-financing"):
 			frappe.delete_doc("Salary Structure", structure_name(mode, self.company), ignore_permissions=True)
@@ -292,7 +388,9 @@ class TestSeeding(PayrollFixture):
 		seed_salary_structures(self.company)
 		for name in ("Provident Fund", "Professional Tax"):
 			self.assertEqual(frappe.db.get_value("Salary Component", name, fields), ("", 1, 0), name)
-		used = frappe.get_all("Salary Detail", {"parent": structure_name("Aided", self.company)}, pluck="salary_component")
+		used = frappe.get_all(
+			"Salary Detail", {"parent": structure_name("Aided", self.company)}, pluck="salary_component"
+		)
 		self.assertNotIn("Provident Fund", used)
 		self.assertIn(EPF, used)
 
@@ -306,12 +404,20 @@ class TestSeeding(PayrollFixture):
 		self.assertEqual(frappe.db.get_value("Salary Component", EPF, "component_type"), "Provident Fund")
 		self.submit_structures()
 		self.assign_demo_staff()
-		self.assertEqual(self.amounts(self.direct_slip(self.self_financing)), (SELF_FINANCING_ROWS, (36000, 1800, 34200)))
+		self.assertEqual(
+			self.amounts(self.direct_slip(self.self_financing)), (SELF_FINANCING_ROWS, (36000, 1800, 34200))
+		)
 
-	WIRED = {"component_type": "Provident Fund", "depends_on_payment_days": 0, "round_to_the_nearest_integer": 1}
+	WIRED = {
+		"component_type": "Provident Fund",
+		"depends_on_payment_days": 0,
+		"round_to_the_nearest_integer": 1,
+	}
 
 	def wire_like_the_old_version(self):
-		frappe.db.set_value("Salary Component", "Provident Fund", dict(self.WIRED))  # set_value adds modified to the dict
+		frappe.db.set_value(
+			"Salary Component", "Provident Fund", dict(self.WIRED)
+		)  # set_value adds modified to the dict
 		frappe.db.set_value("Salary Component", "Professional Tax", "component_type", "Professional Tax")
 		frappe.db.set_global(payroll_setup.OLD_STATUTORY_FLAG, 1)
 
@@ -321,11 +427,18 @@ class TestSeeding(PayrollFixture):
 	def test_retiring_the_old_wiring_swaps_drafts_and_changes_no_hrms_component(self):
 		self.wire_like_the_old_version()
 		seeded = frappe.get_doc("Salary Structure", structure_name(AIDED, self.company))
-		frappe.db.set_value("Salary Detail", seeded.deductions[0].name, {"salary_component": "Provident Fund", "abbr": "PF"})
+		frappe.db.set_value(
+			"Salary Detail", seeded.deductions[0].name, {"salary_component": "Provident Fund", "abbr": "PF"}
+		)
 		payroll_setup.retire_statutory_wiring()
 		self.assertEqual(self.hrms_pf(), ("Provident Fund", 0, 1))
-		self.assertEqual(frappe.db.get_value("Salary Component", "Professional Tax", "component_type"), "Professional Tax")
-		self.assertEqual(frappe.db.get_value("Salary Detail", seeded.deductions[0].name, ["salary_component", "abbr"]), (EPF, "CEPF"))
+		self.assertEqual(
+			frappe.db.get_value("Salary Component", "Professional Tax", "component_type"), "Professional Tax"
+		)
+		self.assertEqual(
+			frappe.db.get_value("Salary Detail", seeded.deductions[0].name, ["salary_component", "abbr"]),
+			(EPF, "CEPF"),
+		)
 		self.assertFalse(frappe.db.get_global(payroll_setup.OLD_STATUTORY_FLAG))
 
 	def test_submitted_structure_on_hrms_pf_keeps_its_pf(self):
@@ -364,7 +477,9 @@ class TestSeeding(PayrollFixture):
 	def test_structures_seeded_as_drafts_once_per_mode(self):
 		seed_salary_structures(self.company)
 		for mode in (AIDED, SELF_FINANCING):
-			rows = frappe.get_all("Salary Structure", {"company": self.company, "oc_funding_mode": mode}, ["name", "docstatus"])
+			rows = frappe.get_all(
+				"Salary Structure", {"company": self.company, "oc_funding_mode": mode}, ["name", "docstatus"]
+			)
 			self.assertEqual(rows, [{"name": structure_name(mode, self.company), "docstatus": 0}])
 
 	def test_edited_structure_is_not_overwritten(self):

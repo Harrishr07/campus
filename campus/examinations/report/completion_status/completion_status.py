@@ -17,8 +17,20 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 200},
-		{"fieldname": "batch", "label": _("Batch"), "fieldtype": "Link", "options": "Academic Year", "width": 120},
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 200,
+		},
+		{
+			"fieldname": "batch",
+			"label": _("Batch"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 120,
+		},
 		{"fieldname": "checked", "label": _("Checked"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "complete", "label": _("Complete"), "fieldtype": "Int", "width": 100},
 		{"fieldname": "incomplete", "label": _("Incomplete"), "fieldtype": "Int", "width": 100},
@@ -34,7 +46,11 @@ def data(filters):
 		if filters.get(field):
 			conditions[field] = filters.get(field)
 	checks = frappe.get_list(
-		"Completion Check", conditions, ["student", "program", "batch", "result"], order_by="creation desc, name desc", limit=0
+		"Completion Check",
+		conditions,
+		["student", "program", "batch", "result"],
+		order_by="creation desc, name desc",
+		limit=0,
 	)
 	latest, rows = set(), {}
 	for check in checks:

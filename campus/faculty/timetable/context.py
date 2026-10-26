@@ -15,7 +15,10 @@ NOT_TIMETABLED = ("Exam Hall",)
 
 
 def entries_of(timetable):
-	return [Entry(r.offering, r.section, r.faculty, r.room, r.day, cint(r.period), r.kind) for r in timetable.entries]
+	return [
+		Entry(r.offering, r.section, r.faculty, r.room, r.day, cint(r.period), r.kind)
+		for r in timetable.entries
+	]
 
 
 def build_grid(timetable):
@@ -35,17 +38,29 @@ def build_grid(timetable):
 def rooms_of(company):
 	"""Rooms of the company by name; a room without a type counts as a classroom."""
 	rooms = frappe.get_all("Room", {"oc_company": company}, ["name", "seating_capacity", "oc_room_type"])
-	return {r.name: Room(cint(r.seating_capacity), r.oc_room_type in LAB_TYPES) for r in rooms if r.oc_room_type not in NOT_TIMETABLED}
+	return {
+		r.name: Room(cint(r.seating_capacity), r.oc_room_type in LAB_TYPES)
+		for r in rooms
+		if r.oc_room_type not in NOT_TIMETABLED
+	}
 
 
 def strengths_of(offerings):
 	"""Students of each offering: the active ones in the group, else the group's maximum strength."""
 	if not offerings:
 		return {}
-	limits = dict(frappe.get_all("Student Group", {"name": ["in", list(offerings)]}, ["name", "max_strength"], as_list=True))
+	limits = dict(
+		frappe.get_all(
+			"Student Group", {"name": ["in", list(offerings)]}, ["name", "max_strength"], as_list=True
+		)
+	)
 	counts = dict(
 		frappe.get_all(
-			"Student Group Student", {"parent": ["in", list(offerings)], "active": 1}, ["parent", {"COUNT": "name"}], group_by="parent", as_list=True
+			"Student Group Student",
+			{"parent": ["in", list(offerings)], "active": 1},
+			["parent", {"COUNT": "name"}],
+			group_by="parent",
+			as_list=True,
 		)
 	)
 	return {o: cint(counts.get(o)) or cint(limits.get(o)) for o in offerings}
@@ -65,9 +80,18 @@ def complete_entries(timetable):
 	template = frappe.get_cached_doc("Timetable Slot Template", timetable.slot_template)
 	times = {p.period: (p.from_time, p.to_time) for p in template.periods}
 	for row in timetable.entries:
-		group = frappe.db.get_value("Student Group", row.offering, ["academic_term", "program", "oc_semester", "oc_section"], as_dict=True)
+		group = frappe.db.get_value(
+			"Student Group",
+			row.offering,
+			["academic_term", "program", "oc_semester", "oc_section"],
+			as_dict=True,
+		)
 		if not group or group.academic_term != timetable.academic_term:
-			frappe.throw(_("Row {0}: {1} is not a course offering of {2}.").format(row.idx, row.offering, timetable.academic_term))
+			frappe.throw(
+				_("Row {0}: {1} is not a course offering of {2}.").format(
+					row.idx, row.offering, timetable.academic_term
+				)
+			)
 		row.section = section_of(row.offering, group)
 		row.from_time, row.to_time = times.get(cint(row.period), (None, None))
 
@@ -85,7 +109,11 @@ def allocation_rows(timetable):
 		filters["department"] = timetable.department
 	allocations = frappe.get_all("Course Allocation", filters, pluck="name")
 	if not allocations:
-		frappe.throw(_("No submitted Course Allocation for {0} in {1}.").format(timetable.academic_term, timetable.department or timetable.company))
+		frappe.throw(
+			_("No submitted Course Allocation for {0} in {1}.").format(
+				timetable.academic_term, timetable.department or timetable.company
+			)
+		)
 	return frappe.get_all(
 		"Course Allocation Row", {"parent": ["in", allocations]},
 		["offering", "faculty", "lecture_hours", "tutorial_hours", "practical_hours"], order_by="parent, idx",
@@ -97,7 +125,11 @@ def sessions_of(timetable, grid):
 	rows = allocation_rows(timetable)
 	groups = {
 		g.name: g
-		for g in frappe.get_all("Student Group", {"name": ["in", list({r.offering for r in rows})]}, ["name", "program", "oc_semester", "oc_section"])
+		for g in frappe.get_all(
+			"Student Group",
+			{"name": ["in", list({r.offering for r in rows})]},
+			["name", "program", "oc_semester", "oc_section"],
+		)
 	}
 	strengths = strengths_of(set(groups))
 	sessions = []
@@ -108,7 +140,12 @@ def sessions_of(timetable, grid):
 			+ [("Tutorial", 1)] * math.ceil(flt(row.tutorial_hours))
 			+ practical_blocks(math.ceil(flt(row.practical_hours)), grid.lab_block)
 		)
-		sessions += [Session(len(sessions) + i, row.offering, section, row.faculty, kind, length, strengths[row.offering]) for i, (kind, length) in enumerate(shapes)]
+		sessions += [
+			Session(
+				len(sessions) + i, row.offering, section, row.faculty, kind, length, strengths[row.offering]
+			)
+			for i, (kind, length) in enumerate(shapes)
+		]
 	return sessions
 
 
@@ -136,5 +173,3 @@ def as_rows(entries, template):
 		}
 		for e in entries
 	]  # fmt: skip
-
-

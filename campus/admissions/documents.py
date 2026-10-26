@@ -35,7 +35,15 @@ def applicable_rules(applicant):
 	"""Admission Document Rules that apply to the applicant."""
 	rules = frappe.get_all(
 		"Admission Document Rule",
-		fields=["document_type", "mandatory", "original_retained", "verification_needed", "admission_type", "quota", "student_category"],
+		fields=[
+			"document_type",
+			"mandatory",
+			"original_retained",
+			"verification_needed",
+			"admission_type",
+			"quota",
+			"student_category",
+		],
 		order_by="creation, name",
 		limit=0,
 	)
@@ -55,12 +63,18 @@ def build_checklist(applicant):
 		rules[rule.document_type] = _stricter(current, rule) if current else rule
 	rows = {row.document_type: row for row in applicant.oc_documents}
 	for document_type, rule in rules.items():
-		row = rows.get(document_type) or applicant.append("oc_documents", {"document_type": document_type, "status": "Pending"})
+		row = rows.get(document_type) or applicant.append(
+			"oc_documents", {"document_type": document_type, "status": "Pending"}
+		)
 		row.mandatory = cint(rule.mandatory)
 		row.verification_needed = cint(rule.verification_needed)
 		row.original_required = cint(rule.original_retained)
 		row.from_rule = cint(row.from_rule or not rows.get(document_type))
-	stale = [r for r in applicant.oc_documents if r.from_rule and r.document_type not in rules and r.status == "Pending"]
+	stale = [
+		r
+		for r in applicant.oc_documents
+		if r.from_rule and r.document_type not in rules and r.status == "Pending"
+	]
 	for row in stale:
 		applicant.remove(row)
 
@@ -111,13 +125,19 @@ def validate_applicant(doc, method=None):
 	if before and VERIFIER_ROLE not in frappe.get_roles():
 		for row in before.oc_documents:
 			if row.status == "Verified" and row.name not in kept:
-				frappe.throw(_("Only an {0} can remove the verified document {1}.").format(VERIFIER_ROLE, row.document_type))
+				frappe.throw(
+					_("Only an {0} can remove the verified document {1}.").format(
+						VERIFIER_ROLE, row.document_type
+					)
+				)
 	for row in doc.oc_documents:
 		stamp_verifier(row, previous.get(row.name))
 	if doc.application_status == "Admitted" and (not before or before.application_status != "Admitted"):
 		missing = uncleared_mandatory(doc)
 		if missing:
-			frappe.throw(_("Cannot admit: mandatory documents are not complete: {0}").format(", ".join(missing)))
+			frappe.throw(
+				_("Cannot admit: mandatory documents are not complete: {0}").format(", ".join(missing))
+			)
 
 
 def guard_clearance(doc, before):
@@ -127,7 +147,11 @@ def guard_clearance(doc, before):
 	cleared = {r.name: r.cleared_until for r in before.oc_documents} if before else {}
 	for row in doc.oc_documents:
 		if str(row.cleared_until or "") != str(cleared.get(row.name) or ""):
-			frappe.throw(_("{0}: a temporary clearance is granted with Temporary Clearance, not by editing the checklist.").format(row.document_type))
+			frappe.throw(
+				_(
+					"{0}: a temporary clearance is granted with Temporary Clearance, not by editing the checklist."
+				).format(row.document_type)
+			)
 
 
 def grant_temporary_clearance(applicant, documents, due_date, reason):
@@ -147,19 +171,28 @@ def grant_temporary_clearance(applicant, documents, due_date, reason):
 	doc = frappe.get_doc("Student Applicant", applicant, for_update=True)
 	check_company_access(doc.oc_company)
 	if doc.application_status not in (*OPEN_STATUSES, ADMITTED):
-		frappe.throw(_("{0} is {1}: no clearance can be granted.").format(applicant, _(doc.application_status)))
+		frappe.throw(
+			_("{0} is {1}: no clearance can be granted.").format(applicant, _(doc.application_status))
+		)
 	pending = set(incomplete_mandatory(doc))
 	for document_type in documents:
 		if document_type not in pending:
-			frappe.throw(_("{0} is not a pending mandatory document of {1}.").format(document_type, applicant))
+			frappe.throw(
+				_("{0} is not a pending mandatory document of {1}.").format(document_type, applicant)
+			)
 	for row in doc.oc_documents:
 		if row.document_type in documents:
 			row.cleared_until = due
 	doc.flags.campus_clearance = True
-	doc.flags.ignore_permissions = True  # the officer's role and company were checked; every input is checked above
+	doc.flags.ignore_permissions = (
+		True  # the officer's role and company were checked; every input is checked above
+	)
 	doc.save()
 	doc.add_comment(
-		"Comment", _("Temporary clearance until {0} for {1}: {2}").format(frappe.format(due, "Date"), ", ".join(documents), reason.strip())
+		"Comment",
+		_("Temporary clearance until {0} for {1}: {2}").format(
+			frappe.format(due, "Date"), ", ".join(documents), reason.strip()
+		),
 	)
 	return {"cleared_until": str(due), "documents": documents}
 
@@ -169,10 +202,14 @@ def stamp_verifier(row, previous_status):
 	if row.status == previous_status:
 		return
 	if previous_status == "Verified" and VERIFIER_ROLE not in frappe.get_roles():
-		frappe.throw(_("Only an {0} can change the verified document {1}.").format(VERIFIER_ROLE, row.document_type))
+		frappe.throw(
+			_("Only an {0} can change the verified document {1}.").format(VERIFIER_ROLE, row.document_type)
+		)
 	if row.status in VERIFIER_STATUSES:
 		if VERIFIER_ROLE not in frappe.get_roles():
-			frappe.throw(_("Only an {0} can mark {1} as {2}.").format(VERIFIER_ROLE, row.document_type, row.status))
+			frappe.throw(
+				_("Only an {0} can mark {1} as {2}.").format(VERIFIER_ROLE, row.document_type, row.status)
+			)
 		if row.status == "Rejected" and not row.remarks:
 			frappe.throw(_("Enter remarks to reject {0}.").format(row.document_type))
 		row.verified_by, row.verified_on = frappe.session.user, now_datetime()
@@ -210,7 +247,12 @@ def reminder_items():
 	by_name = {a.name: a for a in applicants}
 	incomplete = frappe.get_all(
 		"Applicant Document",
-		{"parent": ("in", list(by_name) or [""]), "parenttype": "Student Applicant", "mandatory": 1, "status": ("in", ("Pending", "Rejected"))},
+		{
+			"parent": ("in", list(by_name) or [""]),
+			"parenttype": "Student Applicant",
+			"mandatory": 1,
+			"status": ("in", ("Pending", "Rejected")),
+		},
 		["parent", "document_type", "status", "cleared_until"],
 		order_by="parent, idx",
 		limit=0,
@@ -223,7 +265,12 @@ def reminder_items():
 		if row.cleared_until:
 			due[row.parent] = min(getdate(row.cleared_until), due.get(row.parent, getdate(row.cleared_until)))
 	return [
-		{"applicant": a, "mobile": by_name[a].student_mobile_number, "documents": docs, **({"due_date": str(due[a])} if a in due else {})}
+		{
+			"applicant": a,
+			"mobile": by_name[a].student_mobile_number,
+			"documents": docs,
+			**({"due_date": str(due[a])} if a in due else {}),
+		}
 		for a, docs in sorted(pending.items())
 	]
 
@@ -233,7 +280,9 @@ def send_daily_reminders(as_of=None):
 	day = as_of or nowdate()
 	items = reminder_items()
 	if items:
-		return run_bulk(REMINDER_RUN_TYPE, items, REMINDER_HANDLER, key=REMINDER_KEY, parameters={"day": str(day)})
+		return run_bulk(
+			REMINDER_RUN_TYPE, items, REMINDER_HANDLER, key=REMINDER_KEY, parameters={"day": str(day)}
+		)
 
 
 def reminder_key(item):
@@ -248,5 +297,9 @@ def send_reminder(item, run):
 		REMINDER_EVENT,
 		doc,
 		[f"phone:{item['mobile']}"],
-		context={"documents": ", ".join(item["documents"]), "dedupe_token": day, **({"due_date": item["due_date"]} if item.get("due_date") else {})},
+		context={
+			"documents": ", ".join(item["documents"]),
+			"dedupe_token": day,
+			**({"due_date": item["due_date"]} if item.get("due_date") else {}),
+		},
 	)

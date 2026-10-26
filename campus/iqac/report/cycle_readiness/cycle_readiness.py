@@ -34,7 +34,14 @@ def columns():
 
 def data(cycle):
 	framework = frappe.db.get_value("Accreditation Cycle", cycle, "framework")
-	nodes = {n.name: n for n in frappe.get_all("Framework Node", {"framework": framework}, ["name", "title", "parent_node", "node_type", "answer_type"])}
+	nodes = {
+		n.name: n
+		for n in frappe.get_all(
+			"Framework Node",
+			{"framework": framework},
+			["name", "title", "parent_node", "node_type", "answer_type"],
+		)
+	}
 	root = lambda name: root_of(nodes, name)  # noqa: E731
 	rows = {n.name: new_row(n.name, n.title) for n in nodes.values() if n.node_type == "Criterion"}
 	rows[EXTENDED_PROFILE] = new_row(None, _(EXTENDED_PROFILE))
@@ -67,7 +74,12 @@ def root_of(nodes, name):
 
 def owners_of(cycle):
 	owners = {}
-	for row in frappe.get_all("Accreditation Cycle Owner", {"parent": cycle, "parenttype": "Accreditation Cycle"}, ["criterion", "user"], order_by="idx"):
+	for row in frappe.get_all(
+		"Accreditation Cycle Owner",
+		{"parent": cycle, "parenttype": "Accreditation Cycle"},
+		["criterion", "user"],
+		order_by="idx",
+	):
 		owners.setdefault(row.criterion, []).append(row.user)
 	return owners
 

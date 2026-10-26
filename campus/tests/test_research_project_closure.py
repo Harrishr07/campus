@@ -13,7 +13,11 @@ import frappe
 from frappe.utils import add_days, get_first_day, get_last_day, getdate, today
 
 from campus.campus_platform.approvals import approve, request_approval
-from campus.research.budget_control import BUDGET_HEAD_FIELD, refuse_payment_cancel_on_closed, validate_payment_deductions
+from campus.research.budget_control import (
+	BUDGET_HEAD_FIELD,
+	refuse_payment_cancel_on_closed,
+	validate_payment_deductions,
+)
 from campus.research.setup import PROJECT_STAFF, seed_research
 from campus.research.utilisation import recheck_queued, utilisation_figures
 from campus.tests.factories import make_user
@@ -32,7 +36,11 @@ class ProjectFixtures(SanctionFixtures):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		for user, role in ((PI_USER, None), (ACCOUNTS_USER, "Accounts Manager"), (PRINCIPAL_USER, "Principal")):
+		for user, role in (
+			(PI_USER, None),
+			(ACCOUNTS_USER, "Accounts Manager"),
+			(PRINCIPAL_USER, "Principal"),
+		):
 			make_user(user, [COLLEGE])
 			if role:
 				frappe.get_doc("User", user).add_roles(role)
@@ -46,7 +54,9 @@ class ProjectFixtures(SanctionFixtures):
 		employee.save()
 		self.manpower_account = make_account(COLLEGE, ABBR, "RSA Manpower", "Indirect Expenses")
 		self.manpower = self.make_head("RSA Manpower", [(COLLEGE, self.manpower_account)])
-		self.project_scheme = self.make_scheme("RSA Project Grant", [self.consumables, self.travel, self.equipment, self.manpower])
+		self.project_scheme = self.make_scheme(
+			"RSA Project Grant", [self.consumables, self.travel, self.equipment, self.manpower]
+		)
 		self.month_start, self.month_end = get_first_day(today()), get_last_day(today())
 		self.set_up_payroll()
 
@@ -79,10 +89,22 @@ class ProjectFixtures(SanctionFixtures):
 	def make_structure(self, name, component):
 		structure = frappe.get_doc(
 			{
-				"doctype": "Salary Structure", "name": name, "company": COLLEGE, "payroll_frequency": "Monthly",
-				"currency": frappe.get_cached_value("Company", COLLEGE, "default_currency"), "is_active": "Yes",
-				"earnings": [{"salary_component": component, "abbr": frappe.get_cached_value("Salary Component", component, "salary_component_abbr"),
-					"amount_based_on_formula": 1, "formula": "base"}],
+				"doctype": "Salary Structure",
+				"name": name,
+				"company": COLLEGE,
+				"payroll_frequency": "Monthly",
+				"currency": frappe.get_cached_value("Company", COLLEGE, "default_currency"),
+				"is_active": "Yes",
+				"earnings": [
+					{
+						"salary_component": component,
+						"abbr": frappe.get_cached_value(
+							"Salary Component", component, "salary_component_abbr"
+						),
+						"amount_based_on_formula": 1,
+						"formula": "base",
+					}
+				],
 			}  # fmt: skip
 		).insert()
 		structure.submit()
@@ -97,8 +119,14 @@ class ProjectFixtures(SanctionFixtures):
 	def appointment(self, sanction, employee, structure=None, **values):
 		return frappe.get_doc(
 			{
-				"doctype": "Project Staff Appointment", "sanction": sanction.name, "employee": employee, "designation": JRF,
-				"from_date": sanction.start_date, "salary_structure": structure or self.structure, "base": 37000, **values,
+				"doctype": "Project Staff Appointment",
+				"sanction": sanction.name,
+				"employee": employee,
+				"designation": JRF,
+				"from_date": sanction.start_date,
+				"salary_structure": structure or self.structure,
+				"base": 37000,
+				**values,
 			}  # fmt: skip
 		).insert()
 
@@ -121,18 +149,31 @@ class ProjectFixtures(SanctionFixtures):
 
 	def accrual_entry(self, payroll_entry):
 		return frappe.db.get_value(
-			"Journal Entry Account", {"reference_type": "Payroll Entry", "reference_name": payroll_entry.name, "docstatus": 1}, "parent"
+			"Journal Entry Account",
+			{"reference_type": "Payroll Entry", "reference_name": payroll_entry.name, "docstatus": 1},
+			"parent",
 		)
 
 	# vouchers
 	def spend(self, sanction, account, amount, head, posting_date=None):
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": posting_date or today(),
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": posting_date or today(),
 				"accounts": [
-					{"account": account, "debit_in_account_currency": amount, "cost_center": sanction.cost_center,
-					 "project": sanction.project, BUDGET_HEAD_FIELD: head},
-					{"account": self.bank, "credit_in_account_currency": amount, "cost_center": sanction.cost_center},
+					{
+						"account": account,
+						"debit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
+						BUDGET_HEAD_FIELD: head,
+					},
+					{
+						"account": self.bank,
+						"credit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+					},
 				],
 			}  # fmt: skip
 		).insert()
@@ -142,7 +183,9 @@ class ProjectFixtures(SanctionFixtures):
 	def funded(self, sanction):
 		receipt = self.receipt(sanction, posting_date=sanction.start_date, reference_date=sanction.start_date)
 		receipt.submit()
-		entry = self.spend(sanction, self.consumables_account, 20000, self.consumables, posting_date=add_days(today(), -2))
+		entry = self.spend(
+			sanction, self.consumables_account, 20000, self.consumables, posting_date=add_days(today(), -2)
+		)
 		return receipt, entry
 
 	def recognise(self, sanction, to_date):
@@ -169,15 +212,28 @@ class ProjectFixtures(SanctionFixtures):
 		if recognised:
 			self.recognise(sanction, to_date)
 		return self.approve_all(
-			frappe.get_doc({"doctype": UC, "sanction": sanction.name, "from_date": sanction.start_date, "to_date": to_date}).insert()
+			frappe.get_doc(
+				{
+					"doctype": UC,
+					"sanction": sanction.name,
+					"from_date": sanction.start_date,
+					"to_date": to_date,
+				}
+			).insert()
 		)
 
 	def closure(self, sanction, uc, **values):
 		return frappe.get_doc(
 			{
-				"doctype": "Project Closure", "sanction": sanction.name, "final_uc": uc.name if uc else None,
-				"posting_date": add_days(uc.to_date if uc else today(), 1), "treatment": "Refund to Agency",
-				"paid_from": self.bank, "reference_no": "RFND0001", "reference_date": add_days(today(), 1), **values,
+				"doctype": "Project Closure",
+				"sanction": sanction.name,
+				"final_uc": uc.name if uc else None,
+				"posting_date": add_days(uc.to_date if uc else today(), 1),
+				"treatment": "Refund to Agency",
+				"paid_from": self.bank,
+				"reference_no": "RFND0001",
+				"reference_date": add_days(today(), 1),
+				**values,
 			}  # fmt: skip
 		)
 
@@ -215,12 +271,20 @@ class TestProjectStaff(ProjectFixtures):
 		employee = self.project_staff()
 		appointment = self.appointment(sanction, employee)
 		appointment.submit()
-		self.assertEqual((appointment.to_date, appointment.budget_head), (getdate(sanction.end_date), self.manpower))
-		ssa = frappe.get_doc("Salary Structure Assignment", appointment.salary_structure_assignment)
-		self.assertEqual((ssa.docstatus, ssa.employee, ssa.base, ssa.salary_structure), (1, employee, 37000, self.structure))
-		self.assertEqual([(r.cost_center, r.percentage) for r in ssa.payroll_cost_centers], [(sanction.cost_center, 100)])
 		self.assertEqual(
-			frappe.db.get_value("Employee", employee, ["contract_end_date", "designation"]), (getdate(sanction.end_date), JRF)
+			(appointment.to_date, appointment.budget_head), (getdate(sanction.end_date), self.manpower)
+		)
+		ssa = frappe.get_doc("Salary Structure Assignment", appointment.salary_structure_assignment)
+		self.assertEqual(
+			(ssa.docstatus, ssa.employee, ssa.base, ssa.salary_structure),
+			(1, employee, 37000, self.structure),
+		)
+		self.assertEqual(
+			[(r.cost_center, r.percentage) for r in ssa.payroll_cost_centers], [(sanction.cost_center, 100)]
+		)
+		self.assertEqual(
+			frappe.db.get_value("Employee", employee, ["contract_end_date", "designation"]),
+			(getdate(sanction.end_date), JRF),
 		)
 		appointment.cancel()
 		self.assertEqual(frappe.db.get_value("Salary Structure Assignment", ssa.name, "docstatus"), 2)
@@ -243,7 +307,11 @@ class TestProjectStaff(ProjectFixtures):
 
 	def test_salary_stops_at_the_sanction_end(self):
 		end = add_days(self.year2.start, 14)  # mid-month: the 15th of the first month of year 2
-		heads = [*self.heads(), (self.manpower, self.year1.name, 300000), (self.manpower, self.year2.name, 100000)]
+		heads = [
+			*self.heads(),
+			(self.manpower, self.year1.name, 300000),
+			(self.manpower, self.year2.name, 100000),
+		]
 		sanction = self.sanction(heads=heads, scheme=self.project_scheme, end_date=end)
 		sanction.submit()
 		employee = self.project_staff()
@@ -260,7 +328,9 @@ class TestProjectStaff(ProjectFixtures):
 	def test_cancelling_the_appointment_restores_the_employee(self):
 		sanction = self.project_sanction()
 		employee = self.project_staff()
-		frappe.db.set_value("Employee", employee, {"contract_end_date": "2030-01-01", "designation": "Project Assistant"})
+		frappe.db.set_value(
+			"Employee", employee, {"contract_end_date": "2030-01-01", "designation": "Project Assistant"}
+		)
 		appointment = self.appointment(sanction, employee)
 		appointment.submit()
 		appointment.cancel()
@@ -276,9 +346,20 @@ class TestProjectStaff(ProjectFixtures):
 			"type": "Deduction", "accounts": [{"company": COLLEGE, "account": other}]}).insert()  # fmt: skip
 		structure = frappe.get_doc(
 			{
-				"doctype": "Salary Structure", "name": "RSA Fellowship PF", "company": COLLEGE, "payroll_frequency": "Monthly",
-				"currency": frappe.get_cached_value("Company", COLLEGE, "default_currency"), "is_active": "Yes",
-				"earnings": [{"salary_component": FELLOWSHIP, "abbr": "FEL", "amount_based_on_formula": 1, "formula": "base"}],
+				"doctype": "Salary Structure",
+				"name": "RSA Fellowship PF",
+				"company": COLLEGE,
+				"payroll_frequency": "Monthly",
+				"currency": frappe.get_cached_value("Company", COLLEGE, "default_currency"),
+				"is_active": "Yes",
+				"earnings": [
+					{
+						"salary_component": FELLOWSHIP,
+						"abbr": "FEL",
+						"amount_based_on_formula": 1,
+						"formula": "base",
+					}
+				],
 				"deductions": [{"salary_component": component.name, "abbr": "REPF", "amount": 100}],
 			}  # fmt: skip
 		).insert()
@@ -298,11 +379,18 @@ class TestProgressReport(ProjectFixtures):
 		sanction = self.project_sanction()
 		frappe.get_doc({"doctype": "Task", "subject": "Prototype sensor", "project": sanction.project, "is_milestone": 1,
 			"exp_end_date": add_days(today(), 10)}).insert()  # fmt: skip
-		frappe.get_doc({"doctype": "Task", "subject": "Order chemicals", "project": sanction.project}).insert()
+		frappe.get_doc(
+			{"doctype": "Task", "subject": "Order chemicals", "project": sanction.project}
+		).insert()
 		update = frappe.get_doc(
 			{
-				"doctype": "Project Update", "project": sanction.project, "date": today(), "oc_report_type": "Progress Report",
-				"oc_from_date": sanction.start_date, "oc_to_date": today(), "oc_deliverables": "Two sensors field-tested.",
+				"doctype": "Project Update",
+				"project": sanction.project,
+				"date": today(),
+				"oc_report_type": "Progress Report",
+				"oc_from_date": sanction.start_date,
+				"oc_to_date": today(),
+				"oc_deliverables": "Two sensors field-tested.",
 			}  # fmt: skip
 		).insert()
 		self.assertEqual(update.oc_sanction, sanction.name)
@@ -317,11 +405,19 @@ class TestProgressReport(ProjectFixtures):
 
 	def test_a_report_on_a_sanction_project_needs_a_type_and_a_period_inside_the_sanction(self):
 		sanction = self.project_sanction()
-		values = {"doctype": "Project Update", "project": sanction.project, "date": today(), "oc_from_date": sanction.start_date, "oc_to_date": today()}
+		values = {
+			"doctype": "Project Update",
+			"project": sanction.project,
+			"date": today(),
+			"oc_from_date": sanction.start_date,
+			"oc_to_date": today(),
+		}
 		with self.assertRaisesRegex(frappe.ValidationError, "report type"):
 			frappe.get_doc(values).insert()
 		with self.assertRaisesRegex(frappe.ValidationError, "sanction period"):
-			frappe.get_doc(values | {"oc_report_type": "Progress Report", "oc_to_date": add_days(sanction.end_date, 1)}).insert()
+			frappe.get_doc(
+				values | {"oc_report_type": "Progress Report", "oc_to_date": add_days(sanction.end_date, 1)}
+			).insert()
 
 
 class TestProjectClosure(ProjectFixtures):
@@ -339,11 +435,15 @@ class TestProjectClosure(ProjectFixtures):
 		self.assertEqual((rows[sanction.liability_account].debit, rows[self.bank].credit), (670000, 670000))
 		self.assertEqual(rows[sanction.liability_account].project, sanction.project)
 		self.assertEqual(frappe.db.get_value("Journal Entry", closure.journal_entry, "docstatus"), 1)
-		self.assertEqual(self.liability_balance(sanction), 0)  # the spent part recognised, the unspent refunded
+		self.assertEqual(
+			self.liability_balance(sanction), 0
+		)  # the spent part recognised, the unspent refunded
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Completed")
 		self.assertEqual(frappe.db.get_value("Sanction", sanction.name, "project_closure"), closure.name)
 		recheck_queued()
-		self.assertEqual(frappe.db.get_value(UC, uc.name, "source_changed"), 0)  # the refund is after the final UC
+		self.assertEqual(
+			frappe.db.get_value(UC, uc.name, "source_changed"), 0
+		)  # the refund is after the final UC
 
 	def test_no_spending_receipt_or_appointment_after_closure(self):
 		sanction = self.project_sanction()
@@ -352,7 +452,9 @@ class TestProjectClosure(ProjectFixtures):
 		closure = self.closure(sanction, self.final_uc(sanction)).insert()
 		closure.submit()
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
-			self.spend(sanction, self.consumables_account, 100, self.consumables, posting_date=add_days(today(), 2))
+			self.spend(
+				sanction, self.consumables_account, 100, self.consumables, posting_date=add_days(today(), 2)
+			)
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
 			self.receipt(sanction, "Second")
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
@@ -363,7 +465,9 @@ class TestProjectClosure(ProjectFixtures):
 		self.funded(sanction)
 		with self.assertRaises(frappe.MandatoryError):
 			self.closure(sanction, None).insert()
-		draft = frappe.get_doc({"doctype": UC, "sanction": sanction.name, "from_date": sanction.start_date, "to_date": today()}).insert()
+		draft = frappe.get_doc(
+			{"doctype": UC, "sanction": sanction.name, "from_date": sanction.start_date, "to_date": today()}
+		).insert()
 		with self.assertRaisesRegex(frappe.ValidationError, "approved"):
 			self.closure(sanction, draft).insert()
 
@@ -376,7 +480,9 @@ class TestProjectClosure(ProjectFixtures):
 		with self.assertRaisesRegex(frappe.ValidationError, "after the final"):
 			closure.submit()
 		later.cancel()
-		self.spend(sanction, self.travel_account, 700, self.travel, posting_date=add_days(today(), -3))  # inside it
+		self.spend(
+			sanction, self.travel_account, 700, self.travel, posting_date=add_days(today(), -3)
+		)  # inside it
 		closure = self.closure(sanction, uc, posting_date=add_days(today(), 1)).insert()
 		with self.assertRaisesRegex(frappe.ValidationError, "changed"):
 			closure.submit()
@@ -388,7 +494,9 @@ class TestProjectClosure(ProjectFixtures):
 		self.funded(sanction)
 		first = self.final_uc(sanction, to_date=add_days(today(), -1))
 		second = self.approve_all(
-			frappe.get_doc({"doctype": UC, "sanction": sanction.name, "from_date": today(), "to_date": today()}).insert()
+			frappe.get_doc(
+				{"doctype": UC, "sanction": sanction.name, "from_date": today(), "to_date": today()}
+			).insert()
 		)
 		with self.assertRaisesRegex(frappe.ValidationError, "latest"):
 			self.closure(sanction, first, posting_date=add_days(today(), 1)).insert().submit()
@@ -399,15 +507,32 @@ class TestProjectClosure(ProjectFixtures):
 		sanction = self.project_sanction()
 		self.funded(sanction)
 		uc = self.final_uc(sanction)
-		retained = make_account(COLLEGE, ABBR, "RSA Retained Grants", "Current Liabilities", root_type="Liability")
-		values = {"treatment": "Retain per Agency Letter", "paid_from": None, "reference_no": None, "retained_to": retained}
+		retained = make_account(
+			COLLEGE, ABBR, "RSA Retained Grants", "Current Liabilities", root_type="Liability"
+		)
+		values = {
+			"treatment": "Retain per Agency Letter",
+			"paid_from": None,
+			"reference_no": None,
+			"retained_to": retained,
+		}
 		with self.assertRaisesRegex(frappe.ValidationError, "agency letter"):
 			self.closure(sanction, uc, **values).insert()
 		closure = self.closure(
-			sanction, uc, **values, agency_letter_no="DST/RET/1", agency_letter_date=today(), agency_letter="/files/letter.pdf"
+			sanction,
+			uc,
+			**values,
+			agency_letter_no="DST/RET/1",
+			agency_letter_date=today(),
+			agency_letter="/files/letter.pdf",
 		).insert()
 		closure.submit()
-		rows = {r.account: r for r in frappe.get_all("Journal Entry Account", {"parent": closure.journal_entry}, ["account", "debit", "credit"])}
+		rows = {
+			r.account: r
+			for r in frappe.get_all(
+				"Journal Entry Account", {"parent": closure.journal_entry}, ["account", "debit", "credit"]
+			)
+		}
 		self.assertEqual((rows[sanction.liability_account].debit, rows[retained].credit), (670000, 670000))
 		self.assertEqual(self.liability_balance(sanction), 0)
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Completed")
@@ -427,7 +552,9 @@ class TestProjectClosure(ProjectFixtures):
 		self.assertEqual(frappe.db.get_value("Journal Entry", closure.journal_entry, "docstatus"), 2)
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Open")
 		self.assertFalse(frappe.db.get_value("Sanction", sanction.name, "project_closure"))
-		self.assertEqual(self.liability_balance(sanction), 670000)  # the refund reversed; the recognition stays
+		self.assertEqual(
+			self.liability_balance(sanction), 670000
+		)  # the refund reversed; the recognition stays
 
 	# fix round 1
 	def test_closure_needs_grant_income_recognised_to_the_final_uc(self):
@@ -455,7 +582,8 @@ class TestProjectClosure(ProjectFixtures):
 
 	def test_payment_entry_deductions_on_a_closed_sanction_are_refused(self):
 		self.assertIn(
-			"campus.research.budget_control.validate_payment_deductions", frappe.get_hooks("doc_events")["Payment Entry"]["validate"]
+			"campus.research.budget_control.validate_payment_deductions",
+			frappe.get_hooks("doc_events")["Payment Entry"]["validate"],
 		)
 		sanction = self.project_sanction()
 		self.funded(sanction)
@@ -483,7 +611,9 @@ class TestProjectClosure(ProjectFixtures):
 		self.funded(sanction)
 		self.closure(sanction, self.final_uc(sanction)).insert().submit()
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
-			frappe.get_doc("Sanction", sanction.name).extend_sanction(add_days(sanction.end_date, 30), "EXT/1", today())
+			frappe.get_doc("Sanction", sanction.name).extend_sanction(
+				add_days(sanction.end_date, 30), "EXT/1", today()
+			)
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
 			frappe.get_doc(
 				{"doctype": "Re-appropriation Request", "sanction": sanction.name, "fiscal_year": self.year2.name,
@@ -491,12 +621,21 @@ class TestProjectClosure(ProjectFixtures):
 				 "agency_letter_date": today(), "agency_approval_letter": "/files/r.pdf"}
 			).insert()  # fmt: skip
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
-			frappe.get_doc({"doctype": UC, "sanction": sanction.name, "from_date": add_days(today(), 1), "to_date": add_days(today(), 2)}).insert()
+			frappe.get_doc(
+				{
+					"doctype": UC,
+					"sanction": sanction.name,
+					"from_date": add_days(today(), 1),
+					"to_date": add_days(today(), 2),
+				}
+			).insert()
 
 	def test_cancelling_the_closure_restores_the_project_status(self):
 		sanction = self.project_sanction()
 		self.funded(sanction)
-		frappe.db.set_value("Project", sanction.project, "status", "Cancelled")  # whatever it was before closing
+		frappe.db.set_value(
+			"Project", sanction.project, "status", "Cancelled"
+		)  # whatever it was before closing
 		closure = self.closure(sanction, self.final_uc(sanction)).insert()
 		closure.submit()
 		self.assertEqual(frappe.db.get_value("Project", sanction.project, "status"), "Completed")
@@ -546,7 +685,10 @@ class TestProjectClosure(ProjectFixtures):
 class TestProjectStaffFix2(ProjectFixtures):
 	def sanction_for(self, start_date, end_date, fiscal_year):
 		sanction = self.sanction(
-			heads=[(self.manpower, fiscal_year, 300000)], scheme=self.project_scheme, start_date=start_date, end_date=end_date
+			heads=[(self.manpower, fiscal_year, 300000)],
+			scheme=self.project_scheme,
+			start_date=start_date,
+			end_date=end_date,
 		)
 		sanction.submit()
 		return sanction.reload()
@@ -555,10 +697,14 @@ class TestProjectStaffFix2(ProjectFixtures):
 		first = self.sanction_for(self.year1.start, self.year1.end, self.year1.name)
 		second = self.sanction_for(self.year2.start, self.year2.end, self.year2.name)
 		employee = self.project_staff()
-		frappe.db.set_value("Employee", employee, {"contract_end_date": "2030-01-01", "designation": "Project Assistant"})
+		frappe.db.set_value(
+			"Employee", employee, {"contract_end_date": "2030-01-01", "designation": "Project Assistant"}
+		)
 		earlier = self.appointment(first, employee)
 		earlier.submit()
-		later = self.appointment(second, employee, from_date=second.start_date, designation="Senior Research Fellow")
+		later = self.appointment(
+			second, employee, from_date=second.start_date, designation="Senior Research Fellow"
+		)
 		later.submit()
 		earlier.cancel()
 		self.assertEqual(

@@ -47,14 +47,19 @@ PRINTS = {
 }
 ONCE_ONLY = (PROVISIONAL, DEGREE)
 DESK_ONLY = (DATA_SHEET,)
-DEFAULTS = {"degree_awarding_body": UNIVERSITY, "provisional_certificate_issuer": COLLEGE}  # the profile defaults
+DEFAULTS = {
+	"degree_awarding_body": UNIVERSITY,
+	"provisional_certificate_issuer": COLLEGE,
+}  # the profile defaults
 REQUEST = "Certificate Request"
 
 
 def seed_certificate_types():
 	"""One Certificate Type per print (verifiable, no fee). Existing types are left as configured."""
 	for print_format, (prefix, _graduate, needs_approval) in PRINTS.items():
-		if not frappe.db.exists("Certificate Type", print_format) and frappe.db.exists("Print Format", print_format):
+		if not frappe.db.exists("Certificate Type", print_format) and frappe.db.exists(
+			"Print Format", print_format
+		):
 			frappe.get_doc(
 				{
 					"doctype": "Certificate Type", "type_name": print_format, "print_format": print_format,
@@ -67,7 +72,9 @@ def require_graduate_approval():
 	"""Types seeded before fix round 1 issued graduate documents without approval: set it. DML only; run by a patch."""
 	for print_format, (_prefix, _graduate, needs_approval) in PRINTS.items():
 		if needs_approval:
-			frappe.db.set_value("Certificate Type", {"print_format": print_format, "needs_approval": 0}, "needs_approval", 1)
+			frappe.db.set_value(
+				"Certificate Type", {"print_format": print_format, "needs_approval": 0}, "needs_approval", 1
+			)
 
 
 def types_of(print_formats):
@@ -96,8 +103,14 @@ def available_prints(company):
 def check_available(print_format, company):
 	if print_format in PRINTS and print_format not in available_prints(company):
 		if print_format == DEGREE:
-			frappe.throw(_("A degree certificate is printed only where the college awards the degree; the university awards it here. Use the Degree Data Sheet."))
-		frappe.throw(_("The degree data sheet is for a university that awards the degree; the college awards it here."))
+			frappe.throw(
+				_(
+					"A degree certificate is printed only where the college awards the degree; the university awards it here. Use the Degree Data Sheet."
+				)
+			)
+		frappe.throw(
+			_("The degree data sheet is for a university that awards the degree; the college awards it here.")
+		)
 
 
 def print_format_of(doc):
@@ -113,16 +126,19 @@ def validate_request(doc, method=None):
 	if print_format not in PRINTS:
 		return
 	if doc.is_new() and print_format in DESK_ONLY and not frappe.has_permission(REQUEST, "create"):
-		frappe.throw(_("The {0} is prepared by the college office for the university.").format(_(print_format)), frappe.PermissionError)
+		frappe.throw(
+			_("The {0} is prepared by the college office for the university.").format(_(print_format)),
+			frappe.PermissionError,
+		)
 	check_available(print_format, frappe.db.get_value("Student", doc.student, "oc_company"))
 	record = graduate_record(doc.student)
 	if not record.semesters:
 		frappe.throw(_("{0} has no published results yet.").format(frappe.bold(doc.student)))
 	if PRINTS[print_format][1] and not record.completed:
 		frappe.throw(
-			_("{0} is issued once the programme is completed: published final-year results, no arrears and the credits of the regulation.").format(
-				_(print_format)
-			)
+			_(
+				"{0} is issued once the programme is completed: published final-year results, no arrears and the credits of the regulation."
+			).format(_(print_format))
 		)
 	check_once_only(doc, print_format)
 
@@ -132,7 +148,9 @@ def before_submit_request(doc, method=None):
 	print_format = print_format_of(doc)
 	if print_format not in PRINTS:
 		return
-	if frappe.db.get_value("Certificate Type", doc.certificate_type, "needs_approval") and not is_approved(doc):
+	if frappe.db.get_value("Certificate Type", doc.certificate_type, "needs_approval") and not is_approved(
+		doc
+	):
 		frappe.throw(_("{0} needs approval before it can be issued. Use Request Approval.").format(doc.name))
 	frappe.db.get_value("Student", doc.student, "name", for_update=True)  # one issue per student at a time
 	check_once_only(doc, print_format, lock=True)
@@ -151,14 +169,22 @@ def check_once_only(doc, print_format, lock=False):
 		frappe.qb.from_(table)
 		.select(table.name)
 		.where((table.student == doc.student) & (table.docstatus == 1) & (table.name != doc.name))
-		.where((table.superseded_by.isnull()) | (table.superseded_by == ""))  # a reissue replaces its original (M05-14)
+		.where(
+			(table.superseded_by.isnull()) | (table.superseded_by == "")
+		)  # a reissue replaces its original (M05-14)
 		.where(table.certificate_type.isin(types_of([print_format])))
 	)
 	if doc.get("supersedes"):
-		query = query.where(table.name != doc.supersedes)  # a reissue's original is still current until it is issued
+		query = query.where(
+			table.name != doc.supersedes
+		)  # a reissue's original is still current until it is issued
 	issued = (query.for_update() if lock else query).run(pluck=True)
 	if issued:
-		frappe.throw(_("{0} already has a {1}: {2}. Cancel it to issue another.").format(frappe.bold(doc.student), _(print_format), issued[0]))
+		frappe.throw(
+			_("{0} already has a {1}: {2}. Cancel it to issue another.").format(
+				frappe.bold(doc.student), _(print_format), issued[0]
+			)
+		)
 
 
 # ---- print data ------------------------------------------------------------------------------
@@ -171,7 +197,9 @@ def live_record(doc, print_format):
 	record = graduate_record(doc.student)
 	profile = get_institution(company)
 	record.university = (profile and profile.affiliating_university) or _("the affiliating university")
-	record.provisional_issuer = company if settings(company).provisional_certificate_issuer == COLLEGE else record.university
+	record.provisional_issuer = (
+		company if settings(company).provisional_certificate_issuer == COLLEGE else record.university
+	)
 	return record
 
 
@@ -182,8 +210,17 @@ def oc_graduate_record(doc, print_format):
 		return json.loads(doc.record_snapshot, object_hook=frappe._dict)
 	if doc.docstatus == 0:
 		if not frappe.has_permission(REQUEST, "write"):
-			frappe.throw(_("This {0} is a draft and not valid; it can be printed once the college issues it.").format(_(print_format)), frappe.PermissionError)
+			frappe.throw(
+				_("This {0} is a draft and not valid; it can be printed once the college issues it.").format(
+					_(print_format)
+				),
+				frappe.PermissionError,
+			)
 		record = live_record(doc, print_format)
 		record.draft_preview = True
 		return record
-	frappe.throw(_("{0} was issued without a record snapshot and cannot be reprinted; issue it again.").format(doc.name))
+	frappe.throw(
+		_("{0} was issued without a record snapshot and cannot be reprinted; issue it again.").format(
+			doc.name
+		)
+	)

@@ -18,15 +18,35 @@ from frappe.utils import add_years
 from campus.research import crossref
 
 JOURNAL_ARTICLE = "Journal Article"
-BOOK_TYPES = ("Book", "Book Chapter", "Conference Paper")  # AQAR 3.4.4: books, chapters and conference proceedings
+BOOK_TYPES = (
+	"Book",
+	"Book Chapter",
+	"Conference Paper",
+)  # AQAR 3.4.4: books, chapters and conference proceedings
 DEFAULT_WINDOW_YEARS = 5
-FIELDS = ["name", "title", "doi", "publication_type", "publication_date", "journal", "container_title", "citations"]
+FIELDS = [
+	"name",
+	"title",
+	"doi",
+	"publication_type",
+	"publication_date",
+	"journal",
+	"container_title",
+	"citations",
+]
 
 
 def fill_from_crossref(publication):
 	"""Fill the blank fields of `publication` from Crossref for its DOI; an entered value is never replaced."""
 	work = crossref.parse_work(crossref.fetch_work(publication.doi))
-	for field in ("title", "container_title", "publisher", "publication_date", "publication_type", "citations"):
+	for field in (
+		"title",
+		"container_title",
+		"publisher",
+		"publication_date",
+		"publication_type",
+		"citations",
+	):
 		if not publication.get(field) and work.get(field):
 			publication.set(field, work[field])
 	if work["citations"] is not None and not publication.citations_as_on:
@@ -43,7 +63,9 @@ def journal_of(issns):
 	"""The Indexed Journal with one of `issns` as its ISSN or e-ISSN, or None."""
 	if not issns:
 		return None
-	found = frappe.get_all("Indexed Journal", or_filters=[["issn", "in", issns], ["e_issn", "in", issns]], pluck="name", limit=1)
+	found = frappe.get_all(
+		"Indexed Journal", or_filters=[["issn", "in", issns], ["e_issn", "in", issns]], pluck="name", limit=1
+	)
 	return found[0] if found else None
 
 
@@ -87,7 +109,10 @@ def journal_flags(rows):
 	"""Adds `ugc_care` (0 / 1) to each publication row from its Indexed Journal."""
 	journals = {row.journal for row in rows if row.journal}
 	flags = {
-		j.name: j.ugc_care for j in frappe.get_all("Indexed Journal", {"name": ["in", list(journals) or [""]]}, ["name", "ugc_care"])
+		j.name: j.ugc_care
+		for j in frappe.get_all(
+			"Indexed Journal", {"name": ["in", list(journals) or [""]]}, ["name", "ugc_care"]
+		)
 	}
 	for row in rows:
 		row.ugc_care = 1 if flags.get(row.journal) else 0
@@ -96,7 +121,9 @@ def journal_flags(rows):
 
 def window_years(company):
 	"""How many academic years the citation figures cover (Research Settings, 5 when not set)."""
-	return frappe.db.get_value("Research Settings", company, "publication_window_years") or DEFAULT_WINDOW_YEARS
+	return (
+		frappe.db.get_value("Research Settings", company, "publication_window_years") or DEFAULT_WINDOW_YEARS
+	)
 
 
 def publications_in_window(company, academic_year, department=None):
@@ -166,14 +193,23 @@ def register_rows(company, academic_year, department=None):
 	for parent, kind in authors:
 		total, staff = counts.get(parent, (0, 0))
 		counts[parent] = (total + 1, staff + (kind == "Employee"))
-	return [dict(p) | {"authors": counts.get(p.name, (0, 0))[0], "teacher_authors": counts.get(p.name, (0, 0))[1]} for p in pubs]
+	return [
+		dict(p) | {"authors": counts.get(p.name, (0, 0))[0], "teacher_authors": counts.get(p.name, (0, 0))[1]}
+		for p in pubs
+	]
 
 
 def employee_profile(employee):
 	"""Publications of one Employee (newest first, with `ugc_care`), their citations and h-index, for the faculty profile."""
-	names = frappe.get_all("Publication Author", {"employee": employee, "parenttype": "Publication"}, pluck="parent")
+	names = frappe.get_all(
+		"Publication Author", {"employee": employee, "parenttype": "Publication"}, pluck="parent"
+	)
 	rows = frappe.get_list(
-		"Publication", {"name": ["in", names or [""]]}, FIELDS, order_by="publication_date desc, name", limit_page_length=0
+		"Publication",
+		{"name": ["in", names or [""]]},
+		FIELDS,
+		order_by="publication_date desc, name",
+		limit_page_length=0,
 	)
 	journal_flags(rows)
 	return {

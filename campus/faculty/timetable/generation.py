@@ -27,17 +27,31 @@ def start_generation(timetable, time_limit=None, replace_existing=0):
 	doc = frappe.get_doc("Timetable", timetable)
 	doc.check_permission("write")
 	if doc.entries and not cint(replace_existing):
-		frappe.throw(_("{0} already has a grid; generating replaces it, manual edits included. Confirm to replace it.").format(timetable))
+		frappe.throw(
+			_(
+				"{0} already has a grid; generating replaces it, manual edits included. Confirm to replace it."
+			).format(timetable)
+		)
 	frappe.db.get_value("Timetable", timetable, "name", for_update=True)  # serialises concurrent starts
 	expire_dead_runs(timetable)
 	if live_runs(timetable):
 		frappe.throw(_("{0} already has a generation run in progress.").format(timetable))
 	limit = min(max(cint(time_limit) or solver.DEFAULT_TIME_LIMIT, 1), MAX_TIME_LIMIT)
-	run = frappe.get_doc({"doctype": "Timetable Generation Run", "timetable": timetable, "status": "Queued", "time_limit": limit}).insert(
-		ignore_permissions=True
-	)
+	run = frappe.get_doc(
+		{
+			"doctype": "Timetable Generation Run",
+			"timetable": timetable,
+			"status": "Queued",
+			"time_limit": limit,
+		}
+	).insert(ignore_permissions=True)
 	frappe.enqueue(
-		"campus.faculty.timetable.generation.execute_run", queue=QUEUE, timeout=JOB_TIMEOUT, now=frappe.in_test, enqueue_after_commit=True, run=run.name
+		"campus.faculty.timetable.generation.execute_run",
+		queue=QUEUE,
+		timeout=JOB_TIMEOUT,
+		now=frappe.in_test,
+		enqueue_after_commit=True,
+		run=run.name,
 	)
 	return run.name
 
@@ -56,20 +70,34 @@ def cancel_run(run):
 		(now_datetime(), run),
 	)
 	if not frappe.db.sql("select row_count()")[0][0]:
-		frappe.throw(_("Run {0} is {1}; only a queued or running run can be cancelled.").format(run, _(frappe.db.get_value("Timetable Generation Run", run, "status"))))
+		frappe.throw(
+			_("Run {0} is {1}; only a queued or running run can be cancelled.").format(
+				run, _(frappe.db.get_value("Timetable Generation Run", run, "status"))
+			)
+		)
 
 
 def live_runs(timetable):
 	"""Queued or running runs of the timetable, read with a lock (after the Timetable row lock) so a concurrent start sees them."""
 	run = frappe.qb.DocType("Timetable Generation Run")
-	return frappe.qb.from_(run).select(run.name).where((run.timetable == timetable) & run.status.isin(LIVE)).for_update().run()
+	return (
+		frappe.qb.from_(run)
+		.select(run.name)
+		.where((run.timetable == timetable) & run.status.isin(LIVE))
+		.for_update()
+		.run()
+	)
 
 
 def expire_dead_runs(timetable):
 	"""A queued or running run that began (or, if never started, was created) longer ago than the job timeout plus a margin
 	lost its worker: mark it Failed."""
 	cutoff = add_to_date(now_datetime(), seconds=-(JOB_TIMEOUT + STALE_MARGIN))
-	for run in frappe.get_all("Timetable Generation Run", {"timetable": timetable, "status": ["in", LIVE]}, ["name", "started_at", "creation"]):
+	for run in frappe.get_all(
+		"Timetable Generation Run",
+		{"timetable": timetable, "status": ["in", LIVE]},
+		["name", "started_at", "creation"],
+	):
 		if (run.started_at or run.creation) < cutoff:
 			frappe.db.set_value(
 				"Timetable Generation Run", run.name,
@@ -82,7 +110,12 @@ def execute_run(run):
 	"""The job: solve and store. Failures are recorded on the run (message only); a run cancelled meanwhile stays cancelled."""
 	if frappe.db.get_value("Timetable Generation Run", run, "status", for_update=True) != "Queued":
 		return
-	frappe.db.set_value("Timetable Generation Run", run, {"status": "Running", "started_at": now_datetime()}, update_modified=False)
+	frappe.db.set_value(
+		"Timetable Generation Run",
+		run,
+		{"status": "Running", "started_at": now_datetime()},
+		update_modified=False,
+	)
 	commit()  # releases the lock: cancel_run and other readers are never blocked by the solve
 	doc = frappe.get_doc("Timetable Generation Run", run)
 	try:
@@ -98,7 +131,9 @@ def execute_run(run):
 def finish(run, values):
 	"""Record the outcome only while the run is still Running (a cancel in between wins)."""
 	if frappe.db.get_value("Timetable Generation Run", run, "status", for_update=True) == "Running":
-		frappe.db.set_value("Timetable Generation Run", run, {**values, "finished_at": now_datetime()}, update_modified=False)
+		frappe.db.set_value(
+			"Timetable Generation Run", run, {**values, "finished_at": now_datetime()}, update_modified=False
+		)
 
 
 def commit():

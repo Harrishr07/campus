@@ -23,7 +23,14 @@ from campus.examinations.seed import seed_regulation
 from campus.student_services import lifecycle
 from campus.tests.approval_fixtures import level
 from campus.tests.factories import make_company, make_user
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR, PROGRAM, UNIVERSITY = "Grad Test College", "GRDC", "Grad Test BE", "Grad Test University"
@@ -50,9 +57,15 @@ def make_term(name, start, end):
 
 
 def make_session(term, final_year=0, released=True):
-	session = frappe.get_doc({"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}).insert()
+	session = frappe.get_doc(
+		{"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}
+	).insert()
 	publish_at = add_days(now_datetime(), -1 if released else 3)
-	frappe.db.set_value("Exam Session", session.name, {"status": "Published", "publish_at": publish_at, "is_final_year": final_year})
+	frappe.db.set_value(
+		"Exam Session",
+		session.name,
+		{"status": "Published", "publish_at": publish_at, "is_final_year": final_year},
+	)
 	return session.name
 
 
@@ -67,7 +80,10 @@ def fail(course, credits=3):
 def make_effective_curriculum(regulation, courses, category="PCC", credits=3):
 	"""An Effective curriculum of PROGRAM listing `courses` as mandatory (written Effective directly: the Dean's
 	approval path is not under test here)."""
-	rows = [{"semester": 1, "course": c, "category": category, "credits_override": 1, "credits": credits} for c in courses]
+	rows = [
+		{"semester": 1, "course": c, "category": category, "credits_override": 1, "credits": credits}
+		for c in courses
+	]
 	name = frappe.get_doc(
 		{"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "status": "Draft", "courses": rows}
 	).insert().name  # fmt: skip
@@ -116,26 +132,72 @@ class GraduationFixture(CampusTestCase):
 		cls.students = {}
 		histories = {
 			# (9 + 9 + 8 + 9) x 3 / 12 = 8.75, all at the first appearance
-			"dist": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)], cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)]}),
+			"dist": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)],
+					cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)],
+				},
+			),
 			# GRD C3 failed in S1, cleared in S2: 8.75 but not at the first appearance
-			"cleared": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), fail("GRD C3")],
-				cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)]}),  # fmt: skip
-			"arrear": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)], cls.s2: [pass_("GRD C3", 8), fail("GRD C4")]}),
+			"cleared": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), fail("GRD C3")],
+					cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)],
+				},
+			),  # fmt: skip
+			"arrear": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)],
+					cls.s2: [pass_("GRD C3", 8), fail("GRD C4")],
+				},
+			),
 			# with H1 + H2 (18 Honours credits at 10) and A1 at 10: (105 + 180 + 30) / 33 = 9.55
-			"honours": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), pass_("GRD H1", 10, 9)],
-				cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9), pass_("GRD H2", 10, 9), pass_("GRD A1", 10)]}),  # fmt: skip
+			"honours": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), pass_("GRD H1", 10, 9)],
+					cls.s2: [
+						pass_("GRD C3", 8),
+						pass_("GRD C4", 9),
+						pass_("GRD H2", 10, 9),
+						pass_("GRD A1", 10),
+					],
+				},
+			),  # fmt: skip
 			# 9 Honours credits only: no Honours, H1 listed but not in the CGPA (8.75)
-			"partial": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), pass_("GRD H1", 10, 9)],
-				cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)]}),  # fmt: skip
+			"partial": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9), pass_("GRD H1", 10, 9)],
+					cls.s2: [pass_("GRD C3", 8), pass_("GRD C4", 9)],
+				},
+			),  # fmt: skip
 			# R2026: (6 + 6 + 7 + 6) x 3 / 12 = 6.25
-			"weak26": ("2026", {cls.s1: [pass_("GRD C1", 6), pass_("GRD C2", 6)], cls.s2: [pass_("GRD C3", 7), pass_("GRD C4", 6)]}),
+			"weak26": (
+				"2026",
+				{
+					cls.s1: [pass_("GRD C1", 6), pass_("GRD C2", 6)],
+					cls.s2: [pass_("GRD C3", 7), pass_("GRD C4", 6)],
+				},
+			),
 			# its final year is in the unreleased session
-			"unreleased": ("2022", {cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)], cls.late: [pass_("GRD C3", 8), pass_("GRD C4", 9)]}),
+			"unreleased": (
+				"2022",
+				{
+					cls.s1: [pass_("GRD C1", 9), pass_("GRD C2", 9)],
+					cls.late: [pass_("GRD C3", 8), pass_("GRD C4", 9)],
+				},
+			),
 		}
 		for key, (batch, sessions) in histories.items():
 			student = make_student(f"Grd{key.title()}", COLLEGE, batch)
 			enroll(student, PROGRAM, "2022", submit=True)
-			frappe.db.set_value("Student", student.name, {"oc_current_semester": 2, "oc_register_no": f"GRD{key.upper()}"})
+			frappe.db.set_value(
+				"Student", student.name, {"oc_current_semester": 2, "oc_register_no": f"GRD{key.upper()}"}
+			)
 			cls.students[key] = student.name
 			for session, rows in sessions.items():
 				cls.make_result(student.name, session, rows)
@@ -203,7 +265,12 @@ class GraduationFixture(CampusTestCase):
 
 	def request(self, key, certificate_type, submit=True):
 		doc = frappe.get_doc(
-			{"doctype": "Certificate Request", "student": self.students[key], "certificate_type": certificate_type, "purpose": "Higher studies"}
+			{
+				"doctype": "Certificate Request",
+				"student": self.students[key],
+				"certificate_type": certificate_type,
+				"purpose": "Higher studies",
+			}
 		).insert()
 		if submit and doc.needs_approval:
 			return self.approve(doc)
@@ -229,10 +296,14 @@ class GraduationFixture(CampusTestCase):
 class TestGraduateRecord(GraduationFixture):
 	def test_ac1_classes_from_published_results(self):
 		dist = graduation.graduate_record(self.students["dist"])
-		self.assertEqual((dist.completed, dist.cgpa, dist.percentage, dist.classification), (True, 8.75, 87.5, DISTINCTION))
+		self.assertEqual(
+			(dist.completed, dist.cgpa, dist.percentage, dist.classification), (True, 8.75, 87.5, DISTINCTION)
+		)
 		self.assertEqual(graduation.graduate_record(self.students["cleared"]).classification, FIRST)
 		weak = graduation.graduate_record(self.students["weak26"])
-		self.assertEqual((weak.regulation, weak.cgpa, weak.classification), (self.regs["R2026"], 6.25, SECOND))
+		self.assertEqual(
+			(weak.regulation, weak.cgpa, weak.classification), (self.regs["R2026"], 6.25, SECOND)
+		)
 
 	def test_an_outstanding_arrear_means_not_completed(self):
 		record = graduation.graduate_record(self.students["arrear"])
@@ -249,12 +320,15 @@ class TestGraduateRecord(GraduationFixture):
 		frappe.db.set_value("Student", self.students["dist"], "oc_lateral_entry", 1)
 		with (
 			patch.object(graduation, "break_years", return_value=1),
-			patch.object(graduation.graduation_rules, "classification", wraps=graduation.graduation_rules.classification) as spy,
+			patch.object(
+				graduation.graduation_rules,
+				"classification",
+				wraps=graduation.graduation_rules.classification,
+			) as spy,
 		):
 			graduation.graduate_record(self.students["dist"])
 		_record, _classes, _years, break_years, entry_type = spy.call_args.args
 		self.assertEqual((break_years, entry_type), (1, "Lateral"))
-
 
 	def test_the_patch_gives_existing_rules_their_honours_credits(self):
 		from campus.examinations.seed import fill_honours_credits
@@ -262,8 +336,12 @@ class TestGraduateRecord(GraduationFixture):
 		frappe.db.set_value("Classification Rule", self.regs["R2022"], "honours_credits", 0)
 		frappe.db.set_value("Classification Rule", self.regs["R2026"], "honours_credits", 12)
 		fill_honours_credits()  # DML only
-		self.assertEqual(frappe.db.get_value("Classification Rule", self.regs["R2022"], "honours_credits"), 18)
-		self.assertEqual(frappe.db.get_value("Classification Rule", self.regs["R2026"], "honours_credits"), 12)  # set: kept
+		self.assertEqual(
+			frappe.db.get_value("Classification Rule", self.regs["R2022"], "honours_credits"), 18
+		)
+		self.assertEqual(
+			frappe.db.get_value("Classification Rule", self.regs["R2026"], "honours_credits"), 12
+		)  # set: kept
 
 
 class TestPrints(GraduationFixture):
@@ -289,7 +367,9 @@ class TestPrints(GraduationFixture):
 		self.assertIn(DISTINCTION, html)
 
 	def test_the_semester_grade_sheet_carries_a_verifiable_qr(self):
-		result = frappe.db.get_value("Student Result", {"student": self.students["dist"], "exam_session": self.s2})
+		result = frappe.db.get_value(
+			"Student Result", {"student": self.students["dist"], "exam_session": self.s2}
+		)
 		code = frappe.db.get_value("Verifiable Document", api.issue_grade_sheet(result), "code")
 		self.assertEqual(verify(code).status, "Valid")
 		self.assertIn(code, frappe.get_print("Student Result", result, "Grade Sheet"))
@@ -344,7 +424,9 @@ class TestPrints(GraduationFixture):
 		html = self.printed(self.request("dist", TRANSCRIPT))
 		self.assertIn("Grd &lt;i&gt;Tag&lt;/i&gt;", html)
 		self.assertNotIn("<i>Tag", html)
-		result = frappe.db.get_value("Student Result", {"student": self.students["dist"], "exam_session": self.s2})
+		result = frappe.db.get_value(
+			"Student Result", {"student": self.students["dist"], "exam_session": self.s2}
+		)
 		frappe.db.set_value("Student Result", result, "student_name", "Grd <i>Tag</i>")
 		self.assertNotIn("<i>Tag", frappe.get_print("Student Result", result, "Grade Sheet"))
 
@@ -355,15 +437,27 @@ class TestTranscriptRequest(GraduationFixture):
 
 		user = "grd-student@example.com"
 		if not frappe.db.exists("User", user):
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Grd", "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "Grd",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Student"}],
+				}
+			).insert()
 		frappe.db.set_value("Student", self.students["dist"], "user", user)
 		frappe.db.set_value("Certificate Type", TRANSCRIPT, "fee_amount", 250)
 		frappe.set_user(user)
 		row = portal.request_certificate(TRANSCRIPT, "Higher studies")
 		# no approval on the seeded type: the portal issues it at once (P1-T20) and the fee is invoiced afterwards
-		self.assertEqual((row["certificate_type"], row["status"], row["fee_amount"]), (TRANSCRIPT, "Issued", 250))
+		self.assertEqual(
+			(row["certificate_type"], row["status"], row["fee_amount"]), (TRANSCRIPT, "Issued", 250)
+		)
 		self.assertEqual(verify(row["verification_code"]).status, "Valid")
-		self.assertEqual(frappe.db.get_value("Certificate Request", row["name"], "student"), self.students["dist"])
+		self.assertEqual(
+			frappe.db.get_value("Certificate Request", row["name"], "student"), self.students["dist"]
+		)
 		with self.assertRaises(frappe.PermissionError):
 			portal.request_certificate(TRANSCRIPT, "Higher studies", student=self.students["cleared"])
 
@@ -375,7 +469,9 @@ class TestConvocation(GraduationFixture):
 		return frappe.get_doc("Convocation List", doc.name)
 
 	def test_list_deletable_only_before_it_moves_students(self):
-		empty = frappe.get_doc({"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM}).insert()
+		empty = frappe.get_doc(
+			{"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM}
+		).insert()
 		empty.delete()
 		self.assertFalse(frappe.db.exists("Convocation List", empty.name))
 		doc = self.make_list()
@@ -388,7 +484,9 @@ class TestConvocation(GraduationFixture):
 		expected = {self.students[k] for k in ("dist", "cleared", "honours", "partial", "weak26")}
 		self.assertEqual({g.student for g in doc.graduates}, expected)
 		row = next(g for g in doc.graduates if g.student == self.students["honours"])
-		self.assertEqual((row.cgpa, row.percentage, row.classification, row.variant), (9.55, 95.5, DISTINCTION, "Honours"))
+		self.assertEqual(
+			(row.cgpa, row.percentage, row.classification, row.variant), (9.55, 95.5, DISTINCTION, "Honours")
+		)
 
 	def test_ac2_the_export_is_available_with_the_mapped_columns(self):
 		self.awarding("University")
@@ -405,7 +503,9 @@ class TestConvocation(GraduationFixture):
 		self.assertIn(["GRDDIST", DISTINCTION], rows)
 
 	def test_the_format_is_labelled_a_placeholder(self):
-		self.assertIn("placeholder", frappe.get_meta("Convocation List").get_field("columns").description.lower())
+		self.assertIn(
+			"placeholder", frappe.get_meta("Convocation List").get_field("columns").description.lower()
+		)
 
 	def test_export_cells_cannot_carry_formulas(self):
 		frappe.db.set_value("Student", self.students["dist"], "student_name", "=HYPERLINK(1)")
@@ -426,9 +526,14 @@ class TestConvocation(GraduationFixture):
 		convocation.fill_graduates(doc.name)  # a refill changes nothing twice
 		self.assertEqual(
 			self.lifecycle("dist"),
-			[("Active", "Study Completed", "Convocation List", getdate(today())), ("Study Completed", "Award Eligible", "Convocation List", getdate(today()))],
+			[
+				("Active", "Study Completed", "Convocation List", getdate(today())),
+				("Study Completed", "Award Eligible", "Convocation List", getdate(today())),
+			],
 		)
-		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], "oc_academic_status"), "Active")  # not listed
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["arrear"], "oc_academic_status"), "Active"
+		)  # not listed
 
 	def test_graduates_are_recorded_on_the_convocation_date(self):
 		doc = self.make_list()
@@ -439,17 +544,25 @@ class TestConvocation(GraduationFixture):
 			convocation.graduate(doc.name)
 		doc.db_set("convocation_date", add_days(today(), 0))
 		self.assertEqual(convocation.graduate(doc.name), {"graduated": 5, "refused": []})
-		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Graduated")
-		self.assertEqual(self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", getdate(today())))
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Graduated"
+		)
+		self.assertEqual(
+			self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", getdate(today()))
+		)
 		self.assertEqual(convocation.graduate(doc.name), {"graduated": 0, "refused": []})  # once
 
 	def test_a_list_filled_after_its_convocation_is_dated_from_it_and_graduates(self):
 		held = getdate(add_days(today(), -20))
-		doc = frappe.get_doc({"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM, "convocation_date": held}).insert()
+		doc = frappe.get_doc(
+			{"doctype": "Convocation List", "company": COLLEGE, "program": PROGRAM, "convocation_date": held}
+		).insert()
 		convocation.fill_graduates(doc.name)
 		self.assertEqual([row[3] for row in self.lifecycle("dist")], [held, held])
 		self.assertEqual(convocation.graduate(doc.name)["graduated"], 5)
-		self.assertEqual(self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", held))
+		self.assertEqual(
+			self.lifecycle("dist")[-1], ("Award Eligible", "Graduated", "Convocation List", held)
+		)
 
 	def test_a_legacy_list_with_a_past_convocation_graduates_its_migrated_students(self):
 		held = getdate(add_days(today(), -20))
@@ -460,7 +573,9 @@ class TestConvocation(GraduationFixture):
 		frappe.db.set_value("Student", student, "oc_academic_status", "Active")
 		self.assertEqual(lifecycle.migrate_student(student), "Award Eligible")
 		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": student})
-		self.assertEqual((migrated.kind, migrated.effective_date, migrated.source_name), ("Migrated", held, doc.name))
+		self.assertEqual(
+			(migrated.kind, migrated.effective_date, migrated.source_name), ("Migrated", held, doc.name)
+		)
 		result = convocation.graduate(doc.name)
 		self.assertNotIn(student, [row["student"] for row in result["refused"]])
 		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Graduated")
@@ -469,39 +584,79 @@ class TestConvocation(GraduationFixture):
 		doc = self.make_list()  # dated today
 		doc.db_set("convocation_date", add_days(today(), -1))
 		others = [self.students[k] for k in ("cleared", "honours", "partial", "weak26")]
-		frappe.db.set_value("Lifecycle Transition", {"student": ["in", others], "source_name": doc.name}, "effective_date", add_days(today(), -2))
+		frappe.db.set_value(
+			"Lifecycle Transition",
+			{"student": ["in", others], "source_name": doc.name},
+			"effective_date",
+			add_days(today(), -2),
+		)
 		result = convocation.graduate(doc.name)
 		self.assertEqual(result["graduated"], 4)
 		self.assertEqual([row["student"] for row in result["refused"]], [self.students["dist"]])
 		self.assertIn("before the last status change", result["refused"][0]["reason"])
-		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Award Eligible")
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Award Eligible"
+		)
 
 	def test_a_refill_that_drops_a_graduate_undoes_award_eligible(self):
 		doc = self.make_list()
-		frappe.get_doc({"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 15, "max_total_credits": 200}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Curriculum Rule",
+				"regulation": self.regs["R2022"],
+				"min_total_credits": 15,
+				"max_total_credits": 200,
+			}
+		).insert()
 		convocation.fill_graduates(doc.name)
-		self.assertNotIn(self.students["dist"], {g.student for g in frappe.get_doc("Convocation List", doc.name).graduates})
-		self.assertEqual(frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Active")
+		self.assertNotIn(
+			self.students["dist"], {g.student for g in frappe.get_doc("Convocation List", doc.name).graduates}
+		)
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["dist"], "oc_academic_status"), "Active"
+		)
 		kinds = frappe.get_all(
-			"Lifecycle Transition", {"student": self.students["dist"], "source_name": doc.name}, ["kind", "to_status"], order_by="creation asc, name asc"
+			"Lifecycle Transition",
+			{"student": self.students["dist"], "source_name": doc.name},
+			["kind", "to_status"],
+			order_by="creation asc, name asc",
 		)
 		self.assertEqual(
 			[(k.kind, k.to_status) for k in kinds],
-			[("Transition", "Study Completed"), ("Transition", "Award Eligible"), ("Reversal", "Study Completed"), ("Reversal", "Active")],
+			[
+				("Transition", "Study Completed"),
+				("Transition", "Award Eligible"),
+				("Reversal", "Study Completed"),
+				("Reversal", "Active"),
+			],
 		)
 
 	def test_a_refill_of_a_pre_l01_list_dropping_a_migrated_student_does_not_abort(self):
 		doc = self.make_list()
 		student = self.students["dist"]
-		frappe.db.delete("Lifecycle Transition", {"student": student})  # as recorded before L-01, then migrated
+		frappe.db.delete(
+			"Lifecycle Transition", {"student": student}
+		)  # as recorded before L-01, then migrated
 		frappe.db.set_value("Student", student, "oc_academic_status", "Active")
 		self.assertEqual(lifecycle.migrate_student(student), "Award Eligible")
 		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": student})
-		frappe.get_doc({"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 15, "max_total_credits": 200}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Curriculum Rule",
+				"regulation": self.regs["R2022"],
+				"min_total_credits": 15,
+				"max_total_credits": 200,
+			}
+		).insert()
 		convocation.fill_graduates(doc.name)  # drops dist; must not throw
 		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
-		log = frappe.get_last_doc("Lifecycle Transition", {"student": student}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "Award Eligible", "Active", migrated.name))
+		log = frappe.get_last_doc(
+			"Lifecycle Transition", {"student": student}, order_by="creation desc, name desc"
+		)
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.reverses),
+			("Reversal", "Award Eligible", "Active", migrated.name),
+		)
 
 	def test_a_refused_graduate_writes_nothing(self):
 		doc = self.make_list()
@@ -516,9 +671,15 @@ class TestConvocation(GraduationFixture):
 
 		with patch.object(convocation, "transition", side_effect=half_written):
 			result = convocation.graduate(doc.name)
-		self.assertEqual((result["graduated"], [r["student"] for r in result["refused"]]), (4, [self.students["dist"]]))
-		self.assertNotEqual(frappe.db.get_value("Student", self.students["dist"], "student_name"), "Half Written")
-		self.assertEqual(frappe.db.get_value("Student", self.students["cleared"], "oc_academic_status"), "Graduated")
+		self.assertEqual(
+			(result["graduated"], [r["student"] for r in result["refused"]]), (4, [self.students["dist"]])
+		)
+		self.assertNotEqual(
+			frappe.db.get_value("Student", self.students["dist"], "student_name"), "Half Written"
+		)
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["cleared"], "oc_academic_status"), "Graduated"
+		)
 
 	def test_only_the_coe_records_graduates(self):
 		doc = self.make_list()
@@ -548,11 +709,32 @@ class TestConvocation(GraduationFixture):
 class TestProgressionRun(GraduationFixture):
 	def setUp(self):
 		super().setUp()
-		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2022"], "max_arrears": 0, "probation_below_cgpa": 6}).insert()
-		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2026"], "max_arrears": 2, "probation_below_cgpa": 6.5}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Progression Rule",
+				"regulation": self.regs["R2022"],
+				"max_arrears": 0,
+				"probation_below_cgpa": 6,
+			}
+		).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Progression Rule",
+				"regulation": self.regs["R2026"],
+				"max_arrears": 2,
+				"probation_below_cgpa": 6.5,
+			}
+		).insert()
 
 	def start(self):
-		doc = frappe.get_doc({"doctype": "Progression Run", "company": COLLEGE, "academic_term": self.terms["S2"], "program": PROGRAM})
+		doc = frappe.get_doc(
+			{
+				"doctype": "Progression Run",
+				"company": COLLEGE,
+				"academic_term": self.terms["S2"],
+				"program": PROGRAM,
+			}
+		)
 		doc.insert()
 		with patch.object(bulk, "enqueue_run") as enqueue:
 			doc.submit()
@@ -569,12 +751,17 @@ class TestProgressionRun(GraduationFixture):
 
 	def test_promote_detain_and_probation_by_the_progression_rule(self):
 		doc = self.start()
-		self.assertEqual(set(frappe.parse_json(frappe.db.get_value("Bulk Run", doc.bulk_run, "items"))), set(self.students.values()))
+		self.assertEqual(
+			set(frappe.parse_json(frappe.db.get_value("Bulk Run", doc.bulk_run, "items"))),
+			set(self.students.values()),
+		)
 		rows = self.process(doc)
 		self.assertEqual(rows[self.students["dist"]].outcome, "Promote")
 		self.assertEqual(rows[self.students["arrear"]].outcome, "Detain")
 		self.assertEqual(rows[self.students["weak26"]].outcome, "Probation")  # 6.25 < 6.5
-		student = lambda key: frappe.db.get_value("Student", self.students[key], ["oc_current_semester", "oc_detained", "oc_academic_status"])  # noqa: E731
+		student = lambda key: frappe.db.get_value(
+			"Student", self.students[key], ["oc_current_semester", "oc_detained", "oc_academic_status"]
+		)  # noqa: E731
 		self.assertEqual(student("dist"), (3, 0, "Active"))
 		self.assertEqual(student("arrear"), (2, 1, "Active"))  # detention is not a lifecycle status (L-01)
 		self.assertEqual(student("weak26"), (3, 0, "Active"))
@@ -590,7 +777,14 @@ class TestProgressionRun(GraduationFixture):
 	def test_one_run_per_term_and_program(self):
 		self.start()
 		with self.assertRaises(frappe.DuplicateEntryError):
-			frappe.get_doc({"doctype": "Progression Run", "company": COLLEGE, "academic_term": self.terms["S2"], "program": PROGRAM}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Progression Run",
+					"company": COLLEGE,
+					"academic_term": self.terms["S2"],
+					"program": PROGRAM,
+				}
+			).insert()
 
 	def test_the_rule_is_locked_on_an_effective_regulation(self):
 		rule = frappe.get_doc("Progression Rule", self.regs["R2022"])
@@ -608,8 +802,15 @@ class TestFixRound1(GraduationFixture):
 		snapshot = frappe.parse_json(frappe.db.get_value("Certificate Request", doc.name, "record_snapshot"))
 		self.assertEqual((snapshot["cgpa"], snapshot["classification"]), (8.75, DISTINCTION))
 		# a later result (revaluation) lowers GRD C3, and the rule's distinction line moves
-		frappe.db.set_value("Student Result Course", {"parent": self.s2_result("dist"), "course": "GRD C3"}, "grade_point", 5)
-		frappe.db.set_value("Classification Rule Class", {"parent": self.regs["R2022"], "class_name": DISTINCTION}, "cgpa_min", 9.9)
+		frappe.db.set_value(
+			"Student Result Course", {"parent": self.s2_result("dist"), "course": "GRD C3"}, "grade_point", 5
+		)
+		frappe.db.set_value(
+			"Classification Rule Class",
+			{"parent": self.regs["R2022"], "class_name": DISTINCTION},
+			"cgpa_min",
+			9.9,
+		)
 		self.assertNotEqual(graduation.graduate_record(self.students["dist"]).cgpa, 8.75)
 		html = self.printed(doc)
 		for text in ("87.50", "8.75", DISTINCTION):
@@ -647,7 +848,15 @@ class TestFixRound1(GraduationFixture):
 
 		user = "grd-student-ds@example.com"
 		if not frappe.db.exists("User", user):
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "GrdDs", "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "GrdDs",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Student"}],
+				}
+			).insert()
 		frappe.db.set_value("Student", self.students["dist"], "user", user)
 		frappe.set_user(user)
 		self.assertNotIn(DATA_SHEET, [t.name for t in portal.certificate_types()])
@@ -664,7 +873,12 @@ class TestFixRound1(GraduationFixture):
 		self.assertEqual([s.exam_session for s in record.semesters], [self.s1])
 
 	def test_m2_the_regulation_credit_total_must_be_earned(self):
-		rule = {"doctype": "Curriculum Rule", "regulation": self.regs["R2022"], "min_total_credits": 12, "max_total_credits": 200}
+		rule = {
+			"doctype": "Curriculum Rule",
+			"regulation": self.regs["R2022"],
+			"min_total_credits": 12,
+			"max_total_credits": 200,
+		}
 		frappe.get_doc(rule).insert()
 		self.assertTrue(graduation.graduate_record(self.students["dist"]).completed)  # 12 core credits
 		frappe.db.set_value("Curriculum Rule", {"regulation": self.regs["R2022"]}, "min_total_credits", 15)
@@ -672,28 +886,59 @@ class TestFixRound1(GraduationFixture):
 		self.assertEqual((record.completed, record.classification), (False, None))
 
 	def test_m3_a_rerun_reconsiders_the_runs_detained_students(self):
-		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2022"], "max_arrears": 0}).insert()
-		frappe.get_doc({"doctype": "Progression Rule", "regulation": self.regs["R2026"], "max_arrears": 0}).insert()
-		doc = frappe.get_doc({"doctype": "Progression Run", "company": COLLEGE, "academic_term": self.terms["S2"], "program": PROGRAM}).insert()
+		frappe.get_doc(
+			{"doctype": "Progression Rule", "regulation": self.regs["R2022"], "max_arrears": 0}
+		).insert()
+		frappe.get_doc(
+			{"doctype": "Progression Rule", "regulation": self.regs["R2026"], "max_arrears": 0}
+		).insert()
+		doc = frappe.get_doc(
+			{
+				"doctype": "Progression Run",
+				"company": COLLEGE,
+				"academic_term": self.terms["S2"],
+				"program": PROGRAM,
+			}
+		).insert()
 		with patch.object(bulk, "enqueue_run"):
 			doc.submit()
 		doc.reload()
 		run = frappe.get_doc("Bulk Run", doc.bulk_run)
 		progression.progress_student(self.students["arrear"], run)
-		self.assertEqual(frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_detained"]), ("Active", 1))
+		self.assertEqual(
+			frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_detained"]),
+			("Active", 1),
+		)
 		# a revaluation clears the arrear; the re-run takes the detained student again and promotes
-		frappe.db.set_value("Student Result Course", {"parent": self.s2_result("arrear"), "course": "GRD C4"}, {"result": "Pass", "grade_point": 7})
+		frappe.db.set_value(
+			"Student Result Course",
+			{"parent": self.s2_result("arrear"), "course": "GRD C4"},
+			{"result": "Pass", "grade_point": 7},
+		)
 		self.assertIn(self.students["arrear"], progression.active_students(doc))
 		self.assertEqual(progression.progress_student(self.students["arrear"], run), "Promote")
 		self.assertEqual(
-			frappe.db.get_value("Student", self.students["arrear"], ["oc_academic_status", "oc_detained", "oc_current_semester"]), ("Active", 0, 3)
+			frappe.db.get_value(
+				"Student",
+				self.students["arrear"],
+				["oc_academic_status", "oc_detained", "oc_current_semester"],
+			),
+			("Active", 0, 3),
 		)
 
 
 class TestFixRound2(GraduationFixture):
 	def student_login(self, key, user):
 		if not frappe.db.exists("User", user):
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "GrdN1", "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "GrdN1",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Student"}],
+				}
+			).insert()
 		frappe.db.set_value("Student", self.students[key], "user", user)
 
 	def test_n1_a_student_cannot_print_their_pending_graduate_draft(self):
@@ -702,7 +947,9 @@ class TestFixRound2(GraduationFixture):
 		self.student_login("dist", "grd-n1@example.com")
 		draft = self.request("dist", PROVISIONAL, submit=False)
 		frappe.set_user("grd-n1@example.com")
-		self.assertTrue(frappe.has_permission("Certificate Request", "read", draft.name))  # the student does see it
+		self.assertTrue(
+			frappe.has_permission("Certificate Request", "read", draft.name)
+		)  # the student does see it
 		with self.assertRaisesRegex(Exception, "(?i)draft"):
 			frappe.get_print("Certificate Request", draft.name, PROVISIONAL)
 		with self.assertRaisesRegex(Exception, "(?i)draft"):
@@ -754,13 +1001,19 @@ class TestExamCertificateReissue(GraduationFixture):
 		original = self.request("dist", certificate_type)
 		frappe.db.set_value("Student", self.students["dist"], "student_name", "Grd Renamed")
 		duplicate = self.reissue(original, "Damaged")
-		self.assertEqual(self.snapshot(duplicate), self.snapshot(original))  # a duplicate prints what the original printed
+		self.assertEqual(
+			self.snapshot(duplicate), self.snapshot(original)
+		)  # a duplicate prints what the original printed
 		self.assertNotIn("Grd Renamed", self.snapshot(duplicate))
 		correction = self.reissue(duplicate, "Correction of Particulars")
 		self.assertIn("Grd Renamed", self.snapshot(correction))  # a correction takes the record as it stands
-		self.assertEqual(frappe.db.get_value("Certificate Request", duplicate.name, "superseded_by"), correction.name)
+		self.assertEqual(
+			frappe.db.get_value("Certificate Request", duplicate.name, "superseded_by"), correction.name
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "already has"):
-			self.request("dist", certificate_type, submit=False)  # an independent third issue is still refused
+			self.request(
+				"dist", certificate_type, submit=False
+			)  # an independent third issue is still refused
 
 	def test_a_provisional_certificate_can_be_reissued(self):
 		self.check_reissue_of(PROVISIONAL)

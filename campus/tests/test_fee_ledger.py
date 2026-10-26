@@ -29,7 +29,9 @@ class TestSplit(CampusTestCase):
 		self.assertEqual(ledger.split(-50, [("Tuition", 1)]), [("Tuition", -50)])
 
 	def test_split_follows_the_shares(self):
-		self.assertEqual(ledger.split(1000, [("Tuition", 0.8), ("Exam", 0.2)]), [("Tuition", 800), ("Exam", 200)])
+		self.assertEqual(
+			ledger.split(1000, [("Tuition", 0.8), ("Exam", 0.2)]), [("Tuition", 800), ("Exam", 200)]
+		)
 
 
 class LedgerFixture(CampusTestCase):
@@ -64,8 +66,13 @@ class LedgerFixture(CampusTestCase):
 		]  # fmt: skip
 		doc = frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": company, "student": student, "posting_date": today(), "due_date": today(),
-				"customer": frappe.db.get_value("Student", student, "customer"), "items": items,
+				"doctype": "Sales Invoice",
+				"company": company,
+				"student": student,
+				"posting_date": today(),
+				"due_date": today(),
+				"customer": frappe.db.get_value("Student", student, "customer"),
+				"items": items,
 			}
 		).insert()
 		return doc.submit()
@@ -100,9 +107,15 @@ class TestDues(LedgerFixture):
 
 	def test_scopes_restrict_dues_to_those_heads(self):
 		self.invoice_both()
-		self.assertEqual(api.has_dues(self.student, scopes=[EXAM]), {"total": 2000, "by_company": {COLLEGE: 2000}, "by_head": {EXAM: 2000}, "blocking": 2000})
+		self.assertEqual(
+			api.has_dues(self.student, scopes=[EXAM]),
+			{"total": 2000, "by_company": {COLLEGE: 2000}, "by_head": {EXAM: 2000}, "blocking": 2000},
+		)
 		self.assertEqual(api.has_dues(self.student, scopes=[EXAM, HOSTEL]).total, 12000)
-		self.assertEqual(api.has_dues(self.student, scopes=["Library"]), {"total": 0, "by_company": {}, "by_head": {}, "blocking": 0})
+		self.assertEqual(
+			api.has_dues(self.student, scopes=["Library"]),
+			{"total": 0, "by_company": {}, "by_head": {}, "blocking": 0},
+		)
 
 	def test_payments_and_credit_notes_reduce_dues(self):
 		college, _trust = self.invoice_both()
@@ -129,9 +142,16 @@ class TestDues(LedgerFixture):
 		self.invoice(COLLEGE, self.college, {TUITION: 5000})
 		refund = frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": TRUST, "student": self.student, "is_return": 1, "posting_date": today(),
-				"due_date": today(), "customer": frappe.db.get_value("Student", self.student, "customer"),
-				"items": [{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}],
+				"doctype": "Sales Invoice",
+				"company": TRUST,
+				"student": self.student,
+				"is_return": 1,
+				"posting_date": today(),
+				"due_date": today(),
+				"customer": frappe.db.get_value("Student", self.student, "customer"),
+				"items": [
+					{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}
+				],
 			}
 		).insert()
 		refund.submit()
@@ -153,7 +173,15 @@ class TestDues(LedgerFixture):
 		self.assertEqual(api.has_dues(self.student).total, 0)
 
 	def test_a_line_without_a_fee_category_counts_as_other(self):
-		item = frappe.get_doc({"doctype": "Item", "item_code": "Ledger Test Misc", "item_group": "Fee Component", "is_stock_item": 0, "stock_uom": "Nos"})
+		item = frappe.get_doc(
+			{
+				"doctype": "Item",
+				"item_code": "Ledger Test Misc",
+				"item_group": "Fee Component",
+				"is_stock_item": 0,
+				"stock_uom": "Nos",
+			}
+		)
 		if frappe.get_meta("Item").has_field("gst_hsn_code"):
 			item.gst_hsn_code = "999294"
 		item.insert()
@@ -179,7 +207,10 @@ class TestLedgerReport(LedgerFixture):
 		self.assertEqual(rows[-1]["balance"], self.gl_balance(customer))
 		self.assertEqual(rows[-1]["balance"], api.has_dues(self.student).total)
 		for company in (COLLEGE, TRUST):
-			self.assertEqual(sum(r["debit"] - r["credit"] for r in rows if r["company"] == company), self.gl_balance(customer, company))
+			self.assertEqual(
+				sum(r["debit"] - r["credit"] for r in rows if r["company"] == company),
+				self.gl_balance(customer, company),
+			)
 		self.assertEqual(summary[0]["value"], 40000)
 		self.assertEqual({r["currency"] for r in rows}, {"INR"})
 
@@ -187,7 +218,9 @@ class TestLedgerReport(LedgerFixture):
 		college, _trust = self.invoice_both()
 		self.pay(college, 500)
 		_columns, rows, _summary = self.run_report()
-		invoice_rows = {(r["voucher_no"], r["head"]): r["debit"] for r in rows if r["voucher_type"] == "Sales Invoice"}
+		invoice_rows = {
+			(r["voucher_no"], r["head"]): r["debit"] for r in rows if r["voucher_type"] == "Sales Invoice"
+		}
 		self.assertEqual(invoice_rows[(college.name, TUITION)], 40000)
 		self.assertEqual(invoice_rows[(college.name, EXAM)], 2000)
 		payment = [r for r in rows if r["voucher_type"] == "Payment Entry"]
@@ -223,7 +256,14 @@ class TestLedgerReport(LedgerFixture):
 
 class TestNoDuesClearance(LedgerFixture):
 	def clearance(self, **values):
-		return frappe.get_doc({"doctype": "No Dues Clearance", "student": self.student, "purpose": "Transfer Certificate", **values})
+		return frappe.get_doc(
+			{
+				"doctype": "No Dues Clearance",
+				"student": self.student,
+				"purpose": "Transfer Certificate",
+				**values,
+			}
+		)
 
 	def row(self, doc, office):
 		return next(r for r in doc.signoffs if r.office == office)
@@ -235,7 +275,10 @@ class TestNoDuesClearance(LedgerFixture):
 	def test_new_clearance_has_the_standard_offices_pending_and_checks_dues(self):
 		self.invoice_both()
 		doc = self.clearance().insert()
-		self.assertEqual([(r.office, r.status, r.mandatory) for r in doc.signoffs], [(o, "Pending", 1) for o in ("Accounts", "Library", "Hostel", "Lab")])
+		self.assertEqual(
+			[(r.office, r.status, r.mandatory) for r in doc.signoffs],
+			[(o, "Pending", 1) for o in ("Accounts", "Library", "Hostel", "Lab")],
+		)
 		self.assertEqual((doc.dues_total, doc.company), (52000, COLLEGE))
 		self.assertIn("Hostel: 10000", doc.dues_note)
 
@@ -277,7 +320,10 @@ class TestNoDuesClearance(LedgerFixture):
 		self.assertEqual((doc.docstatus, doc.dues_total), (1, 0))
 		self.assertEqual({r.cleared_by for r in doc.signoffs}, {"Administrator"})
 		record = frappe.get_doc("Verifiable Document", {"code": doc.verification_code})
-		self.assertEqual((record.reference_doctype, record.reference_name, record.status), ("No Dues Clearance", doc.name, "Valid"))
+		self.assertEqual(
+			(record.reference_doctype, record.reference_name, record.status),
+			("No Dues Clearance", doc.name, "Valid"),
+		)
 		html = frappe.get_print("No Dues Clearance", doc.name, print_format="No Dues Certificate")
 		for text in (doc.student_name, "Transfer Certificate", "Library", COLLEGE, doc.verification_code):
 			self.assertIn(text, html)
@@ -305,9 +351,16 @@ class TestNoDuesClearance(LedgerFixture):
 		self.invoice(COLLEGE, self.college, {TUITION: 5000})
 		frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": TRUST, "student": self.student, "is_return": 1, "posting_date": today(),
-				"due_date": today(), "customer": frappe.db.get_value("Student", self.student, "customer"),
-				"items": [{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}],
+				"doctype": "Sales Invoice",
+				"company": TRUST,
+				"student": self.student,
+				"is_return": 1,
+				"posting_date": today(),
+				"due_date": today(),
+				"customer": frappe.db.get_value("Student", self.student, "customer"),
+				"items": [
+					{"item_code": HOSTEL, "qty": -1, "rate": 5000, "income_account": self.trust["income"]}
+				],
 			}
 		).insert().submit()
 		doc = self.clearance().insert()
@@ -381,7 +434,9 @@ class TestNoDuesClearance(LedgerFixture):
 		doc = self.clearance()
 		doc.append("signoffs", {"office": "Sports", "mandatory": 0})
 		doc.insert()
-		self.row(doc, "Sports").status = "Cleared"  # Sports has no mapping: a manager (Administrator) clears it
+		self.row(
+			doc, "Sports"
+		).status = "Cleared"  # Sports has no mapping: a manager (Administrator) clears it
 		doc.save()
 		frappe.set_user(WARDEN_USER)
 		doc = frappe.get_doc("No Dues Clearance", doc.name)

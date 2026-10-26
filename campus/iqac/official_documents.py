@@ -51,7 +51,11 @@ def check_successor(document):
 	if frappe.db.get_value(DOCTYPE, successor, "company") != document.company:
 		frappe.throw(_("{0} belongs to another company.").format(frappe.bold(successor)))
 	if document.name in forward(successor):
-		frappe.throw(_("{0} already leads back to {1}: the chain would loop.").format(frappe.bold(successor), frappe.bold(document.name)))
+		frappe.throw(
+			_("{0} already leads back to {1}: the chain would loop.").format(
+				frappe.bold(successor), frappe.bold(document.name)
+			)
+		)
 
 
 def chain(name):
@@ -85,7 +89,9 @@ def current(name):
 def send_expiry_alerts(on_date=None):
 	"""Scheduler entry point (daily). Returns the number of documents alerted about or marked Expired."""
 	on_date = getdate(on_date or today())
-	offsets = alert_offsets(frappe.db.get_single_value("Official Document Setting", "alert_days") or DEFAULT_ALERT_DAYS)
+	offsets = alert_offsets(
+		frappe.db.get_single_value("Official Document Setting", "alert_days") or DEFAULT_ALERT_DAYS
+	)
 	count = 0
 	for row in frappe.get_all(DOCTYPE, {"status": "Active"}, ["name", "valid_to"], order_by="valid_to, name"):
 		due_stage = expiry_stage(row.valid_to, on_date, offsets)
@@ -95,7 +101,9 @@ def send_expiry_alerts(on_date=None):
 			alert(frappe.get_doc(DOCTYPE, row.name), *due_stage)
 			count += 1
 		except Exception:
-			frappe.log_error(title=f"Official document alert failed for {row.name}")  # no context: keep the rest going
+			frappe.log_error(
+				title=f"Official document alert failed for {row.name}"
+			)  # no context: keep the rest going
 	return count
 
 
@@ -110,12 +118,20 @@ def alert(document, kind, days):
 	if people:
 		send(event, document, [f"Employee:{employee}" for employee in people], context=context)
 	else:  # nobody to tell: say so, the run goes on
-		frappe.logger("campus").warning(f"Official Document {document.name}: {event}, but {document.company} has no Principal or IQAC Coordinator on its Institution Profile")
+		frappe.logger("campus").warning(
+			f"Official Document {document.name}: {event}, but {document.company} has no Principal or IQAC Coordinator on its Institution Profile"
+		)
 	if kind == "expired":
 		document.db_set("status", "Expired", update_modified=False)
 
 
 def recipients(company):
 	"""The Principal and the IQAC Coordinator named on the Institution Profile of `company`."""
-	row = frappe.db.get_value("Institution Profile", {"company": company}, ["principal", "iqac_coordinator"], as_dict=True)
-	return list(dict.fromkeys(employee for employee in (row.principal, row.iqac_coordinator) if employee)) if row else []
+	row = frappe.db.get_value(
+		"Institution Profile", {"company": company}, ["principal", "iqac_coordinator"], as_dict=True
+	)
+	return (
+		list(dict.fromkeys(employee for employee in (row.principal, row.iqac_coordinator) if employee))
+		if row
+		else []
+	)

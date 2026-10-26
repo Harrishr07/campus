@@ -19,11 +19,27 @@ def execute(filters=None):
 
 
 def rows(filters):
-	conditions = {"docstatus": 1, "company": filters.company, **{f: filters[f] for f in FILTERS if filters.get(f)}}
+	conditions = {
+		"docstatus": 1,
+		"company": filters.company,
+		**{f: filters[f] for f in FILTERS if filters.get(f)},
+	}
 	if filters.instructor:
-		taught = frappe.get_all("Student Group Instructor", {"parenttype": "Student Group", "instructor": filters.instructor}, pluck="parent")
+		taught = frappe.get_all(
+			"Student Group Instructor",
+			{"parenttype": "Student Group", "instructor": filters.instructor},
+			pluck="parent",
+		)
 		conditions["course_offering"] = ["in", taught or [""]]
-	runs = {r.name: r for r in frappe.get_list(CO_RUN, filters=conditions, fields=["name", "course", "course_offering", "academic_term"], order_by="name")}
+	runs = {
+		r.name: r
+		for r in frappe.get_list(
+			CO_RUN,
+			filters=conditions,
+			fields=["name", "course", "course_offering", "academic_term"],
+			order_by="name",
+		)
+	}
 	faculty = offering_instructors({r.course_offering for r in runs.values()})
 	results = frappe.get_all(
 		CO_RESULT, {"parenttype": CO_RUN, "parent": ["in", list(runs) or [""]]},
@@ -43,8 +59,20 @@ def rows(filters):
 def columns():
 	return [
 		{"fieldname": "course", "label": _("Course"), "fieldtype": "Link", "options": "Course", "width": 180},
-		{"fieldname": "course_offering", "label": _("Offering"), "fieldtype": "Link", "options": "Student Group", "width": 180},
-		{"fieldname": "academic_term", "label": _("Term"), "fieldtype": "Link", "options": "Academic Term", "width": 130},
+		{
+			"fieldname": "course_offering",
+			"label": _("Offering"),
+			"fieldtype": "Link",
+			"options": "Student Group",
+			"width": 180,
+		},
+		{
+			"fieldname": "academic_term",
+			"label": _("Term"),
+			"fieldtype": "Link",
+			"options": "Academic Term",
+			"width": 130,
+		},
 		{"fieldname": "instructors", "label": _("Faculty"), "fieldtype": "Data", "width": 160},
 		{"fieldname": "co_code", "label": _("CO"), "fieldtype": "Data", "width": 60},
 		{"fieldname": "cia_percent", "label": _("CIA %"), "fieldtype": "Percent", "width": 80},

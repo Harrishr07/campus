@@ -35,7 +35,11 @@ def meeting_rows(filters):
 def submission_rows(filters):
 	submissions = frappe.get_list(
 		"Regulator Submission",
-		{"company": filters.company, "status": ["!=", "Waived"], "due_date": ["between", [filters.from_date, filters.to_date]]},
+		{
+			"company": filters.company,
+			"status": ["!=", "Waived"],
+			"due_date": ["between", [filters.from_date, filters.to_date]],
+		},
 		["name", "submission_type", "due_date", "status"],
 	)
 	return [

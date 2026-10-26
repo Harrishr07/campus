@@ -36,10 +36,15 @@ class TestLabRules(UnitTestCase):
 		self.assertFalse(notice_due("2026-10-21", "2026-10-22", 15))
 
 	def test_a_critical_point_not_met_fails_the_inspection(self):
-		self.assertEqual(inspection_outcome([{"compliant": 0, "critical": 1}, {"compliant": 1, "critical": 0}]), "Fail")
+		self.assertEqual(
+			inspection_outcome([{"compliant": 0, "critical": 1}, {"compliant": 1, "critical": 0}]), "Fail"
+		)
 
 	def test_only_ordinary_points_not_met_needs_action(self):
-		self.assertEqual(inspection_outcome([{"compliant": 1, "critical": 1}, {"compliant": 0, "critical": 0}]), "Needs Action")
+		self.assertEqual(
+			inspection_outcome([{"compliant": 1, "critical": 1}, {"compliant": 0, "critical": 0}]),
+			"Needs Action",
+		)
 
 	def test_everything_met_passes(self):
 		self.assertEqual(inspection_outcome([{"compliant": 1, "critical": 1}]), "Pass")
@@ -88,7 +93,9 @@ class LabCase(CampusTestCase):
 
 	def make_category(self):
 		if not frappe.db.exists("Asset Category", "Lab Equipment"):
-			frappe.get_doc({"doctype": "Asset Category", "asset_category_name": "Lab Equipment"}).insert(ignore_mandatory=True)
+			frappe.get_doc({"doctype": "Asset Category", "asset_category_name": "Lab Equipment"}).insert(
+				ignore_mandatory=True
+			)
 		return "Lab Equipment"
 
 	def make_asset(self, lab, company=COLLEGE, status="Draft"):
@@ -96,18 +103,34 @@ class LabCase(CampusTestCase):
 		category = self.make_category()
 		item = frappe.generate_hash(length=8)
 		if not frappe.db.exists("Item Group", "Lab Items"):
-			frappe.get_doc({"doctype": "Item Group", "item_group_name": "Lab Items"}).insert(ignore_mandatory=True)
+			frappe.get_doc({"doctype": "Item Group", "item_group_name": "Lab Items"}).insert(
+				ignore_mandatory=True
+			)
 		frappe.get_doc(
 			{
-				"doctype": "Item", "item_code": f"LAB-{item}", "item_name": f"Oscilloscope {item}", "item_group": "Lab Items",
-				"is_stock_item": 0, "is_fixed_asset": 1, "is_sales_item": 0, "asset_category": category, "stock_uom": "Nos",
+				"doctype": "Item",
+				"item_code": f"LAB-{item}",
+				"item_name": f"Oscilloscope {item}",
+				"item_group": "Lab Items",
+				"is_stock_item": 0,
+				"is_fixed_asset": 1,
+				"is_sales_item": 0,
+				"asset_category": category,
+				"stock_uom": "Nos",
 			}
 		).insert(ignore_mandatory=True)  # india_compliance asks for an HSN code the test has no use for
 		asset = frappe.get_doc(
 			{
-				"doctype": "Asset", "item_code": f"LAB-{item}", "asset_name": f"Oscilloscope {item}", "company": company,
-				"asset_category": category, "location": lab.asset_location, "purchase_date": add_days(today(), -400),
-				"available_for_use_date": add_days(today(), -400), "net_purchase_amount": 50000, "is_existing_asset": 1,
+				"doctype": "Asset",
+				"item_code": f"LAB-{item}",
+				"asset_name": f"Oscilloscope {item}",
+				"company": company,
+				"asset_category": category,
+				"location": lab.asset_location,
+				"purchase_date": add_days(today(), -400),
+				"available_for_use_date": add_days(today(), -400),
+				"net_purchase_amount": 50000,
+				"is_existing_asset": 1,
 			}
 		)
 		asset.insert(ignore_permissions=True, ignore_mandatory=True)
@@ -121,11 +144,18 @@ class LabCase(CampusTestCase):
 		team = self.make_team()
 		doc = frappe.get_doc(
 			{
-				"doctype": "Asset Maintenance", "asset_name": asset.name, "company": asset.company, "maintenance_team": team,
+				"doctype": "Asset Maintenance",
+				"asset_name": asset.name,
+				"company": asset.company,
+				"maintenance_team": team,
 				"asset_maintenance_tasks": [
 					{
-						"maintenance_task": name, "maintenance_type": kind, "maintenance_status": "Planned",
-						"start_date": add_days(today(), -300), "periodicity": "Yearly", "assign_to": assign_to,
+						"maintenance_task": name,
+						"maintenance_type": kind,
+						"maintenance_status": "Planned",
+						"start_date": add_days(today(), -300),
+						"periodicity": "Yearly",
+						"assign_to": assign_to,
 						"next_due_date": add_days(today(), due_in),
 					}
 					for name, kind, due_in in tasks
@@ -139,15 +169,22 @@ class LabCase(CampusTestCase):
 		if not frappe.db.exists("Asset Maintenance Team", "Lab Team"):
 			frappe.get_doc(
 				{
-					"doctype": "Asset Maintenance Team", "maintenance_team_name": "Lab Team", "company": COLLEGE, "maintenance_manager": READER,
-					"maintenance_team_members": [{"team_member": READER, "maintenance_role": "Maintenance User"}],
+					"doctype": "Asset Maintenance Team",
+					"maintenance_team_name": "Lab Team",
+					"company": COLLEGE,
+					"maintenance_manager": READER,
+					"maintenance_team_members": [
+						{"team_member": READER, "maintenance_role": "Maintenance User"}
+					],
 				}
 			).insert()
 		return "Lab Team"
 
 	def notice_logs(self, maintenance):
 		return frappe.get_all(
-			"Message Log", {"event_key": "lab.calibration_due", "reference_name": maintenance.name}, ["recipient", "status"]
+			"Message Log",
+			{"event_key": "lab.calibration_due", "reference_name": maintenance.name},
+			["recipient", "status"],
 		)
 
 
@@ -163,7 +200,9 @@ class TestLaboratory(LabCase):
 			self.make_lab("Chem Lab", technician=stranger)
 
 	def test_an_unknown_company_department_is_refused(self):
-		department = frappe.get_doc({"doctype": "Department", "department_name": "Lab Dept", "company": OTHER}).insert()
+		department = frappe.get_doc(
+			{"doctype": "Department", "department_name": "Lab Dept", "company": OTHER}
+		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.make_lab("Bio Lab", department=department.name)
 
@@ -182,16 +221,25 @@ class TestEquipmentAndCalibration(LabCase):
 
 	def test_due_tasks_include_the_window_and_overdue_but_not_later(self):
 		asset = self.make_asset(self.lab)
-		self.make_maintenance(asset, [("In window", "Calibration", 15), ("Later", "Calibration", 16), ("Overdue", "Calibration", -3)])
+		self.make_maintenance(
+			asset,
+			[("In window", "Calibration", 15), ("Later", "Calibration", 16), ("Overdue", "Calibration", -3)],
+		)
 		rows = due_tasks(15, laboratory=self.lab.name)
 		self.assertEqual([(row.task, row.days_left) for row in rows], [("Overdue", -3), ("In window", 15)])
 
 	def test_type_filter_separates_amc_visits_from_calibrations(self):
 		asset = self.make_asset(self.lab)
 		self.make_maintenance(asset, [("Cal", "Calibration", 5), ("AMC visit", "Preventive Maintenance", 5)])
-		self.assertEqual([r.task for r in due_tasks(15, maintenance_type="Calibration", laboratory=self.lab.name)], ["Cal"])
 		self.assertEqual(
-			[r.task for r in due_tasks(15, maintenance_type="Preventive Maintenance", laboratory=self.lab.name)], ["AMC visit"]
+			[r.task for r in due_tasks(15, maintenance_type="Calibration", laboratory=self.lab.name)], ["Cal"]
+		)
+		self.assertEqual(
+			[
+				r.task
+				for r in due_tasks(15, maintenance_type="Preventive Maintenance", laboratory=self.lab.name)
+			],
+			["AMC visit"],
 		)
 
 	def test_retired_equipment_is_not_due(self):
@@ -228,12 +276,19 @@ class TestEquipmentAndCalibration(LabCase):
 		maintenance = self.make_maintenance(self.make_asset(self.lab), [("Cal", "Calibration", 15)])
 		send_calibration_notices()
 		count = len(self.notice_logs(maintenance))
-		frappe.db.set_value("Asset Maintenance Task", maintenance.asset_maintenance_tasks[0].name, "next_due_date", add_days(today(), 10))
+		frappe.db.set_value(
+			"Asset Maintenance Task",
+			maintenance.asset_maintenance_tasks[0].name,
+			"next_due_date",
+			add_days(today(), 10),
+		)
 		self.assertEqual(send_calibration_notices(), 1)
 		self.assertGreater(len(self.notice_logs(maintenance)), count)
 
 	def test_amc_visits_and_overdue_calibrations_are_not_notified(self):
-		maintenance = self.make_maintenance(self.make_asset(self.lab), [("AMC", "Preventive Maintenance", 5), ("Late", "Calibration", -2)])
+		maintenance = self.make_maintenance(
+			self.make_asset(self.lab), [("AMC", "Preventive Maintenance", 5), ("Late", "Calibration", -2)]
+		)
 		self.assertEqual(send_calibration_notices(), 0)
 		self.assertFalse(self.notice_logs(maintenance))
 
@@ -266,28 +321,45 @@ class TestReportsAreCompanyScoped(LabCase):
 
 	def test_the_in_charge_reads_the_assets_of_their_college_only(self):
 		"""Labs > Equipment: a read-and-report rule for Lab In-charge, scoped by the company User Permission."""
-		other_lab = self.make_lab("Other Lab", company=OTHER, in_charge=self.make_employee("OtherInCharge", OTHER))
+		other_lab = self.make_lab(
+			"Other Lab", company=OTHER, in_charge=self.make_employee("OtherInCharge", OTHER)
+		)
 		mine, theirs = self.make_asset(self.lab), self.make_asset(other_lab, company=OTHER)
 		ours = self.make_maintenance(mine, [("Cal", "Calibration", 5)])
-		self.make_maintenance(theirs, [("Cal", "Calibration", 5)], assign_to=OTHER_READER)  # not shared with READER
+		self.make_maintenance(
+			theirs, [("Cal", "Calibration", 5)], assign_to=OTHER_READER
+		)  # not shared with READER
 		frappe.set_user(READER)
-		assets, maintenance = frappe.get_list("Asset", pluck="name"), frappe.get_list("Asset Maintenance", pluck="name")
+		assets, maintenance = (
+			frappe.get_list("Asset", pluck="name"),
+			frappe.get_list("Asset Maintenance", pluck="name"),
+		)
 		self.assertIn(mine.name, assets)
 		self.assertNotIn(theirs.name, assets)
 		self.assertIn(ours.name, maintenance)
-		self.assertEqual(set(frappe.get_all("Asset Maintenance", {"name": ["in", maintenance]}, pluck="company")), {COLLEGE})
+		self.assertEqual(
+			set(frappe.get_all("Asset Maintenance", {"name": ["in", maintenance]}, pluck="company")),
+			{COLLEGE},
+		)
 		self.assertFalse(frappe.has_permission("Asset", "write", mine.name))
 
 	def test_the_in_charge_reads_lab_equipment_not_the_colleges_other_assets(self):
 		"""I4: an asset outside every laboratory (furniture, a vehicle) and its maintenance stay shut to the Lab In-charge."""
-		location = frappe.get_doc({"doctype": "Location", "location_name": f"Admin Block {frappe.generate_hash(length=5)}"}).insert()
+		location = frappe.get_doc(
+			{"doctype": "Location", "location_name": f"Admin Block {frappe.generate_hash(length=5)}"}
+		).insert()
 		elsewhere = self.make_asset(SimpleNamespace(asset_location=location.name))
 		equipment = self.make_asset(self.lab)
 		elsewhere_plan = self.make_maintenance(elsewhere, [("Cal", "Calibration", 5)], assign_to=OTHER_READER)
 		equipment_plan = self.make_maintenance(equipment, [("Cal", "Calibration", 5)])
 		frappe.set_user(READER)
-		self.assertEqual({a for a in frappe.get_list("Asset", pluck="name")} & {elsewhere.name, equipment.name}, {equipment.name})
-		counted = frappe.get_list("Asset", filters={"name": ["in", [elsewhere.name, equipment.name]]}, pluck="name")
+		self.assertEqual(
+			{a for a in frappe.get_list("Asset", pluck="name")} & {elsewhere.name, equipment.name},
+			{equipment.name},
+		)
+		counted = frappe.get_list(
+			"Asset", filters={"name": ["in", [elsewhere.name, equipment.name]]}, pluck="name"
+		)
 		self.assertEqual(counted, [equipment.name])
 		self.assertTrue(frappe.has_permission("Asset", "read", equipment.name))
 		self.assertFalse(frappe.has_permission("Asset", "read", elsewhere.name))
@@ -297,7 +369,9 @@ class TestReportsAreCompanyScoped(LabCase):
 		self.assertFalse(frappe.has_permission("Asset Maintenance", "read", elsewhere_plan.name))
 
 	def test_a_user_with_another_asset_role_is_not_limited_to_the_labs(self):
-		location = frappe.get_doc({"doctype": "Location", "location_name": f"Store {frappe.generate_hash(length=5)}"}).insert()
+		location = frappe.get_doc(
+			{"doctype": "Location", "location_name": f"Store {frappe.generate_hash(length=5)}"}
+		).insert()
 		elsewhere = self.make_asset(SimpleNamespace(asset_location=location.name))
 		frappe.get_doc("User", READER).add_roles("Accounts User")
 		frappe.set_user(READER)
@@ -317,7 +391,9 @@ class TestReportsAreCompanyScoped(LabCase):
 		self.assertFalse(frappe.has_permission("Laboratory", "read", self.lab.name))
 
 	def test_the_due_report_defaults_to_the_notice_window(self):
-		self.make_maintenance(self.make_asset(self.lab), [("Soon", "Calibration", 15), ("Far", "Calibration", 40)])
+		self.make_maintenance(
+			self.make_asset(self.lab), [("Soon", "Calibration", 15), ("Far", "Calibration", 40)]
+		)
 		self.assertEqual([r["task"] for r in due_report({"laboratory": self.lab.name})[1]], ["Soon"])
 		self.assertEqual(len(due_report({"laboratory": self.lab.name, "within_days": 45})[1]), 2)
 
@@ -333,7 +409,13 @@ class TestSafetyInspection(LabCase):
 
 	def make_inspection(self, template, met=(1, 1)):
 		inspection = frappe.get_doc(
-			{"doctype": "Lab Safety Inspection", "laboratory": self.lab.name, "inspection_date": today(), "inspector": self.in_charge, "template": template.name}
+			{
+				"doctype": "Lab Safety Inspection",
+				"laboratory": self.lab.name,
+				"inspection_date": today(),
+				"inspector": self.in_charge,
+				"template": template.name,
+			}
 		)
 		inspection.insert()
 		for row, ok in zip(inspection.results, met, strict=True):
@@ -342,7 +424,9 @@ class TestSafetyInspection(LabCase):
 
 	def test_the_results_are_the_templates_points(self):
 		inspection = self.make_inspection(self.make_template())
-		self.assertEqual([r.check_point for r in inspection.results], ["Fire extinguisher valid", "Eye wash clean"])
+		self.assertEqual(
+			[r.check_point for r in inspection.results], ["Fire extinguisher valid", "Eye wash clean"]
+		)
 		self.assertEqual(inspection.company, COLLEGE)
 
 	def test_outcome_follows_the_points_met(self):

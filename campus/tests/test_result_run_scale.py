@@ -62,11 +62,15 @@ class ScaleFixture(ExamFixture):
 	def setUpClass(cls):
 		super().setUpClass()
 		make_program(PROGRAM2, COLLEGE)
-		for name in frappe.get_all("Curriculum", {"program": PROGRAM2}, pluck="name"):  # clear_world clears PROGRAM's only
+		for name in frappe.get_all(
+			"Curriculum", {"program": PROGRAM2}, pluck="name"
+		):  # clear_world clears PROGRAM's only
 			frappe.db.delete("Curriculum Course", {"parent": name})
 			frappe.db.delete("Curriculum", {"name": name})
 		regulation26 = frappe.db.get_value("Student", cls.s26.name, "oc_regulation")
-		regulation = frappe.get_doc("Regulation", regulation26)  # Effective: add the programme row without a save
+		regulation = frappe.get_doc(
+			"Regulation", regulation26
+		)  # Effective: add the programme row without a save
 		regulation.append("programs", {"program": PROGRAM2}).db_insert()
 		curriculum2 = frappe.get_doc(
 			{
@@ -81,7 +85,10 @@ class ScaleFixture(ExamFixture):
 		cls.batch22 = [cls.student(f"Scl22n{i:02d}", "2022", PROGRAM) for i in range(cls.batch_size)]
 		cls.batch26 = [cls.student(f"Scl26n{i:02d}", "2026", PROGRAM2) for i in range(cls.batch_size)]
 		for course, marks in (("EXM TH", theory_marks), ("EXM LB", lab_marks)):
-			for program, curriculum, batch in ((PROGRAM, cls.curriculum22, cls.batch22), (PROGRAM2, curriculum2, cls.batch26)):
+			for program, curriculum, batch in (
+				(PROGRAM, cls.curriculum22, cls.batch22),
+				(PROGRAM2, curriculum2, cls.batch26),
+			):
 				offering = cls.offering(course, program, curriculum, batch)
 				frappe.get_doc(
 					{"doctype": "Mark Sheet Entry", "exam_session": cls.session.name, "course_offering": offering,
@@ -108,7 +115,9 @@ class ScaleFixture(ExamFixture):
 		"""Queue each programme's Result Run as the COE and process its items through the bulk handler."""
 		frappe.set_user(COE_USER)
 		with patch("campus.campus_platform.bulk.enqueue_run"):
-			runs = [frappe.get_doc("Bulk Run", api.run_results(self.session.name, p)) for p in (PROGRAM, PROGRAM2)]
+			runs = [
+				frappe.get_doc("Bulk Run", api.run_results(self.session.name, p)) for p in (PROGRAM, PROGRAM2)
+			]
 		frappe.set_user("Administrator")
 		started, count = time.monotonic(), 0
 		for run in runs:
@@ -118,19 +127,22 @@ class ScaleFixture(ExamFixture):
 		return count, time.monotonic() - started
 
 	def result(self, student):
-		name = frappe.db.get_value("Student Result", {"student": student, "exam_session": self.session.name, "is_latest": 1})
+		name = frappe.db.get_value(
+			"Student Result", {"student": student, "exam_session": self.session.name, "is_latest": 1}
+		)
 		return frappe.get_doc("Student Result", name)
 
 	def course(self, student, course):
 		return next(c for c in self.result(student).courses if c.course == course)
 
 
-
 class TestResultRunAtScale(ScaleFixture):
 	def test_two_programmes_process_well_within_the_time_budget(self):
 		count, seconds = self.run_programs()
 		self.assertEqual(count, 2 * BATCH + 4)  # both batches and the four fixture students
-		self.assertLess(seconds / count * TARGET_STUDENTS, TARGET_SECONDS)  # the measured 480 run: TestResultRunOf480
+		self.assertLess(
+			seconds / count * TARGET_STUDENTS, TARGET_SECONDS
+		)  # the measured 480 run: TestResultRunOf480
 
 	def test_twenty_sampled_students_match_the_hand_computed_fixture(self):
 		self.run_programs()
@@ -139,7 +151,9 @@ class TestResultRunAtScale(ScaleFixture):
 			got = (self.course(student, "EXM TH"), self.course(student, "EXM LB"))
 			self.assertEqual([(c.grade, c.grade_point) for c in got], [theory, lab], f"R2026 student {i}")
 			self.assertEqual({c.grading_method for c in got if c.result == "Pass"} - {"Absolute"}, set())
-			self.assertEqual((self.result(student).sgpa, self.result(student).cgpa), (sgpa, sgpa), f"R2026 student {i}")
+			self.assertEqual(
+				(self.result(student).sgpa, self.result(student).cgpa), (sgpa, sgpa), f"R2026 student {i}"
+			)
 		for i, lab in R2022_LAB_EXPECTED.items():
 			row = self.course(self.batch22[i], "EXM LB")
 			self.assertEqual((row.grade, row.grade_point), lab, f"R2022 student {i}")
@@ -161,25 +175,44 @@ class TestResultRunAtScale(ScaleFixture):
 		self.run_programs()
 		# the cohort: the 36 passing students of the batch and the fixture's s22 (28 + 35 = 63); s_ab is absent and
 		# s_sa short of attendance. Totals out of 100 are CIA + ESE.
-		totals = [sum(theory_marks(i)) for i in range(BATCH) if theory_marks(i)[1] >= 27 and sum(theory_marks(i)) >= 50] + [63]
+		totals = [
+			sum(theory_marks(i))
+			for i in range(BATCH)
+			if theory_marks(i)[1] >= 27 and sum(theory_marks(i)) >= 50
+		] + [63]
 		bands = relative_grade_bands(totals, self.r2022_grades())
 		for i, student in enumerate(self.batch22):
 			cia, ese = theory_marks(i)
 			if ese >= 27 and cia + ese >= 50:
 				row = self.course(student, "EXM TH")
-				self.assertEqual((row.grade, row.grade_point), relative_grade(cia + ese, bands), f"R2022 student {i}")
+				self.assertEqual(
+					(row.grade, row.grade_point), relative_grade(cia + ese, bands), f"R2022 student {i}"
+				)
 
 	def test_bands_are_frozen_at_publication_for_later_reruns(self):
 		self.run_programs()
 		frozen = publication.freeze_bands(self.session.name)
-		frappe.db.set_value("Exam Session", self.session.name, {"status": "Published", "publish_at": frappe.utils.add_days(frappe.utils.now_datetime(), -1)})
+		frappe.db.set_value(
+			"Exam Session",
+			self.session.name,
+			{"status": "Published", "publish_at": frappe.utils.add_days(frappe.utils.now_datetime(), -1)},
+		)
 		stored = json.loads(frappe.db.get_value("Exam Session", self.session.name, "frozen_bands"))
 		self.assertEqual(stored, frozen)
-		scheme = frappe.db.get_value("Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
+		scheme = frappe.db.get_value(
+			"Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")}
+		)
 		key = publication.band_key("EXM TH", scheme)
 		self.assertIn(key, stored)
 		before = {s: self.course(s, "EXM TH").grade for s in self.batch22}
-		sheet_rows = frappe.get_all("Mark Sheet Entry Row", {"student": ["in", self.batch22[:10]], "parent": ["in", frappe.get_all("Mark Sheet Entry", {"course": "EXM TH"}, pluck="name")]}, pluck="name")
+		sheet_rows = frappe.get_all(
+			"Mark Sheet Entry Row",
+			{
+				"student": ["in", self.batch22[:10]],
+				"parent": ["in", frappe.get_all("Mark Sheet Entry", {"course": "EXM TH"}, pluck="name")],
+			},
+			pluck="name",
+		)
 		for name in sheet_rows:  # ten revaluations to full marks would move live bands
 			frappe.db.set_value("Mark Sheet Entry Row", name, "ese", 60)
 		live = Cohorts(self.session.name, lambda student: False).totals("EXM TH", scheme)
@@ -187,29 +220,52 @@ class TestResultRunAtScale(ScaleFixture):
 		for student in self.batch22:
 			results.compute_student_result(student, self.session.name)
 		for i, student in enumerate(self.batch22):
-			pending = frappe.db.get_value("Student Result", {"student": student, "exam_session": self.session.name, "pending_ratification": 1})
+			pending = frappe.db.get_value(
+				"Student Result",
+				{"student": student, "exam_session": self.session.name, "pending_ratification": 1},
+			)
 			if i >= 10:  # unchanged marks: no new version, whatever the live cohort became
 				self.assertIsNone(pending, f"R2022 student {i}")
 				self.assertEqual(self.course(student, "EXM TH").grade, before[student])
 			else:
-				row = next(c for c in frappe.get_doc("Student Result", pending).courses if c.course == "EXM TH")
-				self.assertEqual((row.grade, row.grade_point), relative_grade(row.total, stored[key]), f"R2022 student {i}")
+				row = next(
+					c for c in frappe.get_doc("Student Result", pending).courses if c.course == "EXM TH"
+				)
+				self.assertEqual(
+					(row.grade, row.grade_point), relative_grade(row.total, stored[key]), f"R2022 student {i}"
+				)
 
 	def test_publication_freezes_the_bands_the_run_graded_on(self):
 		self.run_programs()
-		scheme = frappe.db.get_value("Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
+		scheme = frappe.db.get_value(
+			"Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")}
+		)
 		key = publication.band_key("EXM TH", scheme)
-		recorded = json.loads(frappe.db.get_value("Exam Session", self.session.name, "frozen_bands"))  # stored by the run
-		totals = [sum(theory_marks(i)) for i in range(BATCH) if theory_marks(i)[1] >= 27 and sum(theory_marks(i)) >= 50] + [63]
+		recorded = json.loads(
+			frappe.db.get_value("Exam Session", self.session.name, "frozen_bands")
+		)  # stored by the run
+		totals = [
+			sum(theory_marks(i))
+			for i in range(BATCH)
+			if theory_marks(i)[1] >= 27 and sum(theory_marks(i)) >= 50
+		] + [63]
 		self.assertEqual(recorded[key], relative_grade_bands(totals, self.r2022_grades()))
 		self.assertEqual(set(recorded), {key})  # labs and the R2026 batch are absolute
 		sheets = frappe.get_all("Mark Sheet Entry", {"course": "EXM TH"}, pluck="name")
-		for name in frappe.get_all("Mark Sheet Entry Row", {"student": ["in", self.batch22[:10]], "parent": ["in", sheets]}, pluck="name"):
-			frappe.db.set_value("Mark Sheet Entry Row", name, "ese", 60)  # changed after the run, never re-run
+		for name in frappe.get_all(
+			"Mark Sheet Entry Row",
+			{"student": ["in", self.batch22[:10]], "parent": ["in", sheets]},
+			pluck="name",
+		):
+			frappe.db.set_value(
+				"Mark Sheet Entry Row", name, "ese", 60
+			)  # changed after the run, never re-run
 		self.assertEqual(publication.freeze_bands(self.session.name)[key], recorded[key])
 
 	def r2022_grades(self):
-		scheme = frappe.get_doc("Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")})
+		scheme = frappe.get_doc(
+			"Grading Scheme", {"regulation": frappe.db.get_value("Student", self.s22.name, "oc_regulation")}
+		)
 		return [g.as_dict() for g in scheme.grades]
 
 
@@ -230,7 +286,9 @@ class TestResultRunOf480(ScaleFixture):
 					{"doctype": "Attendance Rule", "regulation": regulation, "formula": "course_average",
 					"overall_min_pct": 75, "medical_band_min_pct": 65, "per_course_min_pct": 75}
 				).insert()  # fmt: skip
-		for offering in cls.offerings22.values():  # s_sa is no longer short of attendance here: it needs marks
+		for (
+			offering
+		) in cls.offerings22.values():  # s_sa is no longer short of attendance here: it needs marks
 			sheet = frappe.get_doc("Mark Sheet Entry", {"course_offering": offering})
 			sheet.append("marks", {"student": cls.s_sa.name, "cia": 30, "ese": 40})
 			sheet.save()
@@ -243,6 +301,7 @@ class TestResultRunOf480(ScaleFixture):
 	def test_480_students_run_in_under_ten_minutes(self):
 		count, seconds = self.run_programs()
 		self.assertEqual(count, TARGET_STUDENTS)
-		print(f"\nResult Run of {count} students: {seconds:.1f}s ({seconds / count * 1000:.0f} ms each)")  # recorded in the T19 report
+		print(
+			f"\nResult Run of {count} students: {seconds:.1f}s ({seconds / count * 1000:.0f} ms each)"
+		)  # recorded in the T19 report
 		self.assertLess(seconds, TARGET_SECONDS)
-

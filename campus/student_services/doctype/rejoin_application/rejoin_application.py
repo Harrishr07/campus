@@ -21,7 +21,12 @@ from frappe.model.document import Document
 from frappe.permissions import has_user_permission
 from frappe.utils import getdate
 
-from campus.campus_platform.api import ApprovableDocument, apply_regulation_change, get_regulation, resolve_regulation
+from campus.campus_platform.api import (
+	ApprovableDocument,
+	apply_regulation_change,
+	get_regulation,
+	resolve_regulation,
+)
 from campus.student_services import lifecycle, student_records, withdrawal_rules
 from campus.student_services.lifecycle_rules import migrated_status
 
@@ -40,19 +45,27 @@ class RejoinApplication(ApprovableDocument, Document):
 		if self.docstatus == 0:  # the approved values stand; before_submit re-checks them
 			self.update(self.placement(study_break))
 		if self.other_rejoins():
-			frappe.throw(_("Break of Study {0} already has a rejoin.").format(frappe.bold(self.break_of_study)))
+			frappe.throw(
+				_("Break of Study {0} already has a rejoin.").format(frappe.bold(self.break_of_study))
+			)
 		self.check_bridge_courses()
 
 	def before_submit(self):
 		super().before_submit()
 		student_records.require_policy(self)
-		study_break = frappe.get_doc(BREAK, self.break_of_study, for_update=True)  # one rejoin submit per break
+		study_break = frappe.get_doc(
+			BREAK, self.break_of_study, for_update=True
+		)  # one rejoin submit per break
 		if self.other_rejoins(lock=True):
-			frappe.throw(_("Break of Study {0} already has a rejoin.").format(frappe.bold(self.break_of_study)))
+			frappe.throw(
+				_("Break of Study {0} already has a rejoin.").format(frappe.bold(self.break_of_study))
+			)
 		now = self.placement(study_break)
 		if any(now[field] != self.get(field) for field in PLACEMENT_FIELDS):
 			frappe.throw(
-				_("The regulation or batch of this rejoin has changed since it was saved: return the approval and restart it (save, then request approval again).")
+				_(
+					"The regulation or batch of this rejoin has changed since it was saved: return the approval and restart it (save, then request approval again)."
+				)
 			)
 
 	def on_submit(self):
@@ -70,21 +83,42 @@ class RejoinApplication(ApprovableDocument, Document):
 		lifecycle.transition(self.student, status, self.rejoin_date, reason, self)
 
 	def before_cancel(self):
-		frappe.throw(_("A rejoin cannot be cancelled; the Dean Academics corrects the regulation with Change Regulation."))
+		frappe.throw(
+			_(
+				"A rejoin cannot be cancelled; the Dean Academics corrects the regulation with Change Regulation."
+			)
+		)
 
 	def set_context(self, study_break):
 		student = frappe.get_doc("Student", study_break.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to act for {0}.").format(frappe.bold(student.name)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to act for {0}.").format(frappe.bold(student.name)),
+				frappe.PermissionError,
+			)
 		self.student, self.student_name = student.name, student.student_name
-		self.company, self.program, self.department = study_break.company, study_break.program, study_break.department
+		self.company, self.program, self.department = (
+			study_break.company,
+			study_break.program,
+			study_break.department,
+		)
 
 	def check_rejoin_date(self, study_break):
-		start, end = frappe.db.get_value("Academic Year", self.academic_year, ["year_start_date", "year_end_date"])
+		start, end = frappe.db.get_value(
+			"Academic Year", self.academic_year, ["year_start_date", "year_end_date"]
+		)
 		if not getdate(start) <= getdate(self.rejoin_date) <= getdate(end):
-			frappe.throw(_("The rejoin date must fall in the academic year {0}.").format(frappe.bold(self.academic_year)))
+			frappe.throw(
+				_("The rejoin date must fall in the academic year {0}.").format(
+					frappe.bold(self.academic_year)
+				)
+			)
 		if getdate(self.rejoin_date) < getdate(study_break.from_date):
-			frappe.throw(_("The rejoin date cannot be before the break starts ({0}).").format(frappe.format(study_break.from_date, "Date")))
+			frappe.throw(
+				_("The rejoin date cannot be before the break starts ({0}).").format(
+					frappe.format(study_break.from_date, "Date")
+				)
+			)
 
 	def placement(self, study_break):
 		"""{from_regulation, to_regulation, from_batch, to_batch} computed from the records now."""
@@ -93,7 +127,11 @@ class RejoinApplication(ApprovableDocument, Document):
 			frappe.throw(_("{0} has no batch (admission year).").format(frappe.bold(self.student)))
 		break_year = student_records.academic_year_of(study_break.from_date)
 		if not break_year:
-			frappe.throw(_("No Academic Year holds the start of the break ({0}).").format(frappe.format(study_break.from_date, "Date")))
+			frappe.throw(
+				_("No Academic Year holds the start of the break ({0}).").format(
+					frappe.format(study_break.from_date, "Date")
+				)
+			)
 		batch_start = year_start(from_batch)
 		cohort = withdrawal_rules.rejoin_cohort_year(
 			batch_start.year, getdate(break_year.year_start_date).year, year_start(self.academic_year).year
@@ -103,7 +141,11 @@ class RejoinApplication(ApprovableDocument, Document):
 		to_batch = student_records.cohort_academic_year(from_batch, batch_start, cohort)
 		to_regulation = resolve_regulation(self.company, self.program, to_batch)
 		if not to_regulation:
-			frappe.throw(_("No Effective regulation covers {0} for the {1} batch.").format(frappe.bold(self.program), frappe.bold(to_batch)))
+			frappe.throw(
+				_("No Effective regulation covers {0} for the {1} batch.").format(
+					frappe.bold(self.program), frappe.bold(to_batch)
+				)
+			)
 		return {
 			"from_regulation": get_regulation(self.student), "to_regulation": to_regulation,
 			"from_batch": from_batch, "to_batch": to_batch,

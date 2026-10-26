@@ -38,14 +38,27 @@ class MentoringFixture(CampusTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.guardian = frappe.db.get_value("Guardian", {"user": GUARDIAN})
-		cls.guarded = frappe.db.get_value("Student Guardian", {"guardian": cls.guardian, "parenttype": "Student"}, "parent")
-		enrolled = frappe.get_all("Program Enrollment", {"program": "B.E. CSE", "docstatus": 1}, pluck="student", order_by="student")
+		cls.guarded = frappe.db.get_value(
+			"Student Guardian", {"guardian": cls.guardian, "parenttype": "Student"}, "parent"
+		)
+		enrolled = frappe.get_all(
+			"Program Enrollment", {"program": "B.E. CSE", "docstatus": 1}, pluck="student", order_by="student"
+		)
 		cls.a_student, cls.b_student, cls.c_student = [s for s in enrolled if s != cls.guarded][:3]
-		cls.other_guardian = frappe.get_doc({"doctype": "Guardian", "guardian_name": "L09 Other Guardian"}).insert().name
+		cls.other_guardian = (
+			frappe.get_doc({"doctype": "Guardian", "guardian_name": "L09 Other Guardian"}).insert().name
+		)
 		student = frappe.get_doc("Student", cls.a_student)
-		student.append("guardians", {"guardian": cls.other_guardian, "guardian_name": "L09 Other Guardian", "relation": "Mother"})
+		student.append(
+			"guardians",
+			{"guardian": cls.other_guardian, "guardian_name": "L09 Other Guardian", "relation": "Mother"},
+		)
 		student.save()
-		for student, mentor in ((cls.a_student, "faculty_1"), (cls.guarded, "faculty_1"), (cls.b_student, "faculty_2")):
+		for student, mentor in (
+			(cls.a_student, "faculty_1"),
+			(cls.guarded, "faculty_1"),
+			(cls.b_student, "faculty_2"),
+		):
 			frappe.db.set_value("Student", student, "oc_mentor", demo.employee_of(mentor))
 		for user in (MENTOR_A, MENTOR_B):
 			frappe.get_doc("User", user).add_roles(mentoring.MENTOR_ROLE)
@@ -72,11 +85,20 @@ class MentoringFixture(CampusTestCase):
 		return self.as_user(user, lambda: frappe.get_doc(doc).insert().name)
 
 	def add_interaction(self, user, student, guardian, **values):
-		doc = {"doctype": INTERACTION, "student": student, "guardian": guardian, "mode": "Phone", "outcome": "Discussed attendance", **values}
+		doc = {
+			"doctype": INTERACTION,
+			"student": student,
+			"guardian": guardian,
+			"mode": "Phone",
+			"outcome": "Discussed attendance",
+			**values,
+		}
 		return self.as_user(user, lambda: frappe.get_doc(doc).insert().name)
 
 	def listed(self, user, doctype, names):
-		return set(self.as_user(user, frappe.get_list, doctype, filters={"name": ["in", names]}, pluck="name"))
+		return set(
+			self.as_user(user, frappe.get_list, doctype, filters={"name": ["in", names]}, pluck="name")
+		)
 
 	def can(self, user, doctype, name, ptype="read"):
 		return self.as_user(user, frappe.has_permission, doctype, ptype, name)
@@ -93,7 +115,10 @@ class TestCounsellingNoteAccess(MentoringFixture):
 
 	def test_the_note_records_its_author_mentor_company_and_department(self):
 		note = frappe.get_doc(NOTE, self.add_note(MENTOR_A, self.a_student))
-		self.assertEqual((note.author, note.mentor, note.company), (MENTOR_A, demo.employee_of("faculty_1"), demo.ENGINEERING))
+		self.assertEqual(
+			(note.author, note.mentor, note.company),
+			(MENTOR_A, demo.employee_of("faculty_1"), demo.ENGINEERING),
+		)
 		self.assertEqual(note.department, frappe.db.get_value("Program", "B.E. CSE", "department"))
 
 	def test_the_author_and_the_new_mentor_both_read_after_reallocation(self):
@@ -133,8 +158,16 @@ class TestCounsellingNoteAccess(MentoringFixture):
 
 	def test_an_action_owner_must_be_able_to_read_the_note(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.add_note(MENTOR_A, self.a_student, actions=[{"action": "Meet parents", "action_owner": MENTOR_B, "due_date": today()}])
-		note = self.add_note(MENTOR_A, self.a_student, actions=[{"action": "Meet parents", "action_owner": MENTOR_A, "due_date": today()}])
+			self.add_note(
+				MENTOR_A,
+				self.a_student,
+				actions=[{"action": "Meet parents", "action_owner": MENTOR_B, "due_date": today()}],
+			)
+		note = self.add_note(
+			MENTOR_A,
+			self.a_student,
+			actions=[{"action": "Meet parents", "action_owner": MENTOR_A, "due_date": today()}],
+		)
 		self.assertEqual(frappe.get_doc(NOTE, note).actions[0].action_owner, MENTOR_A)
 
 	def test_a_note_cannot_be_shared(self):
@@ -153,7 +186,10 @@ class TestCounsellingNoteAccess(MentoringFixture):
 
 	def test_the_hod_of_another_department_sees_nothing(self):
 		hod = make_ece_hod()
-		note, interaction = self.add_note(MENTOR_A, self.a_student), self.add_interaction(MENTOR_A, self.a_student, self.other_guardian)
+		note, interaction = (
+			self.add_note(MENTOR_A, self.a_student),
+			self.add_interaction(MENTOR_A, self.a_student, self.other_guardian),
+		)
 		self.assertEqual(self.listed(hod, NOTE, [note]), set())
 		self.assertEqual(self.listed(hod, INTERACTION, [interaction]), set())
 		self.assertFalse(self.can(hod, NOTE, note))
@@ -162,12 +198,23 @@ class TestCounsellingNoteAccess(MentoringFixture):
 	def test_author_mentor_company_and_department_stay_as_written(self):
 		name = self.add_note(MENTOR_A, self.a_student)
 		before = frappe.db.get_value(NOTE, name, ["mentor", "company", "department"])
+
 		def tamper(values):
 			doc = frappe.get_doc(NOTE, name)
 			doc.update(values)
 			doc.save()
-		self.as_user(MENTOR_A, tamper, {"mentor": demo.employee_of("faculty_2"), "department": demo.department_name(demo.ECE_DEPARTMENT, demo.ENGINEERING)})
-		tamper({"company": demo.ARTS})  # as Administrator: the author's own User Permissions would refuse the save
+
+		self.as_user(
+			MENTOR_A,
+			tamper,
+			{
+				"mentor": demo.employee_of("faculty_2"),
+				"department": demo.department_name(demo.ECE_DEPARTMENT, demo.ENGINEERING),
+			},
+		)
+		tamper(
+			{"company": demo.ARTS}
+		)  # as Administrator: the author's own User Permissions would refuse the save
 		self.assertEqual(frappe.db.get_value(NOTE, name, ["mentor", "company", "department"]), before)
 		try:
 			tamper({"student": self.b_student})
@@ -184,7 +231,9 @@ class TestCounsellingNoteAccess(MentoringFixture):
 
 	def test_a_guardian_reads_no_note(self):
 		note = self.add_note(MENTOR_A, self.guarded)
-		with self.assertRaises(frappe.PermissionError):  # the Guardian role has no right on the doctype at all
+		with self.assertRaises(
+			frappe.PermissionError
+		):  # the Guardian role has no right on the doctype at all
 			self.listed(GUARDIAN, NOTE, [note])
 		self.assertFalse(self.can(GUARDIAN, NOTE, note))
 
@@ -215,18 +264,28 @@ class TestParentInteractionAccess(MentoringFixture):
 		with self.assertRaises(frappe.PermissionError):
 			self.listed(GUARDIAN, INTERACTION, [other, own])
 		self.assertFalse(self.can(GUARDIAN, INTERACTION, other))
-		self.assertFalse(self.can(GUARDIAN, INTERACTION, own))  # guardians read no interaction, not even their own
+		self.assertFalse(
+			self.can(GUARDIAN, INTERACTION, own)
+		)  # guardians read no interaction, not even their own
 
 	def test_the_follow_up_owner_must_already_read_the_interaction(self):
 		for owner in (GUARDIAN, MENTOR_B):
 			with self.assertRaises(frappe.ValidationError):
-				self.add_interaction(MENTOR_A, self.guarded, self.guardian, follow_up_owner=owner, follow_up_due=today())
-		name = self.add_interaction(MENTOR_A, self.guarded, self.guardian, follow_up_owner=PRINCIPAL, follow_up_due=today())
+				self.add_interaction(
+					MENTOR_A, self.guarded, self.guardian, follow_up_owner=owner, follow_up_due=today()
+				)
+		name = self.add_interaction(
+			MENTOR_A, self.guarded, self.guardian, follow_up_owner=PRINCIPAL, follow_up_due=today()
+		)
 		self.assertEqual(frappe.db.get_value(INTERACTION, name, "follow_up_owner"), PRINCIPAL)
 
 	def test_only_the_current_mentor_advisor_and_office_edit(self):
 		name = self.add_interaction(MENTOR_A, self.a_student, self.other_guardian)
-		frappe.db.set_value("Student", self.a_student, {"oc_mentor": demo.employee_of("faculty_2"), "oc_class_advisor": demo.email("faculty_3")})
+		frappe.db.set_value(
+			"Student",
+			self.a_student,
+			{"oc_mentor": demo.employee_of("faculty_2"), "oc_class_advisor": demo.email("faculty_3")},
+		)
 		self.assertTrue(self.can(MENTOR_A, INTERACTION, name))  # the recorder still reads it
 		self.assertFalse(self.can(MENTOR_A, INTERACTION, name, "write"))
 		for user in (MENTOR_B, demo.email("faculty_3"), PRINCIPAL):
@@ -244,18 +303,35 @@ class TestFollowUpReminders(MentoringFixture):
 	def test_follow_ups_due_are_reminded_once_without_the_note_text(self):
 		action = {"action": "Bring the parents in", "action_owner": MENTOR_A, "due_date": today()}
 		note = self.add_note(MENTOR_A, self.a_student, follow_up_date=today(), actions=[action])
-		interaction = self.add_interaction(MENTOR_A, self.guarded, self.guardian, follow_up_owner=MENTOR_A, follow_up_due=today())
+		interaction = self.add_interaction(
+			MENTOR_A, self.guarded, self.guardian, follow_up_owner=MENTOR_A, follow_up_due=today()
+		)
 		later = self.add_note(MENTOR_A, self.a_student, follow_up_date=add_days(today(), 3))
-		done = self.add_interaction(MENTOR_A, self.guarded, self.guardian, follow_up_owner=MENTOR_A, follow_up_due=today(), follow_up_done=1)
+		done = self.add_interaction(
+			MENTOR_A,
+			self.guarded,
+			self.guardian,
+			follow_up_owner=MENTOR_A,
+			follow_up_due=today(),
+			follow_up_done=1,
+		)
 		mentoring.send_follow_up_reminders()
 		first = self.reminders([note, interaction, later, done])
-		for log in frappe.get_all("Message Log", {"event_key": mentoring.FOLLOW_UP_EVENT, "reference_name": ["in", [note, interaction]]}, pluck="name"):
-			frappe.db.set_value("Message Log", log, "status", "Sent")  # the test site has no mail account; a failed send may retry
+		for log in frappe.get_all(
+			"Message Log",
+			{"event_key": mentoring.FOLLOW_UP_EVENT, "reference_name": ["in", [note, interaction]]},
+			pluck="name",
+		):
+			frappe.db.set_value(
+				"Message Log", log, "status", "Sent"
+			)  # the test site has no mail account; a failed send may retry
 		mentoring.send_follow_up_reminders()
 		self.assertEqual(len(self.reminders([note, interaction, later, done])), len(first))
 		keys = {(log.reference_name, log.recipient) for log in first}
 		self.assertEqual(keys, {(note, f"User:{MENTOR_A}"), (interaction, f"User:{MENTOR_A}")})
-		self.assertEqual(len({(log.reference_name, log.dedupe_token) for log in first}), 3)  # note follow-up, action, interaction
+		self.assertEqual(
+			len({(log.reference_name, log.dedupe_token) for log in first}), 3
+		)  # note follow-up, action, interaction
 		for log in first:
 			self.assertNotIn(SECRET, (log.message or "") + (log.subject or ""))
 			self.assertNotIn("Bring the parents in", log.message or "")
@@ -271,7 +347,12 @@ class TestMentoringPortal(MentoringFixture):
 	def test_the_mentee_page_escapes_notes_and_interactions(self):
 		self.add_note(MENTOR_A, self.a_student, notes="Said <b>no</b> to the plan")
 		self.add_interaction(MENTOR_A, self.a_student, self.other_guardian, outcome="Father <i>agreed</i>")
-		frappe.db.set_value("Student Guardian", {"parent": self.a_student, "guardian": self.other_guardian}, "guardian_name", "<em>Mum</em>")
+		frappe.db.set_value(
+			"Student Guardian",
+			{"parent": self.a_student, "guardian": self.other_guardian},
+			"guardian_name",
+			"<em>Mum</em>",
+		)
 		html = self.page(self.a_student)
 		for raw in ("<b>no</b>", "<i>agreed</i>", "<em>Mum</em>"):
 			self.assertNotIn(raw, html)
@@ -290,7 +371,14 @@ class TestMentoringPortal(MentoringFixture):
 			action="Check in next week", action_due=add_days(today(), 7))  # fmt: skip
 		doc = frappe.get_doc(NOTE, note)
 		self.assertEqual((doc.author, doc.actions[0].action_owner), (MENTOR_A, MENTOR_A))
-		interaction = self.as_user(MENTOR_A, portal_mentoring.add_parent_interaction, self.a_student, self.other_guardian, "Phone", "Agreed")
+		interaction = self.as_user(
+			MENTOR_A,
+			portal_mentoring.add_parent_interaction,
+			self.a_student,
+			self.other_guardian,
+			"Phone",
+			"Agreed",
+		)
 		record = self.as_user(MENTOR_A, portal_mentoring.mentee_record, self.a_student)
 		self.assertEqual([n["name"] for n in record["notes"]], [note])
 		self.assertEqual([i["name"] for i in record["interactions"]], [interaction])
@@ -304,7 +392,9 @@ class TestMentoringPortal(MentoringFixture):
 
 class TestMentoringActivityReport(MentoringFixture):
 	def test_counts_only_including_confidential_notes(self):
-		frappe.db.set_value("Student", self.c_student, "oc_mentor", demo.employee_of("faculty_1"))  # 3+ mentees
+		frappe.db.set_value(
+			"Student", self.c_student, "oc_mentor", demo.employee_of("faculty_1")
+		)  # 3+ mentees
 		self.add_note(MENTOR_A, self.a_student)
 		self.add_note(MENTOR_A, self.a_student, is_confidential=1, counsellor=COUNSELLOR)
 		self.add_interaction(MENTOR_A, self.a_student, self.other_guardian)
@@ -317,7 +407,11 @@ class TestMentoringActivityReport(MentoringFixture):
 		self.assertNotIn(SECRET, frappe.as_json(rows))
 
 	def test_the_confidential_count_is_blank_below_three_mentees(self):
-		for student in frappe.get_all("Student", {"oc_mentor": demo.employee_of("faculty_2"), "name": ["!=", self.b_student]}, pluck="name"):
+		for student in frappe.get_all(
+			"Student",
+			{"oc_mentor": demo.employee_of("faculty_2"), "name": ["!=", self.b_student]},
+			pluck="name",
+		):
 			frappe.db.set_value("Student", student, "oc_mentor", demo.employee_of("faculty_3"))
 		self.add_note(MENTOR_B, self.b_student, is_confidential=1, counsellor=COUNSELLOR)
 		_columns, rows = self.as_user(HOD, mentoring_activity.execute, frappe._dict(company=demo.ENGINEERING))
@@ -341,9 +435,16 @@ class TestMentoringActivityReport(MentoringFixture):
 	def test_a_mentor_sees_only_their_own_row(self):
 		self.add_note(MENTOR_A, self.a_student)
 		self.add_note(MENTOR_B, self.b_student)
-		_columns, rows = self.as_user(MENTOR_A, mentoring_activity.execute, frappe._dict(company=demo.ENGINEERING))
+		_columns, rows = self.as_user(
+			MENTOR_A, mentoring_activity.execute, frappe._dict(company=demo.ENGINEERING)
+		)
 		self.assertEqual([r["mentor"] for r in rows], [demo.employee_of("faculty_1")])
-		self.assertEqual(rows[0]["mentees"], frappe.db.count("Student", {"oc_mentor": demo.employee_of("faculty_1"), "oc_company": demo.ENGINEERING}))
+		self.assertEqual(
+			rows[0]["mentees"],
+			frappe.db.count(
+				"Student", {"oc_mentor": demo.employee_of("faculty_1"), "oc_company": demo.ENGINEERING}
+			),
+		)
 		self.assertEqual(rows[0]["note_count"], 1)
 
 	def test_a_class_advisor_without_the_mentor_role_is_refused(self):
@@ -366,11 +467,24 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 		frappe.get_doc("User", cls.sysman).add_roles("System Manager", "Website Manager")
 
 	def add_comment(self, user, doctype, name, text):
-		comment = {"doctype": "Comment", "comment_type": "Comment", "reference_doctype": doctype, "reference_name": name, "content": text}
+		comment = {
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": doctype,
+			"reference_name": name,
+			"content": text,
+		}
 		return self.as_user(user, lambda: frappe.get_doc(comment).insert(ignore_permissions=True).name)
 
 	def attach(self, user, note, is_private=0):
-		file = {"doctype": "File", "file_name": "l09-note.txt", "content": b"SECRET", "attached_to_doctype": NOTE, "attached_to_name": note, "is_private": is_private}
+		file = {
+			"doctype": "File",
+			"file_name": "l09-note.txt",
+			"content": b"SECRET",
+			"attached_to_doctype": NOTE,
+			"attached_to_name": note,
+			"is_private": is_private,
+		}
 		return self.as_user(user, lambda: frappe.get_doc(file).insert().name)
 
 	def test_comments_on_a_note_are_hidden_from_system_and_website_managers(self):
@@ -452,14 +566,20 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 		self.assertIsNone(self.as_user(MENTOR_A, find_file_by_url, url))
 
 	def test_a_second_file_row_with_the_url_neither_opens_nor_publishes_it(self):
-		url = frappe.db.get_value("File", self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student)), "file_url")
+		url = frappe.db.get_value(
+			"File", self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student)), "file_url"
+		)
 		copy = {"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}
-		copy_name = frappe.get_doc(copy).insert().name  # Frappe lets only a reader add a row for a private URL
+		copy_name = (
+			frappe.get_doc(copy).insert().name
+		)  # Frappe lets only a reader add a row for a private URL
 		frappe.db.set_value("File", copy_name, "owner", MENTOR_B)
 		self.assertFalse(self.can(MENTOR_B, "File", copy_name))
 		self.assertIsNone(self.as_user(MENTOR_B, find_file_by_url, url))
 		with self.assertRaisesRegex(frappe.PermissionError, "cannot be made public"):
-			frappe.get_doc({**copy, "file_name": "public.txt", "is_private": 0}).insert(ignore_permissions=True)
+			frappe.get_doc({**copy, "file_name": "public.txt", "is_private": 0}).insert(
+				ignore_permissions=True
+			)
 
 	def former_mentors_file(self):
 		"""A counsellor's note File owned by mentor A, who is then reallocated away from the student."""
@@ -477,7 +597,9 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 		copy = {"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}
 		with self.assertRaises(frappe.PermissionError):  # the File permission hook refuses the create
 			self.as_user(MENTOR_A, lambda: frappe.get_doc(copy).insert())
-		with self.assertRaisesRegex(frappe.PermissionError, "cannot read"):  # and so does before_insert, past it
+		with self.assertRaisesRegex(
+			frappe.PermissionError, "cannot read"
+		):  # and so does before_insert, past it
 			self.as_user(MENTOR_A, lambda: frappe.get_doc(copy).insert(ignore_permissions=True))
 
 	def test_a_former_mentor_owner_cannot_zip_the_note_file(self):
@@ -491,7 +613,11 @@ class TestRestrictedRecordSideDoors(MentoringFixture):
 	def test_the_attached_row_is_not_deleted_while_another_row_carries_its_url(self):
 		name = self.attach(MENTOR_A, self.add_note(MENTOR_A, self.a_student))
 		url = frappe.db.get_value("File", name, "file_url")
-		copy = frappe.get_doc({"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1}).insert().name
+		copy = (
+			frappe.get_doc({"doctype": "File", "file_name": "copy.txt", "file_url": url, "is_private": 1})
+			.insert()
+			.name
+		)
 		with self.assertRaises(frappe.PermissionError):
 			frappe.delete_doc("File", name)
 		frappe.delete_doc("File", copy)
@@ -520,7 +646,15 @@ def make_ece_hod():
 	frappe.get_doc("User", hod).add_roles(mentoring.HOD_ROLE)
 	department = demo.department_name(demo.ECE_DEPARTMENT, demo.ENGINEERING)
 	if not frappe.db.exists("Position Holder", {"user": hod, "position": "HOD"}):
-		frappe.get_doc({"doctype": "Position Holder", "position": "HOD", "scope_value": department, "user": hod, "from_date": "2022-06-01"}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Position Holder",
+				"position": "HOD",
+				"scope_value": department,
+				"user": hod,
+				"from_date": "2022-06-01",
+			}
+		).insert()
 	return hod
 
 

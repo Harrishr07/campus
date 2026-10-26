@@ -11,4 +11,8 @@ class BankCollectionImport(Document):
 		if self.status != "Draft" or frappe.db.exists(
 			"Bank Collection Row", {"bank_collection_import": self.name, "payment_entry": ["is", "set"]}
 		):
-			frappe.throw(_("{0} has been processed: it is kept as the reference of the payments it posted.").format(frappe.bold(self.name)))
+			frappe.throw(
+				_("{0} has been processed: it is kept as the reference of the payments it posted.").format(
+					frappe.bold(self.name)
+				)
+			)

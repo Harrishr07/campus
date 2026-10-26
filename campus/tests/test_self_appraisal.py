@@ -45,7 +45,9 @@ class SelfAppraisalFixture(CampusTestCase):
 		self.hours = mock.patch(HOURS, return_value={self.faculty: 12, self.hod: 6})
 		self.hours.start()
 		# the cycle is one academic year; other tests' Academic Years may overlap it and split the annual caps
-		self.year = mock.patch("campus.faculty.self_appraisal.academic_year_of", return_value=lambda on_date: "2026-27")
+		self.year = mock.patch(
+			"campus.faculty.self_appraisal.academic_year_of", return_value=lambda on_date: "2026-27"
+		)
 		self.year.start()
 
 	def tearDown(self):
@@ -92,7 +94,17 @@ class SelfAppraisalFixture(CampusTestCase):
 		event.submit()
 		return event
 
-	def achievement(self, employee, kind="Conference", title="Paper presentation", on="2026-08-10", amount=0, verified=1, evidence="/private/files/evidence.pdf", **extra):
+	def achievement(
+		self,
+		employee,
+		kind="Conference",
+		title="Paper presentation",
+		on="2026-08-10",
+		amount=0,
+		verified=1,
+		evidence="/private/files/evidence.pdf",
+		**extra,
+	):
 		doc = frappe.get_doc(
 			{
 				"doctype": "Faculty Achievement", "employee": employee, "achievement_type": kind, "title": title,
@@ -154,7 +166,9 @@ class TestAchievementAndRule(SelfAppraisalFixture):
 				{"doctype": "Faculty Achievement", "employee": self.faculty, "achievement_type": "Award", "title": "Mine",
 				"achievement_date": today(), "evidence": "/private/files/a.pdf", "verified": 1}
 			).insert()  # fmt: skip
-			self.assertFalse(frappe.db.get_value("Faculty Achievement", doc.name, "verified"))  # the field is HR-only
+			self.assertFalse(
+				frappe.db.get_value("Faculty Achievement", doc.name, "verified")
+			)  # the field is HR-only
 			doc.verified = 1
 			doc.save()
 			self.assertFalse(frappe.db.get_value("Faculty Achievement", doc.name, "verified"))
@@ -166,7 +180,13 @@ class TestAchievementAndRule(SelfAppraisalFixture):
 		try:
 			with self.assertRaises(frappe.PermissionError):
 				frappe.get_doc(
-					{"doctype": "Faculty Achievement", "employee": self.hod, "achievement_type": "Award", "title": "x", "achievement_date": today()}
+					{
+						"doctype": "Faculty Achievement",
+						"employee": self.hod,
+						"achievement_type": "Award",
+						"title": "x",
+						"achievement_date": today(),
+					}
 				).insert()
 		finally:
 			frappe.set_user("Administrator")
@@ -208,16 +228,24 @@ class TestAchievementAndRule(SelfAppraisalFixture):
 
 	def test_rule_weightage_must_total_one_hundred(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.make_rule(effective_from="2026-02-01", kras=[{"kra": TEACHING, "weightage": 60, "target_points": 20}])
+			self.make_rule(
+				effective_from="2026-02-01", kras=[{"kra": TEACHING, "weightage": 60, "target_points": 20}]
+			)
 
 	def test_rule_rows_need_a_kra_of_the_rule(self):
 		other = demo.get_or_insert("KRA", {"title": "SA Test Other"}, {})
 		with self.assertRaises(frappe.ValidationError):
-			self.make_rule(effective_from="2026-02-01", rows=[{"activity": "Award", "points": 1, "annual_cap": 0, "kra": other}])
+			self.make_rule(
+				effective_from="2026-02-01",
+				rows=[{"activity": "Award", "points": 1, "annual_cap": 0, "kra": other}],
+			)
 
 	def test_rule_in_force_is_the_latest_version_effective_by_the_date(self):
 		newer = self.make_rule(effective_from="2027-01-01")
-		self.assertEqual(self_appraisal.rule_in_force(demo.ENGINEERING, "2026-12-31").effective_from.isoformat(), "2026-01-01")
+		self.assertEqual(
+			self_appraisal.rule_in_force(demo.ENGINEERING, "2026-12-31").effective_from.isoformat(),
+			"2026-01-01",
+		)
 		self.assertEqual(self_appraisal.rule_in_force(demo.ENGINEERING, "2027-05-31").name, newer.name)
 		self.assertIsNone(self_appraisal.rule_in_force(demo.ENGINEERING, "2025-12-31"))
 
@@ -235,9 +263,13 @@ class TestSelfAppraisal(SelfAppraisalFixture):
 
 	def test_fdp_attendance_is_read_from_the_training_event_not_copied(self):
 		self.activity()
-		self.assertFalse(frappe.db.exists("Faculty Achievement", {"employee": self.faculty, "title": ["like", "SA FDP%"]}))
+		self.assertFalse(
+			frappe.db.exists("Faculty Achievement", {"employee": self.faculty, "title": ["like", "SA FDP%"]})
+		)
 		breakdown = {r.activity: r for r in self_appraisal.compute(self.faculty, self.cycle).results}
-		self.assertEqual(breakdown["FDP Attended"].quantity, 3)  # absent, non-FDP and last year's events are not counted
+		self.assertEqual(
+			breakdown["FDP Attended"].quantity, 3
+		)  # absent, non-FDP and last year's events are not counted
 
 	def test_updating_keeps_one_appraisal_and_follows_new_achievements(self):
 		self.activity()
@@ -245,8 +277,12 @@ class TestSelfAppraisal(SelfAppraisalFixture):
 		self.achievement(self.faculty, "Award", "Second award", "2026-10-20")
 		second = self.appraisal()
 		self.assertEqual(second.name, first.name)
-		self.assertEqual(frappe.db.count("Appraisal", {"employee": self.faculty, "appraisal_cycle": self.cycle}), 1)
-		self.assertEqual(self.goals(second), {TEACHING: (60, 3.0), PD: (40, 5.0)})  # 16 + 5 = 21 of 20, limited to 100%
+		self.assertEqual(
+			frappe.db.count("Appraisal", {"employee": self.faculty, "appraisal_cycle": self.cycle}), 1
+		)
+		self.assertEqual(
+			self.goals(second), {TEACHING: (60, 3.0), PD: (40, 5.0)}
+		)  # 16 + 5 = 21 of 20, limited to 100%
 		self.assertEqual(second.total_score, 3.8)
 
 	def test_goal_scores_cannot_be_edited_by_hand(self):
@@ -254,7 +290,9 @@ class TestSelfAppraisal(SelfAppraisalFixture):
 		appraisal = self.appraisal()
 		appraisal.goals[0].score = 5
 		appraisal.save()
-		self.assertEqual(self.goals(frappe.get_doc("Appraisal", appraisal.name)), {TEACHING: (60, 3.0), PD: (40, 4.0)})
+		self.assertEqual(
+			self.goals(frappe.get_doc("Appraisal", appraisal.name)), {TEACHING: (60, 3.0), PD: (40, 4.0)}
+		)
 
 	def test_no_rule_in_force_is_refused(self):
 		frappe.db.delete("API Score Rule", {"company": demo.ENGINEERING})
@@ -336,7 +374,10 @@ class TestHodReview(SelfAppraisalFixture):
 		appraisal = frappe.get_doc("Appraisal", self.appraisal_doc.name)
 		appraisal.oc_api_override_reason = "HOD on long leave; Principal instructed"
 		appraisal.submit()
-		self.assertEqual(frappe.db.get_value("Appraisal", appraisal.name, ["docstatus", "oc_api_override_by"]), (1, "Administrator"))
+		self.assertEqual(
+			frappe.db.get_value("Appraisal", appraisal.name, ["docstatus", "oc_api_override_by"]),
+			(1, "Administrator"),
+		)
 
 	def test_faculty_cannot_change_scores_while_the_review_is_pending(self):
 		self.request_as(demo.email("faculty_1"), self.appraisal_doc)
@@ -348,7 +389,10 @@ class TestHodReview(SelfAppraisalFixture):
 				appraisal.save()
 		finally:
 			frappe.set_user("Administrator")
-		self.assertEqual(self.goals(frappe.get_doc("Appraisal", self.appraisal_doc.name)), {TEACHING: (60, 3.0), PD: (40, 4.0)})
+		self.assertEqual(
+			self.goals(frappe.get_doc("Appraisal", self.appraisal_doc.name)),
+			{TEACHING: (60, 3.0), PD: (40, 4.0)},
+		)
 
 	def test_a_rejected_review_does_not_freeze_the_appraisal(self):
 		review = self.request_as(demo.email("faculty_1"), self.appraisal_doc)
@@ -421,7 +465,9 @@ class TestReportsAndCv(SelfAppraisalFixture):
 		point = registry.data_point("fdp_teachers", demo.ENGINEERING, YEAR)
 		self.assertEqual(point["value"], 2)  # faculty_1 twice counts once
 		self.assertEqual({r["name"] for r in point["records"]}, {self.faculty, demo.employee_of("faculty_2")})
-		self.assertEqual(registry.data_point("fdp_teachers", demo.ENGINEERING, YEAR, "No Such Department")["value"], 0)
+		self.assertEqual(
+			registry.data_point("fdp_teachers", demo.ENGINEERING, YEAR, "No Such Department")["value"], 0
+		)
 
 	def test_conference_support_lists_verified_supported_conferences_and_memberships(self):
 		rows = conference_financial_support.execute(FILTERS)[1]
@@ -459,13 +505,18 @@ class TestReportsAndCv(SelfAppraisalFixture):
 
 		frappe.set_user(demo.email("faculty_1"))
 		try:
-			self.assertEqual(sorted(r.event_name for r in faculty_cv_sections(self.faculty)["fdps"]), ["SA FDP one", "SA FDP two"])
+			self.assertEqual(
+				sorted(r.event_name for r in faculty_cv_sections(self.faculty)["fdps"]),
+				["SA FDP one", "SA FDP two"],
+			)
 		finally:
 			frappe.set_user("Administrator")
 
 	def test_faculty_cv_prints_escaped(self):
 		hostile = self.achievement(self.faculty, "Award", "placeholder", amount=0)
-		frappe.db.set_value("Faculty Achievement", hostile.name, "title", "<script>alert(1)</script>")  # as left by an import
+		frappe.db.set_value(
+			"Faculty Achievement", hostile.name, "title", "<script>alert(1)</script>"
+		)  # as left by an import
 		frappe.db.set_value("Employee", self.faculty, "oc_specialisation", "<img src=x onerror=alert(2)>")
 		html = frappe.get_print("Employee", self.faculty, print_format="Faculty CV")
 		self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)

@@ -14,7 +14,14 @@ from campus.student_services.api import attendance_snapshot
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.finance_factories import make_finance_company
 from campus.tests.test_attendance_condonation import inline_bulk
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.test_results import make_login, make_term
 from campus.tests.utils import CampusTestCase
 
@@ -26,7 +33,13 @@ OK_USER, SA_USER, DROP_USER, GUARDIAN_USER = (
 	"exr-ok@example.com", "exr-sa@example.com", "exr-drop@example.com", "exr-guardian@example.com",
 )  # fmt: skip
 # course -> exam type; all semester 1 of one curriculum. EXR IO has no end-semester exam.
-COURSES = {"EXR A": "Theory", "EXR B": "Theory", "EXR D": "Theory", "EXR IO": "Internal Only", "EXR OLD": "Theory"}
+COURSES = {
+	"EXR A": "Theory",
+	"EXR B": "Theory",
+	"EXR D": "Theory",
+	"EXR IO": "Internal Only",
+	"EXR OLD": "Theory",
+}
 FEE_PER_COURSE = 300
 SLABS = [(1, 7, 100), (8, 15, 250)]
 
@@ -36,7 +49,10 @@ def clear_world():
 	registrations = frappe.get_all("Exam Registration", {"company": COLLEGE}, pluck="name") or [""]
 	frappe.db.delete("Exam Registration Course", {"parent": ["in", registrations]})
 	frappe.db.delete("Exam Registration", {"name": ["in", registrations]})
-	frappe.db.delete("Exam Late Fee Slab", {"parent": ["in", frappe.get_all("Exam Fee Rate", {"company": COLLEGE}, pluck="name") or [""]]})
+	frappe.db.delete(
+		"Exam Late Fee Slab",
+		{"parent": ["in", frappe.get_all("Exam Fee Rate", {"company": COLLEGE}, pluck="name") or [""]]},
+	)
 	frappe.db.delete("Exam Fee Rate", {"company": COLLEGE})
 	results = frappe.get_all("Student Result", {"student": ["in", students]}, pluck="name") or [""]
 	frappe.db.delete("Student Result Course", {"parent": ["in", results]})
@@ -113,14 +129,19 @@ def published_result(session, student, outcomes):
 def locked_snapshot(term, statuses):
 	return frappe.get_doc(
 		{
-			"doctype": "Attendance Eligibility Run", "company": COLLEGE, "academic_term": term, "locked": 1,
+			"doctype": "Attendance Eligibility Run",
+			"company": COLLEGE,
+			"academic_term": term,
+			"locked": 1,
 			"rows": [{"student": s, "status": status} for s, status in statuses.items()],
 		}
 	).insert()
 
 
 def with_customer(student):
-	customer = frappe.get_doc({"doctype": "Customer", "customer_name": f"{student} Customer", "customer_type": "Individual"}).insert()
+	customer = frappe.get_doc(
+		{"doctype": "Customer", "customer_name": f"{student} Customer", "customer_type": "Individual"}
+	).insert()
 	frappe.db.set_value("Student", student, "customer", customer.name)
 
 
@@ -152,10 +173,14 @@ class ExamRegistrationFixture(CampusTestCase):
 		make_guardian("Exrguardian", [cls.drop], user=GUARDIAN_USER)
 		curriculum = make_curriculum(regulation)
 		current = [cls.ok, cls.sa, cls.drop, cls.dues]
-		cls.offerings = {c: make_offering(c, curriculum, cls.term, current) for c in ("EXR A", "EXR B", "EXR IO")}
+		cls.offerings = {
+			c: make_offering(c, curriculum, cls.term, current) for c in ("EXR A", "EXR B", "EXR IO")
+		}
 		cls.offerings["EXR D"] = make_offering("EXR D", curriculum, cls.term, [cls.drop])
 		make_offering("EXR OLD", curriculum, cls.pre_term, [cls.ok, cls.sa, cls.old])
-		submitted_course_registration(cls.drop, cls.term, [("EXR A", "Regular"), ("EXR B", "Regular"), ("EXR D", "Dropped")])
+		submitted_course_registration(
+			cls.drop, cls.term, [("EXR A", "Regular"), ("EXR B", "Regular"), ("EXR D", "Dropped")]
+		)
 		pre_session = frappe.get_doc(
 			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": cls.pre_term, "status": "Draft"}
 		).insert()
@@ -163,10 +188,13 @@ class ExamRegistrationFixture(CampusTestCase):
 		published_result(pre_session.name, cls.sa, [("EXR OLD", "Fail")])  # an arrear (U)
 		published_result(pre_session.name, cls.old, [("EXR OLD", "AB")])  # arrear only: no course this term
 		frappe.db.set_value(
-			"Exam Session", pre_session.name, {"status": "Published", "publish_at": add_days(now_datetime(), -30)}
+			"Exam Session",
+			pre_session.name,
+			{"status": "Published", "publish_at": add_days(now_datetime(), -30)},
 		)
 		cls.snapshot = locked_snapshot(
-			cls.term, {cls.ok: "Eligible", cls.sa: "Detained (SA)", cls.drop: "Eligible", cls.dues: "Eligible"}
+			cls.term,
+			{cls.ok: "Eligible", cls.sa: "Detained (SA)", cls.drop: "Eligible", cls.dues: "Eligible"},
 		)
 		cls.session = frappe.get_doc(
 			{
@@ -203,13 +231,17 @@ class ExamRegistrationFixture(CampusTestCase):
 		return {r.course: (r.kind, r.eligibility) for r in self.reg(student).courses}
 
 	def set_closes(self, days_from_today):
-		frappe.db.set_value("Exam Session", self.session.name, "registration_closes", add_days(today(), days_from_today))
+		frappe.db.set_value(
+			"Exam Session", self.session.name, "registration_closes", add_days(today(), days_from_today)
+		)
 
 	def confirm_as(self, user, student):
 		frappe.set_user(user)
 		frappe.form_dict.clear()
 		with patch("frappe.enqueue"):
-			return portal.confirm_exam_registration(registration.registration_name(self.session.name, student), student)
+			return portal.confirm_exam_registration(
+				registration.registration_name(self.session.name, student), student
+			)
 
 
 class TestExamSession(ExamRegistrationFixture):
@@ -240,14 +272,20 @@ class TestBulkRegistration(ExamRegistrationFixture):
 			name = api.start_registration(self.session.name)
 		enqueue.assert_called_once_with(name)
 		run = frappe.get_doc("Bulk Run", name)
-		self.assertEqual(frappe.parse_json(run.items), sorted([self.ok, self.sa, self.drop, self.dues, self.old]))
-		self.assertEqual((run.handler, run.get_parameters()), (registration.HANDLER, {"exam_session": self.session.name}))
+		self.assertEqual(
+			frappe.parse_json(run.items), sorted([self.ok, self.sa, self.drop, self.dues, self.old])
+		)
+		self.assertEqual(
+			(run.handler, run.get_parameters()), (registration.HANDLER, {"exam_session": self.session.name})
+		)
 		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.start_registration], ["POST"])
 
 	def test_courses_are_current_dropped_and_arrears_with_their_eligibility(self):
 		self.register_all()
 		eligible, sa = "Eligible", "Not eligible (SA)"
-		self.assertEqual(self.courses(self.ok), {"EXR A": ("Current", eligible), "EXR B": ("Current", eligible)})
+		self.assertEqual(
+			self.courses(self.ok), {"EXR A": ("Current", eligible), "EXR B": ("Current", eligible)}
+		)
 		# R2022 cl. 15.1: the SA student's term courses are barred, the arrear stays registrable
 		self.assertEqual(
 			self.courses(self.sa),
@@ -282,7 +320,9 @@ class TestBulkRegistration(ExamRegistrationFixture):
 			registration.register(self.dues, self.session.name)
 
 	def test_a_published_session_takes_no_registration(self):
-		frappe.db.set_value("Exam Session", self.session.name, {"status": "Published", "publish_at": now_datetime()})
+		frappe.db.set_value(
+			"Exam Session", self.session.name, {"status": "Published", "publish_at": now_datetime()}
+		)
 		with self.assertRaises(frappe.ValidationError):
 			registration.register(self.ok, self.session.name)
 
@@ -309,7 +349,9 @@ class TestBulkRegistration(ExamRegistrationFixture):
 		name = registration.registration_name(self.session.name, self.ok)
 		real_exists = frappe.db.exists
 
-		def stale_exists(doctype, *args, **kwargs):  # what a plain read of a snapshot older than the insert sees
+		def stale_exists(
+			doctype, *args, **kwargs
+		):  # what a plain read of a snapshot older than the insert sees
 			return None if doctype == "Exam Registration" else real_exists(doctype, *args, **kwargs)
 
 		with patch.object(frappe.db, "exists", side_effect=stale_exists):
@@ -339,19 +381,36 @@ class TestBulkRegistration(ExamRegistrationFixture):
 			doc.save()
 		with self.assertRaisesRegex(frappe.ValidationError, "server"):
 			frappe.get_doc(
-				{"doctype": "Exam Registration", "exam_session": self.session.name, "student": self.dues, "confirmed": 1}
+				{
+					"doctype": "Exam Registration",
+					"exam_session": self.session.name,
+					"student": self.dues,
+					"confirmed": 1,
+				}
 			).insert()
 		self.reg(self.sa).save()  # an untouched save passes
+
 
 class TestAttendanceSnapshot(ExamRegistrationFixture):
 	def test_only_a_locked_run_counts_and_an_approved_condonation_makes_a_medical_band_eligible(self):
 		self.assertEqual(attendance_snapshot(self.ok, self.term, COLLEGE), "Eligible")
 		self.assertEqual(attendance_snapshot(self.sa, self.term, COLLEGE), "Shortage")
 		self.assertIsNone(attendance_snapshot(self.old, self.term, COLLEGE))
-		frappe.db.set_value("Attendance Eligibility Row", {"parent": self.snapshot.name, "student": self.ok}, "status", "Condonation")
+		frappe.db.set_value(
+			"Attendance Eligibility Row",
+			{"parent": self.snapshot.name, "student": self.ok},
+			"status",
+			"Condonation",
+		)
 		self.assertEqual(attendance_snapshot(self.ok, self.term, COLLEGE), "Shortage")
 		frappe.get_doc(
-			{"doctype": "Condonation Request", "name": "CND-EXR-1", "student": self.ok, "academic_term": self.term, "docstatus": 1}
+			{
+				"doctype": "Condonation Request",
+				"name": "CND-EXR-1",
+				"student": self.ok,
+				"academic_term": self.term,
+				"docstatus": 1,
+			}
 		).db_insert()  # an approved request, as the approval engine leaves it
 		self.assertEqual(attendance_snapshot(self.ok, self.term, COLLEGE), "Eligible")
 		frappe.db.set_value("Attendance Eligibility Run", self.snapshot.name, "locked", 0)
@@ -365,9 +424,10 @@ class TestExamFee(ExamRegistrationFixture):
 		frappe.form_dict.clear()
 		name = registration.registration_name(self.session.name, self.drop)
 		web = (frappe.session.user, frappe.session.sid)
-		with patch("frappe.set_user", side_effect=AssertionError("set_user in a request path")), patch(
-			"frappe.enqueue"
-		) as enqueue:
+		with (
+			patch("frappe.set_user", side_effect=AssertionError("set_user in a request path")),
+			patch("frappe.enqueue") as enqueue,
+		):
 			portal.confirm_exam_registration(name, self.drop)
 		self.assertEqual((frappe.session.user, frappe.session.sid), web)
 		queued = [c for c in enqueue.call_args_list if c.args and c.args[0] == exam_fee.JOB]
@@ -376,14 +436,22 @@ class TestExamFee(ExamRegistrationFixture):
 		frappe.set_user("Administrator")
 		doc = self.reg(self.drop)
 		# 3 eligible courses x 300, on time
-		self.assertEqual((doc.confirmed, doc.late_days, doc.exam_fee, doc.late_fee, doc.fee_total), (1, 0, 900, 0, 900))
+		self.assertEqual(
+			(doc.confirmed, doc.late_days, doc.exam_fee, doc.late_fee, doc.fee_total), (1, 0, 900, 0, 900)
+		)
 		self.assertFalse(doc.fee_invoice)
 		exam_fee.raise_fee(name)
 		exam_fee.raise_fee(name)  # idempotent
 		doc.reload()
 		invoice = frappe.get_doc("Sales Invoice", doc.fee_invoice)
 		self.assertEqual(
-			(invoice.docstatus, invoice.grand_total, invoice.items[0].item_code, invoice.student, invoice.company),
+			(
+				invoice.docstatus,
+				invoice.grand_total,
+				invoice.items[0].item_code,
+				invoice.student,
+				invoice.company,
+			),
 			(1, 900, "Exam", self.drop, COLLEGE),
 		)
 		self.assertEqual(frappe.db.count("Sales Invoice", {"student": self.drop, "docstatus": 1}), 1)
@@ -431,7 +499,9 @@ class TestExamFee(ExamRegistrationFixture):
 			frappe.get_doc({"doctype": "Exam Fee Rate", "company": COLLEGE, "fee_per_course": 100}).insert()
 
 	def test_a_program_rate_beats_the_company_rate(self):
-		frappe.get_doc({"doctype": "Exam Fee Rate", "company": COLLEGE, "program": PROGRAM, "fee_per_course": 450}).insert()
+		frappe.get_doc(
+			{"doctype": "Exam Fee Rate", "company": COLLEGE, "program": PROGRAM, "fee_per_course": 450}
+		).insert()
 		self.register_all()
 		self.confirm_as(OK_USER, self.ok)
 		self.assertEqual(self.reg(self.ok).exam_fee, 900)  # 2 x 450
@@ -461,7 +531,9 @@ class TestExamFee(ExamRegistrationFixture):
 		self.confirm_as(OK_USER, self.ok)
 		frappe.set_user("Administrator")
 		exam_fee.raise_fee(self.reg(self.ok).name)  # already invoiced: left alone
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.reraise_exam_fee_invoices], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[api.reraise_exam_fee_invoices], ["POST"]
+		)
 		frappe.set_user(FACULTY)
 		with self.assertRaises(frappe.PermissionError):
 			api.reraise_exam_fee_invoices(self.session.name)
@@ -473,6 +545,7 @@ class TestExamFee(ExamRegistrationFixture):
 		self.assertTrue(self.reg(self.drop).fee_invoice)
 		for student in (self.drop, self.ok):
 			self.assertEqual(frappe.db.count("Sales Invoice", {"student": student, "docstatus": 1}), 1)
+
 
 class TestDuesGating(ExamRegistrationFixture):
 	def test_exam_dues_block_hall_tickets_not_registration(self):
@@ -491,16 +564,22 @@ class TestDuesGating(ExamRegistrationFixture):
 
 class TestPortal(ExamRegistrationFixture):
 	def test_confirm_is_post_only_and_only_for_the_student_themself(self):
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[portal.confirm_exam_registration], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[portal.confirm_exam_registration], ["POST"]
+		)
 		self.register_all()
 		with self.assertRaises(frappe.PermissionError):
 			self.confirm_as(OK_USER, self.drop)  # another student
 		with self.assertRaises(frappe.PermissionError):
 			self.confirm_as(GUARDIAN_USER, self.drop)  # a guardian sees it but the student confirms
 		frappe.set_user(OK_USER)
-		with self.assertRaises(frappe.PermissionError):  # a registration id of another student under one's own id
+		with self.assertRaises(
+			frappe.PermissionError
+		):  # a registration id of another student under one's own id
 			with patch("frappe.enqueue"):
-				portal.confirm_exam_registration(registration.registration_name(self.session.name, self.drop), self.ok)
+				portal.confirm_exam_registration(
+					registration.registration_name(self.session.name, self.drop), self.ok
+				)
 		self.confirm_as(DROP_USER, self.drop)
 		with self.assertRaisesRegex(frappe.ValidationError, "already"):
 			self.confirm_as(DROP_USER, self.drop)
@@ -520,4 +599,6 @@ class TestPortal(ExamRegistrationFixture):
 			self.assertEqual(row["can_confirm"], user == DROP_USER)
 		frappe.set_user(SA_USER)
 		(row,) = portal.my_exam_registrations(self.sa)["registrations"]
-		self.assertEqual({c["course"]: c["eligibility"] for c in row["courses"]}["EXR A"], "Not eligible (SA)")
+		self.assertEqual(
+			{c["course"]: c["eligibility"] for c in row["courses"]}["EXR A"], "Not eligible (SA)"
+		)

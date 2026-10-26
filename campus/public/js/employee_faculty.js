@@ -6,7 +6,15 @@ frappe.ui.form.on("Employee", {
 			__("Self-Appraisal"),
 			() =>
 				frappe.prompt(
-					[{ fieldname: "appraisal_cycle", fieldtype: "Link", options: "Appraisal Cycle", label: __("Appraisal Cycle"), reqd: 1 }],
+					[
+						{
+							fieldname: "appraisal_cycle",
+							fieldtype: "Link",
+							options: "Appraisal Cycle",
+							label: __("Appraisal Cycle"),
+							reqd: 1,
+						},
+					],
 					(values) =>
 						frappe
 							.xcall("campus.faculty.api.create_self_appraisal", {

@@ -41,12 +41,22 @@ def data(filters):
 	)  # fmt: skip
 	names = [a.name for a in allocations] or [""]
 	scripts, valued = {}, {}
-	for row in frappe.get_all("Valuation Allocation Script", {"parenttype": "Valuation Allocation", "parent": ["in", names]}, ["parent", "dummy_number"]):
+	for row in frappe.get_all(
+		"Valuation Allocation Script",
+		{"parenttype": "Valuation Allocation", "parent": ["in", names]},
+		["parent", "dummy_number"],
+	):
 		scripts.setdefault(row.parent, set()).add(row.dummy_number)
-	for row in frappe.get_all("Valuation Entry", {"allocation": ["in", names], "docstatus": 1}, ["allocation", "dummy_number"]):
+	for row in frappe.get_all(
+		"Valuation Entry", {"allocation": ["in", names], "docstatus": 1}, ["allocation", "dummy_number"]
+	):
 		valued.setdefault(row.allocation, set()).add(row.dummy_number)
 	every = set().union(*scripts.values()) if scripts else set()
-	void = set(frappe.get_all("Dummy Number Map", {"dummy_number": ["in", list(every) or [""]], "void": 1}, pluck="dummy_number"))
+	void = set(
+		frappe.get_all(
+			"Dummy Number Map", {"dummy_number": ["in", list(every) or [""]], "void": 1}, pluck="dummy_number"
+		)
+	)
 	out = []
 	for a in allocations:
 		allocated, done = scripts.get(a.name, set()), valued.get(a.name, set())

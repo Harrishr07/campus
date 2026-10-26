@@ -14,7 +14,13 @@ from campus.campus_platform.company_scope import permitted_companies
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	companies = visible_companies(filters.company)
-	return columns(), ledger.ledger_rows(filters.student, companies), None, None, summary(filters.student, companies)
+	return (
+		columns(),
+		ledger.ledger_rows(filters.student, companies),
+		None,
+		None,
+		summary(filters.student, companies),
+	)
 
 
 def visible_companies(company):
@@ -23,7 +29,9 @@ def visible_companies(company):
 	if not company:
 		return permitted
 	if permitted is not None and company not in permitted:
-		frappe.throw(_("You are not permitted to see the company {0}.").format(company), frappe.PermissionError)
+		frappe.throw(
+			_("You are not permitted to see the company {0}.").format(company), frappe.PermissionError
+		)
 	return [company]
 
 
@@ -43,7 +51,14 @@ def columns():
 
 def summary(student, companies):
 	dues = ledger.has_dues(student, companies=companies)
-	return [{"label": _("Outstanding"), "value": dues.blocking, "datatype": "Currency", "indicator": "Red" if dues.blocking > 0 else "Green"}] + [
+	return [
+		{
+			"label": _("Outstanding"),
+			"value": dues.blocking,
+			"datatype": "Currency",
+			"indicator": "Red" if dues.blocking > 0 else "Green",
+		}
+	] + [
 		{"label": label, "value": amount, "datatype": "Currency"}
 		for label, amount in (*dues.by_company.items(), *dues.by_head.items())
 	]

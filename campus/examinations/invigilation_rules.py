@@ -43,7 +43,9 @@ def assign(halls, faculty, own_courses=None, on_leave=(), per_hall=1):
 		duties.append([hall, chosen, people])
 	duties.sort(key=lambda d: (sitting_key(d[0]), d[1]))
 	rebalance(duties, by_slot, busy)
-	return sorted(((h, e) for h, e, _p in duties), key=lambda d: (sitting_key(d[0]), d[1])), sorted(unfilled, key=sitting_key)
+	return sorted(((h, e) for h, e, _p in duties), key=lambda d: (sitting_key(d[0]), d[1])), sorted(
+		unfilled, key=sitting_key
+	)
 
 
 def rebalance(duties, by_slot, busy):
@@ -73,7 +75,9 @@ def eligible_faculty(halls, faculty, own_courses=None, on_leave=()):
 	own_courses, on_leave, eligible = own_courses or {}, set(on_leave), {}
 	for hall in halls:
 		eligible.setdefault(hall.slot, set()).update(
-			e for e in faculty if (e, str(hall.date)) not in on_leave and not set(own_courses.get(e, ())) & set(hall.courses)
+			e
+			for e in faculty
+			if (e, str(hall.date)) not in on_leave and not set(own_courses.get(e, ())) & set(hall.courses)
 		)
 	return eligible
 

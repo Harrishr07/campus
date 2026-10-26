@@ -18,7 +18,9 @@ class LabSafetyInspection(Document):
 	def check_template_company(self):
 		lab_company = frappe.db.get_value("Laboratory", self.laboratory, "company")
 		if frappe.db.get_value("Safety Checklist Template", self.template, "company") != lab_company:
-			frappe.throw(_("Checklist template {0} belongs to another company").format(frappe.bold(self.template)))
+			frappe.throw(
+				_("Checklist template {0} belongs to another company").format(frappe.bold(self.template))
+			)
 
 	def fill_from_template(self):
 		for item in frappe.get_doc("Safety Checklist Template", self.template).items:

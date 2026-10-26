@@ -50,7 +50,11 @@ class Context:
 
 def check_allowed():
 	if not pilot_people.test_passwords_allowed():
-		frappe.throw(_("The demo data is for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config."))
+		frappe.throw(
+			_(
+				"The demo data is for developer-mode or demo sites only: turn on developer_mode or set campus_demo_site in the site config."
+			)
+		)
 
 
 def load(profile="sxcce", seed=2026, steps=None):
@@ -66,12 +70,23 @@ def check_kit(ctx):
 	"""What the pilot setup kit must have provided, named in one message before anything is written."""
 	missing = []
 	company = frappe.db.get_value(
-		"Company", ctx.college,
-		["default_receivable_account", "default_income_account", "default_cash_account", "default_bank_account", "default_holiday_list"],
+		"Company",
+		ctx.college,
+		[
+			"default_receivable_account",
+			"default_income_account",
+			"default_cash_account",
+			"default_bank_account",
+			"default_holiday_list",
+		],
 		as_dict=True,
 	)
 	if not company:
-		frappe.throw(_("Run the pilot setup kit first: company {0} does not exist (campus.setup.pilot.setup_college).").format(ctx.college))
+		frappe.throw(
+			_(
+				"Run the pilot setup kit first: company {0} does not exist (campus.setup.pilot.setup_college)."
+			).format(ctx.college)
+		)
 	for field in ("default_receivable_account", "default_income_account", "default_holiday_list"):
 		if not company[field]:
 			missing.append(f"{ctx.college}: {field}")
@@ -85,10 +100,16 @@ def check_kit(ctx):
 		missing.append(f"{ctx.college}: submitted Fee Structures")
 	for year in ctx.profile["academic_years"]:
 		for term in year.get("terms", []):
-			if not frappe.db.exists("Academic Term", {"academic_year": year["name"], "term_name": term["name"]}):
+			if not frappe.db.exists(
+				"Academic Term", {"academic_year": year["name"], "term_name": term["name"]}
+			):
 				missing.append(f"Academic Term {year['name']} {term['name']}")
 	if missing:
-		frappe.throw(_("Run the pilot setup kit (campus.setup.pilot.setup_college) first; the site lacks: {0}.").format("; ".join(missing)))
+		frappe.throw(
+			_(
+				"Run the pilot setup kit (campus.setup.pilot.setup_college) first; the site lacks: {0}."
+			).format("; ".join(missing))
+		)
 
 
 def run_steps(ctx, steps):
@@ -96,12 +117,21 @@ def run_steps(ctx, steps):
 
 	check_allowed()
 	modules = {
-		"staff": staff, "intake": intake, "fees": fees, "curriculum": curriculum, "batch": batch, "term": term, "services": services,
+		"staff": staff,
+		"intake": intake,
+		"fees": fees,
+		"curriculum": curriculum,
+		"batch": batch,
+		"term": term,
+		"services": services,
 	}
 	unknown = [step for step in steps if step not in modules]
 	if unknown:
 		frappe.throw(_("Unknown steps {0}; the steps are {1}.").format(", ".join(unknown), ", ".join(STEPS)))
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode would skip DocType defaults
+	was_importing, frappe.flags.in_import = (
+		frappe.flags.in_import,
+		False,
+	)  # import mode would skip DocType defaults
 	user = frappe.session.user
 	frappe.set_user("Administrator")
 	try:

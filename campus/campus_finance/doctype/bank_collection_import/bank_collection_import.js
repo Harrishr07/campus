@@ -12,7 +12,9 @@ frappe.ui.form.on("Bank Collection Import", {
 		}
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Rows"), () =>
-				frappe.set_route("List", "Bank Collection Row", { bank_collection_import: frm.doc.name })
+				frappe.set_route("List", "Bank Collection Row", {
+					bank_collection_import: frm.doc.name,
+				})
 			);
 		}
 	},

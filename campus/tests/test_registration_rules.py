@@ -53,7 +53,9 @@ class TestRegistrationRules(UnitTestCase):
 		self.assertEqual(rules.drop_problems([("Dropped", 6)], "2022-07-01", deadline, 6, PREFIX), [])
 
 	def test_drop_of_seven_credits_fails(self):
-		problems = rules.drop_problems([("Dropped", 4), ("Dropped", 3)], "2022-06-10", "2022-07-01", 6, PREFIX)
+		problems = rules.drop_problems(
+			[("Dropped", 4), ("Dropped", 3)], "2022-06-10", "2022-07-01", 6, PREFIX
+		)
 		self.assertEqual(len(problems), 1)
 		self.assertIn("7 credits dropped; at most 6", problems[0])
 

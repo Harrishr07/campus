@@ -64,7 +64,12 @@ REGULATIONS = [
 # interleaved so even the first 10 students of a small batch carry four categories.
 CATEGORY_CYCLE = [*["OC", "BC", "MBC", "SC"] * 4, "OC", "BC", "OC", "ST"]
 CATEGORIES = sorted(set(CATEGORY_CYCLE))
-RESERVED_CATEGORIES = {"BC", "MBC", "SC", "ST"}  # Student Category.oc_is_reserved: counted as reserved by the IQAC data points
+RESERVED_CATEGORIES = {
+	"BC",
+	"MBC",
+	"SC",
+	"ST",
+}  # Student Category.oc_is_reserved: counted as reserved by the IQAC data points
 
 ALL_COMPANIES = [name for name, _abbr, _parent in COMPANIES]
 # username -> (roles, companies the user is limited to); Academics User is the general staff role
@@ -159,15 +164,26 @@ def make_faculty():
 
 def make_certificate_policy():
 	"""Certificate Requests of a needs-approval type go to the Principal of the student's college, so the portal request works."""
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults (enabled, limit to company)
+	was_importing, frappe.flags.in_import = (
+		frappe.flags.in_import,
+		False,
+	)  # import mode skips the defaults (enabled, limit to company)
 	try:
 		get_or_insert(
 			"Approval Policy",
 			{"policy_name": CERTIFICATE_POLICY, "document_type": "Certificate Request"},
 			{
-				"enabled": 1, "condition": "doc.needs_approval", "on_final_action": "Submit",
+				"enabled": 1,
+				"condition": "doc.needs_approval",
+				"on_final_action": "Submit",
 				"levels": [
-					{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "limit_to_company": 1}
+					{
+						"approver_type": "Position",
+						"approver": "PRINCIPAL",
+						"scope_field": "company",
+						"title": "Principal",
+						"limit_to_company": 1,
+					}
 				],
 			},
 		)
@@ -186,7 +202,10 @@ def get_or_insert(doctype, filters, values):
 
 
 def make_companies():
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode skips the defaults a fully set-up site requires
+	was_importing, frappe.flags.in_import = (
+		frappe.flags.in_import,
+		False,
+	)  # import mode skips the defaults a fully set-up site requires
 	try:
 		for name, abbr, parent in COMPANIES:
 			make_company(name, abbr, is_group=0 if parent else 1, parent_company=parent)
@@ -281,7 +300,9 @@ def make_curriculum():
 				"lecture_periods": lecture, "tutorial_periods": tutorial, "practical_periods": practical,
 			}
 		)  # fmt: skip
-	get_or_insert("Curriculum", {"program": "B.E. CSE", "regulation": regulation, "version": 1}, {"courses": rows})
+	get_or_insert(
+		"Curriculum", {"program": "B.E. CSE", "regulation": regulation, "version": 1}, {"courses": rows}
+	)
 
 
 # regulation code -> Attendance Rule values (anna-university-autonomous-rules.md, section 3)
@@ -464,7 +485,9 @@ def make_students(batches, per_batch):
 	students = {
 		row.student_email_id: row.name
 		for row in frappe.get_all(
-			"Student", filters=[["student_email_id", "like", f"%@{DOMAIN}"]], fields=["name", "student_email_id"]
+			"Student",
+			filters=[["student_email_id", "like", f"%@{DOMAIN}"]],
+			fields=["name", "student_email_id"],
 		)
 	}
 	enrollments = {
@@ -507,8 +530,10 @@ def ensure_enrollment(student, program, batch, number, enrollment):
 		if enrollment.student_category != category:
 			frappe.db.set_value("Program Enrollment", enrollment.name, "student_category", category)
 		return
-	doc = frappe.get_doc("Program Enrollment", enrollment.name) if enrollment else frappe.new_doc(
-		"Program Enrollment"
+	doc = (
+		frappe.get_doc("Program Enrollment", enrollment.name)
+		if enrollment
+		else frappe.new_doc("Program Enrollment")
 	)
 	doc.update(
 		{
@@ -542,7 +567,9 @@ def assign_missing_regulations():
 def make_student_users():
 	"""Link student_1 and guardian_1 to the first CSE student and a Guardian record."""
 	student = frappe.db.get_value("Student", {"student_email_id": email("student_1")})
-	if not student or frappe.db.exists("Student", {"user": email("student_1")}):  # already linked, maybe by the slice demo
+	if not student or frappe.db.exists(
+		"Student", {"user": email("student_1")}
+	):  # already linked, maybe by the slice demo
 		return
 	frappe.db.set_value("Student", student, "user", email("student_1"), update_modified=False)
 	guardian = get_or_insert(
@@ -562,7 +589,8 @@ def counts():
 		"Company": frappe.db.count("Company", {"name": ["in", ALL_COMPANIES]}),
 		"Program": frappe.db.count("Program", {"name": ["in", list(PROGRAMS)]}),
 		"Regulation": frappe.db.count(
-			"Regulation", {"name": ["in", [regulation_name(code, company) for code, company, *_ in REGULATIONS]]}
+			"Regulation",
+			{"name": ["in", [regulation_name(code, company) for code, company, *_ in REGULATIONS]]},
 		),
 		"Curriculum": frappe.db.count("Curriculum", {"program": "B.E. CSE"}),
 		"Student": frappe.db.count("Student", {"student_email_id": ["like", f"%@{DOMAIN}"]}),

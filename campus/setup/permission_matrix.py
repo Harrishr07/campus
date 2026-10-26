@@ -28,7 +28,10 @@ OWNER = "System Manager"
 # does not depend on the flag. Any other role without desk access (a future Applicant or Alumni role) is student-facing too.
 STUDENT_FACING = ("Student", "Guardian", "Guest")
 # Test-fixture DocTypes: part of the app so tests can use them, but not a permission of the product.
-TEST_ONLY_DOCTYPES = ("Approval Test Document", "Campus Test Rule")  # Campus Test Rule: a stale test-site leftover, not in the app
+TEST_ONLY_DOCTYPES = (
+	"Approval Test Document",
+	"Campus Test Rule",
+)  # Campus Test Rule: a stale test-site leftover, not in the app
 
 # Lifecycle, official documents, results, certificates and the financial / audit ledgers: kept as history.
 # Round Result (a placement round's shortlist) is deliberately not listed: the Placement Officer deletes a wrongly
@@ -104,11 +107,15 @@ def collect_rows():
 	modules = campus_modules()
 	portal_roles = {*STUDENT_FACING, *frappe.get_all("Role", {"desk_access": 0}, pluck="name")}
 	rows = []
-	doctypes = frappe.get_all("DocType", {"module": ["in", modules], "name": ["not in", TEST_ONLY_DOCTYPES]}, pluck="name")
+	doctypes = frappe.get_all(
+		"DocType", {"module": ["in", modules], "name": ["not in", TEST_ONLY_DOCTYPES]}, pluck="name"
+	)
 	for doctype in doctypes:
 		meta = frappe.get_meta(doctype)
 		rows += [doctype_row(meta, perm) for perm in meta.permissions]
-	for report in frappe.get_all("Report", filters={"module": ["in", modules]}, fields=["name", "ref_doctype"]):
+	for report in frappe.get_all(
+		"Report", filters={"module": ["in", modules]}, fields=["name", "ref_doctype"]
+	):
 		rows += report_rows(report)
 	for row in rows:
 		row["portal"] = int(row["role"] in portal_roles)
@@ -117,14 +124,26 @@ def collect_rows():
 
 def doctype_row(meta, perm):
 	row = {"kind": "DocType", "name": meta.name, "role": perm.role, "permlevel": perm.permlevel or 0}
-	return row | {flag: int(bool(perm.get(flag))) for flag in FLAGS} | {"submittable": int(bool(meta.is_submittable))}
+	return (
+		row
+		| {flag: int(bool(perm.get(flag))) for flag in FLAGS}
+		| {"submittable": int(bool(meta.is_submittable))}
+	)
 
 
 def report_rows(report):
 	roles = frappe.get_all("Has Role", {"parent": report.name, "parenttype": "Report"}, pluck="role")
 	if not roles and report.ref_doctype:
-		roles = [p.role for p in frappe.get_meta(report.ref_doctype).permissions if p.read and not p.permlevel]
-	base = {"kind": "Report", "name": report.name, "permlevel": 0, "read": 1, "ref_doctype": report.ref_doctype}
+		roles = [
+			p.role for p in frappe.get_meta(report.ref_doctype).permissions if p.read and not p.permlevel
+		]
+	base = {
+		"kind": "Report",
+		"name": report.name,
+		"permlevel": 0,
+		"read": 1,
+		"ref_doctype": report.ref_doctype,
+	}
 	return [base | {"role": role} for role in sorted(set(roles))]
 
 

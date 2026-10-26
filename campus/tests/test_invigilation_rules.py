@@ -8,7 +8,8 @@ from collections import Counter
 
 from frappe.tests import UnitTestCase
 
-from campus.examinations.invigilation_rules import Hall, assign, eligible_faculty, spread as duty_spread
+from campus.examinations.invigilation_rules import Hall, assign, eligible_faculty
+from campus.examinations.invigilation_rules import spread as duty_spread
 
 FACULTY = ["E1", "E2", "E3", "E4"]
 
@@ -42,29 +43,39 @@ class TestBalance(UnitTestCase):
 
 	def test_balance_holds_with_own_course_and_leave_exclusions(self):
 		sittings = halls(6, courses={"R1": {"C1"}, "R2": {"C2"}})
-		duties, unfilled = assign(sittings, FACULTY, own_courses={"E1": {"C1"}}, on_leave={("E2", "2026-11-03")})
+		duties, unfilled = assign(
+			sittings, FACULTY, own_courses={"E1": {"C1"}}, on_leave={("E2", "2026-11-03")}
+		)
 		self.assertEqual(unfilled, [])
-		self.assertFalse([h for h, e in duties if e == "E1" and h.room == "R1"])  # rebalancing keeps the exclusions
+		self.assertFalse(
+			[h for h, e in duties if e == "E1" and h.room == "R1"]
+		)  # rebalancing keeps the exclusions
 		self.assertFalse([h for h, e in duties if e == "E2" and h.date == "2026-11-03"])
 		self.assertLessEqual(spread(duties, "FN"), 1)
 		self.assertLessEqual(spread(duties, "AN"), 1)
-
 
 	def test_the_most_constrained_place_is_staffed_first(self):
 		"""Day 1 FN is open to all three; day 2 FN only E1 may take (E2, E3 teach C2). In date order E1 would take
 		both (spread 2); staffing day 2 first leaves day 1 to E2 (spread 1)."""
 		faculty = ["E1", "E2", "E3"]
-		sittings = [Hall("2026-11-01", "FN", "R1", frozenset({"X"})), Hall("2026-11-02", "FN", "R1", frozenset({"C2"}))]
+		sittings = [
+			Hall("2026-11-01", "FN", "R1", frozenset({"X"})),
+			Hall("2026-11-02", "FN", "R1", frozenset({"C2"})),
+		]
 		duties, unfilled = assign(sittings, faculty, own_courses={"E2": {"C2"}, "E3": {"C2"}})
 		self.assertEqual(unfilled, [])
 		self.assertEqual([(h.date, e) for h, e in duties], [("2026-11-01", "E2"), ("2026-11-02", "E1")])
-		self.assertEqual(duty_spread(duties, eligible_faculty(sittings, faculty, {"E2": {"C2"}, "E3": {"C2"}})), {"FN": 1})
+		self.assertEqual(
+			duty_spread(duties, eligible_faculty(sittings, faculty, {"E2": {"C2"}, "E3": {"C2"}})), {"FN": 1}
+		)
 
 	def test_spread_is_per_session_type_and_counts_faculty_without_duties(self):
 		h = Hall("2026-11-01", "FN", "R1", frozenset())
 		a = Hall("2026-11-01", "AN", "R1", frozenset())
 		duties = [(h, "E1"), (h._replace(date="2026-11-02"), "E1"), (a, "E2")]
-		self.assertEqual(duty_spread(duties, {"FN": {"E1", "E2", "E3"}, "AN": {"E1", "E2", "E3"}}), {"FN": 2, "AN": 1})
+		self.assertEqual(
+			duty_spread(duties, {"FN": {"E1", "E2", "E3"}, "AN": {"E1", "E2", "E3"}}), {"FN": 2, "AN": 1}
+		)
 
 	def test_faculty_who_can_take_no_place_of_a_session_type_do_not_count(self):
 		fn = [Hall("2026-11-01", "FN", "R1", frozenset()), Hall("2026-11-02", "FN", "R1", frozenset())]

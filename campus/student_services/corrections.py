@@ -37,7 +37,10 @@ def check_desk_access(doc):
 	if not frappe.db.exists("Student", doc.student):
 		frappe.throw(_("Student {0} does not exist.").format(frappe.bold(doc.student)))
 	if not frappe.has_permission("Student", "read", doc=doc.student):
-		frappe.throw(_("You are not permitted to act for {0}.").format(frappe.bold(doc.student)), frappe.PermissionError)
+		frappe.throw(
+			_("You are not permitted to act for {0}.").format(frappe.bold(doc.student)),
+			frappe.PermissionError,
+		)
 
 
 def prepare(doc):
@@ -71,11 +74,20 @@ def check_field(doc):
 
 
 def check_no_open_correction(doc):
-	filters = {"student": doc.student, "field_name": doc.field_name, "status": ["in", OPEN], "name": ["!=", doc.name or ""]}
+	filters = {
+		"student": doc.student,
+		"field_name": doc.field_name,
+		"status": ["in", OPEN],
+		"name": ["!=", doc.name or ""],
+	}
 	if doc.category == rules.GUARDIAN:
 		filters["guardian"] = doc.guardian
 	if other := frappe.db.get_value(DOCTYPE, filters):
-		frappe.throw(_("{0} already has an open correction of {1}: {2}.").format(frappe.bold(doc.student), frappe.bold(doc.field_name), other))
+		frappe.throw(
+			_("{0} already has an open correction of {1}: {2}.").format(
+				frappe.bold(doc.student), frappe.bold(doc.field_name), other
+			)
+		)
 
 
 def target_of(doc):
@@ -84,8 +96,12 @@ def target_of(doc):
 		return frappe.get_doc("Student", doc.student)
 	if not doc.guardian:
 		frappe.throw(_("Choose the guardian whose details are corrected."))
-	if not frappe.db.exists("Student Guardian", {"parent": doc.student, "parenttype": "Student", "guardian": doc.guardian}):
-		frappe.throw(_("{0} is not a guardian of {1}.").format(frappe.bold(doc.guardian), frappe.bold(doc.student)))
+	if not frappe.db.exists(
+		"Student Guardian", {"parent": doc.student, "parenttype": "Student", "guardian": doc.guardian}
+	):
+		frappe.throw(
+			_("{0} is not a guardian of {1}.").format(frappe.bold(doc.guardian), frappe.bold(doc.student))
+		)
 	return frappe.get_doc("Guardian", doc.guardian)
 
 
@@ -112,8 +128,14 @@ def store_new_value(doc, target):
 	probe._validate_data_fields()
 	probe._validate_selects()
 	probe._validate_links()
-	if doc.category == rules.ACADEMIC and frappe.db.exists("Student", {doc.field_name: value, "name": ["!=", doc.student]}):
-		frappe.throw(_("{0} {1} already belongs to another student.").format(frappe.bold(doc.field_name), frappe.bold(value)))
+	if doc.category == rules.ACADEMIC and frappe.db.exists(
+		"Student", {doc.field_name: value, "name": ["!=", doc.student]}
+	):
+		frappe.throw(
+			_("{0} {1} already belongs to another student.").format(
+				frappe.bold(doc.field_name), frappe.bold(value)
+			)
+		)
 
 
 def store_aadhaar(doc, value):
@@ -121,8 +143,13 @@ def store_aadhaar(doc, value):
 	only as the unchanged value of a saved correction, whose stored secret is checked again."""
 	if value.startswith(rules.MASK_PREFIX):
 		before = None if doc.is_new() else doc.get_doc_before_save()
-		unchanged = before and before.new_value == value and doc.new_secret and doc.is_dummy_password(doc.new_secret)
-		if not (unchanged and aadhaar.is_valid_aadhaar(doc.get_password("new_secret", raise_exception=False) or "")):
+		unchanged = (
+			before and before.new_value == value and doc.new_secret and doc.is_dummy_password(doc.new_secret)
+		)
+		if not (
+			unchanged
+			and aadhaar.is_valid_aadhaar(doc.get_password("new_secret", raise_exception=False) or "")
+		):
 			frappe.throw(_("Enter the full Aadhaar number."))
 		return
 	if not aadhaar.is_valid_aadhaar(value):
@@ -133,7 +160,11 @@ def store_aadhaar(doc, value):
 
 def check_unchanged(doc, target):
 	if doc.field_name != aadhaar.AADHAAR_FIELD and str(doc.new_value) == doc.old_value:
-		frappe.throw(_("{0} is already {1}; there is nothing to correct.").format(frappe.bold(doc.field_name), frappe.bold(doc.new_value)))
+		frappe.throw(
+			_("{0} is already {1}; there is nothing to correct.").format(
+				frappe.bold(doc.field_name), frappe.bold(doc.new_value)
+			)
+		)
 
 
 def check_evidence_is_private(doc):
@@ -149,8 +180,12 @@ def before_request(doc):
 	if rules.needs_evidence(doc.category) and not doc.evidence:
 		frappe.throw(_("Attach the evidence for a {0} correction.").format(_(doc.category)))
 	if not find_policy(doc):
-		frappe.throw(_("No Approval Policy is set for {0}; it cannot be applied without approval.").format(_(DOCTYPE)))
-	doc.db_set("old_value", current_value(target_of(doc), doc.field_name), update_modified=False)  # what the approvers are shown
+		frappe.throw(
+			_("No Approval Policy is set for {0}; it cannot be applied without approval.").format(_(DOCTYPE))
+		)
+	doc.db_set(
+		"old_value", current_value(target_of(doc), doc.field_name), update_modified=False
+	)  # what the approvers are shown
 
 
 # ---- status and apply -----------------------------------------------------------------------
@@ -160,7 +195,9 @@ def sync_status(request, method=None):
 	"""Approval Request hook: the correction shows the request's state (the final action sets Applied)."""
 	if request.reference_doctype != DOCTYPE or not frappe.db.exists(DOCTYPE, request.reference_name):
 		return
-	status = {"Pending": PENDING, "Returned": DRAFT, "Rejected": REJECTED, "Approved": APPROVED}.get(request.status)
+	status = {"Pending": PENDING, "Returned": DRAFT, "Rejected": REJECTED, "Approved": APPROVED}.get(
+		request.status
+	)
 	if not status:
 		return
 	frappe.db.set_value(DOCTYPE, request.reference_name, "status", status, update_modified=False)
@@ -172,11 +209,17 @@ def apply_correction(doc, request=None):
 	"""Final action of the approval policy: change the Student (or Guardian), keep a Version, mark Applied."""
 	if frappe.db.get_value(DOCTYPE, doc.name, "status", for_update=True) == APPLIED:
 		return
-	target_doctype, target_name = ("Guardian", doc.guardian) if doc.category == rules.GUARDIAN else ("Student", doc.student)
+	target_doctype, target_name = (
+		("Guardian", doc.guardian) if doc.category == rules.GUARDIAN else ("Student", doc.student)
+	)
 	frappe.db.get_value(target_doctype, target_name, "name", for_update=True)  # one change at a time
 	before = frappe.get_doc(target_doctype, target_name)
 	if current_value(before, doc.field_name) != (doc.old_value or ""):
-		frappe.throw(_("{0} has changed since the correction was requested; raise a new correction.").format(frappe.bold(doc.field_name)))
+		frappe.throw(
+			_("{0} has changed since the correction was requested; raise a new correction.").format(
+				frappe.bold(doc.field_name)
+			)
+		)
 	failed = False
 	try:
 		save_target(doc, target_doctype, target_name)
@@ -186,7 +229,12 @@ def apply_correction(doc, request=None):
 		frappe.throw(_("The correction could not be applied."))
 	version = keep_version(before, frappe.get_doc(target_doctype, target_name))
 	doc.db_set(
-		{"status": APPLIED, "applied_on": now_datetime(), "applied_by": frappe.session.user, "version": version},
+		{
+			"status": APPLIED,
+			"applied_on": now_datetime(),
+			"applied_by": frappe.session.user,
+			"version": version,
+		},
 		update_modified=False,
 	)
 	delete_all_passwords_for(DOCTYPE, doc.name)
@@ -194,7 +242,10 @@ def apply_correction(doc, request=None):
 
 def save_target(doc, target_doctype, target_name):
 	target = frappe.get_doc(target_doctype, target_name)
-	target.set(doc.field_name, doc.get_password("new_secret") if doc.field_name == aadhaar.AADHAAR_FIELD else doc.new_value)
+	target.set(
+		doc.field_name,
+		doc.get_password("new_secret") if doc.field_name == aadhaar.AADHAAR_FIELD else doc.new_value,
+	)
 	target.flags.from_correction = True
 	target.flags.ignore_permissions = True
 	target.save()
@@ -204,7 +255,9 @@ def keep_version(before, target):
 	"""The Version holding the change; made here when the DocType does not track changes itself."""
 	after = frappe.get_doc(target.doctype, target.name)  # reloaded: a secret shows as asterisks in the diff
 	if after.meta.track_changes:
-		return frappe.db.get_value("Version", {"ref_doctype": after.doctype, "docname": after.name}, "name", order_by="creation desc")
+		return frappe.db.get_value(
+			"Version", {"ref_doctype": after.doctype, "docname": after.name}, "name", order_by="creation desc"
+		)
 	version = frappe.new_doc("Version")
 	if version.update_version_info(before, after):
 		return version.insert(ignore_permissions=True).name
@@ -214,7 +267,9 @@ def keep_version(before, target):
 
 
 def settings():
-	return frappe.get_cached_doc(SETTINGS)  # a Single carries its field defaults only when loaded as a document
+	return frappe.get_cached_doc(
+		SETTINGS
+	)  # a Single carries its field defaults only when loaded as a document
 
 
 def locked_fields():
@@ -229,7 +284,9 @@ def guard_locked_fields(doc, method=None):
 	if not changed or (settings().get("override_role") or "System Manager") in frappe.get_roles():
 		return
 	frappe.throw(
-		_("{0} cannot be edited directly; raise a Student Record Correction.").format(", ".join(frappe.bold(n) for n in changed)),
+		_("{0} cannot be edited directly; raise a Student Record Correction.").format(
+			", ".join(frappe.bold(n) for n in changed)
+		),
 		frappe.PermissionError,
 	)
 
@@ -244,8 +301,11 @@ def seed_policies():
 		return
 	if not (frappe.db.exists("Position", FIRST_LEVEL[1]) and frappe.db.exists("Position", SECOND_LEVEL[1])):
 		return
-	higher = f'doc.category in {tuple(rules.HIGHER_CATEGORIES)!r}'
-	for name, levels, priority, condition in ((POLICY, [FIRST_LEVEL], 0, None), (HIGHER_POLICY, [FIRST_LEVEL, SECOND_LEVEL], 10, higher)):
+	higher = f"doc.category in {tuple(rules.HIGHER_CATEGORIES)!r}"
+	for name, levels, priority, condition in (
+		(POLICY, [FIRST_LEVEL], 0, None),
+		(HIGHER_POLICY, [FIRST_LEVEL, SECOND_LEVEL], 10, higher),
+	):
 		frappe.get_doc(
 			{
 				"doctype": "Approval Policy", "policy_name": name, "document_type": DOCTYPE, "priority": priority,
@@ -270,14 +330,21 @@ def correctable_fields(student):
 		rows.append(
 			{
 				"category": category,
-				"fields": [{"fieldname": f, "label": _(meta.get_label(f))} for f in rules.allowed_fields(category)],
+				"fields": [
+					{"fieldname": f, "label": _(meta.get_label(f))} for f in rules.allowed_fields(category)
+				],
 			}
 		)
 	return rows
 
 
 def student_guardians(student):
-	rows = frappe.get_all("Student Guardian", {"parent": student, "parenttype": "Student"}, ["guardian", "guardian_name"], order_by="idx")
+	rows = frappe.get_all(
+		"Student Guardian",
+		{"parent": student, "parenttype": "Student"},
+		["guardian", "guardian_name"],
+		order_by="idx",
+	)
 	return [{"name": row.guardian, "guardian_name": row.guardian_name or row.guardian} for row in rows]
 
 
@@ -298,8 +365,12 @@ def raise_correction(category, field_name, new_value, reason, student=None, guar
 			"guardian": guardian or None, "new_value": new_value, "reason": (reason or "").strip(),
 		}
 	)  # fmt: skip
-	doc.flags.from_portal = True  # sets requested_via; only this server path sets the flag (flags never come from a client)
-	doc.flags.ignore_permissions = True  # portal roles hold no right on the DocType; the checks above and in validate stand
+	doc.flags.from_portal = (
+		True  # sets requested_via; only this server path sets the flag (flags never come from a client)
+	)
+	doc.flags.ignore_permissions = (
+		True  # portal roles hold no right on the DocType; the checks above and in validate stand
+	)
 	doc.insert()
 	if upload:
 		portal.attach_private(doc, "evidence", *upload)

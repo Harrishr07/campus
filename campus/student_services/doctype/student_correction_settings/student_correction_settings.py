@@ -9,7 +9,15 @@ from campus.student_services import correction_rules as rules
 
 class StudentCorrectionSettings(Document):
 	def validate(self):
-		listed = [line.strip() for line in (self.locked_fields or "").replace(",", "\n").splitlines() if line.strip()]
+		listed = [
+			line.strip()
+			for line in (self.locked_fields or "").replace(",", "\n").splitlines()
+			if line.strip()
+		]
 		unknown = [name for name in listed if name not in rules.student_fields()]
 		if unknown:
-			frappe.throw(_("These fields have no correction workflow and cannot be locked: {0}").format(", ".join(unknown)))
+			frappe.throw(
+				_("These fields have no correction workflow and cannot be locked: {0}").format(
+					", ".join(unknown)
+				)
+			)

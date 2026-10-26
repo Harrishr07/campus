@@ -33,7 +33,9 @@ class PositionHolder(Document):
 
 	def keep_role_mark(self):
 		"""The mark is set by role sync, not by forms; a stale in-memory copy must not overwrite it."""
-		self.role_granted = 0 if self.is_new() else frappe.db.get_value(self.doctype, self.name, "role_granted")
+		self.role_granted = (
+			0 if self.is_new() else frappe.db.get_value(self.doctype, self.name, "role_granted")
+		)
 
 	def set_scope_doctype(self):
 		scope_type = frappe.db.get_value("Position", self.position, "scope_type")
@@ -63,5 +65,7 @@ class PositionHolder(Document):
 		other = find_overlapping_holding(self)
 		if other:
 			frappe.throw(
-				_("{0} already has a holder ({1}) for these dates and this scope").format(self.position, other)
+				_("{0} already has a holder ({1}) for these dates and this scope").format(
+					self.position, other
+				)
 			)

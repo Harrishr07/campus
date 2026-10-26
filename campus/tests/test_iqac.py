@@ -49,7 +49,9 @@ class IqacFixture(ExamFixture):
 		The pre-session (same academic year, not final year) holds a further Student Result that must not count."""
 		for student in (self.s22, self.s26):  # lift the ESE-44% fail so both pass every course
 			offering = (self.offerings22 if student is self.s22 else self.offerings26)["EXM FA"]
-			sheet = frappe.db.get_value("Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": offering})
+			sheet = frappe.db.get_value(
+				"Mark Sheet Entry", {"exam_session": self.session.name, "course_offering": offering}
+			)
 			frappe.db.set_value("Mark Sheet Entry Row", {"parent": sheet, "student": student.name}, "ese", 40)
 		self.run_session()
 		frappe.db.set_value("Exam Session", self.session.name, {"is_final_year": 1, "status": "Published"})
@@ -68,7 +70,8 @@ class TestLiveMetrics(IqacFixture):
 		snapshot = json.loads(metric.snapshot)
 		sr = lambda student: f"SR-{self.session.name}-{student.name}"  # noqa: E731
 		self.assertEqual(
-			[r["name"] for r in snapshot["inputs"]["final_year_passed"]["records"]], sorted([sr(self.s22), sr(self.s26)])
+			[r["name"] for r in snapshot["inputs"]["final_year_passed"]["records"]],
+			sorted([sr(self.s22), sr(self.s26)]),
 		)
 		self.assertEqual(snapshot["inputs"]["final_year_appeared"]["value"], 3)
 		self.assertIn("final_year_passed", snapshot["formula"])
@@ -82,7 +85,9 @@ class TestLiveMetrics(IqacFixture):
 		compute.compute_cycle(self.cycle.name)
 		metric = self.metric(NODE_21_1)
 		enrollments = frappe.get_all(
-			"Program Enrollment", {"oc_company": COLLEGE, "academic_year": year_name("2022"), "docstatus": 1}, pluck="name"
+			"Program Enrollment",
+			{"oc_company": COLLEGE, "academic_year": year_name("2022"), "docstatus": 1},
+			pluck="name",
 		)
 		self.assertEqual(metric.value, 4)
 		self.assertEqual(sorted(r["name"] for r in json.loads(metric.snapshot)["inputs"]["students_admitted"]["records"]),

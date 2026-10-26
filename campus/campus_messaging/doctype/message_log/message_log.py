@@ -11,4 +11,6 @@ class MessageLog(Document):
 		if self.company:
 			return
 		party_type, _sep, party = (self.recipient or "").partition(":")
-		self.company = company_of(self.reference_doctype, self.reference_name) or company_of(party_type, party)
+		self.company = company_of(self.reference_doctype, self.reference_name) or company_of(
+			party_type, party
+		)

@@ -42,7 +42,9 @@ def existing_logs(event_key, doc, recipient, token=""):
 	)
 
 
-def create_log(template, doc, entry, channel, address, subject, message, variables, status="Queued", token="", **extra):
+def create_log(
+	template, doc, entry, channel, address, subject, message, variables, status="Queued", token="", **extra
+):
 	"""Insert a Message Log; returns None when another live attempt already holds its idempotency key."""
 	if status == "Skipped":  # a repeated send must not add the same skip row again
 		same = frappe.db.get_value(
@@ -60,7 +62,11 @@ def create_log(template, doc, entry, channel, address, subject, message, variabl
 		)
 		if same:
 			return frappe.get_doc("Message Log", same)
-	key = None if status in NO_KEY_STATUSES else idempotency_key(template.event_key, doc, entry["key"], channel, token)
+	key = (
+		None
+		if status in NO_KEY_STATUSES
+		else idempotency_key(template.event_key, doc, entry["key"], channel, token)
+	)
 	log = frappe.get_doc(
 		{
 			"doctype": "Message Log",
@@ -201,7 +207,13 @@ def sync_whatsapp_status(doc, method=None):
 		if log.status in ("Delivered", "Read"):
 			return
 		frappe.db.set_value(
-			"Message Log", log.name, {"status": "Failed", "error": "Failed after hand-off (provider webhook)", "idempotency_key": None}
+			"Message Log",
+			log.name,
+			{
+				"status": "Failed",
+				"error": "Failed after hand-off (provider webhook)",
+				"idempotency_key": None,
+			},
 		)
 	elif RANK.get(status, 0) > RANK.get(log.status, 0):
 		frappe.db.set_value("Message Log", log.name, "status", status)

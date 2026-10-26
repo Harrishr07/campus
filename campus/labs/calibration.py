@@ -32,7 +32,9 @@ def due_tasks(within_days, on_date=None, maintenance_type=None, companies=None, 
 	if companies is not None and not companies:
 		return []
 	on_date = getdate(on_date or today())
-	maintenance, task, asset, lab = (DocType(n) for n in ("Asset Maintenance", "Asset Maintenance Task", "Asset", "Laboratory"))
+	maintenance, task, asset, lab = (
+		DocType(n) for n in ("Asset Maintenance", "Asset Maintenance Task", "Asset", "Laboratory")
+	)
 	query = (
 		frappe.qb.from_(task)
 		.join(maintenance).on(task.parent == maintenance.name)
@@ -75,7 +77,9 @@ def send_calibration_notices(on_date=None):
 			notify(row)
 			count += 1
 		except Exception:
-			frappe.log_error(title=f"Calibration notice failed for {row.asset}")  # no context: keep the rest going
+			frappe.log_error(
+				title=f"Calibration notice failed for {row.asset}"
+			)  # no context: keep the rest going
 	return count
 
 

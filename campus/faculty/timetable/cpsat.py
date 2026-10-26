@@ -24,14 +24,18 @@ from campus.faculty.timetable.solver import Result
 PRESOLVE_LIMIT = 50_000
 WARM_START_SHARE, WARM_START_CAP, MIN_SOLVE_SECONDS = 0.1, 15, 0.5
 REPEAT_COST, OVERLOAD_COST, LATE_COST = 100, 200, 1
-WORKERS = int(os.environ.get("CAMPUS_CPSAT_WORKERS") or 8)  # each CP-SAT worker holds its own copy of the model
+WORKERS = int(
+	os.environ.get("CAMPUS_CPSAT_WORKERS") or 8
+)  # each CP-SAT worker holds its own copy of the model
 
 
 def solve(problem):
 	"""One time budget (`problem.time_limit`): the warm-start search gets a tenth of it (at most WARM_START_CAP seconds),
 	model building and CP-SAT use the rest. If CP-SAT has no time left or finds nothing, the warm start is the answer."""
 	started = time.monotonic()
-	warm = backtracking.solve(replace(problem, time_limit=min(WARM_START_CAP, problem.time_limit * WARM_START_SHARE)))
+	warm = backtracking.solve(
+		replace(problem, time_limit=min(WARM_START_CAP, problem.time_limit * WARM_START_SHARE))
+	)
 	search = backtracking.Search(problem)
 	unmet = search.pre_check()
 	sessions = [s for s in problem.sessions if s.id not in search.hopeless]
@@ -43,11 +47,17 @@ def solve(problem):
 	solver = cp_model.CpSolver()
 	solver.parameters.max_time_in_seconds = remaining
 	solver.parameters.num_workers = WORKERS
-	solver.parameters.cp_model_presolve = len(variables) < PRESOLVE_LIMIT  # on a big model presolve alone can eat the budget
+	solver.parameters.cp_model_presolve = (
+		len(variables) < PRESOLVE_LIMIT
+	)  # on a big model presolve alone can eat the budget
 	status = solver.Solve(model)
 	if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
 		return warm
-	chosen = {sid: (day, start, room) for (sid, day, start, room), var in variables.items() if solver.BooleanValue(var)}
+	chosen = {
+		sid: (day, start, room)
+		for (sid, day, start, room), var in variables.items()
+		if solver.BooleanValue(var)
+	}
 	by_id = {s.id: s for s in sessions}
 	search.restore({sid: (by_id[sid], choice) for sid, choice in chosen.items()})
 	missing = [s for s in sessions if s.id not in chosen]
@@ -59,10 +69,28 @@ def solve(problem):
 	else:
 		verdict = "infeasible" if status == cp_model.OPTIMAL or search.hopeless else "feasible"
 	if verdict == "infeasible":
-		unmet.insert(0, _("CP-SAT proved that no timetable can place every class under the hard constraints; the most classes that fit are placed."))
+		unmet.insert(
+			0,
+			_(
+				"CP-SAT proved that no timetable can place every class under the hard constraints; the most classes that fit are placed."
+			),
+		)
 	elif missing:
-		unmet.insert(0, _("The time limit stopped CP-SAT before it could place every class; this is the best timetable found, not a proof of infeasibility."))
-	return Result(entries, unmet, len(rules.soft_issues(entries, problem.grid)), status=verdict, backend="cpsat", unplaced=len(search.hopeless) + len(missing), placements=chosen)
+		unmet.insert(
+			0,
+			_(
+				"The time limit stopped CP-SAT before it could place every class; this is the best timetable found, not a proof of infeasibility."
+			),
+		)
+	return Result(
+		entries,
+		unmet,
+		len(rules.soft_issues(entries, problem.grid)),
+		status=verdict,
+		backend="cpsat",
+		unplaced=len(search.hopeless) + len(missing),
+		placements=chosen,
+	)
 
 
 def hint(model, variables, found):
@@ -115,5 +143,7 @@ def build_model(problem, search, sessions):
 		model.Add(over >= sum(length * v for length, v in items) - maximum)
 		penalties.append(OVERLOAD_COST * over)
 		worst += OVERLOAD_COST * sum(length for length, _v in items)
-	model.Maximize((1 + worst) * sum(variables.values()) - sum(penalties))  # one true variable per placed session; one more class always outweighs every soft cost, so a shortfall proven optimal is real
+	model.Maximize(
+		(1 + worst) * sum(variables.values()) - sum(penalties)
+	)  # one true variable per placed session; one more class always outweighs every soft cost, so a shortfall proven optimal is real
 	return model, variables

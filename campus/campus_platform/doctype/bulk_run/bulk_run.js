@@ -7,7 +7,11 @@ frappe.ui.form.on("Bulk Run", {
 			frappe.realtime.off("bulk_run_progress");
 			frappe.realtime.on("bulk_run_progress", (data) => {
 				if (data.name !== frm.doc.name) return;
-				Object.assign(frm.doc, { done: data.done, failed: data.failed, status: data.status });
+				Object.assign(frm.doc, {
+					done: data.done,
+					failed: data.failed,
+					status: data.status,
+				});
 				frm.trigger("show_progress");
 				if (!["Queued", "Running"].includes(data.status)) frm.reload_doc();
 			});

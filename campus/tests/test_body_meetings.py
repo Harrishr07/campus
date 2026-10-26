@@ -101,7 +101,9 @@ class TestBodyMeetings(CampusTestCase):
 	def setUp(self):
 		frappe.db.savepoint("meeting_test")
 		self.addCleanup(frappe.db.rollback, save_point="meeting_test")
-		sendmail = patch("frappe.sendmail", return_value=frappe._dict(name="test-mail"))  # the test site has no outgoing Email Account; a failed attempt would be retried
+		sendmail = patch(
+			"frappe.sendmail", return_value=frappe._dict(name="test-mail")
+		)  # the test site has no outgoing Email Account; a failed attempt would be retried
 		sendmail.start()
 		self.addCleanup(sendmail.stop)
 		from campus.academic_governance.seed import seed_body_types
@@ -109,7 +111,13 @@ class TestBodyMeetings(CampusTestCase):
 		seed_body_types()
 		frappe.db.set_single_value("Governance Settings", "notice_days", 7)
 		self.employees = [self.employee() for _ in range(3)]
-		self.nominee = frappe.get_doc({"doctype": "External Member", "member_name": "Nominee N", "email": "nominee.n@example.com"}).insert().name
+		self.nominee = (
+			frappe.get_doc(
+				{"doctype": "External Member", "member_name": "Nominee N", "email": "nominee.n@example.com"}
+			)
+			.insert()
+			.name
+		)
 		self.body = self.make_body("Test Governing Body")
 
 	def employee(self):
@@ -124,14 +132,27 @@ class TestBodyMeetings(CampusTestCase):
 	def make_body(self, name, nominee_to=None, body_type="Governing Body"):
 		start = add_days(today(), -500)
 		members = [{"category": "Internal", "employee": e, "from_date": start} for e in self.employees]
-		members.append({"category": "University Nominee", "external_member": self.nominee, "from_date": start, "to_date": nominee_to})
+		members.append(
+			{
+				"category": "University Nominee",
+				"external_member": self.nominee,
+				"from_date": start,
+				"to_date": nominee_to,
+			}
+		)
 		return frappe.get_doc(
 			{"doctype": "Body", "body_name": name, "company": COLLEGE, "body_type": body_type, "members": members}
 		).insert().name  # fmt: skip
 
 	def meeting(self, days_ahead=30, body=None, **values):
 		return frappe.get_doc(
-			{"doctype": "Body Meeting", "body": body or self.body, "meeting_date": add_days(today(), days_ahead), "venue": "Board Room", **values}
+			{
+				"doctype": "Body Meeting",
+				"body": body or self.body,
+				"meeting_date": add_days(today(), days_ahead),
+				"venue": "Board Room",
+				**values,
+			}
 		).insert()
 
 	def attend(self, meeting, *present):
@@ -145,9 +166,14 @@ class TestBodyMeetings(CampusTestCase):
 	# attendance and quorum (AC2)
 	def test_attendance_is_filled_from_the_members_in_office_on_the_meeting_date(self):
 		meeting = self.meeting()
-		self.assertEqual(sorted((r.employee or r.external_member) for r in meeting.attendance), sorted([*self.employees, self.nominee]))
+		self.assertEqual(
+			sorted((r.employee or r.external_member) for r in meeting.attendance),
+			sorted([*self.employees, self.nominee]),
+		)
 		self.assertEqual({r.present for r in meeting.attendance}, {0})
-		self.assertEqual((meeting.quorum_status, meeting.in_office_count, meeting.quorum_required), ("Not met", 4, 2))
+		self.assertEqual(
+			(meeting.quorum_status, meeting.in_office_count, meeting.quorum_required), ("Not met", 4, 2)
+		)
 
 	def test_quorum_is_met_with_half_and_the_university_nominee(self):
 		meeting = self.attend(self.meeting(), self.employees[0], self.nominee)
@@ -163,7 +189,9 @@ class TestBodyMeetings(CampusTestCase):
 		meeting = self.meeting(30, body=body)
 		self.assertEqual(meeting.in_office_count, 3)  # nominee's term ends before the meeting
 		self.assertNotIn(self.nominee, [r.external_member for r in meeting.attendance])
-		self.assertEqual(self.attend(meeting, *self.employees).quorum_status, "Not met")  # nominee mandatory, none in office
+		self.assertEqual(
+			self.attend(meeting, *self.employees).quorum_status, "Not met"
+		)  # nominee mandatory, none in office
 
 	def test_resolutions_are_refused_without_quorum(self):
 		meeting = self.meeting(0)
@@ -179,12 +207,17 @@ class TestBodyMeetings(CampusTestCase):
 			first.append("resolutions", {"resolution_text": text, "decision": "Approved"})
 		first.save()
 		year = getdate(first.meeting_date).year
-		self.assertEqual([r.resolution_no for r in first.resolutions], [f"{self.body}/{year}/001", f"{self.body}/{year}/002"])
+		self.assertEqual(
+			[r.resolution_no for r in first.resolutions],
+			[f"{self.body}/{year}/001", f"{self.body}/{year}/002"],
+		)
 
 		second = self.attend(self.meeting(-20), self.employees[1], self.nominee)
 		second.append("resolutions", {"resolution_text": "Ratify", "decision": "Approved"})
 		second.save()
-		self.assertEqual(second.resolutions[0].resolution_no, f"{self.body}/{getdate(second.meeting_date).year}/003")
+		self.assertEqual(
+			second.resolutions[0].resolution_no, f"{self.body}/{getdate(second.meeting_date).year}/003"
+		)
 
 		first.reload()
 		first.save()  # saving again keeps the numbers
@@ -207,15 +240,22 @@ class TestBodyMeetings(CampusTestCase):
 		self.assertEqual(len({m.resolutions[0].resolution_no for m in (this_year, next_year, elsewhere)}), 3)
 
 	def test_a_resolution_proposal_reference_is_a_link_to_academic_proposal(self):
-		self.assertEqual(frappe.get_meta("Meeting Resolution").get_field("proposal").options, "Academic Proposal")
+		self.assertEqual(
+			frappe.get_meta("Meeting Resolution").get_field("proposal").options, "Academic Proposal"
+		)
 		meeting = self.attend(self.meeting(0), self.employees[0], self.nominee)
-		meeting.append("resolutions", {"resolution_text": "Adopt syllabus", "decision": "Approved", "proposal": "PROP-NOPE"})
+		meeting.append(
+			"resolutions",
+			{"resolution_text": "Adopt syllabus", "decision": "Approved", "proposal": "PROP-NOPE"},
+		)
 		with self.assertRaises(frappe.LinkValidationError):
 			meeting.save()
 
 	# notice (AC1)
 	def notice_logs(self, meeting, event=NOTICE):
-		return frappe.get_all("Message Log", {"event_key": event, "reference_name": meeting.name}, ["recipient", "status"])
+		return frappe.get_all(
+			"Message Log", {"event_key": event, "reference_name": meeting.name}, ["recipient", "status"]
+		)
 
 	def test_notice_in_time_is_sent_to_every_member(self):
 		meeting = self.meeting(10)
@@ -254,14 +294,18 @@ class TestBodyMeetings(CampusTestCase):
 	def test_the_external_nominee_gets_the_notice_by_email_and_consent_is_respected(self):
 		meeting = self.meeting(10)
 		meeting.send_notice()
-		(log,) = [log for log in self.notice_logs(meeting) if log.recipient == f"External Member:{self.nominee}"]
+		(log,) = [
+			log for log in self.notice_logs(meeting) if log.recipient == f"External Member:{self.nominee}"
+		]
 		self.assertNotEqual(log.status, "Skipped")
 		other = self.meeting(11, body=self.make_body("Second Body"))
 		frappe.get_doc(
 			{"doctype": "Communication Consent", "party_type": "External Member", "party": self.nominee, "channel": "email", "purpose": "transactional", "status": "Opted Out"}
 		).insert()  # fmt: skip
 		other.send_notice()
-		(skipped,) = [log for log in self.notice_logs(other) if log.recipient == f"External Member:{self.nominee}"]
+		(skipped,) = [
+			log for log in self.notice_logs(other) if log.recipient == f"External Member:{self.nominee}"
+		]
 		self.assertEqual(skipped.status, "Skipped")
 
 	def test_consent_is_respected(self):
@@ -303,7 +347,10 @@ class TestBodyMeetings(CampusTestCase):
 		self.assertEqual(len(self.notice_logs(overdue, OVERDUE)), 2)
 
 	def test_the_weekly_scheduler_runs_the_reminder(self):
-		self.assertIn("campus.academic_governance.actions.notify_overdue", frappe.get_hooks("scheduler_events")["weekly"])
+		self.assertIn(
+			"campus.academic_governance.actions.notify_overdue",
+			frappe.get_hooks("scheduler_events")["weekly"],
+		)
 
 	def test_a_done_item_records_the_action_taken(self):
 		meeting = self.meeting(-5)
@@ -315,7 +362,11 @@ class TestBodyMeetings(CampusTestCase):
 		return frappe.get_print("Body Meeting", meeting.name, print_format=print_format)
 
 	def test_the_five_prints_render_their_content(self):
-		meeting = self.attend(self.meeting(0, agenda=[{"item": "Budget 2027", "presenter": self.employees[0]}]), self.employees[0], self.nominee)
+		meeting = self.attend(
+			self.meeting(0, agenda=[{"item": "Budget 2027", "presenter": self.employees[0]}]),
+			self.employees[0],
+			self.nominee,
+		)
 		meeting.append("resolutions", {"resolution_text": "Approve the budget", "decision": "Approved"})
 		meeting.minutes = "<p>Discussed at length</p>"
 		meeting.save()
@@ -358,9 +409,14 @@ class TestBodyMeetings(CampusTestCase):
 
 	def test_a_client_supplied_resolution_number_is_replaced(self):
 		meeting = self.attend(self.meeting(0), self.employees[0], self.nominee)
-		meeting.append("resolutions", {"resolution_text": "A", "decision": "Approved", "resolution_no": "FAKE/2026/999", "serial": 999})
+		meeting.append(
+			"resolutions",
+			{"resolution_text": "A", "decision": "Approved", "resolution_no": "FAKE/2026/999", "serial": 999},
+		)
 		meeting.save()
-		self.assertEqual(meeting.resolutions[0].resolution_no, f"{self.body}/{getdate(meeting.meeting_date).year}/001")
+		self.assertEqual(
+			meeting.resolutions[0].resolution_no, f"{self.body}/{getdate(meeting.meeting_date).year}/001"
+		)
 		self.assertEqual(meeting.resolutions[0].serial, 1)
 
 	def test_numbered_resolutions_keep_their_number_text_and_row(self):
@@ -388,7 +444,10 @@ class TestBodyMeetings(CampusTestCase):
 		meeting.reload()
 		meeting.status = "Cancelled"
 		meeting.save()
-		self.assertEqual([(r.resolution_no, r.void) for r in meeting.resolutions], [(meeting.resolutions[0].resolution_no, 1)])
+		self.assertEqual(
+			[(r.resolution_no, r.void) for r in meeting.resolutions],
+			[(meeting.resolutions[0].resolution_no, 1)],
+		)
 
 	def test_resolutions_need_a_meeting_that_has_happened_and_is_not_cancelled(self):
 		future = self.attend(self.meeting(5), self.employees[0], self.nominee)
@@ -403,15 +462,26 @@ class TestBodyMeetings(CampusTestCase):
 
 	def test_quorum_is_frozen_once_resolutions_are_numbered(self):
 		meeting = self.numbered_meeting()
-		before = (meeting.quorum_status, meeting.in_office_count, meeting.quorum_required, meeting.present_count)
+		before = (
+			meeting.quorum_status,
+			meeting.in_office_count,
+			meeting.quorum_required,
+			meeting.present_count,
+		)
 		body = frappe.get_doc("Body", self.body)
 		for _ in range(6):
-			body.append("members", {"category": "Internal", "employee": self.employee(), "from_date": add_days(today(), -400)})
+			body.append(
+				"members",
+				{"category": "Internal", "employee": self.employee(), "from_date": add_days(today(), -400)},
+			)
 		body.save()  # six more members would change the quorum if it were recomputed
 		meeting.reload()
 		meeting.minutes = "Noted"
 		meeting.save()
-		self.assertEqual((meeting.quorum_status, meeting.in_office_count, meeting.quorum_required, meeting.present_count), before)
+		self.assertEqual(
+			(meeting.quorum_status, meeting.in_office_count, meeting.quorum_required, meeting.present_count),
+			before,
+		)
 		meeting.attendance[1].present = 1 - meeting.attendance[1].present
 		with self.assertRaises(frappe.ValidationError):
 			meeting.save()
@@ -446,7 +516,11 @@ class TestBodyMeetings(CampusTestCase):
 		return email
 
 	def test_confidential_bodies_are_seeded(self):
-		for name in ("Internal Complaints Committee", "Anti-Ragging Committee", "Grievance Redressal Committee"):
+		for name in (
+			"Internal Complaints Committee",
+			"Anti-Ragging Committee",
+			"Grievance Redressal Committee",
+		):
 			self.assertEqual(frappe.db.get_value("Body Type", name, "confidential"), 1, name)
 		self.assertEqual(frappe.db.get_value("Body Type", "Governing Body", "confidential"), 0)
 
@@ -464,14 +538,20 @@ class TestBodyMeetings(CampusTestCase):
 			self.assertEqual(listed(outsider), [], doctype)
 			self.assertTrue(frappe.has_permission(doctype, "read", name, user=member))
 			self.assertFalse(frappe.has_permission(doctype, "read", name, user=outsider))
-		self.assertTrue(frappe.has_permission("Body Meeting", "read", self.meeting(5).name, user=outsider))  # an open body
+		self.assertTrue(
+			frappe.has_permission("Body Meeting", "read", self.meeting(5).name, user=outsider)
+		)  # an open body
 
 	def test_a_member_whose_term_ended_loses_access(self):
 		body = self.make_body("Past Panel", body_type="Internal Complaints Committee")
-		frappe.db.set_value("Body Member", {"parent": body, "employee": self.employees[0]}, "to_date", add_days(today(), -1))
+		frappe.db.set_value(
+			"Body Member", {"parent": body, "employee": self.employees[0]}, "to_date", add_days(today(), -1)
+		)
 		meeting = self.meeting(5, body=body)
 		former = self.user_with("conf-former@example.com", "HOD", self.employees[0])
-		self.assertEqual(frappe.get_list("Body Meeting", {"name": meeting.name}, pluck="name", user=former), [])
+		self.assertEqual(
+			frappe.get_list("Body Meeting", {"name": meeting.name}, pluck="name", user=former), []
+		)
 
 	def test_the_action_taken_report_respects_permissions(self):
 		meeting, body = self.confidential_meeting()
@@ -501,7 +581,9 @@ class TestBodyMeetings(CampusTestCase):
 
 		with patch("campus.academic_governance.actions.send", flaky):
 			actions.notify_overdue()
-		self.assertEqual(sorted(calls), sorted([first.name, second.name]))  # the cancelled meeting's item was not tried
+		self.assertEqual(
+			sorted(calls), sorted([first.name, second.name])
+		)  # the cancelled meeting's item was not tried
 		self.assertEqual(len(self.notice_logs(second, OVERDUE)) + len(self.notice_logs(first, OVERDUE)), 1)
 
 	def test_print_formats_escape_values(self):
@@ -512,11 +594,23 @@ class TestBodyMeetings(CampusTestCase):
 			resolutions=[frappe._dict(resolution_no=hostile, resolution_text=hostile, decision="Approved")], name="BMTG-X",
 			quorum_status="Met", present_count=1, in_office_count=1, minutes="<b>kept</b>",
 		)  # fmt: skip
-		for name in ("Meeting Notice", "Meeting Agenda", "Meeting Minutes", "Resolution Extract", "Action Taken Report"):
-			html = frappe.render_template(frappe.db.get_value("Print Format", name, "html"), {"doc": meeting, "_": frappe._, "frappe": frappe})
+		for name in (
+			"Meeting Notice",
+			"Meeting Agenda",
+			"Meeting Minutes",
+			"Resolution Extract",
+			"Action Taken Report",
+		):
+			html = frappe.render_template(
+				frappe.db.get_value("Print Format", name, "html"),
+				{"doc": meeting, "_": frappe._, "frappe": frappe},
+			)
 			self.assertNotIn(hostile, html, name)
 			self.assertIn("&lt;i&gt;", html, name)
-		minutes = frappe.render_template(frappe.db.get_value("Print Format", "Meeting Minutes", "html"), {"doc": meeting, "_": frappe._, "frappe": frappe})
+		minutes = frappe.render_template(
+			frappe.db.get_value("Print Format", "Meeting Minutes", "html"),
+			{"doc": meeting, "_": frappe._, "frappe": frappe},
+		)
 		self.assertIn("<b>kept</b>", minutes)  # the minutes are rich text and stay as written
 
 	def test_the_workspace_keeps_the_body_type_shortcut(self):

@@ -33,7 +33,11 @@ def employee_of_instructor(instructor):
 def department_teachers(department):
 	"""{employee: employee_name} of active teachers (employees with an Instructor record) whose department is `department`."""
 	instructors = frappe.get_all("Instructor", {"employee": ["is", "set"]}, ["employee", "department"])
-	employees = frappe.get_all("Employee", {"name": ["in", [i.employee for i in instructors] or [""]], "status": "Active"}, ["name", "employee_name", "department"])
+	employees = frappe.get_all(
+		"Employee",
+		{"name": ["in", [i.employee for i in instructors] or [""]], "status": "Active"},
+		["name", "employee_name", "department"],
+	)
 	own = {i.employee: i.department for i in instructors}
 	return {e.name: e.employee_name for e in employees if (e.department or own[e.name]) == department}
 
@@ -43,14 +47,24 @@ def on_leave(employee, date):
 	return bool(
 		frappe.db.exists(
 			"Leave Application",
-			{"employee": employee, "docstatus": 1, "status": "Approved", "from_date": ["<=", date], "to_date": [">=", date]},
+			{
+				"employee": employee,
+				"docstatus": 1,
+				"status": "Approved",
+				"from_date": ["<=", date],
+				"to_date": [">=", date],
+			},
 		)
 	)
 
 
 def busy_periods(employee, date, ignore=None):
 	"""[(from_time, to_time, label)] of the classes the employee takes on `date`: Course Schedules and live Substitutions."""
-	taught = frappe.get_all("Course Schedule", {"instructor": instructor_of(employee), "schedule_date": date}, ["name", "from_time", "to_time"])
+	taught = frappe.get_all(
+		"Course Schedule",
+		{"instructor": instructor_of(employee), "schedule_date": date},
+		["name", "from_time", "to_time"],
+	)
 	covering = frappe.get_all(
 		"Substitution", {"substitute": employee, "schedule_date": date, "status": ["in", LIVE], "name": ["!=", ignore or ""]},
 		["name", "from_time", "to_time"],
@@ -68,12 +82,19 @@ def clashes_with(employee, schedule, ignore=None):
 	entries = [rules.Entry(schedule.name, schedule.name, employee, "", day, start, "Lecture")]
 	for from_time, to_time, label in busy_periods(employee, schedule.schedule_date, ignore):
 		overlaps = seconds(from_time) < end and seconds(to_time) > start
-		entries.append(rules.Entry(label, label, employee, "", day, start if overlaps else seconds(from_time), "Lecture"))
+		entries.append(
+			rules.Entry(label, label, employee, "", day, start if overlaps else seconds(from_time), "Lecture")
+		)
 	return any(v.rule == rules.FACULTY_CLASH for v in rules.clashes(entries))
 
 
 def schedule_row(course_schedule):
-	return frappe.db.get_value("Course Schedule", course_schedule, ["name", "instructor", "schedule_date", "from_time", "to_time", "student_group"], as_dict=True)
+	return frappe.db.get_value(
+		"Course Schedule",
+		course_schedule,
+		["name", "instructor", "schedule_date", "from_time", "to_time", "student_group"],
+		as_dict=True,
+	)
 
 
 def live_count(employee):
@@ -84,7 +105,9 @@ def free_faculty(course_schedule, ignore=None):
 	"""Teachers of the absent teacher's department free for the period, least-covering first: [{employee, employee_name, user}]."""
 	schedule = schedule_row(course_schedule)
 	absent = employee_of_instructor(schedule.instructor)
-	department = frappe.db.get_value("Employee", absent, "department") or frappe.db.get_value("Instructor", schedule.instructor, "department")
+	department = frappe.db.get_value("Employee", absent, "department") or frappe.db.get_value(
+		"Instructor", schedule.instructor, "department"
+	)
 	if not department:
 		return []
 	free = [
@@ -103,12 +126,21 @@ def affected_schedules(employee, from_date, to_date):
 	if not instructor:
 		return []
 	return frappe.get_all(
-		"Course Schedule", {"instructor": instructor, "schedule_date": ["between", [from_date, to_date]]}, pluck="name", order_by="schedule_date, from_time"
+		"Course Schedule",
+		{"instructor": instructor, "schedule_date": ["between", [from_date, to_date]]},
+		pluck="name",
+		order_by="schedule_date, from_time",
 	)
 
 
 def covered(schedules):
-	return set(frappe.get_all("Substitution", {"course_schedule": ["in", schedules or [""]], "status": ["in", LIVE]}, pluck="course_schedule"))
+	return set(
+		frappe.get_all(
+			"Substitution",
+			{"course_schedule": ["in", schedules or [""]], "status": ["in", LIVE]},
+			pluck="course_schedule",
+		)
+	)
 
 
 def propose_for_leave(leave):
@@ -119,9 +151,17 @@ def propose_for_leave(leave):
 	done = covered(schedules)
 	for schedule in [s for s in schedules if s not in done]:
 		free = free_faculty(schedule)
-		reason = _("{0} on leave ({1} to {2})").format(leave.employee_name or leave.employee, leave.from_date, leave.to_date)
+		reason = _("{0} on leave ({1} to {2})").format(
+			leave.employee_name or leave.employee, leave.from_date, leave.to_date
+		)
 		doc = frappe.get_doc(
-			{"doctype": "Substitution", "course_schedule": schedule, "leave_application": leave.name, "reason": reason, "substitute": free[0]["employee"] if free else None}
+			{
+				"doctype": "Substitution",
+				"course_schedule": schedule,
+				"leave_application": leave.name,
+				"reason": reason,
+				"substitute": free[0]["employee"] if free else None,
+			}
 		)
 		doc.insert(ignore_permissions=True)
 		created.append(doc.name)
@@ -143,7 +183,9 @@ def on_leave_submit(doc, method=None):
 
 def on_leave_cancel(doc, method=None):
 	"""A cancelled leave withdraws the substitutions it produced."""
-	for name in frappe.get_all("Substitution", {"leave_application": doc.name, "status": ["in", LIVE]}, pluck="name"):
+	for name in frappe.get_all(
+		"Substitution", {"leave_application": doc.name, "status": ["in", LIVE]}, pluck="name"
+	):
 		confirmed = frappe.db.get_value("Substitution", name, "status") == "Confirmed"
 		frappe.db.set_value("Substitution", name, "status", "Cancelled")
 		if confirmed:  # the substitute was told they were covering: tell them they no longer are

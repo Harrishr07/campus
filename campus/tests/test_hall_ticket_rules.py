@@ -6,7 +6,14 @@ from campus.examinations.hall_ticket_rules import withheld_reasons
 
 
 def reasons(**overrides):
-	facts = {"confirmed": True, "dues": 0, "debarred": None, "detained": None, "shortage": False, "eligible_courses": 2}
+	facts = {
+		"confirmed": True,
+		"dues": 0,
+		"debarred": None,
+		"detained": None,
+		"shortage": False,
+		"eligible_courses": 2,
+	}
 	return withheld_reasons(**{**facts, **overrides})
 
 
@@ -25,7 +32,9 @@ class TestWithheldReasons(UnitTestCase):
 
 	def test_shortage_or_detention_withholds_only_when_no_course_is_left(self):
 		self.assertEqual(reasons(shortage=True, eligible_courses=0), ["Attendance shortage (SA)"])
-		self.assertEqual(reasons(detained="Committee order", eligible_courses=0), ["Detained: Committee order"])
+		self.assertEqual(
+			reasons(detained="Committee order", eligible_courses=0), ["Detained: Committee order"]
+		)
 		self.assertEqual(
 			reasons(shortage=True, detained="Committee order", eligible_courses=0),
 			["Attendance shortage (SA)", "Detained: Committee order"],

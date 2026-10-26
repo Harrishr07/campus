@@ -37,8 +37,12 @@ class TestRules(UnitTestCase):
 		self.assertEqual(fee_refunds.paid_for_head(1000, "Exam", {"Tuition": 400, "Exam": 600}), 600)
 		self.assertEqual(fee_refunds.paid_for_head(0, "Tuition", {"Tuition": 100}), 0)
 		self.assertEqual(fee_refunds.paid_for_head(333.33, "Tuition", {"Tuition": 50, "Exam": 50}), 166.67)
-		self.assertEqual(fee_refunds.paid_for_head(333.33, "Exam", {"Tuition": 50, "Exam": 50}), 166.66)  # the remainder
-		self.assertEqual(fee_refunds.paid_for_head(1000, "Fine", {"Tuition": 400}), 0)  # a head the invoice lacks
+		self.assertEqual(
+			fee_refunds.paid_for_head(333.33, "Exam", {"Tuition": 50, "Exam": 50}), 166.66
+		)  # the remainder
+		self.assertEqual(
+			fee_refunds.paid_for_head(1000, "Fine", {"Tuition": 400}), 0
+		)  # a head the invoice lacks
 
 	def test_the_students_money_pays_the_caution_deposit_first(self):
 		lines = {"Tuition": 50000, "Caution Deposit": 5000}
@@ -51,7 +55,9 @@ class TestRules(UnitTestCase):
 
 	def test_the_other_heads_share_what_the_deposit_leaves_pro_rata(self):
 		lines = {"Tuition": 6000, "Exam": 4000, "Caution Deposit": 2000}
-		parts = [fee_refunds.paid_for_head(7000, head, lines) for head in ("Caution Deposit", "Tuition", "Exam")]
+		parts = [
+			fee_refunds.paid_for_head(7000, head, lines) for head in ("Caution Deposit", "Tuition", "Exam")
+		]
 		self.assertEqual(parts, [2000, 3000, 2000])
 		self.assertEqual(sum(parts), 7000)  # never more than the student paid
 		self.assertEqual(fee_refunds.paid_for_head(5000, "Caution Deposit", {"Caution Deposit": 3000}), 3000)
@@ -82,7 +88,9 @@ class RefundFixture(CampusTestCase):
 		cls.college = make_finance_company(COLLEGE, "RFDC")
 		cls.trust = make_finance_company(TRUST, "RFDT")
 		if not frappe.db.exists("Party Type", "Customer"):
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+			frappe.get_doc(
+				{"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}
+			).insert()
 		make_year_and_program(COLLEGE, PROGRAM, YEAR)
 		_group, cls.students = make_enrolled_students(COLLEGE, PROGRAM, YEAR, 2, "RfdStu")
 		cls.a, cls.b = cls.students
@@ -96,13 +104,23 @@ class RefundFixture(CampusTestCase):
 		self.addCleanup(frappe.db.rollback, save_point="refund_test")
 		self.addCleanup(frappe.set_user, "Administrator")
 		for company in (COLLEGE, TRUST):  # a bare test site has no bank account default
-			frappe.db.set_value("Company", company, "default_bank_account", self.college["bank"] if company == COLLEGE else self.trust["bank"])
+			frappe.db.set_value(
+				"Company",
+				company,
+				"default_bank_account",
+				self.college["bank"] if company == COLLEGE else self.trust["bank"],
+			)
 		for company, accounts in ((COLLEGE, self.college), (TRUST, self.trust)):
 			frappe.db.set_value("Company", company, "oc_damages_income_account", accounts["income"])
 		frappe.db.delete("Approval Level", {"parent": ["in", [POLICY, "Fee Refund Approval"]]})
 		frappe.db.delete("Approval Policy", {"name": ["in", [POLICY, "Fee Refund Approval"]]})
 		frappe.get_doc(
-			{"doctype": "Approval Policy", "policy_name": POLICY, "document_type": "Fee Refund", "levels": [level("User", APPROVER, title="Accounts")]}
+			{
+				"doctype": "Approval Policy",
+				"policy_name": POLICY,
+				"document_type": "Fee Refund",
+				"levels": [level("User", APPROVER, title="Accounts")],
+			}
 		).insert()
 
 	def invoice(self, student, head, amount, company=COLLEGE, paid=True):
@@ -116,14 +134,23 @@ class RefundFixture(CampusTestCase):
 		payment.reference_no, payment.reference_date = "UTR1", today()
 		payment.insert().submit()
 
-	def two_head_invoice(self, student, company=COLLEGE, heads=(("Tuition", 6000), ("Exam", 4000)), paid=True):
+	def two_head_invoice(
+		self, student, company=COLLEGE, heads=(("Tuition", 6000), ("Exam", 4000)), paid=True
+	):
 		"""An invoice of the heads (Tuition 6000 and Exam 4000 by default), paid in full when `paid`."""
 		invoice = frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": company, "customer": frappe.db.get_value("Student", student, "customer"),
-				"student": student, "posting_date": today(), "set_posting_time": 1, "due_date": today(),
+				"doctype": "Sales Invoice",
+				"company": company,
+				"customer": frappe.db.get_value("Student", student, "customer"),
+				"student": student,
+				"posting_date": today(),
+				"set_posting_time": 1,
+				"due_date": today(),
 				"debit_to": frappe.db.get_value("Company", company, "default_receivable_account"),
-				"items": [{"item_code": category_for_type(head), "qty": 1, "rate": rate} for head, rate in heads],
+				"items": [
+					{"item_code": category_for_type(head), "qty": 1, "rate": rate} for head, rate in heads
+				],
 			}
 		)
 		invoice.flags.ignore_permissions = True
@@ -133,8 +160,16 @@ class RefundFixture(CampusTestCase):
 		return invoice
 
 	def refund(self, invoice, student=None, **values):
-		values = {"refund_type": "Fee Refund", "fee_head": "Tuition", "amount": 1000, "reason": "Course withdrawn", **values}
-		return frappe.get_doc({"doctype": "Fee Refund", "student": student or self.a, "fee_invoice": invoice.name, **values}).insert()
+		values = {
+			"refund_type": "Fee Refund",
+			"fee_head": "Tuition",
+			"amount": 1000,
+			"reason": "Course withdrawn",
+			**values,
+		}
+		return frappe.get_doc(
+			{"doctype": "Fee Refund", "student": student or self.a, "fee_invoice": invoice.name, **values}
+		).insert()
 
 	def approved(self, doc):
 		request = request_approval("Fee Refund", doc.name)
@@ -144,7 +179,9 @@ class RefundFixture(CampusTestCase):
 		return doc.reload()
 
 	def gl(self, voucher):
-		rows = frappe.get_all("GL Entry", {"voucher_no": voucher, "is_cancelled": 0}, ["account", "debit", "credit"])
+		rows = frappe.get_all(
+			"GL Entry", {"voucher_no": voucher, "is_cancelled": 0}, ["account", "debit", "credit"]
+		)
 		return {r.account: (flt(r.debit), flt(r.credit)) for r in rows}
 
 	def outstanding(self, invoice):
@@ -155,14 +192,23 @@ class TestFeeRefund(RefundFixture):
 	def test_an_approved_refund_posts_a_credit_note_and_drafts_the_payment(self):
 		invoice = self.invoice(self.a, "Tuition", 10000)
 		doc = self.approved(self.refund(invoice, amount=4000))
-		self.assertEqual((doc.docstatus, doc.company, flt(doc.available), flt(doc.cash_refund), flt(doc.dues_netted)), (1, COLLEGE, 10000, 4000, 0))
+		self.assertEqual(
+			(doc.docstatus, doc.company, flt(doc.available), flt(doc.cash_refund), flt(doc.dues_netted)),
+			(1, COLLEGE, 10000, 4000, 0),
+		)
 		note = frappe.get_doc("Sales Invoice", doc.credit_note)
-		self.assertEqual((note.docstatus, note.is_return, note.return_against, note.company, flt(note.grand_total)), (1, 1, invoice.name, COLLEGE, -4000))
+		self.assertEqual(
+			(note.docstatus, note.is_return, note.return_against, note.company, flt(note.grand_total)),
+			(1, 1, invoice.name, COLLEGE, -4000),
+		)
 		entries = self.gl(note.name)
-		self.assertEqual(entries[f"Sales - RFDC"], (4000, 0))  # income reversed
+		self.assertEqual(entries["Sales - RFDC"], (4000, 0))  # income reversed
 		self.assertEqual(sum(d for d, _c in entries.values()), sum(c for _d, c in entries.values()))
 		payment = frappe.get_doc("Payment Entry", doc.payment_entry)
-		self.assertEqual((payment.docstatus, payment.payment_type, flt(payment.paid_amount), payment.paid_from), (0, "Pay", 4000, self.college["bank"]))
+		self.assertEqual(
+			(payment.docstatus, payment.payment_type, flt(payment.paid_amount), payment.paid_from),
+			(0, "Pay", 4000, self.college["bank"]),
+		)
 		self.assertEqual([r.reference_name for r in payment.references], [note.name])
 
 	def test_the_refund_needs_approval_and_cannot_approve_itself(self):
@@ -184,20 +230,26 @@ class TestFeeRefund(RefundFixture):
 		seed_refund_policy()  # idempotent
 		policy = frappe.get_doc("Approval Policy", {"document_type": "Fee Refund"})
 		self.assertEqual(policy.name, REFUND_POLICY)
-		self.assertEqual([(l.approver_type, l.approver) for l in policy.levels], [("Role", "Accounts Manager")])
+		self.assertEqual(
+			[(l.approver_type, l.approver) for l in policy.levels], [("Role", "Accounts Manager")]
+		)
 
 	def test_a_refund_cannot_exceed_what_was_paid_for_the_head(self):
 		invoice = self.two_head_invoice(self.a)
 		with self.assertRaisesRegex(frappe.ValidationError, "6000.0 of the Tuition"):
 			self.refund(invoice, amount=6001)
 		self.assertEqual(self.approved(self.refund(invoice, amount=6000)).docstatus, 1)
-		self.assertEqual(fee_refunds.balance(invoice.name, "Exam").available, 4000)  # the other head is untouched
+		self.assertEqual(
+			fee_refunds.balance(invoice.name, "Exam").available, 4000
+		)  # the other head is untouched
 		with self.assertRaisesRegex(frappe.ValidationError, "already been refunded"):
 			self.refund(invoice)
 
 	def test_only_money_received_can_be_refunded(self):
 		invoice = self.invoice(self.a, "Tuition", 10000, paid=False)
-		frappe.db.set_value("Sales Invoice", invoice.name, "outstanding_amount", 0)  # settled otherwise, e.g. a waiver
+		frappe.db.set_value(
+			"Sales Invoice", invoice.name, "outstanding_amount", 0
+		)  # settled otherwise, e.g. a waiver
 		with self.assertRaisesRegex(frappe.ValidationError, "nothing to refund"):
 			self.refund(invoice)
 
@@ -209,7 +261,9 @@ class TestFeeRefund(RefundFixture):
 
 	def test_credit_notes_already_issued_count_against_the_cap(self):
 		invoice = self.invoice(self.a, "Tuition", 10000)
-		finance.make_credit_note(frappe.get_doc("Sales Invoice", invoice.name), 7000)  # accounts issued it by hand
+		finance.make_credit_note(
+			frappe.get_doc("Sales Invoice", invoice.name), 7000
+		)  # accounts issued it by hand
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 3000)
 		with self.assertRaisesRegex(frappe.ValidationError, "3000.0 of the Tuition"):
 			self.refund(invoice, amount=3001)
@@ -222,7 +276,10 @@ class TestFeeRefund(RefundFixture):
 
 	def test_two_refunds_drafted_together_cannot_both_pass_at_submit(self):
 		invoice = self.invoice(self.a, "Tuition", 10000)
-		first, second = self.refund(invoice, amount=7000), self.refund(invoice, amount=7000)  # each passes alone
+		first, second = (
+			self.refund(invoice, amount=7000),
+			self.refund(invoice, amount=7000),
+		)  # each passes alone
 		self.approved(first)
 		with self.assertRaisesRegex(frappe.ValidationError, "already been refunded"):
 			self.approved(second)
@@ -250,7 +307,10 @@ class TestFeeRefund(RefundFixture):
 			order.append(("balance", kwargs.get("locking")))
 			return real_balance(*args, **kwargs)
 
-		with patch.object(frappe.db, "get_value", spy_get_value), patch.object(fee_refunds, "balance", spy_balance):
+		with (
+			patch.object(frappe.db, "get_value", spy_get_value),
+			patch.object(fee_refunds, "balance", spy_balance),
+		):
 			self.approved(doc)
 		self.assertEqual(order[order.index("lock") + 1], ("balance", True))
 
@@ -284,7 +344,13 @@ class TestFeeRefund(RefundFixture):
 		payment, note = doc.payment_entry, doc.credit_note
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)
 		doc.cancel()
-		self.assertEqual((frappe.db.get_value("Fee Refund", doc.name, "docstatus"), frappe.db.get_value("Sales Invoice", note, "docstatus")), (2, 2))
+		self.assertEqual(
+			(
+				frappe.db.get_value("Fee Refund", doc.name, "docstatus"),
+				frappe.db.get_value("Sales Invoice", note, "docstatus"),
+			),
+			(2, 2),
+		)
 		self.assertFalse(frappe.db.exists("Payment Entry", payment))  # the draft is deleted
 		self.assertIsNone(frappe.db.get_value("Fee Refund", doc.name, "payment_entry"))
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 10000)
@@ -387,11 +453,15 @@ class TestFeeRefund(RefundFixture):
 		frappe.db.delete("Approval Level", {"parent": POLICY})
 		frappe.db.delete("Approval Policy", {"name": POLICY})
 		seed_refund_policy()
-		self.assertEqual(frappe.get_doc("Approval Policy", {"document_type": "Fee Refund"}).levels[0].limit_to_company, 1)
+		self.assertEqual(
+			frappe.get_doc("Approval Policy", {"document_type": "Fee Refund"}).levels[0].limit_to_company, 1
+		)
 		for email, company in ((TRUST_MANAGER, TRUST), (COLLEGE_MANAGER, COLLEGE)):
 			make_user(email, [company])
 			frappe.get_doc("User", email).add_roles("Accounts Manager", "Accounts User")
-		request = request_approval("Fee Refund", self.refund(self.invoice(self.a, "Tuition", 10000), amount=1000).name)
+		request = request_approval(
+			"Fee Refund", self.refund(self.invoice(self.a, "Tuition", 10000), amount=1000).name
+		)
 		frappe.set_user(TRUST_MANAGER)
 		with self.assertRaises(frappe.PermissionError):
 			approve(request, None)
@@ -405,13 +475,31 @@ class TestFeeRefund(RefundFixture):
 
 	def test_damages_of_the_deposit_do_not_reduce_another_head(self):
 		invoice = self.two_head_invoice(self.a, heads=(("Caution Deposit", 5000), ("Tuition", 6000)))
-		self.approved(self.refund(invoice, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, deduction=500))
+		self.approved(
+			self.refund(
+				invoice, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, deduction=500
+			)
+		)
 		self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 6000)
 
 	def test_partial_head_refunds_need_one_tax_treatment_on_the_invoice(self):
-		same = SimpleNamespace(name='INV', taxes=[1], items=[SimpleNamespace(item_code="A", item_tax_template="T", item_tax_rate="{}"), SimpleNamespace(item_code="B", item_tax_template="T", item_tax_rate="{}")])
+		same = SimpleNamespace(
+			name="INV",
+			taxes=[1],
+			items=[
+				SimpleNamespace(item_code="A", item_tax_template="T", item_tax_rate="{}"),
+				SimpleNamespace(item_code="B", item_tax_template="T", item_tax_rate="{}"),
+			],
+		)
 		refunds.check_uniform_tax(same, {"A"})
-		mixed = SimpleNamespace(name='INV', taxes=[1], items=[SimpleNamespace(item_code="A", item_tax_template="T", item_tax_rate="{}"), SimpleNamespace(item_code="B", item_tax_template=None, item_tax_rate="{}")])
+		mixed = SimpleNamespace(
+			name="INV",
+			taxes=[1],
+			items=[
+				SimpleNamespace(item_code="A", item_tax_template="T", item_tax_rate="{}"),
+				SimpleNamespace(item_code="B", item_tax_template=None, item_tax_rate="{}"),
+			],
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "different taxes"):
 			refunds.check_uniform_tax(mixed, {"A"})
 		refunds.check_uniform_tax(mixed, {"A", "B"})  # the whole invoice
@@ -431,16 +519,27 @@ class TestCautionDeposit(RefundFixture):
 		return self.invoice(student, "Caution Deposit", amount, company)
 
 	def caution(self, invoice, **values):
-		values = {"refund_type": "Caution Deposit", "fee_head": "Caution Deposit", "amount": 0, "reason": "Course completed", **values}
+		values = {
+			"refund_type": "Caution Deposit",
+			"fee_head": "Caution Deposit",
+			"amount": 0,
+			"reason": "Course completed",
+			**values,
+		}
 		return self.refund(invoice, **values)
 
 	def test_the_deposit_comes_back_less_damages(self):
 		invoice = self.deposit(self.a)
 		doc = self.approved(self.caution(invoice, deduction=500))
-		self.assertEqual((flt(doc.amount), flt(doc.deduction), flt(doc.dues_netted), flt(doc.cash_refund)), (4500, 500, 0, 4500))
+		self.assertEqual(
+			(flt(doc.amount), flt(doc.deduction), flt(doc.dues_netted), flt(doc.cash_refund)),
+			(4500, 500, 0, 4500),
+		)
 		note = frappe.get_doc("Sales Invoice", doc.credit_note)
 		self.assertEqual(flt(note.grand_total), -4500)
-		self.assertEqual(self.gl(note.name)[self.college["deposit"]], (4500, 0))  # the deposit liability is released
+		self.assertEqual(
+			self.gl(note.name)[self.college["deposit"]], (4500, 0)
+		)  # the deposit liability is released
 		self.assertEqual(flt(frappe.db.get_value("Payment Entry", doc.payment_entry, "paid_amount")), 4500)
 
 	def test_damages_move_from_the_deposit_liability_to_income(self):
@@ -448,7 +547,9 @@ class TestCautionDeposit(RefundFixture):
 		doc = self.approved(self.caution(invoice, deduction=500))
 		entry = frappe.get_doc("Journal Entry", doc.damages_entry)
 		self.assertEqual(entry.docstatus, 1)
-		self.assertEqual(self.gl(entry.name), {self.college["deposit"]: (500, 0), self.college["income"]: (0, 500)})
+		self.assertEqual(
+			self.gl(entry.name), {self.college["deposit"]: (500, 0), self.college["income"]: (0, 500)}
+		)
 
 	def test_damages_need_an_income_account_for_the_company(self):
 		frappe.db.set_value("Company", COLLEGE, "oc_damages_income_account", None)
@@ -518,7 +619,9 @@ class TestScholarshipMoneyIsNotRefunded(RefundFixture):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.expense = make_account(COLLEGE, "RFDC", "Scholarship Expense", "Indirect Expenses", root_type="Expense")
+		cls.expense = make_account(
+			COLLEGE, "RFDC", "Scholarship Expense", "Indirect Expenses", root_type="Expense"
+		)
 
 	def award(self, student, scheme_type, amount):
 		"""Sanction and disburse `amount` of a Government (Payment Entry) or Institutional (Journal Entry) scheme."""
@@ -529,7 +632,9 @@ class TestScholarshipMoneyIsNotRefunded(RefundFixture):
 				{"doctype": "Scholarship Scheme", "scheme_name": name, "company": COLLEGE, "scheme_type": scheme_type,
 				 "account": account, "amount_type": "Fixed", "amount": amount}
 			).insert()  # fmt: skip
-		drop_policies("Scholarship Application")  # sanctioned by submitting; test_mandatory_approval covers the approval list
+		drop_policies(
+			"Scholarship Application"
+		)  # sanctioned by submitting; test_mandatory_approval covers the approval list
 		with approval_not_required():
 			application = frappe.get_doc(
 				{"doctype": "Scholarship Application", "student": student, "scheme": name, "academic_year": YEAR}
@@ -567,16 +672,37 @@ class TestScholarshipMoneyIsNotRefunded(RefundFixture):
 		invoice = self.invoice(self.a, "Caution Deposit", 5000, paid=False)
 		self.award(self.a, "Government", 2000)
 		self.pay(invoice.name)
-		doc = self.approved(self.refund(invoice, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, reason="Done"))
+		doc = self.approved(
+			self.refund(
+				invoice, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, reason="Done"
+			)
+		)
 		self.assertEqual((flt(doc.amount), flt(doc.cash_refund)), (3000, 3000))
 
 	def test_the_students_own_money_refunds_the_caution_deposit_first(self):
 		for scheme_type, student in (("Government", self.a), ("Institutional", self.b)):
-			invoice = self.two_head_invoice(student, heads=(("Tuition", 50000), ("Caution Deposit", 5000)), paid=False)
+			invoice = self.two_head_invoice(
+				student, heads=(("Tuition", 50000), ("Caution Deposit", 5000)), paid=False
+			)
 			self.award(student, scheme_type, 50000)
 			self.pay(invoice.name)
-			self.assertEqual((self.outstanding(invoice.name), refunds.paid_by_student(invoice.name)), (0, 5000), scheme_type)
+			self.assertEqual(
+				(self.outstanding(invoice.name), refunds.paid_by_student(invoice.name)),
+				(0, 5000),
+				scheme_type,
+			)
 			self.assertEqual(fee_refunds.balance(invoice.name, "Tuition").available, 0, scheme_type)
-			self.assertEqual(fee_refunds.balance(invoice.name, "Caution Deposit").available, 5000, scheme_type)
-			doc = self.approved(self.refund(invoice, student, refund_type="Caution Deposit", fee_head="Caution Deposit", amount=0, reason="Done"))
+			self.assertEqual(
+				fee_refunds.balance(invoice.name, "Caution Deposit").available, 5000, scheme_type
+			)
+			doc = self.approved(
+				self.refund(
+					invoice,
+					student,
+					refund_type="Caution Deposit",
+					fee_head="Caution Deposit",
+					amount=0,
+					reason="Done",
+				)
+			)
 			self.assertEqual((flt(doc.amount), flt(doc.cash_refund)), (5000, 5000), scheme_type)

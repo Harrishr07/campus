@@ -4,11 +4,14 @@ import frappe
 
 from campus.campus_platform.api import request_approval
 from campus.iqac import aishe, compute, evidence, feedback, feedback_invites, metric_values, validation
-from campus.iqac import export as exporter
-from campus.iqac.access import OWNER_ROLE, ROLES
-from campus.iqac.feedback import MINIMUM_GROUP_DEFAULT, MINIMUM_GROUP_FLOOR  # noqa: F401  (public API: Campus Settings)
 from campus.iqac import cycle as lifecycle
+from campus.iqac import export as exporter
 from campus.iqac import framework as framework_lifecycle
+from campus.iqac.access import OWNER_ROLE, ROLES
+from campus.iqac.feedback import (  # noqa: F401  (public API: Campus Settings)
+	MINIMUM_GROUP_DEFAULT,
+	MINIMUM_GROUP_FLOOR,
+)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -69,7 +72,12 @@ def reopen_metric(metric_value):
 def request_override(metric_value, proposed_value, reason):
 	"""Ask to replace the computed value by `proposed_value`: makes a Metric Override and sends it for approval; returns its name."""
 	override = frappe.get_doc(
-		{"doctype": "Metric Override", "metric_value": metric_value, "proposed_value": proposed_value, "reason": reason}
+		{
+			"doctype": "Metric Override",
+			"metric_value": metric_value,
+			"proposed_value": proposed_value,
+			"reason": reason,
+		}
 	).insert()
 	request_approval(override.doctype, override.name)
 	return override.name
@@ -83,16 +91,22 @@ def clone_framework(framework, new_name, version):
 
 
 @frappe.whitelist(methods=["POST"])
-def attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None):
+def attach_as_evidence(
+	doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None
+):
 	"""Make an Evidence from a record of a document type listed in Campus Settings > Evidence Sources; returns its name."""
-	return evidence.attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes, is_public, file, url)
+	return evidence.attach_as_evidence(
+		doctype, name, title, evidence_type, academic_year, nodes, is_public, file, url
+	)
 
 
 @frappe.whitelist()
 def evidence_source_doctypes():
 	"""{document type: file field} that get the Attach as Evidence action (IQAC roles)."""
 	frappe.only_for((*ROLES, OWNER_ROLE))
-	rows = frappe.get_all("Evidence Source Doctype", {"parent": "Campus Settings"}, ["document_type", "file_field"])
+	rows = frappe.get_all(
+		"Evidence Source Doctype", {"parent": "Campus Settings"}, ["document_type", "file_field"]
+	)
 	return {row.document_type: row.file_field or "" for row in rows}
 
 

@@ -22,7 +22,12 @@ def offering_course(offering):
 	)
 	row = group and frappe.db.get_value(
 		"Curriculum Course",
-		{"parent": group.oc_curriculum, "parenttype": "Curriculum", "course": group.course, "semester": group.oc_semester},
+		{
+			"parent": group.oc_curriculum,
+			"parenttype": "Curriculum",
+			"course": group.course,
+			"semester": group.oc_semester,
+		},
 		COURSE_FIELDS,
 		as_dict=True,
 	)
@@ -57,8 +62,14 @@ def student_limits(student, course):
 
 def rule_limits(rule_set, course, student=None):
 	"""Values of `rule_set` (an Exam Rule Set) for `course`: maxima resolved, pass thresholds, the attempt rule and revaluation eligibility."""
-	if not course["course_type"]:  # blank or Internal Only: no ESE rule applies, never a guessed Theory (M06-12)
-		frappe.throw(_("Course {0} has no exam type with an end-semester exam.").format(frappe.bold(escape_html(course["course"]))))
+	if not course[
+		"course_type"
+	]:  # blank or Internal Only: no ESE rule applies, never a guessed Theory (M06-12)
+		frappe.throw(
+			_("Course {0} has no exam type with an end-semester exam.").format(
+				frappe.bold(escape_html(course["course"]))
+			)
+		)
 	for row in rule_set.types:
 		if row.course_type == course["course_type"]:
 			return {

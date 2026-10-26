@@ -77,7 +77,9 @@ def validate_formula(formula, framework=None, code=None, check_nodes=True):
 	nodes = framework_nodes(framework) if framework else {}
 	if code:
 		nodes[node_identifier(code)] = (code, formula)  # this node, as it is about to be saved
-	later = () if check_nodes else tuple(key for key in keys if key.startswith("n_"))  # a clone: nodes created later
+	later = (
+		() if check_nodes else tuple(key for key in keys if key.startswith("n_"))
+	)  # a clone: nodes created later
 	unknown = [key for key in keys if key not in points and key not in nodes and key not in later]
 	if unknown:
 		frappe.throw(_("Unknown data point(s) or node(s) in the formula: {0}").format(", ".join(unknown)))
@@ -102,7 +104,9 @@ def framework_nodes(framework, lock=True):
 def check_node_references(framework, code, keys, nodes):
 	for key in keys:
 		if key in nodes and not nodes[key][1]:
-			frappe.throw(_("Node {0} has no formula, so a formula cannot use it.").format(frappe.bold(nodes[key][0])))
+			frappe.throw(
+				_("Node {0} has no formula, so a formula cannot use it.").format(frappe.bold(nodes[key][0]))
+			)
 	graph = {nodes[key][0]: node_references(nodes[key][1], nodes) for key in nodes if nodes[key][1]}
 	if code:
 		graph[code] = {nodes[key][0] for key in keys if key in nodes}

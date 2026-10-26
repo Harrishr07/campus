@@ -4,7 +4,10 @@ frappe.ui.form.on("CO Attainment Run", {
 		if (frm.is_new() || frm.doc.docstatus !== 0) return;
 		frm.add_custom_button(__("Compute"), () =>
 			frappe
-				.call({ method: "campus.curriculum.attainment.queue_co_run", args: { name: frm.doc.name } })
+				.call({
+					method: "campus.curriculum.attainment.queue_co_run",
+					args: { name: frm.doc.name },
+				})
 				.then(() => {
 					frappe.show_alert(__("Computing in the background"));
 					frm.reload_doc();

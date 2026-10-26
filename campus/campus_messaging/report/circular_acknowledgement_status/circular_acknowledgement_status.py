@@ -25,9 +25,21 @@ def execute(filters=None):
 
 def summary_columns():
 	return [
-		{"fieldname": "circular", "label": _("Circular"), "fieldtype": "Link", "options": "Circular", "width": 150},
+		{
+			"fieldname": "circular",
+			"label": _("Circular"),
+			"fieldtype": "Link",
+			"options": "Circular",
+			"width": 150,
+		},
 		{"fieldname": "title", "label": _("Title"), "fieldtype": "Data", "width": 240},
-		{"fieldname": "company", "label": _("Company"), "fieldtype": "Link", "options": "Company", "width": 180},
+		{
+			"fieldname": "company",
+			"label": _("Company"),
+			"fieldtype": "Link",
+			"options": "Company",
+			"width": 180,
+		},
 		{"fieldname": "audience", "label": _("Audience"), "fieldtype": "Int", "width": 90},
 		{"fieldname": "acknowledged", "label": _("Acknowledged"), "fieldtype": "Int", "width": 110},
 		{"fieldname": "pending", "label": _("Pending"), "fieldtype": "Int", "width": 90},
@@ -40,7 +52,12 @@ def detail_columns():
 		{"fieldname": "recipient_name", "label": _("Name"), "fieldtype": "Data", "width": 200},
 		{"fieldname": "user", "label": _("User"), "fieldtype": "Link", "options": "User", "width": 200},
 		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 110},
-		{"fieldname": "acknowledged_on", "label": _("Acknowledged On"), "fieldtype": "Datetime", "width": 160},
+		{
+			"fieldname": "acknowledged_on",
+			"label": _("Acknowledged On"),
+			"fieldtype": "Datetime",
+			"width": 160,
+		},
 	]
 
 
@@ -52,7 +69,10 @@ def visible_circulars(filters):
 	if companies is not None:
 		conditions["company"] = ["in", companies or [""]]
 	return frappe.get_all(
-		"Circular", filters=conditions, fields=["name", "title", "company", "audience_rule"], order_by="publish_from desc"
+		"Circular",
+		filters=conditions,
+		fields=["name", "title", "company", "audience_rule"],
+		order_by="publish_from desc",
 	)
 
 
@@ -63,7 +83,9 @@ def recipient_status(circular):
 	acknowledged = {
 		row.user: row.acknowledged_on
 		for row in frappe.get_all(
-			"Circular Acknowledgement", filters={"circular": circular.name}, fields=["user", "acknowledged_on"]
+			"Circular Acknowledgement",
+			filters={"circular": circular.name},
+			fields=["user", "acknowledged_on"],
 		)
 	}
 	rows = []

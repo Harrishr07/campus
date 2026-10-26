@@ -14,12 +14,20 @@ class AttendanceEligibilityRun(Document):
 	def validate(self):
 		before = self.get_doc_before_save()
 		if before and (before.locked or self.locked != before.locked):
-			frappe.throw(_("{0} is locked; use Lock to freeze a run and nothing else can change it.").format(self.name))
+			frappe.throw(
+				_("{0} is locked; use Lock to freeze a run and nothing else can change it.").format(self.name)
+			)
 		if self.program and frappe.db.get_value("Program", self.program, "oc_company") != self.company:
-			frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(self.program), frappe.bold(self.company)))
+			frappe.throw(
+				_("Program {0} does not belong to {1}.").format(
+					frappe.bold(self.program), frappe.bold(self.company)
+				)
+			)
 		self.run_key = eligibility_run.run_key(self)
 		if frappe.db.exists(self.doctype, {"run_key": self.run_key, "name": ["!=", self.name]}):
-			frappe.throw(_("A run for this company, term, programme and semester already exists; run that one again."))
+			frappe.throw(
+				_("A run for this company, term, programme and semester already exists; run that one again.")
+			)
 
 	def on_trash(self):
 		if self.locked:

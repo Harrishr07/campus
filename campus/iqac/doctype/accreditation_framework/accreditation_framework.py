@@ -14,8 +14,13 @@ from campus.iqac.framework import status_of
 class AccreditationFramework(Document):
 	def validate(self):
 		self.status = self.status or "Draft"
-		if self.is_new() or self.get_doc_before_save().status == "Draft":  # a published framework is not touched
-			self.framework_code, self.version = self.framework_code or None, self.version or None  # "" would collide in the unique index
+		if (
+			self.is_new() or self.get_doc_before_save().status == "Draft"
+		):  # a published framework is not touched
+			self.framework_code, self.version = (
+				self.framework_code or None,
+				self.version or None,
+			)  # "" would collide in the unique index
 		self.validate_dates()
 		self.validate_unique_version()
 		if not self.is_new():
@@ -31,16 +36,28 @@ class AccreditationFramework(Document):
 		if not (self.framework_code and self.version):
 			return
 		table = frappe.qb.DocType("Accreditation Framework")
-		same = (table.framework_code == self.framework_code) & (table.version == self.version) & (table.name != self.name)
+		same = (
+			(table.framework_code == self.framework_code)
+			& (table.version == self.version)
+			& (table.name != self.name)
+		)
 		if frappe.qb.from_(table).select(table.name).where(same).limit(1).for_update().run():
-			frappe.throw(_("Version {0} of {1} already exists.").format(frappe.bold(self.version), frappe.bold(self.framework_code)))
+			frappe.throw(
+				_("Version {0} of {1} already exists.").format(
+					frappe.bold(self.version), frappe.bold(self.framework_code)
+				)
+			)
 
 	def validate_lock(self):
 		before = status_of(self.name, lock=True)
 		if before == "Draft":
 			return
 		retiring = before == "Published" and self.status == "Retired"
-		changed = [f.fieldname for f in self.meta.fields if f.fieldname != "status" and self.has_value_changed(f.fieldname)]
+		changed = [
+			f.fieldname
+			for f in self.meta.fields
+			if f.fieldname != "status" and self.has_value_changed(f.fieldname)
+		]
 		if not retiring or changed:
 			frappe.throw(
 				_("{0} is {1} and cannot be changed. Clone it to a new version to make changes.").format(
@@ -54,4 +71,6 @@ class AccreditationFramework(Document):
 
 
 def on_doctype_update():
-	frappe.db.add_unique("Accreditation Framework", ["framework_code", "version"], constraint_name="unique_code_version")
+	frappe.db.add_unique(
+		"Accreditation Framework", ["framework_code", "version"], constraint_name="unique_code_version"
+	)

@@ -196,7 +196,9 @@ doc_events["Course Schedule"]["validate"] = [  # L-07: class session states
 	"campus.faculty.session_states.validate_session",
 ]
 doc_events["Course Schedule"]["on_update"] = "campus.faculty.session_states.log_state_change"
-doc_events["Student Attendance"] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
+doc_events[
+	"Student Attendance"
+] = {  # L-07: the correction cut-off holds for every writer, desk and Education's tool
 	"validate": "campus.faculty.attendance_corrections.guard_record",
 	"before_cancel": "campus.faculty.attendance_corrections.guard_cancel",
 }
@@ -217,18 +219,24 @@ doc_events["User Permission"] = {
 }
 doc_events["User"] = {"on_update": "campus.admissions.enquiry.user_changed"}
 
-doc_events["Student Leave Application"] = {"before_submit": "campus.student_services.setup.require_certificate"}
+doc_events["Student Leave Application"] = {
+	"before_submit": "campus.student_services.setup.require_certificate"
+}
 doc_events["Certificate Request"] = {  # P2-T22
 	"validate": "campus.examinations.exam_certificates.validate_request",
 	"before_submit": "campus.examinations.exam_certificates.before_submit_request",
 }
 doc_events["Fee Concession"] = {"on_cancel": "campus.campus_finance.concessions.clear_draft_tags"}
 doc_events["Grievance Type"] = {"validate": "campus.student_services.grievances.validate_category"}
-doc_events["Institution Profile"] = {"after_insert": "campus.student_services.onboarding.seed_template_for_profile"}
+doc_events["Institution Profile"] = {
+	"after_insert": "campus.student_services.onboarding.seed_template_for_profile"
+}
 doc_events["Student"]["validate"].append("campus.student_services.mentors.set_class_advisor")
 doc_events["Student"]["validate"].append("campus.student_services.lifecycle.validate_student")  # L-01
 doc_events["Student"]["validate"].append("campus.student_services.corrections.guard_locked_fields")  # L-08
-doc_events["Student"]["validate"].append("campus.examinations.affiliation.validate_university_register_no")  # M06-10
+doc_events["Student"]["validate"].append(
+	"campus.examinations.affiliation.validate_university_register_no"
+)  # M06-10
 _after_insert = doc_events["Student"].get("after_insert")
 doc_events["Student"]["after_insert"] = [
 	*([_after_insert] if isinstance(_after_insert, str) else _after_insert or []),
@@ -251,7 +259,10 @@ doc_events["Payment Entry"] = {
 		"campus.campus_finance.fee_refunds.allow_payment_cancel",  # after ERPNext's own on_cancel, which sets the ignore list
 	],
 }
-doc_events["Payment Entry"]["validate"] = [doc_events["Payment Entry"]["validate"], "campus.campus_finance.scholarships.block_amend"]
+doc_events["Payment Entry"]["validate"] = [
+	doc_events["Payment Entry"]["validate"],
+	"campus.campus_finance.scholarships.block_amend",
+]
 doc_events["Payment Entry"]["before_submit"] = [  # L-03: a no-show's advance refund is paid once
 	doc_events["Payment Entry"]["before_submit"],
 	"campus.admissions.doctype.admission_cancellation.admission_cancellation.check_advance_refund",
@@ -260,51 +271,106 @@ doc_events["Journal Entry"] = {
 	"validate": "campus.campus_finance.scholarships.block_amend",
 	"on_cancel": "campus.campus_finance.scholarships.refresh_after_voucher_cancel",
 }
-doc_events["Employee"] = {"validate": "campus.faculty.qualification.validate_employee", "on_update": "campus.faculty.setup.grant_employee_role"}
+doc_events["Employee"] = {
+	"validate": "campus.faculty.qualification.validate_employee",
+	"on_update": "campus.faculty.setup.grant_employee_role",
+}
 doc_events["Job Applicant"] = {"validate": "campus.faculty.qualification.validate_job_applicant"}
 doc_events["Room"]["validate"] = "campus.examinations.exam_halls.validate_room"
-doc_events["Leave Application"] = {"on_submit": "campus.faculty.substitution.on_leave_submit", "on_cancel": "campus.faculty.substitution.on_leave_cancel"}
+doc_events["Leave Application"] = {
+	"on_submit": "campus.faculty.substitution.on_leave_submit",
+	"on_cancel": "campus.faculty.substitution.on_leave_cancel",
+}
 doc_events["Employee Performance Feedback"] = {
-	e: "campus.faculty.self_appraisal.block_feedback_on_self_appraisal" for e in ("validate", "before_submit", "before_cancel")
+	e: "campus.faculty.self_appraisal.block_feedback_on_self_appraisal"
+	for e in ("validate", "before_submit", "before_cancel")
 }
 doc_events["Appraisal"] = {
 	"before_validate": "campus.faculty.self_appraisal.before_validate",
 	"before_submit": "campus.faculty.self_appraisal.before_submit",
 }
 doc_events["Purchase Invoice"] = {
-	"on_submit": ["campus.academic_governance.honorarium.refresh_claim", "campus.examinations.remuneration_payment.refresh_claim"],
+	"on_submit": [
+		"campus.academic_governance.honorarium.refresh_claim",
+		"campus.examinations.remuneration_payment.refresh_claim",
+	],
 	"on_cancel": "campus.academic_governance.honorarium.refresh_claim",
 	"before_submit": "campus.examinations.remuneration_payment.check_invoice",  # P2-T23
 	"before_cancel": "campus.examinations.remuneration_payment.refuse_invoice_cancel",  # P2-T23
 }
 _budget_control = "campus.research.budget_control"  # P3-T15: grant budget heads on spending lines
 doc_events["Purchase Invoice"]["validate"] = f"{_budget_control}.validate_lines"
-doc_events["Purchase Invoice"]["before_submit"] = [doc_events["Purchase Invoice"]["before_submit"], f"{_budget_control}.check_capital_limits"]
-doc_events["Purchase Order"] = {"validate": f"{_budget_control}.validate_lines", "before_submit": f"{_budget_control}.check_capital_limits"}
-doc_events["Journal Entry"]["validate"] = [doc_events["Journal Entry"]["validate"], f"{_budget_control}.validate_lines"]
+doc_events["Purchase Invoice"]["before_submit"] = [
+	doc_events["Purchase Invoice"]["before_submit"],
+	f"{_budget_control}.check_capital_limits",
+]
+doc_events["Purchase Order"] = {
+	"validate": f"{_budget_control}.validate_lines",
+	"before_submit": f"{_budget_control}.check_capital_limits",
+}
+doc_events["Journal Entry"]["validate"] = [
+	doc_events["Journal Entry"]["validate"],
+	f"{_budget_control}.validate_lines",
+]
 doc_events["Journal Entry"]["before_submit"] = f"{_budget_control}.check_capital_limits"
 doc_events["Expense Claim"] = {"validate": f"{_budget_control}.validate_lines"}
-doc_events["Purchase Order"]["before_update_after_submit"] = f"{_budget_control}.validate_updated_order"  # Update Items
-doc_events["Purchase Invoice"]["before_cancel"] = [doc_events["Purchase Invoice"]["before_cancel"], f"{_budget_control}.check_capital_credit_cancel"]
+doc_events["Purchase Order"]["before_update_after_submit"] = (
+	f"{_budget_control}.validate_updated_order"  # Update Items
+)
+doc_events["Purchase Invoice"]["before_cancel"] = [
+	doc_events["Purchase Invoice"]["before_cancel"],
+	f"{_budget_control}.check_capital_credit_cancel",
+]
 doc_events["Journal Entry"]["before_cancel"] = f"{_budget_control}.check_capital_credit_cancel"
-for _dt in ("Payment Entry", "Journal Entry"):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
+for _dt in (
+	"Payment Entry",
+	"Journal Entry",
+):  # P2-T23: a payment of a claim's invoice waits on and respects a claim cancel
 	_before = doc_events.setdefault(_dt, {}).get("before_submit")
-	doc_events[_dt]["before_submit"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.examinations.remuneration_payment.check_paid_invoice"]
-for _dt in ("Payment Entry", "Purchase Invoice"):  # P3-T18: a payment exported to PFMS is withdrawn there before a cancel
+	doc_events[_dt]["before_submit"] = [
+		*([_before] if isinstance(_before, str) else _before or []),
+		"campus.examinations.remuneration_payment.check_paid_invoice",
+	]
+for _dt in (
+	"Payment Entry",
+	"Purchase Invoice",
+):  # P3-T18: a payment exported to PFMS is withdrawn there before a cancel
 	_before = doc_events[_dt].get("before_cancel")
-	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), "campus.research.pfms.refuse_exported_cancel"]
+	doc_events[_dt]["before_cancel"] = [
+		*([_before] if isinstance(_before, str) else _before or []),
+		"campus.research.pfms.refuse_exported_cancel",
+	]
 	_on = doc_events[_dt].get("on_cancel")
-	doc_events[_dt]["on_cancel"] = [*([_on] if isinstance(_on, str) else _on or []), "campus.research.pfms.allow_withdrawn_cancel"]
-for _dt in ("Purchase Order", "Purchase Invoice", "Journal Entry", "Expense Claim"):  # P3-T19: a closed sanction's lines stay
+	doc_events[_dt]["on_cancel"] = [
+		*([_on] if isinstance(_on, str) else _on or []),
+		"campus.research.pfms.allow_withdrawn_cancel",
+	]
+for _dt in (
+	"Purchase Order",
+	"Purchase Invoice",
+	"Journal Entry",
+	"Expense Claim",
+):  # P3-T19: a closed sanction's lines stay
 	_before = doc_events.setdefault(_dt, {}).get("before_cancel")
-	doc_events[_dt]["before_cancel"] = [*([_before] if isinstance(_before, str) else _before or []), f"{_budget_control}.refuse_cancel_on_closed"]
+	doc_events[_dt]["before_cancel"] = [
+		*([_before] if isinstance(_before, str) else _before or []),
+		f"{_budget_control}.refuse_cancel_on_closed",
+	]
 _validate = doc_events["Payment Entry"]["validate"]  # P3-T19: no deduction on a closed sanction
-doc_events["Payment Entry"]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate), f"{_budget_control}.validate_payment_deductions"]
-doc_events["Payment Entry"]["before_cancel"].append(f"{_budget_control}.refuse_payment_cancel_on_closed")  # P3-T19: its deductions stay
+doc_events["Payment Entry"]["validate"] = [
+	*([_validate] if isinstance(_validate, str) else _validate),
+	f"{_budget_control}.validate_payment_deductions",
+]
+doc_events["Payment Entry"]["before_cancel"].append(
+	f"{_budget_control}.refuse_payment_cancel_on_closed"
+)  # P3-T19: its deductions stay
 _consultancy = "campus.research.consultancy"  # P3-T20: consultancy invoices within the agreement; a shared invoice stays paid
 for _event, _method in (("before_submit", "check_invoice"), ("before_cancel", "refuse_invoice_cancel")):
 	_before = doc_events["Sales Invoice"].get(_event)
-	doc_events["Sales Invoice"][_event] = [*([_before] if isinstance(_before, str) else _before or []), f"{_consultancy}.{_method}"]
+	doc_events["Sales Invoice"][_event] = [
+		*([_before] if isinstance(_before, str) else _before or []),
+		f"{_consultancy}.{_method}",
+	]
 for _dt in ("Payment Entry", "Journal Entry"):
 	doc_events[_dt]["before_cancel"].append(f"{_consultancy}.refuse_payment_cancel")
 doc_events.setdefault("Unreconcile Payment", {})["before_submit"] = f"{_consultancy}.refuse_unreconcile"
@@ -333,7 +399,7 @@ doc_events.setdefault("Unreconcile Payment", {})["before_submit"] = f"{_consulta
 # Testing
 # -------
 
-# before_tests = "campus.install.before_tests"
+before_tests = "campus.tests.bootstrap.before_tests"
 
 # Extend DocType Class
 # ------------------------------
@@ -474,7 +540,10 @@ doc_events["Approval Request"] = {
 }
 doc_events["WhatsApp Message"] = {"on_update": "campus.campus_messaging.delivery.sync_whatsapp_status"}
 
-app_include_js = ["/assets/campus/js/approvals.js", "/assets/campus/js/attach_evidence.js"]  # P3-T04 Attach as Evidence
+app_include_js = [
+	"/assets/campus/js/approvals.js",
+	"/assets/campus/js/attach_evidence.js",
+]  # P3-T04 Attach as Evidence
 
 doctype_js = {
 	"Student Applicant": "public/js/student_applicant.js",
@@ -497,11 +566,17 @@ permission_query_conditions = {
 	**{dt: "campus.examinations.access.portal_permission_query" for dt in PORTAL_SCOPED},
 	**{dt: "campus.examinations.access.offering_permission_query" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_permission_query",
-	**{dt: "campus.academic_governance.access.permission_query" for dt in ("Body Meeting", "Meeting Action Item")},
+	**{
+		dt: "campus.academic_governance.access.permission_query"
+		for dt in ("Body Meeting", "Meeting Action Item")
+	},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_permission_query",
 	"Substitution": "campus.faculty.substitution_access.permission_query",
 	"Question Paper": "campus.examinations.question_papers.permission_query",
-	**{dt: "campus.examinations.question_papers.confidential_query" for dt in ("QP Setter Nomination", "QP Access Log")},
+	**{
+		dt: "campus.examinations.question_papers.confidential_query"
+		for dt in ("QP Setter Nomination", "QP Access Log")
+	},
 	"Question Bank Item": "campus.examinations.question_papers.bank_item_query",
 }
 has_permission = {
@@ -511,11 +586,17 @@ has_permission = {
 	**{dt: "campus.examinations.access.portal_has_permission" for dt in PORTAL_SCOPED},
 	**{dt: "campus.examinations.access.offering_has_permission" for dt in OFFERING_SCOPED},
 	"Student Result": "campus.examinations.access.result_has_permission",
-	**{dt: "campus.academic_governance.access.has_permission" for dt in ("Body Meeting", "Meeting Action Item")},
+	**{
+		dt: "campus.academic_governance.access.has_permission"
+		for dt in ("Body Meeting", "Meeting Action Item")
+	},
 	"Hall Ticket": "campus.examinations.access.hall_ticket_has_permission",
 	"Substitution": "campus.faculty.substitution_access.has_permission",
 	"Question Paper": "campus.examinations.question_papers.has_permission",
-	**{dt: "campus.examinations.question_papers.confidential_has_permission" for dt in ("QP Setter Nomination", "QP Access Log")},
+	**{
+		dt: "campus.examinations.question_papers.confidential_has_permission"
+		for dt in ("QP Setter Nomination", "QP Access Log")
+	},
 	"Question Bank Item": "campus.examinations.question_papers.bank_item_has_permission",
 	"File": "campus.examinations.question_papers.file_has_permission",
 }
@@ -560,7 +641,10 @@ doc_events["Project Update"] = {"validate": "campus.research.progress.validate_p
 # Course Outcomes once it has any
 for _dt in ("CIA Schedule", "Question Bank Item", "Answer Script Bundle"):
 	_validate = doc_events.setdefault(_dt, {}).get("validate")
-	doc_events[_dt]["validate"] = [*([_validate] if isinstance(_validate, str) else _validate or []), "campus.curriculum.outcomes.validate_co_tags"]
+	doc_events[_dt]["validate"] = [
+		*([_validate] if isinstance(_validate, str) else _validate or []),
+		"campus.curriculum.outcomes.validate_co_tags",
+	]
 # P3-T10: attainment runs are read by their programme's HOD and the offering's instructors (per-student marks: permlevel 1)
 for _dt, _kind in (("CO Attainment Run", "co_run"), ("PO Attainment Run", "po_run")):
 	permission_query_conditions[_dt] = f"campus.curriculum.attainment_access.{_kind}_query"
@@ -590,11 +674,26 @@ website_route_rules = [
 	{"from_route": "/campus-portal", "to_route": "campus_portal"},
 	*(
 		{"from_route": f"/campus-portal/{page}", "to_route": f"campus_portal/{page}"}
-		for page in ("fees", "attendance", "results", "circulars", "certificates", "grievances", "leave", "valuation", "feedback", "corrections", "profile")
+		for page in (
+			"fees",
+			"attendance",
+			"results",
+			"circulars",
+			"certificates",
+			"grievances",
+			"leave",
+			"valuation",
+			"feedback",
+			"corrections",
+			"profile",
+		)
 	),
 	{"from_route": "/campus-portal/faculty", "to_route": "campus_portal/faculty"},
 	*(
-		{"from_route": f"/campus-portal/faculty/{page.replace('_', '-')}", "to_route": f"campus_portal/faculty/{page}"}
+		{
+			"from_route": f"/campus-portal/faculty/{page.replace('_', '-')}",
+			"to_route": f"campus_portal/faculty/{page}",
+		}
 		for page in ("attendance", "cia", "course_plan", "leave", "mentees")
 	),
 ]

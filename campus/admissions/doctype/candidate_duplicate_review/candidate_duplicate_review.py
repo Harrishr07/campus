@@ -12,4 +12,7 @@ from frappe.model.document import Document
 class CandidateDuplicateReview(Document):
 	def validate(self):
 		if not self.is_new() and not self.flags.from_decide:
-			frappe.throw(_("A duplicate review changes only through its Link or Not Duplicate decision."), frappe.PermissionError)
+			frappe.throw(
+				_("A duplicate review changes only through its Link or Not Duplicate decision."),
+				frappe.PermissionError,
+			)

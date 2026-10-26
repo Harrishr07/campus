@@ -58,14 +58,27 @@ class ValidationFixture(EvidenceFixture):
 
 	def rule(self, rule_type, node, **values):
 		return frappe.get_doc(
-			{"doctype": "Validation Rule", "framework": FRAMEWORK, "rule_type": rule_type, "node": node, "message": f"{rule_type} failed", **values}
+			{
+				"doctype": "Validation Rule",
+				"framework": FRAMEWORK,
+				"rule_type": rule_type,
+				"node": node,
+				"message": f"{rule_type} failed",
+				**values,
+			}
 		).insert()
 
 	def answer(self, node, **values):
-		return frappe.get_doc({"doctype": "Metric Value", "cycle": self.cycle.name, "node": node, **values}).insert()
+		return frappe.get_doc(
+			{"doctype": "Metric Value", "cycle": self.cycle.name, "node": node, **values}
+		).insert()
 
 	def failures(self, **match):
-		return [row for row in validation.evaluate(self.cycle.name) if all(row.get(k) == v for k, v in match.items())]
+		return [
+			row
+			for row in validation.evaluate(self.cycle.name)
+			if all(row.get(k) == v for k, v in match.items())
+		]
 
 
 class TestRuleRecord(ValidationFixture):
@@ -102,7 +115,9 @@ class TestEachRuleType(ValidationFixture):
 
 	def test_required_evidence_without_a_slot_name_checks_the_required_slots(self):
 		self.rule("Required Evidence", N263)
-		self.assertEqual(self.failures(rule_type="Required Evidence"), [])  # no slot of the node is marked required
+		self.assertEqual(
+			self.failures(rule_type="Required Evidence"), []
+		)  # no slot of the node is marked required
 
 	def test_word_limit_uses_the_rule_limit_then_the_node_limit(self):
 		self.rule("Word Limit", N261, limit=3, severity="Warning")
@@ -171,12 +186,26 @@ class TestEachRuleType(ValidationFixture):
 		self.assertEqual(self.failures(), [])
 
 	def test_rules_of_another_framework_are_not_checked(self):
-		other = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": "VAL-OTHER-FW"}).insert()
-		frappe.get_doc(
-			{"doctype": "Framework Node", "framework": other.name, "code": "1", "title": "One", "node_type": "Criterion"}
+		other = frappe.get_doc(
+			{"doctype": "Accreditation Framework", "framework_name": "VAL-OTHER-FW"}
 		).insert()
 		frappe.get_doc(
-			{"doctype": "Validation Rule", "framework": other.name, "rule_type": "Non-empty", "node": f"{other.name}-1", "message": "x"}
+			{
+				"doctype": "Framework Node",
+				"framework": other.name,
+				"code": "1",
+				"title": "One",
+				"node_type": "Criterion",
+			}
+		).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Validation Rule",
+				"framework": other.name,
+				"rule_type": "Non-empty",
+				"node": f"{other.name}-1",
+				"message": "x",
+			}
 		).insert()
 		self.assertEqual(self.failures(), [])
 
@@ -218,7 +247,13 @@ class TestRunAndGate(ValidationFixture):
 		lifecycle.advance(self.cycle.name, comment="Accepted by the IQAC")
 		self.assertEqual(frappe.db.get_value("Accreditation Cycle", self.cycle.name, "status"), "IQAC Review")
 		note = frappe.get_all(
-			"Comment", {"reference_doctype": "Accreditation Cycle", "reference_name": self.cycle.name, "comment_type": "Comment"}, "content"
+			"Comment",
+			{
+				"reference_doctype": "Accreditation Cycle",
+				"reference_name": self.cycle.name,
+				"comment_type": "Comment",
+			},
+			"content",
 		)
 		self.assertTrue(any("Accepted by the IQAC" in row.content and "1" in row.content for row in note))
 
@@ -231,7 +266,9 @@ class TestRunAndGate(ValidationFixture):
 	def test_the_gate_checks_afresh_not_a_stale_run(self):
 		self.answer(N212, manual_value=5)
 		api.run_validation(self.cycle.name)
-		frappe.db.set_value("Validation Rule", {"framework": FRAMEWORK, "rule_type": "Word Limit"}, "enabled", 0)
+		frappe.db.set_value(
+			"Validation Rule", {"framework": FRAMEWORK, "rule_type": "Word Limit"}, "enabled", 0
+		)
 		self.rule("Range", N212, minimum=10, message="2.1.2 below 10")  # a new blocking rule after the run
 		lifecycle.advance(self.cycle.name)
 		with self.assertRaisesRegex(frappe.ValidationError, "below 10"):

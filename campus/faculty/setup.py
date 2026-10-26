@@ -10,7 +10,12 @@ from campus.faculty.timetable.setup import setup_timetable
 
 MODULE = "Faculty"
 CADRES = ["Professor", "Associate Professor", "Assistant Professor"]
-QUALIFICATIONS = ["Diploma", "Graduate", "Post Graduate", "Doctorate"]  # lowest first; the rank order of qualification.py
+QUALIFICATIONS = [
+	"Diploma",
+	"Graduate",
+	"Post Graduate",
+	"Doctorate",
+]  # lowest first; the rank order of qualification.py
 PHD_STATUSES = ["Not Pursuing", "Pursuing", "Submitted", "Awarded"]
 NET_SET = ["NET", "SET", "SLET"]
 TEACHING = 'eval:doc.oc_staff_type=="Teaching"'
@@ -22,7 +27,12 @@ def options(values):
 
 def setup_faculty():
 	create_custom_fields(
-		{"Employee": employee_fields(), "Job Applicant": applicant_fields(), "Training Event": training_event_fields(), "Appraisal": appraisal_fields()},
+		{
+			"Employee": employee_fields(),
+			"Job Applicant": applicant_fields(),
+			"Training Event": training_event_fields(),
+			"Appraisal": appraisal_fields(),
+		},
 		update=True,
 	)
 	setup_timetable()
@@ -39,12 +49,16 @@ def setup_faculty():
 # Once a doctype has Custom DocPerms, the site ignores its standard DocPerms: a later Education upgrade to the
 # Course Schedule or Student Attendance permissions does not reach the site (review in the Role Permission Manager).
 TEACHING_STAFF_RIGHTS = {
-	("Course Schedule", "Instructor"): ("select",),  # pick the period of an Attendance Correction Request at the desk
+	("Course Schedule", "Instructor"): (
+		"select",
+	),  # pick the period of an Attendance Correction Request at the desk
 	("Student Attendance", "HOD"): ("read", "report"),  # the Attendance Shortage report
 	("Student Attendance", "Class Advisor"): ("read", "report"),
 	("Instructor", "Academics User"): ("read", "report"),
 }
-GRANTED_RIGHTS_KEY = "campus_teaching_staff_rights"  # global default: the TEACHING_STAFF_RIGHTS rules already granted
+GRANTED_RIGHTS_KEY = (
+	"campus_teaching_staff_rights"  # global default: the TEACHING_STAFF_RIGHTS rules already granted
+)
 
 
 def grant_teaching_staff_rights():
@@ -56,7 +70,9 @@ def grant_teaching_staff_rights():
 		key = f"{doctype}:{role}"
 		if key in granted:
 			continue
-		if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}):
+		if not frappe.db.exists(
+			"Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}
+		):
 			add_rule(doctype, role, rights)
 		granted.add(key)
 	frappe.db.set_global(GRANTED_RIGHTS_KEY, frappe.as_json(sorted(granted), indent=None))
@@ -111,7 +127,9 @@ ALLOCATION_POLICY = "Course Allocation - HOD"
 
 def seed_course_allocation_policy():
 	"""Course Allocations are approved by the HOD of the allocated department, unless the college has its own policy."""
-	if frappe.db.exists("Approval Policy", {"document_type": "Course Allocation"}) or not frappe.db.exists("Position", "HOD"):
+	if frappe.db.exists("Approval Policy", {"document_type": "Course Allocation"}) or not frappe.db.exists(
+		"Position", "HOD"
+	):
 		return
 	frappe.get_doc(
 		{
@@ -137,8 +155,12 @@ def seed_appraisal_review_policy():
 			frappe.db.set_value("Approval Policy", hod, "condition", NOT_HOD)
 	elif not frappe.db.exists("Approval Policy", {"document_type": "Appraisal Review"}):
 		insert_review_policy(APPRAISAL_REVIEW_POLICY, NOT_HOD, 0, "HOD", "department")
-	if not frappe.db.exists("Approval Policy", APPRAISAL_REVIEW_PRINCIPAL_POLICY) and frappe.db.exists("Position", "PRINCIPAL"):
-		insert_review_policy(APPRAISAL_REVIEW_PRINCIPAL_POLICY, 'doc.get("appraisee_is_hod")', 1, "PRINCIPAL", "company")
+	if not frappe.db.exists("Approval Policy", APPRAISAL_REVIEW_PRINCIPAL_POLICY) and frappe.db.exists(
+		"Position", "PRINCIPAL"
+	):
+		insert_review_policy(
+			APPRAISAL_REVIEW_PRINCIPAL_POLICY, 'doc.get("appraisee_is_hod")', 1, "PRINCIPAL", "company"
+		)
 
 
 def insert_review_policy(name, condition, priority, position, scope_field):
@@ -153,7 +175,11 @@ def insert_review_policy(name, condition, priority, position, scope_field):
 def grant_employee_role(employee, method=None):
 	"""Teaching staff with a login get the HRMS Employee role (it carries their rights on Appraisal; Appraisal permissions
 	are HRMS's and are not copied into Custom DocPerm). Doc event of Employee and the onboarding helper."""
-	if employee.get("oc_staff_type") != "Teaching" or not employee.get("user_id") or employee.user_id == "Administrator":
+	if (
+		employee.get("oc_staff_type") != "Teaching"
+		or not employee.get("user_id")
+		or employee.user_id == "Administrator"
+	):
 		return
 	if "Employee" not in frappe.get_roles(employee.user_id):
 		frappe.get_doc("User", employee.user_id).add_roles("Employee")
@@ -217,25 +243,74 @@ def applicant_fields():
 	return [
 		field("oc_cadre", "Select", "Cadre", "designation", options=options(CADRES)),
 		*qualification_fields("oc_cadre"),
-		field("oc_qualification_shortfall", "Small Text", "Shortfall Against Faculty Norm", "oc_prior_teaching_experience", read_only=1),
+		field(
+			"oc_qualification_shortfall",
+			"Small Text",
+			"Shortfall Against Faculty Norm",
+			"oc_prior_teaching_experience",
+			read_only=1,
+		),
 	]
 
 
 def qualification_fields(insert_after):
 	return [
-		field("oc_highest_qualification", "Select", "Highest Qualification", insert_after, options=options(QUALIFICATIONS)),
-		field("oc_phd_status", "Select", "PhD Status", "oc_highest_qualification", options=options(PHD_STATUSES)),
-		field("oc_phd_awarded_on", "Date", "PhD Awarded On", "oc_phd_status", depends_on='eval:doc.oc_phd_status=="Awarded"'),
+		field(
+			"oc_highest_qualification",
+			"Select",
+			"Highest Qualification",
+			insert_after,
+			options=options(QUALIFICATIONS),
+		),
+		field(
+			"oc_phd_status", "Select", "PhD Status", "oc_highest_qualification", options=options(PHD_STATUSES)
+		),
+		field(
+			"oc_phd_awarded_on",
+			"Date",
+			"PhD Awarded On",
+			"oc_phd_status",
+			depends_on='eval:doc.oc_phd_status=="Awarded"',
+		),
 		field("oc_net_set", "Select", "NET / SET / SLET", "oc_phd_awarded_on", options=options(NET_SET)),
-		field("oc_prior_teaching_experience", "Float", "Teaching Experience Before Joining (Years)", "oc_net_set"),
+		field(
+			"oc_prior_teaching_experience",
+			"Float",
+			"Teaching Experience Before Joining (Years)",
+			"oc_net_set",
+		),
 	]
 
 
 def field(fieldname, fieldtype, label, insert_after, **kwargs):
-	return {"fieldname": fieldname, "fieldtype": fieldtype, "label": label, "insert_after": insert_after, "module": MODULE, "permlevel": 0, **kwargs}
+	return {
+		"fieldname": fieldname,
+		"fieldtype": fieldtype,
+		"label": label,
+		"insert_after": insert_after,
+		"module": MODULE,
+		"permlevel": 0,
+		**kwargs,
+	}
 
 
-PERM_FLAGS = ("read", "write", "create", "delete", "submit", "cancel", "amend", "report", "export", "import", "share", "print", "email", "select", "if_owner")
+PERM_FLAGS = (
+	"read",
+	"write",
+	"create",
+	"delete",
+	"submit",
+	"cancel",
+	"amend",
+	"report",
+	"export",
+	"import",
+	"share",
+	"print",
+	"email",
+	"select",
+	"if_owner",
+)
 PROFILE_FIELDS_ONCE_AT_PERMLEVEL_ONE = (
 	"oc_aicte_faculty_id", "oc_highest_qualification", "oc_phd_status", "oc_phd_awarded_on", "oc_net_set",
 	"oc_prior_teaching_experience", "oc_qualification_shortfall", "oc_qualification_override_reason", "oc_qualification_override_by",
@@ -253,20 +328,29 @@ def undo_permlevel_one():
 	"""
 	for fieldname in PROFILE_FIELDS_ONCE_AT_PERMLEVEL_ONE:
 		frappe.db.set_value("Custom Field", {"dt": "Employee", "fieldname": fieldname}, "permlevel", 0)
-	custom = frappe.get_all("Custom DocPerm", {"parent": "Employee"}, ["name", "role", "permlevel", *PERM_FLAGS])
+	custom = frappe.get_all(
+		"Custom DocPerm", {"parent": "Employee"}, ["name", "role", "permlevel", *PERM_FLAGS]
+	)
 	if not custom:
 		return
 	if copies_standard_permissions(custom):
 		frappe.db.delete("Custom DocPerm", {"parent": "Employee"})
 	else:
-		frappe.db.delete("Custom DocPerm", {"parent": "Employee", "permlevel": 1, "role": ["in", ["HR Manager", "HR User", "Principal"]]})
+		frappe.db.delete(
+			"Custom DocPerm",
+			{"parent": "Employee", "permlevel": 1, "role": ["in", ["HR Manager", "HR User", "Principal"]]},
+		)
 	frappe.clear_cache(doctype="Employee")
 
 
 def copies_standard_permissions(custom):
 	"""True when the permlevel 0 and 1 Custom DocPerm rows are the standard rows plus only HR Manager, HR User and Principal at permlevel 1."""
 	standard = frappe.get_all("DocPerm", {"parent": "Employee"}, ["role", "permlevel", *PERM_FLAGS])
-	ours = {(r.role, r.permlevel) for r in custom if r.permlevel == 1 and r.role in ("HR Manager", "HR User", "Principal")}
+	ours = {
+		(r.role, r.permlevel)
+		for r in custom
+		if r.permlevel == 1 and r.role in ("HR Manager", "HR User", "Principal")
+	}
 	rest = [r for r in custom if (r.role, r.permlevel) not in ours]
 	key = lambda r: tuple(sorted((k, v or 0) for k, v in r.items() if k != "name"))  # noqa: E731
 	return sorted(map(key, rest)) == sorted(map(key, standard))

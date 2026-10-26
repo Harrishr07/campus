@@ -30,7 +30,12 @@ def data(filters):
 	conditions = {"company": filters.company}
 	if filters.exam_session:
 		conditions["exam_session"] = filters.exam_session
-	plans = {p.name: p for p in frappe.get_list("Seating Plan", filters=conditions, fields=["name", "exam_session", "exam_date", "slot"])}
+	plans = {
+		p.name: p
+		for p in frappe.get_list(
+			"Seating Plan", filters=conditions, fields=["name", "exam_session", "exam_date", "slot"]
+		)
+	}
 	seats = frappe.get_all(
 		"Seating Plan Seat", {"parenttype": "Seating Plan", "parent": ["in", list(plans) or [""]], "absent": 1},
 		["parent", "course", "student", "student_name", "room", "seat_label"],
@@ -40,4 +45,7 @@ def data(filters):
 		**{k: s[k] for k in ("course", "student", "student_name", "room", "seat_label")}}
 		for s in seats
 	]  # fmt: skip
-	return sorted(rows, key=lambda r: (str(r["exam_date"] or ""), r["slot"] or "", r["course"] or "", r["student"] or ""))
+	return sorted(
+		rows,
+		key=lambda r: (str(r["exam_date"] or ""), r["slot"] or "", r["course"] or "", r["student"] or ""),
+	)

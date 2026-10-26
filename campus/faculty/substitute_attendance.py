@@ -25,7 +25,9 @@ LIVE_GRANT = "Confirmed"
 
 def granting_substitution(user, course_schedule):
 	"""Name of the Confirmed Substitution that gives `user` this period, or None."""
-	return frappe.db.get_value("Substitution", {"course_schedule": course_schedule, "substitute_user": user, "status": LIVE_GRANT})
+	return frappe.db.get_value(
+		"Substitution", {"course_schedule": course_schedule, "substitute_user": user, "status": LIVE_GRANT}
+	)
 
 
 def can_mark(user, course_schedule):
@@ -44,12 +46,23 @@ def mark(substitution, present=None, absent=None):
 def mark_period(course_schedule, present, absent):
 	"""Write Present / Absent for students of the period's Student Group (the caller has authorised the period)."""
 	schedule = frappe.db.get_value(
-		"Course Schedule", course_schedule, ["student_group", "schedule_date", "oc_session_state"], as_dict=True, for_update=True
+		"Course Schedule",
+		course_schedule,
+		["student_group", "schedule_date", "oc_session_state"],
+		as_dict=True,
+		for_update=True,
 	)  # one marking of a period at a time
 	if getdate(schedule.schedule_date) > getdate(today()):
 		frappe.throw(_("Attendance cannot be marked for a period that has not happened yet."))
 	session_states.check_markable(course_schedule, schedule.oc_session_state)
-	roll = dict(frappe.get_all("Student Group Student", {"parent": schedule.student_group, "active": 1}, ["student", "student_name"], as_list=True))
+	roll = dict(
+		frappe.get_all(
+			"Student Group Student",
+			{"parent": schedule.student_group, "active": 1},
+			["student", "student_name"],
+			as_list=True,
+		)
+	)
 	chosen = [*present, *absent]
 	if len(set(chosen)) != len(chosen):
 		frappe.throw(_("A student is listed more than once."))
@@ -68,14 +81,20 @@ def record(student, student_name, status, course_schedule, schedule, correction=
 	cancels it and writes a new record (same grant, same checks); the same status changes nothing. `correction`: an
 	approved Attendance Correction Request is applying it, past the cut-off (attendance_corrections.guard_record)."""
 	existing = frappe.db.get_value(
-		"Student Attendance", {"student": student, "course_schedule": course_schedule, "docstatus": 1}, ["name", "status"], as_dict=True, for_update=True
+		"Student Attendance",
+		{"student": student, "course_schedule": course_schedule, "docstatus": 1},
+		["name", "status"],
+		as_dict=True,
+		for_update=True,
 	)  # a locking read: the period lock above is held
 	if existing and existing.status == status:
 		return existing.name
 	if existing:
 		old = frappe.get_doc("Student Attendance", existing.name, for_update=True)
 		old.flags.ignore_permissions = True
-		old.ignore_linked_doctypes = ("Attendance Correction Request",)  # the request applying this change names it
+		old.ignore_linked_doctypes = (
+			"Attendance Correction Request",
+		)  # the request applying this change names it
 		old.flags.attendance_correction = correction
 		old.cancel()
 	doc = frappe.get_doc(
@@ -84,7 +103,9 @@ def record(student, student_name, status, course_schedule, schedule, correction=
 			"course_schedule": course_schedule, "student_group": schedule.student_group, "date": schedule.schedule_date,
 		}
 	)  # fmt: skip
-	doc.flags.ignore_permissions = True  # the Confirmed Substitution is the permission, resolved above on the server
+	doc.flags.ignore_permissions = (
+		True  # the Confirmed Substitution is the permission, resolved above on the server
+	)
 	doc.flags.attendance_correction = correction
 	doc.insert()
 	doc.submit()

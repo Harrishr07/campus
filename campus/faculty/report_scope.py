@@ -18,4 +18,10 @@ def report_filters(filters):
 
 
 def department_column():
-	return {"fieldname": "department", "label": frappe._("Department"), "fieldtype": "Link", "options": "Department", "width": 260}
+	return {
+		"fieldname": "department",
+		"label": frappe._("Department"),
+		"fieldtype": "Link",
+		"options": "Department",
+		"width": 260,
+	}

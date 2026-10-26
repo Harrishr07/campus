@@ -44,7 +44,11 @@ def template_for(offering):
 	regulation = curriculum and frappe.db.get_value("Curriculum", curriculum, "regulation")
 	course = offering_course(offering)
 	if not course["configured"]:  # blank: refused, never a guessed Theory (R-08)
-		frappe.throw(_("Course {0} has no exam type; set it on the curriculum first.").format(frappe.bold(escape_html(course["course"]))))
+		frappe.throw(
+			_("Course {0} has no exam type; set it on the curriculum first.").format(
+				frappe.bold(escape_html(course["course"]))
+			)
+		)
 	course_type = course["course_type"]
 	template = frappe.db.get_value(TEMPLATE, {"regulation": regulation, "course_type": course_type})
 	if not template:
@@ -79,8 +83,16 @@ class SheetCIA:
 		rows = []
 		for student in students:
 			for key, question in questions.items():
-				row = existing.get((student, *key)) or frappe._dict(student=student, component=key[0], question=key[1])
-				row.update({"max_marks": question.max_marks, "course_outcome": question.course_outcome, "bloom_level": question.bloom_level})
+				row = existing.get((student, *key)) or frappe._dict(
+					student=student, component=key[0], question=key[1]
+				)
+				row.update(
+					{
+						"max_marks": question.max_marks,
+						"course_outcome": question.course_outcome,
+						"bloom_level": question.bloom_level,
+					}
+				)
 				rows.append(row)
 		self.sheet.set("cia_marks", rows)
 
@@ -97,17 +109,23 @@ class SheetCIA:
 				)
 
 	def consolidate(self):
-		totals = cia_rules.component_totals((r.student, r.component, r.marks, r.absent) for r in self.sheet.cia_marks)
+		totals = cia_rules.component_totals(
+			(r.student, r.component, r.marks, r.absent) for r in self.sheet.cia_marks
+		)
 		components = [(c.component, c.max_marks, c.weight) for c in self.template.components]
 		for row in self.sheet.marks:
 			marks = {c: totals.get((row.student, c), 0.0) for c, _max, _weight in components}
 			row.cia_attendance = self.attendance_marks(row.student)
-			row.cia = cia_rules.converted_cia(components, marks, row.cia_attendance, self.template.round_to_integer)
+			row.cia = cia_rules.converted_cia(
+				components, marks, row.cia_attendance, self.template.round_to_integer
+			)
 
 	def attendance_marks(self, student):
 		if not self.template.includes_attendance_marks:
 			return 0
-		return min(attendance_marks(student, self.sheet.course_offering)["marks"], self.template.attendance_max)
+		return min(
+			attendance_marks(student, self.sheet.course_offering)["marks"], self.template.attendance_max
+		)
 
 
 def cia_snapshot(sheet):
@@ -133,12 +151,16 @@ def lock_due_schedules():
 			frappe.db.commit()  # nosemgrep: one schedule per transaction, a failure must not undo the others
 		except Exception:
 			frappe.db.rollback()
-			frappe.log_error(title=_("CIA lock failed for {0}").format(schedule), message=frappe.get_traceback())
+			frappe.log_error(
+				title=_("CIA lock failed for {0}").format(schedule), message=frappe.get_traceback()
+			)
 
 
 def lock_schedule(schedule):
 	"""Consolidate the schedule's sheets once after its deadline; a no-op when stamped already or not yet due."""
-	values = frappe.db.get_value(SCHEDULE, schedule, ["entry_deadline", "locked_on"], as_dict=True, for_update=True)
+	values = frappe.db.get_value(
+		SCHEDULE, schedule, ["entry_deadline", "locked_on"], as_dict=True, for_update=True
+	)
 	if not values or values.locked_on or get_datetime(values.entry_deadline) >= now_datetime():
 		return
 	for sheet in frappe.get_all("Mark Sheet Entry", {"cia_schedule": schedule}, ["name", "exam_session"]):

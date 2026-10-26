@@ -22,7 +22,9 @@ def make_gender(name):
 
 def make_role_user(email, roles):
 	if not frappe.db.exists("User", email):
-		frappe.get_doc({"doctype": "User", "email": email, "first_name": "Hostel", "send_welcome_email": 0}).insert()
+		frappe.get_doc(
+			{"doctype": "User", "email": email, "first_name": "Hostel", "send_welcome_email": 0}
+		).insert()
 	user = frappe.get_doc("User", email)
 	for role in roles:
 		if not frappe.db.exists("Role", role):
@@ -80,16 +82,24 @@ class TestHostelMasters(CampusTestCase):
 
 	# fixtures
 	def make_hostel(self, name, gender, company=TRUST):
-		return frappe.get_doc({"doctype": "Hostel", "hostel_name": name, "company": company, "gender": gender}).insert()
+		return frappe.get_doc(
+			{"doctype": "Hostel", "hostel_name": name, "company": company, "gender": gender}
+		).insert()
 
 	def make_room(self, hostel, floor_name, room_no, room_type="Double"):
 		block_name = f"B-{floor_name}"
 		if not frappe.db.exists("Hostel Block", f"{hostel.name}-{block_name}"):
-			frappe.get_doc({"doctype": "Hostel Block", "hostel": hostel.name, "block_name": block_name}).insert()
+			frappe.get_doc(
+				{"doctype": "Hostel Block", "hostel": hostel.name, "block_name": block_name}
+			).insert()
 		floor_id = f"{hostel.name}-{block_name}-{floor_name}"
-		floor = frappe.get_doc("Hostel Floor", floor_id) if frappe.db.exists("Hostel Floor", floor_id) else frappe.get_doc(
-			{"doctype": "Hostel Floor", "block": f"{hostel.name}-{block_name}", "floor_name": floor_name}
-		).insert()
+		floor = (
+			frappe.get_doc("Hostel Floor", floor_id)
+			if frappe.db.exists("Hostel Floor", floor_id)
+			else frappe.get_doc(
+				{"doctype": "Hostel Floor", "block": f"{hostel.name}-{block_name}", "floor_name": floor_name}
+			).insert()
+		)
 		if not frappe.db.exists("Hostel Room Type", room_type):
 			frappe.get_doc({"doctype": "Hostel Room Type", "room_type_name": room_type}).insert()
 		return frappe.get_doc(
@@ -122,7 +132,9 @@ class TestHostelMasters(CampusTestCase):
 		room = frappe.get_doc("Hostel Room", self.room.name)
 		self.assertTrue(hostel.asset_location)
 		self.assertTrue(room.asset_location)
-		self.assertEqual(frappe.db.get_value("Location", room.asset_location, "parent_location"), hostel.asset_location)
+		self.assertEqual(
+			frappe.db.get_value("Location", room.asset_location, "parent_location"), hostel.asset_location
+		)
 
 	# capacity and beds
 	def test_capacity_equals_active_beds(self):
@@ -260,14 +272,19 @@ class TestHostelMasters(CampusTestCase):
 		self.assertTrue(frappe.has_permission("Hostel Fee Rate", "create", user=accounts))
 		self.assertTrue(frappe.has_permission("Hostel Settings", "write", user=accounts))
 		self.assertFalse(frappe.has_permission("Hostel Bed", "create", user=accounts))
-		self.assertFalse(frappe.has_permission("Hostel", "read", user=make_role_user("hostel-none@example.com", [])))
+		self.assertFalse(
+			frappe.has_permission("Hostel", "read", user=make_role_user("hostel-none@example.com", []))
+		)
 
 	# fee rate
 	def make_rate(self, items):
 		return frappe.get_doc(
 			{
-				"doctype": "Hostel Fee Rate", "company": TRUST, "academic_year": self.academic_year(),
-				"room_type": "Double", "items": items,
+				"doctype": "Hostel Fee Rate",
+				"company": TRUST,
+				"academic_year": self.academic_year(),
+				"room_type": "Double",
+				"items": items,
 			}
 		).insert()
 
@@ -275,13 +292,22 @@ class TestHostelMasters(CampusTestCase):
 		name = "Hostel Test AY"
 		if not frappe.db.exists("Academic Year", name):
 			frappe.get_doc(
-				{"doctype": "Academic Year", "academic_year_name": name, "year_start_date": today(), "year_end_date": today()}
+				{
+					"doctype": "Academic Year",
+					"academic_year_name": name,
+					"year_start_date": today(),
+					"year_end_date": today(),
+				}
 			).insert()
 		return name
 
 	def test_fee_rate_lookup(self):
-		self.make_rate([{"fee_category": "Hostel", "amount": 30000}, {"fee_category": "Caution Deposit", "amount": 5000}])
-		self.assertEqual(fee_rate(TRUST, self.academic_year(), "Double"), {"Hostel": 30000, "Caution Deposit": 5000})
+		self.make_rate(
+			[{"fee_category": "Hostel", "amount": 30000}, {"fee_category": "Caution Deposit", "amount": 5000}]
+		)
+		self.assertEqual(
+			fee_rate(TRUST, self.academic_year(), "Double"), {"Hostel": 30000, "Caution Deposit": 5000}
+		)
 		self.assertEqual(fee_rate(TRUST, self.academic_year(), "Single"), {})
 
 	def test_fee_rate_refuses_duplicate_category_and_negative(self):
@@ -297,7 +323,12 @@ class TestHostelMasters(CampusTestCase):
 
 	# settings
 	def test_settings_need_matching_fee_heads(self):
-		doc = {"doctype": "Hostel Settings", "company": TRUST, "hostel_fee_category": "Hostel", "caution_deposit_category": "Caution Deposit"}
+		doc = {
+			"doctype": "Hostel Settings",
+			"company": TRUST,
+			"hostel_fee_category": "Hostel",
+			"caution_deposit_category": "Caution Deposit",
+		}
 		frappe.get_doc(doc).insert()
 		frappe.db.delete("Hostel Settings", {"company": TRUST})
 		with self.assertRaises(frappe.ValidationError):

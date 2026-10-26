@@ -31,7 +31,10 @@ class ExamRuleSet(Document):
 				frappe.throw(_("Row {0}: an ESE-alone attempt rule needs its ESE minimum %.").format(row.idx))
 		if not 0 <= self.internal_only_min_pct <= 100:
 			frappe.throw(_("The Internal Only pass % lies within 0-100."))
-		for field in ("third_valuation_diff_pct", "final_valuation_method"):  # records built from a dict skip defaults
+		for field in (
+			"third_valuation_diff_pct",
+			"final_valuation_method",
+		):  # records built from a dict skip defaults
 			if self.get(field) in (None, ""):
 				self.set(field, self.meta.get_field(field).default)
 		if not 0 < flt(self.third_valuation_diff_pct) <= 100:

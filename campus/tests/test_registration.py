@@ -11,7 +11,14 @@ from campus.curriculum.api import generate_offerings
 from campus.curriculum.report.elective_enrolment.elective_enrolment import execute as elective_report
 from campus.tests import approval_fixtures as fx
 from campus.tests.factories import make_company, make_user
-from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year, year_name
+from campus.tests.test_regulation import (
+	enroll,
+	make_program,
+	make_regulation,
+	make_student,
+	make_year,
+	year_name,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE = "Registration Test College"
@@ -28,12 +35,22 @@ TERM_ODD, TERM_EVEN = "Reg Odd", "Reg Even"
 
 # course -> (semester, credits, elective group). Credits are fixed per row (override) for clear arithmetic.
 COURSES = {
-	"REG A": (5, 18, None), "REG B": (5, 18, None), "REG C": (5, 3, None), "REG D": (5, 3, None),
+	"REG A": (5, 18, None),
+	"REG B": (5, 18, None),
+	"REG C": (5, 3, None),
+	"REG D": (5, 3, None),
 	"REG E": (3, 4, None),  # arrear course of an earlier odd semester
-	"REG D1": (5, 4, None), "REG D2": (5, 3, None),
-	"REG AD1": (5, 4, None), "REG AD2": (5, 4, None), "REG AD3": (5, 2, None), "REG AD4": (5, 2, None),
+	"REG D1": (5, 4, None),
+	"REG D2": (5, 3, None),
+	"REG AD1": (5, 4, None),
+	"REG AD2": (5, 4, None),
+	"REG AD3": (5, 2, None),
+	"REG AD4": (5, 2, None),
 	"REG AD5": (5, 2, None),
-	"REG EL1": (5, 3, "G1"), "REG EL2": (5, 3, "G1"), "REG EL3": (5, 3, "G1"), "REG EL4": (5, 3, "G2"),
+	"REG EL1": (5, 3, "G1"),
+	"REG EL2": (5, 3, "G1"),
+	"REG EL3": (5, 3, "G1"),
+	"REG EL4": (5, 3, "G2"),
 	"REG S4": (4, 3, None),  # an even-semester course
 }
 STUDENTS = [f"Regs{n}" for n in range(1, 7)]
@@ -42,7 +59,9 @@ STUDENTS = [f"Regs{n}" for n in range(1, 7)]
 def clear_previous_run():
 	registrations = frappe.get_all("Course Registration", {"company": COLLEGE}, pluck="name") or [""]
 	requests = frappe.get_all(
-		"Approval Request", {"reference_doctype": "Course Registration", "reference_name": ["in", registrations]}, pluck="name"
+		"Approval Request",
+		{"reference_doctype": "Course Registration", "reference_name": ["in", registrations]},
+		pluck="name",
 	) or [""]
 	for child in ("Approval Request Approver", "Approval Action"):
 		frappe.db.delete(child, {"parent": ["in", requests]})
@@ -52,7 +71,9 @@ def clear_previous_run():
 	frappe.db.delete("Notification Log", {"document_type": "Course Registration"})
 	students = frappe.get_all("Student", {"oc_company": COLLEGE}, pluck="name") or [""]
 	frappe.db.delete("Course Enrollment", {"student": ["in", students]})
-	offerings = frappe.get_all("Student Group", {"oc_company": COLLEGE, "group_based_on": "Course"}, pluck="name") or [""]
+	offerings = frappe.get_all(
+		"Student Group", {"oc_company": COLLEGE, "group_based_on": "Course"}, pluck="name"
+	) or [""]
 	frappe.db.delete("Student Group Student", {"parent": ["in", offerings]})
 	frappe.db.delete("Registration Window", {"company": COLLEGE})
 
@@ -72,7 +93,9 @@ def clear_world():
 
 
 def make_term(term_name, start, end):
-	existing = frappe.db.get_value("Academic Term", {"academic_year": year_name("2022"), "term_name": term_name})
+	existing = frappe.db.get_value(
+		"Academic Term", {"academic_year": year_name("2022"), "term_name": term_name}
+	)
 	if existing:
 		return existing
 	return frappe.get_doc(
@@ -97,7 +120,13 @@ def make_curriculum(regulation):
 		for course, (semester, credits, group) in COURSES.items()
 	]  # fmt: skip
 	doc = frappe.get_doc(
-		{"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "status": "Draft", "courses": rows}
+		{
+			"doctype": "Curriculum",
+			"program": PROGRAM,
+			"regulation": regulation,
+			"status": "Draft",
+			"courses": rows,
+		}
 	).insert()
 	groups = {}
 	for key, cap, choose in (("G1", 1, 2), ("G2", 0, 1)):
@@ -196,7 +225,9 @@ class RegistrationTestCase(CampusTestCase):
 		)[0][0]
 
 	def enrollments(self, student, course):
-		return frappe.db.count("Course Enrollment", {"student": self.students[student].name, "course": course})
+		return frappe.db.count(
+			"Course Enrollment", {"student": self.students[student].name, "course": course}
+		)
 
 
 class TestOfferingsAndRecords(RegistrationTestCase):
@@ -214,15 +245,24 @@ class TestOfferingsAndRecords(RegistrationTestCase):
 		self.assertNotIn("REG S4", {g.course for g in groups})
 		sample = next(g for g in groups if g.course == "REG A" and g.oc_section == "B")
 		self.assertEqual(sample.name, f"REG A-{self.odd}-B")
-		self.assertEqual((sample.group_based_on, sample.oc_semester, sample.oc_course_category), ("Course", 5, "PCC"))
+		self.assertEqual(
+			(sample.group_based_on, sample.oc_semester, sample.oc_course_category), ("Course", 5, "PCC")
+		)
 		self.assertEqual(sample.oc_company, COLLEGE)
 
 	def test_generator_is_idempotent(self):
-		before = frappe.db.count("Student Group", {"oc_curriculum": self.curriculum.name, "academic_term": self.odd})
+		before = frappe.db.count(
+			"Student Group", {"oc_curriculum": self.curriculum.name, "academic_term": self.odd}
+		)
 		result = generate_offerings(self.curriculum.name, self.odd, ["A", "B"])
 		self.assertEqual(result["created"], [])
 		self.assertEqual(len(result["existing"]), before)
-		self.assertEqual(frappe.db.count("Student Group", {"oc_curriculum": self.curriculum.name, "academic_term": self.odd}), before)
+		self.assertEqual(
+			frappe.db.count(
+				"Student Group", {"oc_curriculum": self.curriculum.name, "academic_term": self.odd}
+			),
+			before,
+		)
 
 	def test_explicit_semester_parity_on_the_term_overrides_the_name(self):
 		self.assertTrue(frappe.get_meta("Academic Term").has_field("oc_semester_parity"))
@@ -237,7 +277,15 @@ class TestOfferingsAndRecords(RegistrationTestCase):
 		self.assertEqual(result["created"], [f"REG S4-{self.even}-A"])
 
 	def test_generator_refuses_a_draft_curriculum(self):
-		draft = frappe.get_doc({"doctype": "Curriculum", "program": PROGRAM, "regulation": self.regulation, "version": 2, "courses": [{"semester": 1, "course": "REG C", "category": "PCC", "lecture_periods": 3}]})
+		draft = frappe.get_doc(
+			{
+				"doctype": "Curriculum",
+				"program": PROGRAM,
+				"regulation": self.regulation,
+				"version": 2,
+				"courses": [{"semester": 1, "course": "REG C", "category": "PCC", "lecture_periods": 3}],
+			}
+		)
 		draft.insert()
 		with self.assertRaisesRegex(frappe.ValidationError, "Approved or Effective"):
 			generate_offerings(draft.name, self.odd, "A")
@@ -264,14 +312,19 @@ class TestRegistrationRules(RegistrationTestCase):
 		doc = self.regular("REG A", "REG C")
 		self.assertEqual([i.credits for i in doc.items], [18, 3])
 		self.assertEqual(doc.total_credits, 21)
-		self.assertEqual((doc.curriculum, doc.regulation, doc.company), (self.curriculum.name, self.regulation, COLLEGE))
+		self.assertEqual(
+			(doc.curriculum, doc.regulation, doc.company), (self.curriculum.name, self.regulation, COLLEGE)
+		)
 
 	def test_course_outside_the_curriculum_is_rejected(self):
 		make_course("REG X")
 		self.assert_rejected([("REG X", "Regular")], "not in curriculum")
 
 	def test_over_36_credits_is_rejected_with_the_clause(self):
-		self.assert_rejected([("REG A", "Regular"), ("REG B", "Regular"), ("REG C", "Regular")], r"R2022 cl\. 6\.1: 39 credits registered; the maximum is 36")
+		self.assert_rejected(
+			[("REG A", "Regular"), ("REG B", "Regular"), ("REG C", "Regular")],
+			r"R2022 cl\. 6\.1: 39 credits registered; the maximum is 36",
+		)
 
 	def test_exactly_36_credits_is_accepted(self):
 		self.assertEqual(self.regular("REG A", "REG B").total_credits, 36)
@@ -295,19 +348,28 @@ class TestRegistrationRules(RegistrationTestCase):
 		self.assert_rejected([("REG C", "Regular"), ("REG C", "Regular")], "listed twice")
 
 	def test_additional_courses_not_allowed_before_semester_five(self):
-		self.assert_rejected([("REG AD3", "Additional")], r"R2022 cl\. 6\.3: additional courses are allowed from semester 5", semester=4)
+		self.assert_rejected(
+			[("REG AD3", "Additional")],
+			r"R2022 cl\. 6\.3: additional courses are allowed from semester 5",
+			semester=4,
+		)
 
 	def test_additional_credits_over_six_rejected(self):
-		self.assert_rejected([("REG AD1", "Additional"), ("REG AD2", "Additional")], r"8 additional credits; at most 6")
+		self.assert_rejected(
+			[("REG AD1", "Additional"), ("REG AD2", "Additional")], r"8 additional credits; at most 6"
+		)
 
 	def test_three_additional_courses_rejected_two_accepted(self):
 		self.assert_rejected(
-			[("REG AD3", "Additional"), ("REG AD4", "Additional"), ("REG AD5", "Additional")], r"3 additional courses; at most 2"
+			[("REG AD3", "Additional"), ("REG AD4", "Additional"), ("REG AD5", "Additional")],
+			r"3 additional courses; at most 2",
 		)
 		self.registration([("REG AD3", "Additional"), ("REG AD4", "Additional")])
 
 	def test_choose_n_counts_electives_held_from_earlier_registrations(self):
-		self.regular("REG EL1", "REG EL2").submit()  # fills choose-2 of G1 for student 0 (EL1 cap 1 is theirs)
+		self.regular(
+			"REG EL1", "REG EL2"
+		).submit()  # fills choose-2 of G1 for student 0 (EL1 cap 1 is theirs)
 		self.assert_rejected([("REG EL3", "Regular")], r"allows 2 course\(s\); 3 chosen")
 
 	def test_regular_course_of_another_semester_is_rejected_but_arrear_is_fine(self):
@@ -315,7 +377,9 @@ class TestRegistrationRules(RegistrationTestCase):
 		self.assertEqual(self.registration([("REG E", "Arrear")]).items[0].semester, 3)
 
 	def test_elective_group_choose_n_is_enforced(self):
-		self.assert_rejected([(c, "Regular") for c in ("REG EL1", "REG EL2", "REG EL3")], r"allows 2 course\(s\); 3 chosen")
+		self.assert_rejected(
+			[(c, "Regular") for c in ("REG EL1", "REG EL2", "REG EL3")], r"allows 2 course\(s\); 3 chosen"
+		)
 
 
 class TestDrops(RegistrationTestCase):
@@ -325,7 +389,9 @@ class TestDrops(RegistrationTestCase):
 		reg.submit()  # no policy yet: submits directly and enrolls
 
 	def test_dropping_seven_credits_is_rejected(self):
-		self.assert_rejected([("REG D1", "Dropped"), ("REG D2", "Dropped")], r"R2022 cl\. 6\.2: 7 credits dropped; at most 6")
+		self.assert_rejected(
+			[("REG D1", "Dropped"), ("REG D2", "Dropped")], r"R2022 cl\. 6\.2: 7 credits dropped; at most 6"
+		)
 
 	def test_dropping_after_thirty_days_is_rejected(self):
 		self.assert_rejected([("REG D2", "Dropped")], r"only until 2022-07-01", date=AFTER_DROP)
@@ -352,7 +418,9 @@ class TestDrops(RegistrationTestCase):
 class TestSeatCap(RegistrationTestCase):
 	def test_elective_at_its_seat_cap_rejects_new_registrations(self):
 		self.regular("REG EL1", student=0).submit()
-		self.assert_rejected([("REG EL1", "Regular")], r"R2022 cl\. 6\.4: elective REG EL1 is full: all 1 seats", student=1)
+		self.assert_rejected(
+			[("REG EL1", "Regular")], r"R2022 cl\. 6\.4: elective REG EL1 is full: all 1 seats", student=1
+		)
 
 	def test_last_seat_goes_to_the_first_submit_and_the_second_fails(self):
 		"""Both drafts pass the unlocked draft check while a seat is free. Submit then takes the Elective
@@ -377,7 +445,11 @@ class TestSeatCap(RegistrationTestCase):
 		doc = self.regular("REG EL1", student=0)
 		with patch("frappe.db.get_value", wraps=frappe.db.get_value) as get_value:
 			doc.submit()
-		locked = [c for c in get_value.call_args_list if c.kwargs.get("for_update") and c.args[0] == "Elective Group"]
+		locked = [
+			c
+			for c in get_value.call_args_list
+			if c.kwargs.get("for_update") and c.args[0] == "Elective Group"
+		]
 		self.assertTrue(locked)
 
 	def test_post_lock_seat_count_is_a_locking_read(self):
@@ -388,7 +460,13 @@ class TestSeatCap(RegistrationTestCase):
 		doc = self.regular("REG EL1", student=0)
 		with patch("frappe.db.sql", wraps=frappe.db.sql) as sql:
 			doc.submit()
-		counts = [str(c.args[0]) for c in sql.call_args_list if "tabStudent Group Student" in str(c.args[0]) and "COUNT" not in str(c.args[0]).upper() and str(c.args[0]).lstrip().upper().startswith("SELECT")]
+		counts = [
+			str(c.args[0])
+			for c in sql.call_args_list
+			if "tabStudent Group Student" in str(c.args[0])
+			and "COUNT" not in str(c.args[0]).upper()
+			and str(c.args[0]).lstrip().upper().startswith("SELECT")
+		]
 		locking = [q for q in counts if q.rstrip().upper().endswith("FOR UPDATE")]
 		self.assertTrue(locking, counts)
 
@@ -509,7 +587,9 @@ class TestApprovalAndEnrollment(RegistrationTestCase):
 		for course in ("REG C", "REG D"):
 			self.assertEqual(self.members(0, course), 1)
 			self.assertEqual(self.enrollments(0, course), 1)
-		self.assertEqual([i.offering for i in doc.items], [f"REG C-{self.odd}-B", f"REG D-{self.odd}-B"])  # class section B
+		self.assertEqual(
+			[i.offering for i in doc.items], [f"REG C-{self.odd}-B", f"REG D-{self.odd}-B"]
+		)  # class section B
 
 	def test_applying_the_enrollment_again_adds_nothing(self):
 		doc = self.approved_registration("REG C")
@@ -522,8 +602,13 @@ class TestApprovalAndEnrollment(RegistrationTestCase):
 
 	def test_course_enrollment_belongs_to_the_students_program_enrollment(self):
 		self.approved_registration("REG C")
-		enrollment = frappe.get_doc("Course Enrollment", {"student": self.students[0].name, "course": "REG C"})
-		self.assertEqual(frappe.db.get_value("Program Enrollment", enrollment.program_enrollment, "student"), self.students[0].name)
+		enrollment = frappe.get_doc(
+			"Course Enrollment", {"student": self.students[0].name, "course": "REG C"}
+		)
+		self.assertEqual(
+			frappe.db.get_value("Program Enrollment", enrollment.program_enrollment, "student"),
+			self.students[0].name,
+		)
 
 	def test_cancelling_reverses_the_enrollment(self):
 		doc = self.approved_registration("REG C")
@@ -542,13 +627,20 @@ class TestElectiveReport(RegistrationTestCase):
 		rows = self.run_report()
 		self.assertEqual(set(rows), {"REG EL1", "REG EL2", "REG EL3", "REG EL4"})
 		self.assertEqual(
-			(rows["REG EL1"]["seat_cap"], rows["REG EL1"]["enrolled"], rows["REG EL1"]["minimum"], rows["REG EL1"]["offerings"]),
+			(
+				rows["REG EL1"]["seat_cap"],
+				rows["REG EL1"]["enrolled"],
+				rows["REG EL1"]["minimum"],
+				rows["REG EL1"]["offerings"],
+			),
 			(1, 1, 10, 2),
 		)
 
 	def test_below_minimum_is_flagged_only_after_the_window_closes(self):
 		self.regular("REG EL4", student=0).submit()
-		with patch("campus.curriculum.report.elective_enrolment.elective_enrolment.today", return_value="2022-06-15"):
+		with patch(
+			"campus.curriculum.report.elective_enrolment.elective_enrolment.today", return_value="2022-06-15"
+		):
 			row = self.run_report()["REG EL4"]
 		self.assertEqual((row["status"], row["below_minimum"]), ("Filling", 0))
 		row = self.run_report()["REG EL4"]  # the real today is long after CLOSES

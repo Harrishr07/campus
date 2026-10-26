@@ -55,7 +55,16 @@ class AttainmentFixture(CampusTestCase):
 		return doc
 
 	def levels(self, doc):
-		fields = ("cia_percent", "cia_level", "ese_percent", "ese_level", "direct_level", "indirect_level", "final_level", "target_met")
+		fields = (
+			"cia_percent",
+			"cia_level",
+			"ese_percent",
+			"ese_level",
+			"direct_level",
+			"indirect_level",
+			"final_level",
+			"target_met",
+		)
 		return {r.co_code: tuple(shown(r.as_dict())[f] for f in fields) for r in doc.results}
 
 	def po_levels(self, doc):
@@ -73,13 +82,24 @@ class AttainmentFixture(CampusTestCase):
 class TestAttainmentPolicy(AttainmentFixture):
 	def test_the_demo_seed_is_idempotent_and_approves_the_matrix(self):
 		self.assertEqual(frappe.db.get_value("CO-PO Matrix", self.matrix, "docstatus"), 1)
-		counts = [frappe.db.count(d) for d in ("Program Outcome", "Course Outcome", "Attainment Policy", "CO-PO Matrix")]
+		counts = [
+			frappe.db.count(d)
+			for d in ("Program Outcome", "Course Outcome", "Attainment Policy", "CO-PO Matrix")
+		]
 		self.assertEqual(fx.seed_outcome_demo(), self.matrix)
-		self.assertEqual([frappe.db.count(d) for d in ("Program Outcome", "Course Outcome", "Attainment Policy", "CO-PO Matrix")], counts)
+		self.assertEqual(
+			[
+				frappe.db.count(d)
+				for d in ("Program Outcome", "Course Outcome", "Attainment Policy", "CO-PO Matrix")
+			],
+			counts,
+		)
 
 	def test_one_policy_per_regulation(self):
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Attainment Policy", "regulation": self.r22, **fx.POLICIES["R2022"]}).insert()
+			frappe.get_doc(
+				{"doctype": "Attainment Policy", "regulation": self.r22, **fx.POLICIES["R2022"]}
+			).insert()
 
 	def test_weights_add_up_to_100(self):
 		doc = frappe.get_doc("Attainment Policy", attainment.policy_for(self.r22))
@@ -117,17 +137,33 @@ class TestAttainmentPolicy(AttainmentFixture):
 		policy.reload()
 		policy.disabled = 1
 		policy.save()
-		new = frappe.get_doc({"doctype": "Attainment Policy", "regulation": self.r22, **fx.POLICIES["R2022"], "direct_weight": 70, "indirect_weight": 30}).insert()
+		new = frappe.get_doc(
+			{
+				"doctype": "Attainment Policy",
+				"regulation": self.r22,
+				**fx.POLICIES["R2022"],
+				"direct_weight": 70,
+				"indirect_weight": 30,
+			}
+		).insert()
 		self.assertEqual(attainment.policy_for(self.r22), new.name)
-		self.assertEqual(frappe.db.get_value("CO Attainment Run", run.name, ["policy", "direct_weight"]), (policy.name, 80))
+		self.assertEqual(
+			frappe.db.get_value("CO Attainment Run", run.name, ["policy", "direct_weight"]), (policy.name, 80)
+		)
 
 
 class TestCOAttainmentRun(AttainmentFixture):
 	def test_the_fixture_course_gives_the_hand_computed_co_levels(self):  # AC1
 		doc = self.co_run()
 		self.assertEqual(doc.status, "Computed")
-		self.assertEqual((doc.policy, doc.regulation, doc.batch, doc.matrix), (attainment.policy_for(self.r22), self.r22, fx.BATCH, self.matrix))
-		self.assertEqual((doc.direct_weight, doc.indirect_weight, doc.cia_weight, doc.ese_weight, doc.student_threshold), (80, 20, 40, 60, 60))
+		self.assertEqual(
+			(doc.policy, doc.regulation, doc.batch, doc.matrix),
+			(attainment.policy_for(self.r22), self.r22, fx.BATCH, self.matrix),
+		)
+		self.assertEqual(
+			(doc.direct_weight, doc.indirect_weight, doc.cia_weight, doc.ese_weight, doc.student_threshold),
+			(80, 20, 40, 60, 60),
+		)
 		self.assertEqual(
 			self.levels(doc),
 			{
@@ -137,7 +173,9 @@ class TestCOAttainmentRun(AttainmentFixture):
 			},
 		)
 		co3 = next(r for r in doc.results if r.co_code == "CO3")
-		self.assertEqual((co3.cia_students, co3.cia_attained, co3.ese_students, co3.ese_attained), (9, 3, 9, 5))
+		self.assertEqual(
+			(co3.cia_students, co3.cia_attained, co3.ese_students, co3.ese_attained), (9, 3, 9, 5)
+		)
 		self.assertTrue(co3.indirect_suppressed)
 
 	def test_the_snapshot_lists_the_questions_and_students_used_per_co(self):  # AC3
@@ -154,7 +192,10 @@ class TestCOAttainmentRun(AttainmentFixture):
 		self.assertEqual(co1["ese"]["students"][S[8]], [10, 20, 0])  # third valuation: rounds 2 and 3
 		self.assertEqual([q["question"] for q in co3["ese"]["questions"]], ["Q3", "Q4"])
 		self.assertNotIn(S[9], co3["cia"]["students"])  # absent from CIA 2 Q2
-		self.assertEqual(snapshot["cos"]["CO2"]["indirect"], {"responses": 5, "average": 3.6, "percent": 72.0, "suppressed": 0})
+		self.assertEqual(
+			snapshot["cos"]["CO2"]["indirect"],
+			{"responses": 5, "average": 3.6, "percent": 72.0, "suppressed": 0},
+		)
 		self.assertEqual(snapshot["policy"]["bands"], [[1, 40], [2, 50], [3, 60]])
 		self.assertEqual(snapshot["batches"], {fx.BATCH: 10})
 		self.assertIn("raw valuation question marks", snapshot["ese_basis"])
@@ -173,13 +214,24 @@ class TestCOAttainmentRun(AttainmentFixture):
 		bulk_run = attainment.queue_co_runs([doc.name])
 		self.assertEqual(json.loads(frappe.db.get_value("Bulk Run", bulk_run, "items")), [doc.name])
 		self.assertEqual(frappe.db.get_value("Bulk Run", bulk_run, "handler"), attainment.CO_HANDLER)
-		self.assertEqual(frappe.db.get_value("CO Attainment Run", doc.name, ["status", "bulk_run"]), ("Queued", bulk_run))
+		self.assertEqual(
+			frappe.db.get_value("CO Attainment Run", doc.name, ["status", "bulk_run"]), ("Queued", bulk_run)
+		)
 
 	def test_a_term_queues_a_run_per_offering_with_an_approved_matrix(self):
 		bulk_run = attainment.start_term_runs(ENGINEERING, self.world.term)
 		names = json.loads(frappe.db.get_value("Bulk Run", bulk_run, "items"))
-		self.assertEqual([frappe.db.get_value("CO Attainment Run", n, "course_offering") for n in names], [fx.OFFERING])
-		self.assertEqual(json.loads(frappe.db.get_value("Bulk Run", attainment.start_term_runs(ENGINEERING, self.world.term), "items")), names)
+		self.assertEqual(
+			[frappe.db.get_value("CO Attainment Run", n, "course_offering") for n in names], [fx.OFFERING]
+		)
+		self.assertEqual(
+			json.loads(
+				frappe.db.get_value(
+					"Bulk Run", attainment.start_term_runs(ENGINEERING, self.world.term), "items"
+				)
+			),
+			names,
+		)
 
 	def test_one_live_run_per_offering_and_submit_needs_a_computed_run(self):
 		doc = frappe.get_doc({"doctype": "CO Attainment Run", "course_offering": fx.OFFERING}).insert()
@@ -199,7 +251,9 @@ class TestPolicyIsolation(AttainmentFixture):
 		doc = self.co_run()
 		before = self.levels(doc)
 		r26 = frappe.get_doc("Attainment Policy", attainment.policy_for(self.r26))
-		r26.update({"direct_weight": 50, "indirect_weight": 50, "student_threshold": 90, "po_indirect_weight": 50})
+		r26.update(
+			{"direct_weight": 50, "indirect_weight": 50, "student_threshold": 90, "po_indirect_weight": 50}
+		)
 		r26.save()
 		attainment.compute_co_run(doc.name)
 		doc = frappe.get_doc("CO Attainment Run", doc.name)
@@ -207,12 +261,17 @@ class TestPolicyIsolation(AttainmentFixture):
 		doc.submit()
 		po = self.po_run()
 		self.assertEqual(po.po_indirect_weight, 20)
-		self.assertEqual({r.outcome_code: r.final_level for r in po.results if r.mapped}, {"PO1": 2.28, "PO2": 1.7, "PSO1": 1.2})
+		self.assertEqual(
+			{r.outcome_code: r.final_level for r in po.results if r.mapped},
+			{"PO1": 2.28, "PO2": 1.7, "PSO1": 1.2},
+		)
 
 	def test_a_submitted_run_keeps_the_policy_it_was_computed_with(self):
 		doc = self.submitted_co_run()
 		before = self.levels(doc)
-		frappe.db.set_value("Attainment Policy", attainment.policy_for(self.r22), "direct_weight", 50)  # behind the lock
+		frappe.db.set_value(
+			"Attainment Policy", attainment.policy_for(self.r22), "direct_weight", 50
+		)  # behind the lock
 		self.assertEqual(self.levels(frappe.get_doc("CO Attainment Run", doc.name)), before)
 		self.assertEqual(frappe.db.get_value("CO Attainment Run", doc.name, "direct_weight"), 80)
 
@@ -232,7 +291,10 @@ class TestPOAttainmentRun(AttainmentFixture):
 	def test_the_fixture_batch_gives_the_hand_computed_po_levels(self):  # AC1
 		self.submitted_co_run()
 		doc = self.po_run()
-		self.assertEqual((doc.regulation, doc.policy, doc.po_indirect_weight), (self.r22, attainment.policy_for(self.r22), 20))
+		self.assertEqual(
+			(doc.regulation, doc.policy, doc.po_indirect_weight),
+			(self.r22, attainment.policy_for(self.r22), 20),
+		)
 		rows = self.po_levels(doc)
 		self.assertEqual(rows["PO1"], (2.19, 2.64, 2.28, 1, 1))
 		self.assertEqual(rows["PO2"], (1.7, None, 1.7, 0, 1))
@@ -244,7 +306,10 @@ class TestPOAttainmentRun(AttainmentFixture):
 		run = snapshot["co_runs"][0]["name"]
 		self.assertEqual(
 			sorted(snapshot["cells"]["PO1"]),
-			[["CO1", 2.4, 3, fx.course(), [[run, 2.4, 10]]], ["CO2", 1.87, 2, fx.course(), [[run, 1.87, 10]]]],
+			[
+				["CO1", 2.4, 3, fx.course(), [[run, 2.4, 10]]],
+				["CO2", 1.87, 2, fx.course(), [[run, 1.87, 10]]],
+			],
 		)
 
 	def test_draft_co_runs_and_other_years_do_not_count(self):
@@ -265,7 +330,14 @@ class TestPOAttainmentRun(AttainmentFixture):
 	def test_the_exit_survey_must_be_a_closed_campaign_of_the_college(self):
 		frappe.db.set_value("Feedback Campaign", fx.EXIT_CAMPAIGN, "end_date", add_days(today(), 5))
 		with self.assertRaisesRegex(frappe.ValidationError, "closed"):
-			frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH, "exit_survey": fx.EXIT_CAMPAIGN}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "PO Attainment Run",
+					"program": fx.PROGRAM,
+					"batch": fx.BATCH,
+					"exit_survey": fx.EXIT_CAMPAIGN,
+				}
+			).insert()
 
 	def test_exit_survey_scores_hide_small_groups(self):
 		scores = iqac_api.campaign_outcome_scores(fx.EXIT_CAMPAIGN)
@@ -274,7 +346,9 @@ class TestPOAttainmentRun(AttainmentFixture):
 		self.assertIsNone(scores["PO2"]["average"])
 
 	def test_a_po_run_is_queued_on_the_bulk_runner(self):
-		doc = frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH}).insert()
+		doc = frappe.get_doc(
+			{"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH}
+		).insert()
 		bulk_run = attainment.queue_po_run(doc.name)
 		self.assertEqual(json.loads(frappe.db.get_value("Bulk Run", bulk_run, "items")), [doc.name])
 		self.assertEqual(frappe.db.get_value("PO Attainment Run", doc.name, "status"), "Queued")
@@ -288,15 +362,24 @@ class TestAttainmentReports(AttainmentFixture):
 		self.po.submit()
 
 	def test_co_attainment_by_course_and_faculty(self):
-		columns, rows = co_attainment_by_course.execute({"company": ENGINEERING, "instructor": self.world.instructor})[:2]
+		columns, rows = co_attainment_by_course.execute(
+			{"company": ENGINEERING, "instructor": self.world.instructor}
+		)[:2]
 		self.assertEqual([(r["course_offering"], r["co_code"], r["final_level"], r["gap"]) for r in rows],
 			[(fx.OFFERING, "CO1", 2.4, None), (fx.OFFERING, "CO2", 1.87, 0.13), (fx.OFFERING, "CO3", 1.2, 0.8)])  # fmt: skip
 		self.assertIn(self.world.instructor, rows[0]["instructors"])
-		self.assertEqual(co_attainment_by_course.execute({"company": ENGINEERING, "instructor": "nobody"})[1], [])
+		self.assertEqual(
+			co_attainment_by_course.execute({"company": ENGINEERING, "instructor": "nobody"})[1], []
+		)
 
 	def test_po_attainment_by_program_and_batch(self):
-		rows = po_attainment_by_program.execute({"company": ENGINEERING, "program": fx.PROGRAM, "batch": fx.BATCH})[1]
-		self.assertEqual({r["outcome_code"]: r["final_level"] for r in rows if r["final_level"] is not None}, {"PO1": 2.28, "PO2": 1.7, "PSO1": 1.2})
+		rows = po_attainment_by_program.execute(
+			{"company": ENGINEERING, "program": fx.PROGRAM, "batch": fx.BATCH}
+		)[1]
+		self.assertEqual(
+			{r["outcome_code"]: r["final_level"] for r in rows if r["final_level"] is not None},
+			{"PO1": 2.28, "PO2": 1.7, "PSO1": 1.2},
+		)
 
 	def test_target_gap_lists_the_outcomes_below_target(self):
 		rows = attainment_target_gap.execute({"company": ENGINEERING})[1]
@@ -327,7 +410,12 @@ class TestCOTags(AttainmentFixture):
 		self.assertEqual(bundle.questions[0].course_outcome, "CO2")
 
 	def test_an_unchanged_legacy_tag_does_not_block_an_unrelated_save(self):
-		frappe.db.set_value("Answer Script Bundle Question", {"parent": fx.BUNDLE, "question": "Q1"}, "course_outcome", "CO1, CO2")
+		frappe.db.set_value(
+			"Answer Script Bundle Question",
+			{"parent": fx.BUNDLE, "question": "Q1"},
+			"course_outcome",
+			"CO1, CO2",
+		)
 		bundle = frappe.get_doc("Answer Script Bundle", fx.BUNDLE)
 		bundle._doc_before_save = frappe.get_doc("Answer Script Bundle", fx.BUNDLE)
 		validate_co_tags(bundle)  # unchanged: left alone
@@ -392,12 +480,19 @@ class TestAttainmentAccess(AttainmentFixture):
 			doc = frappe.get_doc("CO Attainment Run", self.run.name).as_dict()
 			responses = {
 				"save": frappe.client.save(doc),
-				"set_value": frappe.client.set_value("CO Attainment Run", self.run.name, "course_offering", fx.OFFERING),
+				"set_value": frappe.client.set_value(
+					"CO Attainment Run", self.run.name, "course_offering", fx.OFFERING
+				),
 			}
 			frappe.form_dict.data = "{}"
 			responses["rest_put"] = update_doc("CO Attainment Run", self.run.name).as_dict()
-			responses["submit"] = frappe.client.submit(frappe.get_doc("CO Attainment Run", self.run.name).as_dict())
-			responses["cancel"] = frappe.client.cancel("CO Attainment Run", self.run.name) or frappe.get_doc("CO Attainment Run", self.run.name).as_dict()
+			responses["submit"] = frappe.client.submit(
+				frappe.get_doc("CO Attainment Run", self.run.name).as_dict()
+			)
+			responses["cancel"] = (
+				frappe.client.cancel("CO Attainment Run", self.run.name)
+				or frappe.get_doc("CO Attainment Run", self.run.name).as_dict()
+			)
 		finally:
 			frappe.form_dict.pop("data", None)
 			frappe.set_user("Administrator")
@@ -407,7 +502,9 @@ class TestAttainmentAccess(AttainmentFixture):
 			self.assertTrue(text, path)
 			for student in S[:10]:
 				self.assertNotIn(student, text, path)
-		self.assertIn(S[0], frappe.db.get_value("CO Attainment Snapshot", self.run.name, "snapshot"))  # kept apart
+		self.assertIn(
+			S[0], frappe.db.get_value("CO Attainment Snapshot", self.run.name, "snapshot")
+		)  # kept apart
 
 	def test_another_departments_hod_and_a_non_owning_instructor_cannot_read_the_run(self):
 		for user in (self.OTHER_HOD, email("faculty_2")):
@@ -427,7 +524,9 @@ class TestAttainmentAccess(AttainmentFixture):
 				frappe.set_user("Administrator")
 		frappe.set_user(self.OTHER_HOD)
 		try:
-			with self.assertRaisesRegex(frappe.ValidationError, "No offering"):  # the term's offerings are not their department's
+			with self.assertRaisesRegex(
+				frappe.ValidationError, "No offering"
+			):  # the term's offerings are not their department's
 				attainment.start_term_runs(ENGINEERING, self.world.term)
 		finally:
 			frappe.set_user("Administrator")
@@ -439,7 +538,9 @@ class TestAttainmentAccess(AttainmentFixture):
 		self.assertEqual(frappe.db.get_value("CO Attainment Run", self.run.name, "docstatus"), 1)
 
 	def test_a_po_run_is_the_programme_hods(self):
-		po = frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH}).insert()
+		po = frappe.get_doc(
+			{"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH}
+		).insert()
 		self.assertEqual(self.read_as(email("hod_cse"), "PO Attainment Run", po.name)["name"], po.name)
 		self.assertEqual(self.read_as(email("iqac"), "PO Attainment Run", po.name)["name"], po.name)
 		with self.assertRaises(frappe.PermissionError):
@@ -447,7 +548,14 @@ class TestAttainmentAccess(AttainmentFixture):
 		frappe.set_user(self.OTHER_HOD)
 		try:
 			with self.assertRaises(frappe.PermissionError):
-				frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH, "academic_year": fx.BATCH}).insert()
+				frappe.get_doc(
+					{
+						"doctype": "PO Attainment Run",
+						"program": fx.PROGRAM,
+						"batch": fx.BATCH,
+						"academic_year": fx.BATCH,
+					}
+				).insert()
 		finally:
 			frappe.set_user("Administrator")
 
@@ -463,7 +571,9 @@ class TestInputGuards(AttainmentFixture):
 
 	def test_an_unanswered_choice_question_counts_in_neither_marks_nor_maximum(self):  # I3
 		row = frappe.db.get_value("Curriculum Course", {"parent": fx.curriculum(), "course": fx.course()})
-		frappe.db.set_value("Curriculum Course", row, {"exam_type": "Theory", "practical_periods": 0, "ese_max": 70})
+		frappe.db.set_value(
+			"Curriculum Course", row, {"exam_type": "Theory", "practical_periods": 0, "ese_max": 70}
+		)
 		for idx, question in ((6, "Q6a"), (7, "Q6b")):  # either / or, CO1; the paper now adds up to 90 > 70
 			frappe.get_doc({"doctype": "Answer Script Bundle Question", "parent": fx.BUNDLE, "parenttype": "Answer Script Bundle",
 				"parentfield": "questions", "idx": idx, "question": question, "max_marks": 10, "course_outcome": "CO1"}).db_insert()  # fmt: skip
@@ -484,14 +594,28 @@ class TestInputGuards(AttainmentFixture):
 					"rule_type": "Program and Semester", "program": "B.E. ECE"})  # fmt: skip
 			frappe.db.set_value("Feedback Campaign", fx.EXIT_CAMPAIGN, "audience_rule", rule)
 			with self.assertRaisesRegex(frappe.ValidationError, "exit survey of programme"):
-				frappe.get_doc({"doctype": "PO Attainment Run", "program": fx.PROGRAM, "batch": fx.BATCH, "exit_survey": fx.EXIT_CAMPAIGN}).insert()
+				frappe.get_doc(
+					{
+						"doctype": "PO Attainment Run",
+						"program": fx.PROGRAM,
+						"batch": fx.BATCH,
+						"exit_survey": fx.EXIT_CAMPAIGN,
+					}
+				).insert()
 
 	def test_a_course_in_several_sections_weighs_once_in_a_po(self):  # I5
 		run = self.submitted_co_run()
 		section = run.as_dict()
 		section.update({"name": "COAR-ATT-B", "course_offering": "ATT-DS-2022-B", "students": 30})
 		section["results"] = [
-			{**row, "name": frappe.generate_hash(length=10), "parent": "COAR-ATT-B", "final_level": 3, "assessed": 1} for row in section["results"]
+			{
+				**row,
+				"name": frappe.generate_hash(length=10),
+				"parent": "COAR-ATT-B",
+				"final_level": 3,
+				"assessed": 1,
+			}
+			for row in section["results"]
 		]
 		fx.insert(section)
 		rows = self.po_levels(self.po_run())
@@ -522,7 +646,9 @@ class TestInputGuards(AttainmentFixture):
 	def test_the_snapshot_survey_percent_uses_the_policy_scale(self):
 		frappe.db.set_value("Attainment Policy", attainment.policy_for(self.r22), "survey_scale", 4)
 		doc = self.co_run()
-		self.assertEqual(attainment.input_snapshot(doc.name)["cos"]["CO2"]["indirect"]["percent"], 90)  # 3.6 of 4
+		self.assertEqual(
+			attainment.input_snapshot(doc.name)["cos"]["CO2"]["indirect"]["percent"], 90
+		)  # 3.6 of 4
 		co2 = next(r for r in doc.results if r.co_code == "CO2")
 		self.assertEqual((co2.indirect_percent, co2.indirect_level), (90, 2.7))
 		self.assertIn("1-4", frappe.get_print("CO Attainment Run", doc.name, "Course Attainment Sheet"))

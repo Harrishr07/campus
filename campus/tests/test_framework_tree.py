@@ -20,17 +20,36 @@ COPIED_FIELDS = [
 
 
 def nodes_of(framework):
-	return frappe.get_all("Framework Node", {"framework": framework}, ["name", "parent_node", *COPIED_FIELDS], order_by="code")
+	return frappe.get_all(
+		"Framework Node", {"framework": framework}, ["name", "parent_node", *COPIED_FIELDS], order_by="code"
+	)
 
 
 def make_draft(name):
-	doc = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": name, "version": "1"}).insert()
-	for code, node_type, parent in (("1", "Criterion", None), ("1.1", "Key Indicator", "1"), ("1.1.1", "Metric", "1.1")):
-		node = {"doctype": "Framework Node", "framework": name, "code": code, "title": f"t{code}", "node_type": node_type}
+	doc = frappe.get_doc(
+		{"doctype": "Accreditation Framework", "framework_name": name, "version": "1"}
+	).insert()
+	for code, node_type, parent in (
+		("1", "Criterion", None),
+		("1.1", "Key Indicator", "1"),
+		("1.1.1", "Metric", "1.1"),
+	):
+		node = {
+			"doctype": "Framework Node",
+			"framework": name,
+			"code": code,
+			"title": f"t{code}",
+			"node_type": node_type,
+		}
 		if parent:
 			node["parent_node"] = f"{name}-{parent}"
 		if node_type == "Metric":
-			node.update(answer_type="Choice", choices="A\nB", unit="n", evidence_slots=[{"slot_name": "Data Template", "kind": "File"}])
+			node.update(
+				answer_type="Choice",
+				choices="A\nB",
+				unit="n",
+				evidence_slots=[{"slot_name": "Data Template", "kind": "File"}],
+			)
 		frappe.get_doc(node).insert()
 	return doc
 
@@ -72,38 +91,74 @@ class TestSeededTree(CampusTestCase):
 		framework = frappe.get_doc("Accreditation Framework", FRAMEWORK)
 		self.assertEqual(framework.status, "Published")
 		self.assertIn("placeholder - replace with official template", framework.description)
-		unmarked = [n.code for n in nodes_of(FRAMEWORK) if "placeholder - replace with official template" not in (n.description or "")]
+		unmarked = [
+			n.code
+			for n in nodes_of(FRAMEWORK)
+			if "placeholder - replace with official template" not in (n.description or "")
+		]
 		self.assertEqual(unmarked, [])
 
 	def test_seeded_metrics_declare_answer_type_and_evidence_slots(self):
 		node = frappe.get_doc("Framework Node", f"{FRAMEWORK}-1.4.1")
 		self.assertEqual(node.answer_type, "Choice")
 		self.assertTrue(node.choices)
-		self.assertEqual(frappe.db.get_value("Framework Node", f"{FRAMEWORK}-2.5.3", "answer_type"), "Narrative")
-		self.assertIn("Data Template", [s.slot_name for s in frappe.get_doc("Framework Node", f"{FRAMEWORK}-2.5.1").evidence_slots])
+		self.assertEqual(
+			frappe.db.get_value("Framework Node", f"{FRAMEWORK}-2.5.3", "answer_type"), "Narrative"
+		)
+		self.assertIn(
+			"Data Template",
+			[s.slot_name for s in frappe.get_doc("Framework Node", f"{FRAMEWORK}-2.5.1").evidence_slots],
+		)
 
 
 class TestNodeValidation(CampusTestCase):
 	def setUp(self):
 		super().setUp()
-		self.scratch = f"Tree Scratch {self._testMethodName}"  # one framework per test: only the class is rolled back
+		self.scratch = (
+			f"Tree Scratch {self._testMethodName}"  # one framework per test: only the class is rolled back
+		)
 		make_draft(self.scratch)
 
 	def node(self, **values):
 		return frappe.get_doc(
-			{"doctype": "Framework Node", "framework": self.scratch, "code": "9", "title": "t", "node_type": "Criterion", **values}
+			{
+				"doctype": "Framework Node",
+				"framework": self.scratch,
+				"code": "9",
+				"title": "t",
+				"node_type": "Criterion",
+				**values,
+			}
 		)
 
 	def test_manual_metric_needs_no_formula_but_a_choice_needs_choices(self):
-		self.assertTrue(self.node(code="1.1.2", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Number").insert())
+		self.assertTrue(
+			self.node(
+				code="1.1.2", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Number"
+			).insert()
+		)
 		with self.assertRaises(frappe.ValidationError):
-			self.node(code="1.1.3", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Choice").insert()
+			self.node(
+				code="1.1.3", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Choice"
+			).insert()
 
 	def test_word_limit_belongs_to_narratives(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.node(code="1.1.4", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Number", word_limit=500).insert()
+			self.node(
+				code="1.1.4",
+				node_type="Metric",
+				parent_node=f"{self.scratch}-1.1",
+				answer_type="Number",
+				word_limit=500,
+			).insert()
 		self.assertTrue(
-			self.node(code="1.1.5", node_type="Metric", parent_node=f"{self.scratch}-1.1", answer_type="Narrative", word_limit=500).insert()
+			self.node(
+				code="1.1.5",
+				node_type="Metric",
+				parent_node=f"{self.scratch}-1.1",
+				answer_type="Narrative",
+				word_limit=500,
+			).insert()
 		)
 
 	def test_codes_are_unique_per_framework(self):
@@ -133,13 +188,25 @@ class TestPublishLock(CampusTestCase):
 
 	def test_blank_code_and_version_are_stored_as_null_so_unversioned_frameworks_coexist(self):
 		for name in (f"{self.scratch} A", f"{self.scratch} B"):  # a form sends "" for a blank field
-			frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": name, "framework_code": "", "version": ""}).insert()
-			self.assertEqual(frappe.db.get_value("Accreditation Framework", name, ["framework_code", "version"]), (None, None))
+			frappe.get_doc(
+				{
+					"doctype": "Accreditation Framework",
+					"framework_name": name,
+					"framework_code": "",
+					"version": "",
+				}
+			).insert()
+			self.assertEqual(
+				frappe.db.get_value("Accreditation Framework", name, ["framework_code", "version"]),
+				(None, None),
+			)
 
 	def test_draft_is_editable_and_publishing_needs_nodes(self):
 		self.framework.description = "edited"
 		self.framework.save()
-		empty = frappe.get_doc({"doctype": "Accreditation Framework", "framework_name": f"{self.scratch} empty"}).insert()
+		empty = frappe.get_doc(
+			{"doctype": "Accreditation Framework", "framework_name": f"{self.scratch} empty"}
+		).insert()
 		empty.status = "Published"
 		with self.assertRaises(frappe.ValidationError):
 			empty.save()
@@ -158,7 +225,13 @@ class TestPublishLock(CampusTestCase):
 			node.delete()
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc(
-				{"doctype": "Framework Node", "framework": self.scratch, "code": "2", "title": "new", "node_type": "Criterion"}
+				{
+					"doctype": "Framework Node",
+					"framework": self.scratch,
+					"code": "2",
+					"title": "new",
+					"node_type": "Criterion",
+				}
 			).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.framework.delete()
@@ -202,9 +275,15 @@ class TestClone(CampusTestCase):
 		doc = frappe.get_doc("Accreditation Framework", clone)
 		self.assertEqual((doc.status, doc.version, doc.previous_version), ("Draft", "2", self.scratch))
 		strip = lambda rows, prefix: [  # noqa: E731
-			{**{f: row[f] for f in COPIED_FIELDS}, "parent": row.parent_node and row.parent_node.removeprefix(prefix)} for row in rows
+			{
+				**{f: row[f] for f in COPIED_FIELDS},
+				"parent": row.parent_node and row.parent_node.removeprefix(prefix),
+			}
+			for row in rows
 		]
-		self.assertEqual(strip(nodes_of(clone), clone + "-"), strip(nodes_of(self.scratch), self.scratch + "-"))
+		self.assertEqual(
+			strip(nodes_of(clone), clone + "-"), strip(nodes_of(self.scratch), self.scratch + "-")
+		)
 		metric = frappe.get_doc("Framework Node", f"{clone}-1.1.1")
 		self.assertEqual([(s.slot_name, s.kind) for s in metric.evidence_slots], [("Data Template", "File")])
 		metric.title = "edited in the clone"
@@ -221,7 +300,9 @@ class TestClone(CampusTestCase):
 			api.clone_framework(self.scratch, self.scratch, "2")
 		user = "framework-tree-plain@example.com"
 		if not frappe.db.exists("User", user):
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Plain", "send_welcome_email": 0}).insert()
+			frappe.get_doc(
+				{"doctype": "User", "email": user, "first_name": "Plain", "send_welcome_email": 0}
+			).insert()
 		frappe.set_user(user)
 		self.addCleanup(frappe.set_user, "Administrator")
 		with self.assertRaises(frappe.PermissionError):

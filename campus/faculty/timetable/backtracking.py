@@ -44,7 +44,13 @@ def solve(problem):
 	search.restore(placements)  # so the unmet reasons describe the timetable that is returned
 	entries = sorted(search.entries(), key=lambda e: (e.section, e.day, e.period, e.offering))
 	choices = {sid: choice for sid, (_session, choice) in search.placements.items()}
-	return Result(entries, unmet + [search.explain(s) for s in failed], len(rules.soft_issues(entries, problem.grid)), placements=choices, unplaced=len(search.hopeless) + len(failed))
+	return Result(
+		entries,
+		unmet + [search.explain(s) for s in failed],
+		len(rules.soft_issues(entries, problem.grid)),
+		placements=choices,
+		unplaced=len(search.hopeless) + len(failed),
+	)
 
 
 class Search:
@@ -78,7 +84,11 @@ class Search:
 		lab = session.kind == PRACTICAL
 		key = ("rooms", lab, session.strength)
 		if key not in self.cache:
-			rooms = [(r.capacity, name) for name, r in self.grid.rooms.items() if r.is_lab == lab and not (r.capacity and session.strength > r.capacity)]
+			rooms = [
+				(r.capacity, name)
+				for name, r in self.grid.rooms.items()
+				if r.is_lab == lab and not (r.capacity and session.strength > r.capacity)
+			]
 			self.cache[key] = [name for _capacity, name in sorted(rooms)]
 		return self.cache[key]
 
@@ -105,7 +115,17 @@ class Search:
 		for s in sessions:
 			load[s.faculty] += s.length
 		starts = {n: len(self.starts(n)) for n in {s.length for s in sessions}}
-		return sorted(sessions, key=lambda s: (-bumped.get(s.id, 0), -s.length, s.kind != PRACTICAL, -load[s.faculty], starts[s.length], s.id))
+		return sorted(
+			sessions,
+			key=lambda s: (
+				-bumped.get(s.id, 0),
+				-s.length,
+				s.kind != PRACTICAL,
+				-load[s.faculty],
+				starts[s.length],
+				s.id,
+			),
+		)
 
 	# --- state ---------------------------------------------------------------------------------
 
@@ -220,7 +240,9 @@ class Search:
 		for day in self.grid.days:
 			for start in self.starts(session.length):
 				total += 1
-				reason = self.blocker(session, day, start) or ("room" if not self.free_rooms(session, day, start, rooms) else None)
+				reason = self.blocker(session, day, start) or (
+					"room" if not self.free_rooms(session, day, start, rooms) else None
+				)
 				closed[reason] += 1
 		return _(
 			"{0} {1} ({2}): not placed by the search. Of {3} possible slots, {4} are closed because the teacher is unavailable, {5} because "

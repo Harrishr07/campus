@@ -36,7 +36,15 @@ from campus.admissions.setup import OFFICER_ROLE
 REVIEW = "Candidate Duplicate Review"
 DECIDERS = (OFFICER_ROLE, "System Manager")
 DECISIONS = ("Link", "Not Duplicate")
-IDENTITY = ("first_name", "middle_name", "last_name", "date_of_birth", "oc_company", "oc_qualifying_exam", "oc_qualifying_register_no")
+IDENTITY = (
+	"first_name",
+	"middle_name",
+	"last_name",
+	"date_of_birth",
+	"oc_company",
+	"oc_qualifying_exam",
+	"oc_qualifying_register_no",
+)
 NAME_BASIS, EXAM_BASIS = "name and date of birth", "qualifying exam register number"
 
 
@@ -46,10 +54,17 @@ class DuplicateCandidateError(frappe.ValidationError):
 
 # ---- Student Applicant hook ---------------------------------------------------------------
 
+
 def validate_applicant(doc, method=None):
 	"""Normalise the register number, keep the candidate key and refuse a possible duplicate."""
 	doc.oc_qualifying_register_no = id_key(doc.oc_qualifying_register_no) or None
-	doc.oc_candidate_key = candidate_key(doc.oc_qualifying_register_no, doc.oc_qualifying_exam, doc.date_of_birth, doc.program, doc.academic_year)
+	doc.oc_candidate_key = candidate_key(
+		doc.oc_qualifying_register_no,
+		doc.oc_qualifying_exam,
+		doc.date_of_birth,
+		doc.program,
+		doc.academic_year,
+	)
 	if not (doc.is_new() or any(doc.has_value_changed(f) for f in IDENTITY)):
 		return
 	cleared = cleared_matches(doc)
@@ -95,6 +110,7 @@ def describe(matches):
 
 # ---- review -------------------------------------------------------------------------------
 
+
 def hold_for_review(values, matches, upload=None, upload_row=None):
 	"""Record a possible duplicate for a reviewer; returns the review's name."""
 	applicant = next((m.name for m in matches if m.doctype == "Student Applicant"), None)
@@ -116,7 +132,9 @@ def hold_for_review(values, matches, upload=None, upload_row=None):
 def decide(review: str, decision: str, note: str | None = None):
 	"""Link the candidate to the existing record or mark it Not Duplicate (creates the applicant); returns the record."""
 	frappe.only_for(DECIDERS)
-	frappe.has_permission(REVIEW, "read", review, throw=True)  # no role writes a review; read keeps the company scope
+	frappe.has_permission(
+		REVIEW, "read", review, throw=True
+	)  # no role writes a review; read keeps the company scope
 	if decision not in DECISIONS:
 		frappe.throw(_("Choose Link or Not Duplicate."))
 	if frappe.db.get_value(REVIEW, review, "status", for_update=True) != "Open":
@@ -126,7 +144,13 @@ def decide(review: str, decision: str, note: str | None = None):
 	doc = frappe.get_doc(REVIEW, review)
 	doc.update({"decided_by": frappe.session.user, "decided_on": now_datetime(), "note": note})
 	if decision == "Link":
-		doc.update({"status": "Linked", "linked_applicant": doc.existing_applicant, "linked_student": None if doc.existing_applicant else doc.existing_student})
+		doc.update(
+			{
+				"status": "Linked",
+				"linked_applicant": doc.existing_applicant,
+				"linked_student": None if doc.existing_applicant else doc.existing_student,
+			}
+		)
 	else:
 		doc.update({"status": "Not Duplicate", "new_applicant": create_cleared_applicant(doc)})
 	doc.flags.from_decide = True
@@ -141,7 +165,13 @@ def decide(review: str, decision: str, note: str | None = None):
 
 
 def create_cleared_applicant(review):
-	applicant = frappe.get_doc({"doctype": "Student Applicant", **json.loads(review.candidate_values), "oc_duplicate_review": review.name})
+	applicant = frappe.get_doc(
+		{
+			"doctype": "Student Applicant",
+			**json.loads(review.candidate_values),
+			"oc_duplicate_review": review.name,
+		}
+	)
 	applicant.flags.cleared_matches = recorded_matches(review.matches)
 	applicant.insert(ignore_permissions=True)
 	return applicant.name
@@ -153,7 +183,9 @@ def cleared_matches(doc):
 		return doc.flags.cleared_matches
 	if not doc.oc_duplicate_review:
 		return set()
-	review = frappe.db.get_value(REVIEW, doc.oc_duplicate_review, ["status", "new_applicant", "matches"], as_dict=True)
+	review = frappe.db.get_value(
+		REVIEW, doc.oc_duplicate_review, ["status", "new_applicant", "matches"], as_dict=True
+	)
 	if not review or review.status != "Not Duplicate" or review.new_applicant != doc.name:
 		return set()
 	return recorded_matches(review.matches)
@@ -164,6 +196,7 @@ def recorded_matches(matches):
 
 
 # ---- lookups and keys ---------------------------------------------------------------------
+
 
 def same_birth_date(doctype, doc, lock=True):
 	"""The college's records born the same day whose name matches (a locking read unless `lock` is off)."""
@@ -189,7 +222,11 @@ def same_register_no(doc, lock=True):
 	query = (
 		frappe.qb.from_(table)
 		.select(table.name, table.oc_qualifying_exam)
-		.where((table.oc_company == doc.oc_company) & (table.oc_qualifying_register_no == doc.oc_qualifying_register_no) & (table.name != cstr(doc.name)))
+		.where(
+			(table.oc_company == doc.oc_company)
+			& (table.oc_qualifying_register_no == doc.oc_qualifying_register_no)
+			& (table.name != cstr(doc.name))
+		)
 		.orderby(table.name)
 	)
 	rows = (query.for_update() if lock else query).run(as_dict=True)

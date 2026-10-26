@@ -20,7 +20,9 @@ class TestModuleMap(CampusTestCase):
 		stale["campus"].remove("campus_approvals")
 		frappe.local.app_modules = stale
 		frappe.cache.set_value("app_modules", stale)
-		self.addCleanup(frappe.cache.delete_value, "app_modules")  # the next init rebuilds it from modules.txt
+		self.addCleanup(
+			frappe.cache.delete_value, "app_modules"
+		)  # the next init rebuilds it from modules.txt
 
 		refresh_module_map()
 

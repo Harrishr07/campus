@@ -28,7 +28,9 @@ def raise_fee_invoice(student, head_type, amount, company, remarks):
 			"items": [{"item_code": item, "qty": 1, "rate": amount}],
 		}
 	)  # fmt: skip
-	invoice.flags.ignore_permissions = True  # the caller (e.g. an approver) may lack Accounts rights; every input is server-side
+	invoice.flags.ignore_permissions = (
+		True  # the caller (e.g. an approver) may lack Accounts rights; every input is server-side
+	)
 	invoice.insert()
 	return invoice.submit()
 
@@ -40,7 +42,9 @@ def check_fee_invoice(student, head_type, company):
 	"""
 	customer = frappe.db.get_value("Student", student, "customer")
 	if not customer:
-		frappe.throw(_("Student {0} has no Customer, so no fee invoice can be raised.").format(frappe.bold(student)))
+		frappe.throw(
+			_("Student {0} has no Customer, so no fee invoice can be raised.").format(frappe.bold(student))
+		)
 	receivable = frappe.db.get_value("Company", company, "default_receivable_account")
 	if not receivable:
 		frappe.throw(_("Company {0} has no default receivable account.").format(frappe.bold(company)))

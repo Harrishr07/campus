@@ -12,7 +12,11 @@ from campus.curriculum import attainment
 class POAttainmentRun(Document):
 	def validate(self):
 		attainment.set_po_scope(self)
-		scope = {"program": self.program, "batch": self.batch, "academic_year": self.academic_year or ["is", "not set"]}
+		scope = {
+			"program": self.program,
+			"batch": self.batch,
+			"academic_year": self.academic_year or ["is", "not set"],
+		}
 		attainment.check_one_live(self, scope, ("Program", self.program))
 
 	def before_submit(self):

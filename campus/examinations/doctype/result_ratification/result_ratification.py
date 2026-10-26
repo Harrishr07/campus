@@ -31,19 +31,27 @@ REISSUE_JOB = "campus.examinations.doctype.result_ratification.result_ratificati
 class ResultRatification(ApprovableDocument, Document):
 	def validate(self):
 		super().validate()
-		refuse_affiliated_session(self.exam_session, _("Result Ratification"))  # M06-10: imported results need none
+		refuse_affiliated_session(
+			self.exam_session, _("Result Ratification")
+		)  # M06-10: imported results need none
 		if frappe.db.get_value("Exam Session", self.exam_session, "status") != "Published":
 			frappe.throw(_("Only the results of a published Exam Session are ratified."))
-		if self.docstatus == 0 and not approval_requested(self):  # the approver ratifies the list they were asked about
+		if self.docstatus == 0 and not approval_requested(
+			self
+		):  # the approver ratifies the list they were asked about
 			self.set("items", pending_items(self.exam_session))
 		if not self.items:
-			frappe.throw(_("{0} has no pending result version to ratify.").format(frappe.bold(self.exam_session)))
+			frappe.throw(
+				_("{0} has no pending result version to ratify.").format(frappe.bold(self.exam_session))
+			)
 
 	def before_submit(self):
 		super().before_submit()
 		if not is_approved(self):
 			frappe.throw(
-				_("A Result Ratification is submitted only by its approval. Set up an Approval Policy for Result Ratification."),
+				_(
+					"A Result Ratification is submitted only by its approval. Set up an Approval Policy for Result Ratification."
+				),
 				title=_("Approval Required"),
 			)
 
@@ -57,19 +65,41 @@ class ResultRatification(ApprovableDocument, Document):
 
 
 def approval_requested(doc):
-	return not doc.is_new() and bool(frappe.db.exists("Approval Request", {"reference_doctype": doc.doctype, "reference_name": doc.name}))
+	return not doc.is_new() and bool(
+		frappe.db.exists("Approval Request", {"reference_doctype": doc.doctype, "reference_name": doc.name})
+	)
 
 
 def pending_items(exam_session):
 	return [
-		{"student_result": r.name, "student": r.student, "version": r.version, "change_log": r.change_log, "fingerprint": fingerprint(r.name)}
+		{
+			"student_result": r.name,
+			"student": r.student,
+			"version": r.version,
+			"change_log": r.change_log,
+			"fingerprint": fingerprint(r.name),
+		}
 		for r in frappe.get_all(
-			RESULT, {"exam_session": exam_session, "pending_ratification": 1}, ["name", "student", "version", "change_log"], order_by="student"
+			RESULT,
+			{"exam_session": exam_session, "pending_ratification": 1},
+			["name", "student", "version", "change_log"],
+			order_by="student",
 		)
 	]
 
 
-GRADING_FIELDS = ("course", "kind", "cia", "ese", "moderation", "grace", "total", "grade", "grade_point", "result")
+GRADING_FIELDS = (
+	"course",
+	"kind",
+	"cia",
+	"ese",
+	"moderation",
+	"grace",
+	"total",
+	"grade",
+	"grade_point",
+	"result",
+)
 
 
 def fingerprint(name):
@@ -84,13 +114,19 @@ def fingerprint(name):
 def publish_version(name, listed_fingerprint, ratification):
 	"""Make the pending version `name` the latest; returns the versions it replaces, or None when it is gone or its
 	grading changed since listing."""
-	row = frappe.db.get_value(RESULT, name, ["student", "exam_session", "pending_ratification"], as_dict=True, for_update=True)
+	row = frappe.db.get_value(
+		RESULT, name, ["student", "exam_session", "pending_ratification"], as_dict=True, for_update=True
+	)
 	if not row or not row.pending_ratification or fingerprint(name) != listed_fingerprint:
 		return None
-	replaced = frappe.get_all(RESULT, {"student": row.student, "exam_session": row.exam_session, "is_latest": 1}, pluck="name")
+	replaced = frappe.get_all(
+		RESULT, {"student": row.student, "exam_session": row.exam_session, "is_latest": 1}, pluck="name"
+	)
 	for old in replaced:
 		frappe.db.set_value(RESULT, old, "is_latest", 0, update_modified=False)
-	frappe.db.set_value(RESULT, name, {"is_latest": 1, "pending_ratification": 0, "ratification": ratification})
+	frappe.db.set_value(
+		RESULT, name, {"is_latest": 1, "pending_ratification": 0, "ratification": ratification}
+	)
 	return replaced
 
 
@@ -102,13 +138,26 @@ def reissue_grade_sheets(replaced, name, ratification):
 
 	issued = False
 	for old in replaced:
-		filters = {"reference_doctype": RESULT, "reference_name": old, "print_format": GRADE_SHEET, "status": "Valid"}
+		filters = {
+			"reference_doctype": RESULT,
+			"reference_name": old,
+			"print_format": GRADE_SHEET,
+			"status": "Valid",
+		}
 		if frappe.db.exists("Verifiable Document", filters):
-			revoke_for(frappe.get_doc(RESULT, old), _("Superseded by the version {0} ratified by {1}").format(name, ratification))
+			revoke_for(
+				frappe.get_doc(RESULT, old),
+				_("Superseded by the version {0} ratified by {1}").format(name, ratification),
+			)
 			issued = True
 	if issued:
 		frappe.enqueue(
-			REISSUE_JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, student_result=name, ratification=ratification
+			REISSUE_JOB,
+			queue="short",
+			enqueue_after_commit=True,
+			now=frappe.in_test,
+			student_result=name,
+			ratification=ratification,
 		)
 
 
@@ -120,8 +169,15 @@ def issue_grade_sheet(student_result, ratification):
 	caller = frappe.session.user
 	frappe.set_user("Administrator")
 	try:
-		filters = {"reference_doctype": RESULT, "reference_name": student_result, "print_format": GRADE_SHEET, "status": "Valid"}
-		if frappe.db.get_value(RESULT, student_result, "is_latest") and not frappe.db.exists("Verifiable Document", filters):
+		filters = {
+			"reference_doctype": RESULT,
+			"reference_name": student_result,
+			"print_format": GRADE_SHEET,
+			"status": "Valid",
+		}
+		if frappe.db.get_value(RESULT, student_result, "is_latest") and not frappe.db.exists(
+			"Verifiable Document", filters
+		):
 			frappe.db.savepoint("grade_sheet_reissue")
 			try:
 				verification.issue(frappe.get_doc(RESULT, student_result), GRADE_SHEET)
@@ -129,9 +185,9 @@ def issue_grade_sheet(student_result, ratification):
 				frappe.db.rollback(save_point="grade_sheet_reissue")
 				frappe.log_error(
 					title=_("Grade Sheet re-issue failed ({0})").format(ratification),
-					message=_("Ratification {0}: the Grade Sheet of {1} was not issued: {2}. Issue it with Issue Grade Sheet.").format(
-						ratification, student_result, e
-					),
+					message=_(
+						"Ratification {0}: the Grade Sheet of {1} was not issued: {2}. Issue it with Issue Grade Sheet."
+					).format(ratification, student_result, e),
 				)
 	finally:
 		frappe.set_user(caller)
@@ -147,8 +203,14 @@ def refresh_later_results(student, exam_session, ratification):
 	raised (the transaction is gone)."""
 	from campus.examinations.results import compute_student_result
 
-	start = frappe.db.get_value("Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date")
-	result, term, session = frappe.qb.DocType(RESULT), frappe.qb.DocType("Academic Term"), frappe.qb.DocType("Exam Session")
+	start = frappe.db.get_value(
+		"Academic Term", frappe.db.get_value("Exam Session", exam_session, "academic_term"), "term_start_date"
+	)
+	result, term, session = (
+		frappe.qb.DocType(RESULT),
+		frappe.qb.DocType("Academic Term"),
+		frappe.qb.DocType("Exam Session"),
+	)
 	later = (
 		frappe.qb.from_(result)
 		.join(term).on(term.name == result.academic_term)
@@ -170,11 +232,15 @@ def refresh_later_results(student, exam_session, ratification):
 			frappe.clear_messages()
 			frappe.log_error(
 				title=_("Later result not refreshed ({0})").format(ratification),
-				message=_("Ratification {0}: the result of {1} in {2} was not recomputed: {3}").format(ratification, student, session, e),
+				message=_("Ratification {0}: the result of {1} in {2} was not recomputed: {3}").format(
+					ratification, student, session, e
+				),
 			)
 
 
 def notify(name):
 	doc = frappe.get_doc(RESULT, name)
-	guardians = frappe.get_all("Student Guardian", {"parent": doc.student, "parenttype": "Student"}, pluck="guardian", order_by="idx")
+	guardians = frappe.get_all(
+		"Student Guardian", {"parent": doc.student, "parenttype": "Student"}, pluck="guardian", order_by="idx"
+	)
 	send(REVISED_EVENT, doc, [f"Student:{doc.student}", *(f"Guardian:{g}" for g in guardians)])

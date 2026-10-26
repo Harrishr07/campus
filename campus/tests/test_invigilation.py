@@ -32,8 +32,14 @@ class RosterFixture(SeatingFixture):
 		).insert()  # fmt: skip
 		frappe.get_doc(
 			{
-				"doctype": "Leave Application", "name": "SEAT-TEST-LEAVE", "employee": cls.teachers["faculty_2"],
-				"from_date": DAY2, "to_date": DAY2, "status": "Approved", "docstatus": 1, "company": demo.ENGINEERING,
+				"doctype": "Leave Application",
+				"name": "SEAT-TEST-LEAVE",
+				"employee": cls.teachers["faculty_2"],
+				"from_date": DAY2,
+				"to_date": DAY2,
+				"status": "Approved",
+				"docstatus": 1,
+				"company": demo.ENGINEERING,
 				"posting_date": DAY1,
 			}
 		).db_insert()  # only the approved-leave facts the faculty check reads; HRMS leave rules are not under test
@@ -65,7 +71,9 @@ class TestRoster(RosterFixture):
 		roster = self.roster()
 		self.assertLessEqual(roster.duty_spread, 1)
 		frappe.clear_messages()
-		with patch.object(invigilation.invigilation_rules, "spread", lambda duties, eligible: {"FN": 2, "AN": 0}):
+		with patch.object(
+			invigilation.invigilation_rules, "spread", lambda duties, eligible: {"FN": 2, "AN": 0}
+		):
 			invigilation.generate(roster.name)
 		self.assertEqual(roster.reload().duty_spread, 2)
 		self.assertIn("differ by 2", str(frappe.message_log))
@@ -73,14 +81,26 @@ class TestRoster(RosterFixture):
 	def test_nobody_invigilates_a_hall_writing_their_own_course(self):
 		roster = self.roster()
 		c1_halls = set(
-			frappe.get_all("Seating Plan Seat", {"parenttype": "Seating Plan", "course": course("C1")}, pluck="room")
+			frappe.get_all(
+				"Seating Plan Seat", {"parenttype": "Seating Plan", "course": course("C1")}, pluck="room"
+			)
 		)
-		own = [d for d in roster.duties if d.employee == self.teachers["faculty_1"] and str(d.exam_date) == DAY1 and d.slot == "FN"]
+		own = [
+			d
+			for d in roster.duties
+			if d.employee == self.teachers["faculty_1"] and str(d.exam_date) == DAY1 and d.slot == "FN"
+		]
 		self.assertFalse([d for d in own if d.room in c1_halls])
 
 	def test_nobody_on_approved_leave_that_day_is_used(self):
 		roster = self.roster()
-		self.assertFalse([d for d in roster.duties if d.employee == self.teachers["faculty_2"] and str(d.exam_date) == DAY2])
+		self.assertFalse(
+			[
+				d
+				for d in roster.duties
+				if d.employee == self.teachers["faculty_2"] and str(d.exam_date) == DAY2
+			]
+		)
 		self.assertTrue([d for d in roster.duties if d.employee == self.teachers["faculty_2"]])
 
 	def test_an_empty_pool_takes_the_company_teachers(self):
@@ -94,7 +114,11 @@ class TestRoster(RosterFixture):
 
 	def test_duties_are_server_owned(self):
 		roster = self.roster()
-		roster.duties[0].employee = self.teachers["faculty_3"] if roster.duties[0].employee != self.teachers["faculty_3"] else self.teachers["hod_cse"]
+		roster.duties[0].employee = (
+			self.teachers["faculty_3"]
+			if roster.duties[0].employee != self.teachers["faculty_3"]
+			else self.teachers["hod_cse"]
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "Generate Roster"):
 			roster.save()
 
@@ -105,11 +129,15 @@ class TestRoster(RosterFixture):
 			api.generate_invigilation(doc.name)
 		frappe.set_user(COE_USER)
 		self.assertGreater(api.generate_invigilation(doc.name), 0)
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.generate_invigilation], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[api.generate_invigilation], ["POST"]
+		)
 
 	def test_the_invigilation_order_prints_escaped(self):
 		roster = self.roster()
-		frappe.db.set_value("Invigilation Duty", roster.duties[0].name, "employee_name", "<b>x</b><script>alert(2)</script>")
+		frappe.db.set_value(
+			"Invigilation Duty", roster.duties[0].name, "employee_name", "<b>x</b><script>alert(2)</script>"
+		)
 		html = frappe.get_print("Invigilation Roster", roster.name, "Invigilation Order")
 		self.assertIn(roster.duties[1].employee_name, html)
 		self.assertNotIn("<script>alert(2)</script>", html)

@@ -36,13 +36,28 @@ def template_rows(round_result):
 	drive = frappe.db.get_value("Round Result", round_result, "drive")
 	current = {
 		row.student: row
-		for row in frappe.get_all("Round Result Student", {"parent": round_result}, ["student", "result", "remarks"], limit=0)
+		for row in frappe.get_all(
+			"Round Result Student", {"parent": round_result}, ["student", "result", "remarks"], limit=0
+		)
 	}
-	students = frappe.get_all("Drive Registration", {"drive": drive, "status": "Registered"}, ["student", "student_name"], order_by="student", limit=0)
+	students = frappe.get_all(
+		"Drive Registration",
+		{"drive": drive, "status": "Registered"},
+		["student", "student_name"],
+		order_by="student",
+		limit=0,
+	)
 	rows = [list(HEADER)]
 	for student in students:
 		now = current.get(student.student)
-		rows.append([safe_cell(student.student), safe_cell(student.student_name), safe_cell(now.result if now else ""), safe_cell(now.remarks if now else "")])
+		rows.append(
+			[
+				safe_cell(student.student),
+				safe_cell(student.student_name),
+				safe_cell(now.result if now else ""),
+				safe_cell(now.remarks if now else ""),
+			]
+		)
 	return rows
 
 
@@ -60,7 +75,9 @@ def read_rows(file_url):
 	if file.file_name.lower().endswith(".xlsx"):
 		from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file
 
-		table = [[cstr(c).strip() for c in row] for row in read_xlsx_file_from_attached_file(fcontent=content)]
+		table = [
+			[cstr(c).strip() for c in row] for row in read_xlsx_file_from_attached_file(fcontent=content)
+		]
 	else:
 		table = [[cstr(c).strip() for c in row] for row in csv.reader(io.StringIO(decode(content)))]
 	return parse_table(table)

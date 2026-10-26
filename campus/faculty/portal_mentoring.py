@@ -13,7 +13,15 @@ from campus.faculty.portal import require_faculty
 
 NOTE, INTERACTION = "Counselling Note", "Parent Interaction"
 NOTE_FIELDS = ["name", "note_date", "category", "notes", "is_confidential", "author", "follow_up_date"]
-INTERACTION_FIELDS = ["name", "interaction_date", "guardian_name", "mode", "outcome", "follow_up_due", "follow_up_done"]
+INTERACTION_FIELDS = [
+	"name",
+	"interaction_date",
+	"guardian_name",
+	"mode",
+	"outcome",
+	"follow_up_due",
+	"follow_up_done",
+]
 
 
 def own_mentee(student):
@@ -30,20 +38,43 @@ def mentee_record(student):
 		"student": student,
 		"student_name": frappe.db.get_value("Student", student, "student_name"),
 		"guardians": frappe.get_all(
-			"Student Guardian", {"parent": student, "parenttype": "Student"}, ["guardian", "guardian_name", "relation"], order_by="idx"
+			"Student Guardian",
+			{"parent": student, "parenttype": "Student"},
+			["guardian", "guardian_name", "relation"],
+			order_by="idx",
 		),
-		"notes": frappe.get_list(NOTE, {"student": student}, NOTE_FIELDS, order_by="note_date desc, creation desc"),
-		"interactions": frappe.get_list(INTERACTION, {"student": student}, INTERACTION_FIELDS, order_by="interaction_date desc, creation desc"),
+		"notes": frappe.get_list(
+			NOTE, {"student": student}, NOTE_FIELDS, order_by="note_date desc, creation desc"
+		),
+		"interactions": frappe.get_list(
+			INTERACTION,
+			{"student": student},
+			INTERACTION_FIELDS,
+			order_by="interaction_date desc, creation desc",
+		),
 		"categories": options(NOTE, "category"),
 		"modes": options(INTERACTION, "mode"),
 	}
 
 
 @frappe.whitelist(methods=["POST"])
-def add_note(student, category, notes, note_date=None, follow_up_date=None, is_confidential=0, action=None, action_due=None):
+def add_note(
+	student,
+	category,
+	notes,
+	note_date=None,
+	follow_up_date=None,
+	is_confidential=0,
+	action=None,
+	action_due=None,
+):
 	"""A Counselling Note by the caller; an agreed action given here is the caller's own."""
 	own_mentee(student)
-	actions = [{"action": action, "action_owner": frappe.session.user, "due_date": action_due or None}] if action else []
+	actions = (
+		[{"action": action, "action_owner": frappe.session.user, "due_date": action_due or None}]
+		if action
+		else []
+	)
 	doc = frappe.get_doc(
 		{
 			"doctype": NOTE, "student": student, "category": category, "notes": notes, "note_date": note_date or None,

@@ -17,7 +17,11 @@ class QuestionBankItem(Document):
 		before = self.get_doc_before_save()
 		self.retired_by_withdrawal = before.retired_by_withdrawal if before else None
 		if self.retired_by_withdrawal and not self.disabled:
-			frappe.throw(_("{0} was on withdrawn paper {1}; it stays retired.").format(self.name, self.retired_by_withdrawal))
+			frappe.throw(
+				_("{0} was on withdrawn paper {1}; it stays retired.").format(
+					self.name, self.retired_by_withdrawal
+				)
+			)
 		editors = (before.editors or "").split() if before else []
 		changed = not before or any(before.get(f) != self.get(f) for f in CONTENT_FIELDS)
 		if changed and frappe.session.user not in editors:

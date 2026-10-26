@@ -20,12 +20,21 @@ def full_time_teachers(company, academic_year, department=None):
 def sanctioned_posts(company, academic_year, department=None):
 	"""NAAC 2.4.1: total sanctioned posts in the year."""
 	posts = staffing.sanctioned_posts(company, academic_year, department)
-	return {"value": sum(p.sanctioned_count or 0 for p in posts), "records": refs("Sanctioned Post", [p.name for p in posts])}
+	return {
+		"value": sum(p.sanctioned_count or 0 for p in posts),
+		"records": refs("Sanctioned Post", [p.name for p in posts]),
+	}
 
 
 def phd_teachers(company, academic_year, department=None):
 	"""NAAC 2.4.2: teachers with a PhD awarded by the year end."""
-	return result([t for t in staffing.teachers(company, academic_year, department) if staffing.has_phd(t, academic_year)])
+	return result(
+		[
+			t
+			for t in staffing.teachers(company, academic_year, department)
+			if staffing.has_phd(t, academic_year)
+		]
+	)
 
 
 def teacher_experience_years(company, academic_year, department=None):
@@ -40,19 +49,28 @@ def student_teacher_ratio(company, academic_year, department=None):
 	by_department = staffing.students_by_department(company, academic_year)
 	students = by_department.get(department, set()) if department else set().union(*by_department.values())
 	staff = staffing.teachers(company, academic_year, department)
-	return {"value": flt(len(students) / len(staff), 2) if staff else 0, "records": refs("Employee", [t.name for t in staff])}
+	return {
+		"value": flt(len(students) / len(staff), 2) if staff else 0,
+		"records": refs("Employee", [t.name for t in staff]),
+	}
 
 
 def fdp_teachers(company, academic_year, department=None):
 	"""NAAC 6.3.4: distinct teachers who attended at least one FDP (HRMS Training Event flagged as an FDP) in the year."""
 	rows = development.fdp_attendances(company, academic_year, department)
-	return {"value": len({r["employee"] for r in rows}), "records": refs("Employee", {r["employee"] for r in rows})}
+	return {
+		"value": len({r["employee"] for r in rows}),
+		"records": refs("Employee", {r["employee"] for r in rows}),
+	}
 
 
 def teachers_financially_supported(company, academic_year, department=None):
 	"""NAAC 6.3.2: distinct teachers given financial support for conferences, workshops or membership of professional bodies."""
 	rows = development.supported_achievements(company, academic_year, department)
-	return {"value": len({r["employee"] for r in rows}), "records": refs("Employee", {r["employee"] for r in rows})}
+	return {
+		"value": len({r["employee"] for r in rows}),
+		"records": refs("Employee", {r["employee"] for r in rows}),
+	}
 
 
 def result(teachers):
@@ -85,7 +103,10 @@ def on_leave(employee, date):
 @frappe.whitelist(methods=["POST"])
 def suggest_substitutes(course_schedule):
 	"""Free teachers of the absent teacher's department for a period, for the Substitution form."""
-	if not (frappe.has_permission("Substitution", "write") and frappe.has_permission("Course Schedule", "read", course_schedule)):
+	if not (
+		frappe.has_permission("Substitution", "write")
+		and frappe.has_permission("Course Schedule", "read", course_schedule)
+	):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	return substitutions.free_faculty(course_schedule)
 

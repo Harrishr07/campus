@@ -45,8 +45,19 @@ def audit_trail(proposal):
 	)
 	versions = []
 	for version in frappe.get_all(
-		"Version", {"ref_doctype": "Academic Proposal", "docname": proposal}, ["name", "owner", "creation", "data"], order_by="creation"
+		"Version",
+		{"ref_doctype": "Academic Proposal", "docname": proposal},
+		["name", "owner", "creation", "data"],
+		order_by="creation",
 	):
 		data = json.loads(version.data or "{}")
-		versions.append({"name": version.name, "owner": version.owner, "creation": version.creation, "changed": data.get("changed", []), "data": data})
+		versions.append(
+			{
+				"name": version.name,
+				"owner": version.owner,
+				"creation": version.creation,
+				"changed": data.get("changed", []),
+				"data": data,
+			}
+		)
 	return {"comments": comments, "versions": versions}

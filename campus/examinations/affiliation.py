@@ -25,7 +25,15 @@ PLACEHOLDER_UNIVERSITY = "Affiliating University"
 PLACEHOLDER_FORMATS = {
 	"Export": (
 		"Placeholder registration export - replace with the university's agreed format",
-		["University Register No", "Student Name", "Program", "Course Code", "Registration Type", "CIA", "CIA Max"],
+		[
+			"University Register No",
+			"Student Name",
+			"Program",
+			"Course Code",
+			"Registration Type",
+			"CIA",
+			"CIA Max",
+		],
 	),
 	"Import": (
 		"Placeholder result import - replace with the university's agreed format",
@@ -48,9 +56,16 @@ def examination_modes(regulations):
 			["regulation", "examination_mode"], as_list=True,
 		)
 	)  # fmt: skip
-	companies = dict(frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_company"], as_list=True))
+	companies = dict(
+		frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_company"], as_list=True)
+	)
 	college_modes = dict(
-		frappe.get_all("Institution Profile", {"name": ["in", list(set(companies.values())) or [""]]}, ["name", "examination_mode"], as_list=True)
+		frappe.get_all(
+			"Institution Profile",
+			{"name": ["in", list(set(companies.values())) or [""]]},
+			["name", "examination_mode"],
+			as_list=True,
+		)
 	)
 	return {
 		student: rule_modes.get(regulation) or college_modes.get(companies.get(student)) or AUTONOMOUS
@@ -66,9 +81,9 @@ def refuse_affiliated_session(exam_session, action):
 	"""Refuse `action` (the Result Run, publication) on an Affiliated session: the university grades and publishes it."""
 	if session_mode(exam_session) == AFFILIATED:
 		frappe.throw(
-			_("{0} is an Affiliated session: the university conducts its examinations, so {1} is not used. Import the university's results instead.").format(
-				frappe.bold(exam_session), action
-			),
+			_(
+				"{0} is an Affiliated session: the university conducts its examinations, so {1} is not used. Import the university's results instead."
+			).format(frappe.bold(exam_session), action),
 			title=_("Affiliated mode"),
 		)
 
@@ -95,13 +110,24 @@ def validate_university_register_no(doc, method=None):
 	"""Student validate: the university register number is unique within the student's college."""
 	register_no = (doc.get(UNIVERSITY_REGISTER_FIELD) or "").strip()
 	doc.set(UNIVERSITY_REGISTER_FIELD, register_no or None)
-	if not register_no or not (doc.has_value_changed(UNIVERSITY_REGISTER_FIELD) or doc.has_value_changed("oc_company")):
+	if not register_no or not (
+		doc.has_value_changed(UNIVERSITY_REGISTER_FIELD) or doc.has_value_changed("oc_company")
+	):
 		return
 	other = frappe.db.get_value(
-		"Student", {UNIVERSITY_REGISTER_FIELD: register_no, "oc_company": doc.get("oc_company"), "name": ["!=", doc.name or ""]}
+		"Student",
+		{
+			UNIVERSITY_REGISTER_FIELD: register_no,
+			"oc_company": doc.get("oc_company"),
+			"name": ["!=", doc.name or ""],
+		},
 	)
 	if other:
-		frappe.throw(_("University register number {0} is already {1}'s.").format(frappe.bold(register_no), frappe.bold(other)))
+		frappe.throw(
+			_("University register number {0} is already {1}'s.").format(
+				frappe.bold(register_no), frappe.bold(other)
+			)
+		)
 
 
 def seed_placeholder_formats():

@@ -10,7 +10,13 @@ from frappe.utils import add_days, today
 
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.test_results import (
-	COLLEGE, FACULTY, GUARDIAN_USER, STUDENT_22_USER, STUDENT_26_USER, ExamFixture, make_login,
+	COLLEGE,
+	FACULTY,
+	GUARDIAN_USER,
+	STUDENT_22_USER,
+	STUDENT_26_USER,
+	ExamFixture,
+	make_login,
 )  # fmt: skip
 from campus.tests.test_student_portal import make_invoice
 
@@ -44,7 +50,12 @@ class TestPortalPrivacy(ExamFixture):
 	def add_rows(self, student, group):
 		rows = self.rows
 		rows["Student Attendance"][student.name] = insert_row(
-			"Student Attendance", student=student.name, student_group=group, date=today(), status="Present", docstatus=1
+			"Student Attendance",
+			student=student.name,
+			student_group=group,
+			date=today(),
+			status="Present",
+			docstatus=1,
 		)
 		rows["Student Leave Application"][student.name] = insert_row(
 			"Student Leave Application", student=student.name, student_group=group, from_date=today(),
@@ -55,7 +66,9 @@ class TestPortalPrivacy(ExamFixture):
 		)
 		rows["Sales Invoice"][student.name] = f"PRIV-INV-{student.name}"
 		make_invoice(student, COLLEGE, 100, 100, rows["Sales Invoice"][student.name])
-		rows["Program Enrollment"][student.name] = frappe.db.get_value("Program Enrollment", {"student": student.name})
+		rows["Program Enrollment"][student.name] = frappe.db.get_value(
+			"Program Enrollment", {"student": student.name}
+		)
 		rows["Course Schedule"][student.name] = insert_row(
 			"Course Schedule", student_group=group, schedule_date=today(), course="EXM TH"
 		)
@@ -92,7 +105,9 @@ class TestPortalPrivacy(ExamFixture):
 				if not frappe.has_permission(doctype, "read", user=STUDENT_26_USER):
 					continue
 				self.assertNotIn(self.rows[doctype][self.s22.name], self.listed(STUDENT_26_USER, doctype))
-				self.assertFalse(self.can_get_doc(STUDENT_26_USER, doctype, self.rows[doctype][self.s22.name]))
+				self.assertFalse(
+					self.can_get_doc(STUDENT_26_USER, doctype, self.rows[doctype][self.s22.name])
+				)
 
 	def test_guardian_reads_linked_student_rows_only(self):
 		for doctype in ALL_DOCTYPES:

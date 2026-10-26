@@ -20,25 +20,49 @@ class Patent(Document):
 		if self.status in LICENSABLE and not self.patent_number:
 			frappe.throw(_("Enter the patent number of a granted patent."))
 		self.set_licensed()
-		check_lifecycle(self.status, {field: self.get(field) for field in STAGE_DATES.values()}, self.status_before(), today())
+		check_lifecycle(
+			self.status,
+			{field: self.get(field) for field in STAGE_DATES.values()},
+			self.status_before(),
+			today(),
+		)
 		self.set_totals()
 
 	def check_disclosure(self):
 		disclosure = frappe.db.get_value(
-			"Invention Disclosure", self.invention_disclosure, ["docstatus", "title", "company", "department", "ipr_type"], as_dict=True
+			"Invention Disclosure",
+			self.invention_disclosure,
+			["docstatus", "title", "company", "department", "ipr_type"],
+			as_dict=True,
 		)
 		if not disclosure or (disclosure.docstatus != 1 and self.is_linking_or_advancing()):
-			frappe.throw(_("Invention Disclosure {0} must be approved and submitted before it is filed.").format(self.invention_disclosure))
-		for field in ("title", "company", "department", "ipr_type"):  # also what fetch_from fills, which runs after validate
+			frappe.throw(
+				_("Invention Disclosure {0} must be approved and submitted before it is filed.").format(
+					self.invention_disclosure
+				)
+			)
+		for field in (
+			"title",
+			"company",
+			"department",
+			"ipr_type",
+		):  # also what fetch_from fills, which runs after validate
 			self.set(field, disclosure[field])
-		if self.get_doc_before_save() and self.get_doc_before_save().invention_disclosure != self.invention_disclosure:
+		if (
+			self.get_doc_before_save()
+			and self.get_doc_before_save().invention_disclosure != self.invention_disclosure
+		):
 			frappe.throw(_("The Invention Disclosure of a patent can't be changed."))
 
 	def is_linking_or_advancing(self):
 		"""A new patent, a new disclosure or a new stage needs an approved disclosure; a later cancel of the disclosure
 		doesn't stop the patent being updated (costs, revenue) without a change of stage."""
 		before = self.get_doc_before_save()
-		return not before or before.invention_disclosure != self.invention_disclosure or before.status != self.status
+		return (
+			not before
+			or before.invention_disclosure != self.invention_disclosure
+			or before.status != self.status
+		)
 
 	def check_share(self):
 		if not 0 <= flt(self.institution_share_percent) <= 100:
@@ -58,7 +82,9 @@ class Patent(Document):
 			if flt(row.amount_received) <= 0:
 				frappe.throw(_("Row {0}: the revenue received must be above zero.").format(row.idx))
 			if self.granted_date and getdate(row.licence_date) < getdate(self.granted_date):
-				frappe.throw(_("Row {0}: revenue can't be received before the patent was granted.").format(row.idx))
+				frappe.throw(
+					_("Row {0}: revenue can't be received before the patent was granted.").format(row.idx)
+				)
 
 	def set_totals(self):
 		for row in self.costs:
@@ -66,7 +92,9 @@ class Patent(Document):
 				frappe.throw(_("Row {0}: the cost must be above zero.").format(row.idx))
 		self.total_cost = sum(flt(row.amount) for row in self.costs)
 		for row in self.licences:
-			row.institution_amount, row.inventors_amount = split_revenue(row.amount_received, self.institution_share_percent)
+			row.institution_amount, row.inventors_amount = split_revenue(
+				row.amount_received, self.institution_share_percent
+			)
 		self.total_revenue = sum(flt(row.amount_received) for row in self.licences)
 		self.institution_revenue = sum(flt(row.institution_amount) for row in self.licences)
 		self.inventors_revenue = sum(flt(row.inventors_amount) for row in self.licences)
@@ -81,6 +109,7 @@ class Patent(Document):
 		)
 		amounts = split_among(flt(self.inventors_revenue), [row.share_percent for row in inventors])
 		return [
-			{key: row[key] for key in ("inventor_type", "employee", "student", "inventor_name")} | {"amount": amount}
+			{key: row[key] for key in ("inventor_type", "employee", "student", "inventor_name")}
+			| {"amount": amount}
 			for row, amount in zip(inventors, amounts, strict=True)
 		]

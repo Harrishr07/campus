@@ -26,7 +26,9 @@ def make_department(name, company):
 	existing = frappe.db.get_value("Department", {"department_name": name, "company": company})
 	if existing:
 		return existing
-	return frappe.get_doc({"doctype": "Department", "department_name": name, "company": company}).insert().name
+	return (
+		frappe.get_doc({"doctype": "Department", "department_name": name, "company": company}).insert().name
+	)
 
 
 def holding(position, user, from_date, to_date=None, scope=None, **extra):
@@ -85,7 +87,9 @@ class TestPositions(CampusTestCase):
 		self.assertEqual(frappe.db.count("Position", {"name": ["in", [row[0] for row in SEED_POSITIONS]]}), 9)
 		for code, _title, scope_type, role, single in SEED_POSITIONS:
 			position = frappe.get_doc("Position", code)
-			self.assertEqual((position.scope_type, position.role, position.single_holder), (scope_type, role, single))
+			self.assertEqual(
+				(position.scope_type, position.role, position.single_holder), (scope_type, role, single)
+			)
 			self.assertTrue(frappe.db.exists("Role", role))
 		self.assertEqual(frappe.db.get_value("Position", "MENTOR", "single_holder"), 0)
 
@@ -237,7 +241,9 @@ class TestPositions(CampusTestCase):
 
 		doc = holding("HOD", ALICE, add_days(today(), -5), scope=self.dept).insert()
 		frappe.db.set_value("Position Holder", doc.name, "to_date", add_days(today(), -1))
-		holding("HOD", BOB, add_days(today(), -5), scope=make_department("Position Test CE", COLLEGE)).insert()
+		holding(
+			"HOD", BOB, add_days(today(), -5), scope=make_department("Position Test CE", COLLEGE)
+		).insert()
 		real = positions.sync_user_roles
 
 		def flaky(user, *args, **kwargs):
@@ -246,7 +252,11 @@ class TestPositions(CampusTestCase):
 			return real(user, *args, **kwargs)
 
 		# the job rolls a failed user back; a real rollback would also drop this class's users and department
-		with patch.object(positions, "sync_user_roles", flaky), patch.object(frappe, "log_error") as log, patch.object(frappe.db, "rollback") as rollback:
+		with (
+			patch.object(positions, "sync_user_roles", flaky),
+			patch.object(frappe, "log_error") as log,
+			patch.object(frappe.db, "rollback") as rollback,
+		):
 			sync_all_roles()
 		rollback.assert_called_once_with()
 		self.assertTrue(log.called)
@@ -282,15 +292,19 @@ class TestPositions(CampusTestCase):
 		existing = frappe.db.get_value("Employee", {"first_name": first_name})
 		if existing:
 			return existing
-		return frappe.get_doc(
-			{
-				"doctype": "Employee",
-				"first_name": first_name,
-				"gender": "Female",
-				"date_of_birth": "1985-01-01",
-				"date_of_joining": "2020-01-01",
-				"company": COLLEGE,
-				"user_id": user,
-				"status": "Active",
-			}
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"first_name": first_name,
+					"gender": "Female",
+					"date_of_birth": "1985-01-01",
+					"date_of_joining": "2020-01-01",
+					"company": COLLEGE,
+					"user_id": user,
+					"status": "Active",
+				}
+			)
+			.insert()
+			.name
+		)

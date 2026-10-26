@@ -12,7 +12,9 @@ import frappe
 def execute():
 	unresolved = bind_registrations()
 	if unresolved:
-		print(f"Course Registration: no unique Program Enrollment for {', '.join(unresolved)}; left blank for review.")
+		print(
+			f"Course Registration: no unique Program Enrollment for {', '.join(unresolved)}; left blank for review."
+		)
 
 
 def bind_registrations():
@@ -26,7 +28,13 @@ def bind_registrations():
 	):
 		enrollment = choose_enrollment(covering_enrollments(registration), enrollments_in_use(registration))
 		if enrollment:
-			frappe.db.set_value("Course Registration", registration.name, "program_enrollment", enrollment, update_modified=False)
+			frappe.db.set_value(
+				"Course Registration",
+				registration.name,
+				"program_enrollment",
+				enrollment,
+				update_modified=False,
+			)
 		else:
 			unresolved.append(registration.name)
 	return unresolved
@@ -49,7 +57,11 @@ def covering_enrollments(registration):
 		enrollment.name
 		for enrollment in frappe.get_all(
 			"Program Enrollment",
-			{"student": registration.student, "docstatus": ["<", 2], "creation": ["<=", registration.creation]},
+			{
+				"student": registration.student,
+				"docstatus": ["<", 2],
+				"creation": ["<=", registration.creation],
+			},
 			["name", "academic_year"],
 		)
 		if covers(years.get(enrollment.academic_year), registration.registration_date)

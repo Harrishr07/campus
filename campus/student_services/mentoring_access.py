@@ -61,7 +61,10 @@ def reads_note(doc, user):
 def check_may_write_note(user, student):
 	if user == "Administrator" or COUNSELLOR_ROLE in frappe.get_roles(user) or is_mentor_of(user, student):
 		return
-	frappe.throw(_("Only the student's mentor or a student counsellor may write a counselling note."), frappe.PermissionError)
+	frappe.throw(
+		_("Only the student's mentor or a student counsellor may write a counselling note."),
+		frappe.PermissionError,
+	)
 
 
 # ---- Parent Interaction ---------------------------------------------------------------------
@@ -97,9 +100,17 @@ def reads_interaction(doc, user, roles=None):
 
 def check_may_record_interaction(user, student):
 	roles = set(frappe.get_roles(user))
-	if user == "Administrator" or set(OFFICE_ROLES) & roles or is_mentor_of(user, student) or is_class_advisor_of(user, student):
+	if (
+		user == "Administrator"
+		or set(OFFICE_ROLES) & roles
+		or is_mentor_of(user, student)
+		or is_class_advisor_of(user, student)
+	):
 		return
-	frappe.throw(_("Only the student's mentor, class advisor or the office may record a parent interaction."), frappe.PermissionError)
+	frappe.throw(
+		_("Only the student's mentor, class advisor or the office may record a parent interaction."),
+		frappe.PermissionError,
+	)
 
 
 # ---- shared ---------------------------------------------------------------------------------

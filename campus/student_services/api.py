@@ -6,6 +6,7 @@ from frappe.query_builder.functions import Min
 from frappe.utils import flt, getdate, today
 
 from campus.campus_platform.api import get_rule
+from campus.student_services import mentors as allocation
 from campus.student_services.attendance_rules import (
 	ATTENDED,
 	ELIGIBLE,
@@ -20,12 +21,13 @@ from campus.student_services.attendance_rules import (
 	session_mark,
 )
 from campus.student_services.attendance_rules import attendance_marks as marks_for_pct
-from campus.student_services import mentors as allocation
 from campus.student_services.certificate_reissue import keeps_original_record  # noqa: F401  (public API)
 from campus.student_services.lifecycle import current_status as lifecycle_status  # noqa: F401  (public API)
-from campus.student_services.lifecycle import last_change_date  # noqa: F401  (public API)
+from campus.student_services.lifecycle import (
+	last_change_date,  # noqa: F401  (public API)
+	transition,  # noqa: F401  (public API)
+)
 from campus.student_services.lifecycle import revert as revert_transition  # noqa: F401  (public API)
-from campus.student_services.lifecycle import transition  # noqa: F401  (public API)
 from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API: lifecycle statuses)
 	ACTIVE,
 	ADMITTED,
@@ -37,7 +39,9 @@ from campus.student_services.lifecycle_rules import (  # noqa: F401  (public API
 	ON_ROLL,
 	STUDY_COMPLETED,
 )
-from campus.student_services.onboarding import create_for_student as create_onboarding  # noqa: F401  (public API)
+from campus.student_services.onboarding import (
+	create_for_student as create_onboarding,  # noqa: F401  (public API)
+)
 from campus.student_services.onboarding import mark_item_done
 from campus.student_services.student_records import (  # noqa: F401  (public API)
 	on_break,
@@ -90,7 +94,10 @@ def attendance_snapshot(student, academic_term, company):
 	term is approved (submitted), else a Shortage. None when no locked run has a row for the student.
 	No read check on the Student: for service code with its own authorisation (exam registration).
 	"""
-	run, row = frappe.qb.DocType("Attendance Eligibility Run"), frappe.qb.DocType("Attendance Eligibility Row")
+	run, row = (
+		frappe.qb.DocType("Attendance Eligibility Run"),
+		frappe.qb.DocType("Attendance Eligibility Row"),
+	)
 	rows = (
 		frappe.qb.from_(run)
 		.join(row)
@@ -152,7 +159,9 @@ def summarise(student, academic_term, window, conducted_cache):
 
 def has_condonation(student, academic_term):
 	return bool(
-		frappe.db.exists("Condonation Request", {"student": student, "academic_term": academic_term, "docstatus": 1})
+		frappe.db.exists(
+			"Condonation Request", {"student": student, "academic_term": academic_term, "docstatus": 1}
+		)
 	)
 
 
@@ -283,11 +292,18 @@ def held_sessions(offering, window):
 	replaced = set(
 		frappe.get_all(
 			"Course Schedule",
-			{"student_group": offering, "oc_session_state": MAKEUP, "oc_makeup_for": ["is", "set"], "schedule_date": ["<=", window[1]]},
+			{
+				"student_group": offering,
+				"oc_session_state": MAKEUP,
+				"oc_makeup_for": ["is", "set"],
+				"schedule_date": ["<=", window[1]],
+			},
 			pluck="oc_makeup_for",
 		)
 	)  # a Makeup replaces its session once it is held (dated in the window), not while it is still to come
-	return {s.name: s.schedule_date for s in schedules if session_counts(s.oc_session_state, s.name in replaced)}
+	return {
+		s.name: s.schedule_date for s in schedules if session_counts(s.oc_session_state, s.name in replaced)
+	}
 
 
 def marked_dates(offering, window):
@@ -313,10 +329,14 @@ def session_counts_of(student, offering, sessions, window, rule):
 	buckets, days_seen = [], set()
 	for name, date in sessions.items():
 		day = getdate(date)
-		status, kind = by_session.get(name) or (by_date.get(day) if day not in days_seen else None) or (None, None)
+		status, kind = (
+			by_session.get(name) or (by_date.get(day) if day not in days_seen else None) or (None, None)
+		)
 		days_seen.add(day)
 		leave = covering_leave(leaves, name, offering, day)
-		status, kind = session_mark(status, kind, leave and leave.oc_leave_kind, bool(leave and leave.mark_as_present))
+		status, kind = session_mark(
+			status, kind, leave and leave.oc_leave_kind, bool(leave and leave.mark_as_present)
+		)
 		buckets.append(bucket(status, kind, rule))
 	return buckets.count(ATTENDED), buckets.count(MEDICAL_LEAVE)
 
@@ -325,8 +345,21 @@ def approved_leaves(student, window):
 	"""The student's submitted Student Leave Applications overlapping the window."""
 	return frappe.get_all(
 		"Student Leave Application",
-		filters={"student": student, "docstatus": 1, "from_date": ["<=", window[1]], "to_date": [">=", window[0]]},
-		fields=["from_date", "to_date", "oc_leave_kind", "attendance_based_on", "student_group", "course_schedule", "mark_as_present"],
+		filters={
+			"student": student,
+			"docstatus": 1,
+			"from_date": ["<=", window[1]],
+			"to_date": [">=", window[0]],
+		},
+		fields=[
+			"from_date",
+			"to_date",
+			"oc_leave_kind",
+			"attendance_based_on",
+			"student_group",
+			"course_schedule",
+			"mark_as_present",
+		],
 	)
 
 
@@ -345,7 +378,10 @@ def covering_leave(leaves, session, offering, date):
 
 
 def student_records(student, offering, window):
-	attendance, leave = frappe.qb.DocType("Student Attendance"), frappe.qb.DocType("Student Leave Application")
+	attendance, leave = (
+		frappe.qb.DocType("Student Attendance"),
+		frappe.qb.DocType("Student Leave Application"),
+	)
 	return (
 		frappe.qb.from_(attendance)
 		.left_join(leave)
@@ -389,7 +425,11 @@ def issue_id_card(student):
 
 	frappe.has_permission("Student", "write", student, throw=True)
 	if lifecycle_status(student) == ADMITTED:  # M04-09: the ID follows the joining confirmation
-		frappe.throw(_("{0} has not joined yet: the ID card is issued after the joining confirmation.").format(frappe.bold(student)))
+		frappe.throw(
+			_("{0} has not joined yet: the ID card is issued after the joining confirmation.").format(
+				frappe.bold(student)
+			)
+		)
 	record = verification.issue(frappe.get_doc("Student", student), ID_CARD_FORMAT)
 	mark_item_done(student, "ID-CARD")
 	return {"code": record.code, "url": verification.verification_url(record.code)}

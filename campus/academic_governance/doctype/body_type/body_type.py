@@ -14,9 +14,21 @@ class BodyType(Document):
 		categories = [row.category for row in self.composition]
 		repeated = sorted({c for c in categories if categories.count(c) > 1})
 		if repeated:
-			frappe.throw(_("Each member category can have one composition rule; repeated: {0}").format(", ".join(map(_, repeated))))
+			frappe.throw(
+				_("Each member category can have one composition rule; repeated: {0}").format(
+					", ".join(map(_, repeated))
+				)
+			)
 		for row in self.composition:
 			if row.maximum_count and row.maximum_count < row.minimum_count:
-				frappe.throw(_("Row {0}: Maximum {1} cannot be below Minimum {2}").format(row.idx, row.maximum_count, row.minimum_count))
+				frappe.throw(
+					_("Row {0}: Maximum {1} cannot be below Minimum {2}").format(
+						row.idx, row.maximum_count, row.minimum_count
+					)
+				)
 			if row.mandatory_for_quorum and not row.minimum_count:
-				frappe.throw(_("Row {0}: a category mandatory for quorum needs a Minimum of at least 1").format(row.idx))
+				frappe.throw(
+					_("Row {0}: a category mandatory for quorum needs a Minimum of at least 1").format(
+						row.idx
+					)
+				)

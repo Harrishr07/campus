@@ -74,7 +74,9 @@ class TestResearchProposal(CampusTestCase):
 		self.consumables = self.make_head("RPT Consumables", [(COLLEGE, consumables)])
 		self.travel = self.make_head("RPT Travel", [(COLLEGE, travel)])
 		self.outside_head = self.make_head("RPT Outside Head", [(COLLEGE, consumables)])
-		self.agency = frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Science Board"}).insert().name
+		self.agency = (
+			frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Science Board"}).insert().name
+		)
 		self.scheme = self.make_scheme("RPT Core Grant", [self.consumables, self.travel])
 		self.call = self.make_call(add_days(today(), 3))
 		self.pi = self.make_employee("Pi", COLLEGE, user=PI_USER)
@@ -84,10 +86,13 @@ class TestResearchProposal(CampusTestCase):
 	def make_settings(self, company, abbr):
 		frappe.get_doc(
 			{
-				"doctype": "Research Settings", "company": company,
+				"doctype": "Research Settings",
+				"company": company,
 				"grant_liability_parent": f"Current Liabilities - {abbr}",
 				"grant_income_account": make_account(company, abbr, "Grant Income", "Indirect Income"),
-				"deferred_capital_grant_account": make_account(company, abbr, "Deferred Capital Grant", "Non-Current Liabilities"),
+				"deferred_capital_grant_account": make_account(
+					company, abbr, "Deferred Capital Grant", "Non-Current Liabilities"
+				),
 			}  # fmt: skip
 		).insert()
 
@@ -102,30 +107,52 @@ class TestResearchProposal(CampusTestCase):
 		).insert().name  # fmt: skip
 
 	def make_call(self, deadline, reminder_days=7, scheme=None):
-		return frappe.get_doc(
-			{
-				"doctype": "Research Call", "call_title": f"RPT Call {frappe.generate_hash(length=6)}", "funding_agency": self.agency,
-				"funding_scheme": scheme or self.scheme, "deadline": deadline, "reminder_days": reminder_days,
-			}  # fmt: skip
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Research Call",
+					"call_title": f"RPT Call {frappe.generate_hash(length=6)}",
+					"funding_agency": self.agency,
+					"funding_scheme": scheme or self.scheme,
+					"deadline": deadline,
+					"reminder_days": reminder_days,
+				}  # fmt: skip
+			)
+			.insert()
+			.name
+		)
 
 	def make_employee(self, first_name, company, user=None):
-		return frappe.get_doc(
-			{
-				"doctype": "Employee", "first_name": first_name, "last_name": frappe.generate_hash(length=6), "gender": "Male",
-				"date_of_birth": "1980-01-01", "date_of_joining": "2010-01-01", "company": company, "user_id": user,
-				"personal_email": f"{first_name.lower()}-{frappe.generate_hash(length=6)}@example.com",
-			}  # fmt: skip
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"first_name": first_name,
+					"last_name": frappe.generate_hash(length=6),
+					"gender": "Male",
+					"date_of_birth": "1980-01-01",
+					"date_of_joining": "2010-01-01",
+					"company": company,
+					"user_id": user,
+					"personal_email": f"{first_name.lower()}-{frappe.generate_hash(length=6)}@example.com",
+				}  # fmt: skip
+			)
+			.insert()
+			.name
+		)
 
 	def proposal(self, budget=None, company=COLLEGE, call=None, **values):
 		budget = budget or [(self.consumables, 300000), (self.travel, 50000)]
 		return frappe.get_doc(
 			{
-				"doctype": "Research Proposal", "title": "Low-cost water sensors", "company": company,
-				"research_call": call or self.call, "principal_investigator": self.pi,
+				"doctype": "Research Proposal",
+				"title": "Low-cost water sensors",
+				"company": company,
+				"research_call": call or self.call,
+				"principal_investigator": self.pi,
 				"co_investigators": [{"employee": self.co_pi}],
-				"budget": [{"budget_head": head, "amount": amount} for head, amount in budget], **values,
+				"budget": [{"budget_head": head, "amount": amount} for head, amount in budget],
+				**values,
 			}  # fmt: skip
 		).insert()
 
@@ -138,7 +165,9 @@ class TestResearchProposal(CampusTestCase):
 
 	# call and proposal set-up
 	def test_call_scheme_must_belong_to_the_agency(self):
-		other_agency = frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Other Board"}).insert().name
+		other_agency = (
+			frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Other Board"}).insert().name
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "RPT Other Board"):
 			frappe.get_doc(
 				{"doctype": "Research Call", "call_title": "RPT Mismatch", "funding_agency": other_agency,
@@ -146,7 +175,9 @@ class TestResearchProposal(CampusTestCase):
 			).insert()  # fmt: skip
 
 	def test_proposal_takes_agency_scheme_and_deadline_from_the_call_and_totals_the_budget(self):
-		other_agency = frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Other Board"}).insert().name
+		other_agency = (
+			frappe.get_doc({"doctype": "Funding Agency", "agency_name": "RPT Other Board"}).insert().name
+		)
 		proposal = self.proposal(funding_agency=other_agency, deadline="2000-01-01")
 		self.assertEqual((proposal.funding_agency, proposal.funding_scheme), (self.agency, self.scheme))
 		self.assertEqual(getdate(proposal.deadline), getdate(add_days(today(), 3)))
@@ -200,7 +231,9 @@ class TestResearchProposal(CampusTestCase):
 	def test_investigators_cannot_review_their_own_proposal(self):
 		proposal = self.proposal()
 		request = request_approval("Research Proposal", proposal.name)
-		self.assertNotIn(PI_USER, frappe.get_all("Approval Request Approver", {"parent": request}, pluck="user"))
+		self.assertNotIn(
+			PI_USER, frappe.get_all("Approval Request Approver", {"parent": request}, pluck="user")
+		)
 		frappe.set_user(PI_USER)  # a Principal, but the proposal's PI
 		with self.assertRaisesRegex(frappe.PermissionError, "own approval request"):
 			approve(request, None)
@@ -236,15 +269,21 @@ class TestResearchProposal(CampusTestCase):
 
 	# acceptance 1: deadline reminders go to the PI
 	def reminder_logs(self, proposal):
-		return frappe.get_all("Message Log", {"event_key": REMINDER_EVENT, "reference_name": proposal.name}, pluck="recipient")
+		return frappe.get_all(
+			"Message Log", {"event_key": REMINDER_EVENT, "reference_name": proposal.name}, pluck="recipient"
+		)
 
 	def test_reminder_goes_to_the_pi_only_once_a_day(self):
 		proposal = self.proposal()
 		proposals.send_deadline_reminders()
 		logs = frappe.get_all(
-			"Message Log", {"event_key": REMINDER_EVENT, "reference_name": proposal.name}, ["name", "recipient", "dedupe_token"]
+			"Message Log",
+			{"event_key": REMINDER_EVENT, "reference_name": proposal.name},
+			["name", "recipient", "dedupe_token"],
 		)
-		self.assertEqual({(log.recipient, log.dedupe_token) for log in logs}, {(f"Employee:{self.pi}", today())})
+		self.assertEqual(
+			{(log.recipient, log.dedupe_token) for log in logs}, {(f"Employee:{self.pi}", today())}
+		)
 		for log in logs:  # the test site has no outgoing mail account: treat the attempt as delivered
 			frappe.db.set_value("Message Log", log.name, "status", "Sent")
 		proposals.send_deadline_reminders()
@@ -288,9 +327,20 @@ class TestResearchProposal(CampusTestCase):
 	# T13 review carry-overs (P3-T14)
 	def test_principal_reads_only_own_college_and_pi_reads_a_colleague_named_proposal(self):
 		other_consumables = make_account(OTHER, OTHER_ABBR, "RP Consumables", "Indirect Expenses")
-		shared = self.make_head("RPT Shared Head", [(COLLEGE, frappe.db.get_value("Grant Budget Head Account", {"parent": self.consumables}, "account")), (OTHER, other_consumables)])
+		shared = self.make_head(
+			"RPT Shared Head",
+			[
+				(
+					COLLEGE,
+					frappe.db.get_value("Grant Budget Head Account", {"parent": self.consumables}, "account"),
+				),
+				(OTHER, other_consumables),
+			],
+		)
 		self.make_settings(OTHER, OTHER_ABBR)
-		other_call = self.make_call(add_days(today(), 3), scheme=self.make_scheme("RPT Shared Grant", [shared]))
+		other_call = self.make_call(
+			add_days(today(), 3), scheme=self.make_scheme("RPT Shared Grant", [shared])
+		)
 		elsewhere = self.proposal(
 			company=OTHER, call=other_call, principal_investigator=self.make_employee("Far", OTHER), co_investigators=[],
 			budget=[(shared, 1000)],
@@ -299,7 +349,9 @@ class TestResearchProposal(CampusTestCase):
 		named = self.proposal(co_investigators=[{"employee": colleague}])  # PI_USER's employee is the PI
 		colleagues_own = self.proposal(principal_investigator=colleague, co_investigators=[])
 		if not frappe.db.exists("User Permission", {"user": PI_USER, "allow": "Employee"}):
-			frappe.get_doc({"doctype": "User Permission", "user": PI_USER, "allow": "Employee", "for_value": self.pi}).insert()
+			frappe.get_doc(
+				{"doctype": "User Permission", "user": PI_USER, "allow": "Employee", "for_value": self.pi}
+			).insert()
 
 		for user in (REVIEWER, PI_USER):
 			frappe.set_user(user)
@@ -313,7 +365,9 @@ class TestResearchProposal(CampusTestCase):
 	def test_co_investigator_cannot_review_the_proposal(self):
 		proposal = self.proposal()
 		request = request_approval("Research Proposal", proposal.name)
-		self.assertNotIn(CO_PI_USER, frappe.get_all("Approval Request Approver", {"parent": request}, pluck="user"))
+		self.assertNotIn(
+			CO_PI_USER, frappe.get_all("Approval Request Approver", {"parent": request}, pluck="user")
+		)
 		frappe.set_user(CO_PI_USER)  # a Principal, but a co-PI of the proposal
 		with self.assertRaisesRegex(frappe.PermissionError, "own approval request"):
 			approve(request, None)

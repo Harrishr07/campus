@@ -22,7 +22,9 @@ def open_drives(student):
 		"Placement Drive", {"company": company, "status": "Open"}, pluck="name", order_by="drive_date"
 	):
 		doc = frappe.get_doc("Placement Drive", drive)
-		registration = frappe.db.get_value("Drive Registration", {"drive": drive, "student": student}, "status")
+		registration = frappe.db.get_value(
+			"Drive Registration", {"drive": drive, "student": student}, "status"
+		)
 		rows.append(
 			{
 				"drive": doc, "registration": registration, "closed": deadline_passed(doc.registration_deadline),

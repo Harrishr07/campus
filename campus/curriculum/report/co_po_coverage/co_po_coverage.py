@@ -21,17 +21,33 @@ def execute(filters=None):
 		frappe.throw(_("Choose a curriculum."))
 	program = frappe.db.get_value("Curriculum", filters.curriculum, "program")
 	if frappe.db.get_value("Program", program, "oc_company") != filters.company:
-		frappe.throw(_("{0} is not a curriculum of {1}.").format(frappe.bold(filters.curriculum), frappe.bold(filters.company)))
+		frappe.throw(
+			_("{0} is not a curriculum of {1}.").format(
+				frappe.bold(filters.curriculum), frappe.bold(filters.company)
+			)
+		)
 	rows = coverage(filters.curriculum, read=frappe.get_list)
 	unmapped = [row.outcome_code for row in rows if not row.total_correlation]
-	message = _("Outcomes with zero total correlation across {0}: {1}.").format(filters.curriculum, ", ".join(unmapped)) if unmapped else None
+	message = (
+		_("Outcomes with zero total correlation across {0}: {1}.").format(
+			filters.curriculum, ", ".join(unmapped)
+		)
+		if unmapped
+		else None
+	)
 	return columns(), rows, message
 
 
 def columns():
 	return [
 		{"fieldname": "outcome_code", "label": _("PO / PSO"), "fieldtype": "Data", "width": 90},
-		{"fieldname": "outcome", "label": _("Outcome"), "fieldtype": "Dynamic Link", "options": "outcome_type", "width": 200},
+		{
+			"fieldname": "outcome",
+			"label": _("Outcome"),
+			"fieldtype": "Dynamic Link",
+			"options": "outcome_type",
+			"width": 200,
+		},
 		{"fieldname": "outcome_type", "label": _("Type"), "fieldtype": "Data", "width": 170},
 		{"fieldname": "statement", "label": _("Statement"), "fieldtype": "Data", "width": 300},
 		{"fieldname": "courses", "label": _("Courses Mapping"), "fieldtype": "Int", "width": 130},

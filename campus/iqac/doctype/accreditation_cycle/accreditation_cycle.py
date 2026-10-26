@@ -24,7 +24,11 @@ class AccreditationCycle(ApprovableDocument, Document):
 
 	def validate_framework(self):
 		if self.is_new() and status_of(self.framework) != "Published":
-			frappe.throw(_("A cycle needs a Published framework; {0} is not published.").format(frappe.bold(self.framework)))
+			frappe.throw(
+				_("A cycle needs a Published framework; {0} is not published.").format(
+					frappe.bold(self.framework)
+				)
+			)
 
 	def validate_unique_cycle(self):
 		if frappe.db.exists(
@@ -34,7 +38,11 @@ class AccreditationCycle(ApprovableDocument, Document):
 				"name": ["!=", self.name],
 			},
 		):  # fmt: skip
-			frappe.throw(_("{0} already has a cycle of {1} for {2}.").format(self.company, self.framework, self.academic_year))
+			frappe.throw(
+				_("{0} already has a cycle of {1} for {2}.").format(
+					self.company, self.framework, self.academic_year
+				)
+			)
 
 	def validate_status(self):
 		self.status = self.status or "Collecting"
@@ -46,27 +54,50 @@ class AccreditationCycle(ApprovableDocument, Document):
 	def validate_owners(self):
 		seen = set()
 		for row in self.owners:
-			node = frappe.db.get_value("Framework Node", row.criterion, ["framework", "node_type"], as_dict=True)
+			node = frappe.db.get_value(
+				"Framework Node", row.criterion, ["framework", "node_type"], as_dict=True
+			)
 			if not node or node.framework != self.framework or node.node_type != "Criterion":
-				frappe.throw(_("Row {0}: {1} is not a criterion of {2}.").format(row.idx, frappe.bold(row.criterion), self.framework))
+				frappe.throw(
+					_("Row {0}: {1} is not a criterion of {2}.").format(
+						row.idx, frappe.bold(row.criterion), self.framework
+					)
+				)
 			if (row.criterion, row.user) in seen:
-				frappe.throw(_("Row {0}: {1} is already an owner of {2}.").format(row.idx, row.user, row.criterion))
+				frappe.throw(
+					_("Row {0}: {1} is already an owner of {2}.").format(row.idx, row.user, row.criterion)
+				)
 			seen.add((row.criterion, row.user))
 
 	def before_approval_request(self):
 		"""Approval is for a cycle in IQAC Review, under a policy whose final action submits it."""
 		if self.status != "IQAC Review":
-			frappe.throw(_("Approval is requested for a cycle in IQAC Review; {0} is {1}.").format(self.name, _(self.status)))
+			frappe.throw(
+				_("Approval is requested for a cycle in IQAC Review; {0} is {1}.").format(
+					self.name, _(self.status)
+				)
+			)
 		policy = find_policy(self)
 		if not policy:
-			frappe.throw(_("Set up an Approval Policy for Accreditation Cycle first; a cycle is approved only through it."))
+			frappe.throw(
+				_(
+					"Set up an Approval Policy for Accreditation Cycle first; a cycle is approved only through it."
+				)
+			)
 		if policy.on_final_action != "Submit":
-			frappe.throw(_("The final action of {0} must be Submit, so that approving the cycle submits and locks it.").format(frappe.bold(policy.name)))
+			frappe.throw(
+				_(
+					"The final action of {0} must be Submit, so that approving the cycle submits and locks it."
+				).format(frappe.bold(policy.name))
+			)
 
 	def before_submit(self):
 		super().before_submit()
 		if not is_approved(self) or self.status != "IQAC Review":
-			frappe.throw(_("A cycle is submitted only by its approval, from IQAC Review."), title=_("Approval Required"))
+			frappe.throw(
+				_("A cycle is submitted only by its approval, from IQAC Review."),
+				title=_("Approval Required"),
+			)
 
 	def on_submit(self):
 		from campus.iqac.cycle import lock_values

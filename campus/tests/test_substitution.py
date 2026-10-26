@@ -51,8 +51,14 @@ class SubstitutionFixture(TimetableFixture):
 
 	def assign_holiday_list(self):
 		"""HRMS needs a holiday list for the leave days; this one has no holidays."""
-		holiday_list = demo.get_or_insert("Holiday List", {"holiday_list_name": "TT Substitution No Holidays"}, {"from_date": "2026-01-01", "to_date": "2026-12-31"})
-		frappe.db.set_value("Company", demo.ENGINEERING, "default_holiday_list", holiday_list)  # Student Attendance reads the company default
+		holiday_list = demo.get_or_insert(
+			"Holiday List",
+			{"holiday_list_name": "TT Substitution No Holidays"},
+			{"from_date": "2026-01-01", "to_date": "2026-12-31"},
+		)
+		frappe.db.set_value(
+			"Company", demo.ENGINEERING, "default_holiday_list", holiday_list
+		)  # Student Attendance reads the company default
 		frappe.get_doc(
 			{"doctype": "Holiday List Assignment", "applicable_for": "Company", "assigned_to": demo.ENGINEERING, "holiday_list": holiday_list, "from_date": "2026-01-01"}
 		).insert(ignore_permissions=True).submit()  # fmt: skip
@@ -73,14 +79,24 @@ class SubstitutionFixture(TimetableFixture):
 	def busy_elsewhere(self, person, row):
 		"""Other classes (schedules or live substitutions) of `person` overlapping the substituted period."""
 		instructor = frappe.db.get_value("Instructor", {"employee": person})
-		overlap = {"schedule_date": row.schedule_date, "from_time": ["<", row.to_time], "to_time": [">", row.from_time]}
+		overlap = {
+			"schedule_date": row.schedule_date,
+			"from_time": ["<", row.to_time],
+			"to_time": [">", row.from_time],
+		}
 		classes = frappe.get_all("Course Schedule", {"instructor": instructor, **overlap}, pluck="name")
-		covering = frappe.get_all("Substitution", {"substitute": person, "status": ["!=", "Cancelled"], "name": ["!=", row.name], **overlap}, pluck="name")
+		covering = frappe.get_all(
+			"Substitution",
+			{"substitute": person, "status": ["!=", "Cancelled"], "name": ["!=", row.name], **overlap},
+			pluck="name",
+		)
 		return classes + covering
 
 	def make_sub_only_teacher(self):
 		"""A CSE teacher with the Instructor role only (not Academics User): the case a substitution has to grant."""
-		user = demo.get_or_insert("User", {"email": SUB_USER}, {"first_name": "Sub Only", "enabled": 1, "send_welcome_email": 0})
+		user = demo.get_or_insert(
+			"User", {"email": SUB_USER}, {"first_name": "Sub Only", "enabled": 1, "send_welcome_email": 0}
+		)
 		frappe.get_doc("User", user).add_roles("Instructor")
 		person = frappe.get_doc(
 			{
@@ -114,8 +130,16 @@ class TestProposal(SubstitutionFixture):
 
 	def test_a_leave_that_is_not_approved_proposes_nothing(self):
 		frappe.get_doc(
-			{"doctype": "Leave Application", "employee": self.hod, "leave_type": make_leave_type(), "from_date": FIRST, "to_date": SECOND,
-			"status": "Open", "company": demo.ENGINEERING, "leave_approver": demo.email("principal")}  # fmt: skip
+			{
+				"doctype": "Leave Application",
+				"employee": self.hod,
+				"leave_type": make_leave_type(),
+				"from_date": FIRST,
+				"to_date": SECOND,
+				"status": "Open",
+				"company": demo.ENGINEERING,
+				"leave_approver": demo.email("principal"),
+			}  # fmt: skip
 		).insert(ignore_permissions=True)
 		self.assertEqual(self.substitutions(), [])
 
@@ -128,7 +152,13 @@ class TestProposal(SubstitutionFixture):
 	def test_a_colleague_teaching_at_that_time_is_not_suggested(self):
 		period = self.hod_schedules(FIRST)[0]
 		busy = frappe.get_all(
-			"Course Schedule", {"schedule_date": FIRST, "from_time": period.from_time, "instructor": ["!=", self.hod_instructor]}, pluck="instructor"
+			"Course Schedule",
+			{
+				"schedule_date": FIRST,
+				"from_time": period.from_time,
+				"instructor": ["!=", self.hod_instructor],
+			},
+			pluck="instructor",
 		)
 		busy_people = {frappe.db.get_value("Instructor", i, "employee") for i in busy}
 		self.assertTrue(busy_people, "fixture: someone else teaches in the same period")
@@ -147,7 +177,9 @@ class TestProposal(SubstitutionFixture):
 		period = self.hod_schedules(FIRST)[0]
 		outsider = employee("faculty_3")
 		frappe.db.set_value("Employee", outsider, "department", f"{demo.ECE_DEPARTMENT} - DCE")
-		frappe.db.set_value("Instructor", {"employee": outsider}, "department", f"{demo.ECE_DEPARTMENT} - DCE")
+		frappe.db.set_value(
+			"Instructor", {"employee": outsider}, "department", f"{demo.ECE_DEPARTMENT} - DCE"
+		)
 		suggested = {s["employee"] for s in substitution.free_faculty(period.name)}
 		self.assertNotIn(self.hod, suggested)
 		self.assertNotIn(outsider, suggested)
@@ -160,10 +192,20 @@ class TestProposal(SubstitutionFixture):
 
 	def test_a_clashing_substitute_cannot_be_chosen_by_hand(self):
 		period = self.hod_schedules(FIRST)[0]
-		busy = frappe.get_all("Course Schedule", {"schedule_date": FIRST, "from_time": period.from_time, "instructor": ["!=", self.hod_instructor]}, pluck="instructor")
+		busy = frappe.get_all(
+			"Course Schedule",
+			{
+				"schedule_date": FIRST,
+				"from_time": period.from_time,
+				"instructor": ["!=", self.hod_instructor],
+			},
+			pluck="instructor",
+		)
 		clash = frappe.db.get_value("Instructor", busy[0], "employee")
 		with self.assertRaises(frappe.ValidationError) as caught:
-			frappe.get_doc({"doctype": "Substitution", "course_schedule": period.name, "substitute": clash}).insert()
+			frappe.get_doc(
+				{"doctype": "Substitution", "course_schedule": period.name, "substitute": clash}
+			).insert()
 		self.assertIn("clash", str(caught.exception).lower())
 
 	def test_cancelling_the_leave_cancels_its_substitutions(self):
@@ -192,7 +234,9 @@ class TestConfirmation(SubstitutionFixture):
 		doc.reload()
 		doc.reason = "Edited"
 		doc.save()
-		self.assertEqual(len(frappe.get_all("Message Log", {"event_key": EVENT, "reference_name": doc.name})), len(logs))
+		self.assertEqual(
+			len(frappe.get_all("Message Log", {"event_key": EVENT, "reference_name": doc.name})), len(logs)
+		)
 
 	def test_an_invalid_course_schedule_is_a_validation_error(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -204,7 +248,9 @@ class TestConfirmation(SubstitutionFixture):
 		doc.status = "Confirmed"
 		doc.save()
 		leave.cancel()
-		logs = frappe.get_all("Message Log", {"event_key": "substitution.cancelled", "reference_name": doc.name}, ["recipient"])
+		logs = frappe.get_all(
+			"Message Log", {"event_key": "substitution.cancelled", "reference_name": doc.name}, ["recipient"]
+		)
 		self.assertTrue(logs)
 		self.assertTrue(all(doc.substitute in log.recipient for log in logs))
 
@@ -230,7 +276,9 @@ class TestConfirmation(SubstitutionFixture):
 
 	def test_the_order_prints_with_the_reason_escaped(self):
 		doc = self.proposed()
-		frappe.db.set_value("Substitution", doc.name, "reason", "<script>alert(1)</script>")  # as if stored by an import: save() would sanitise it
+		frappe.db.set_value(
+			"Substitution", doc.name, "reason", "<script>alert(1)</script>"
+		)  # as if stored by an import: save() would sanitise it
 		html = frappe.get_print("Substitution", doc.name, "Substitution Order")
 		self.assertNotIn("<script>alert(1)</script>", html)
 		self.assertIn("&lt;script&gt;", html)
@@ -247,15 +295,23 @@ class TestSubstituteAttendance(SubstitutionFixture):
 			self.assign(row, self.substitute)
 		frappe.db.set_value("Substitution", self.mine.name, "status", "Confirmed")
 		self.students = self.enrol(self.mine.course_schedule)
-		patcher = mock.patch(DEFAULT_COMPANY, return_value=demo.ENGINEERING)  # the test site has no default company, which attendance's holiday check reads
+		patcher = mock.patch(
+			DEFAULT_COMPANY, return_value=demo.ENGINEERING
+		)  # the test site has no default company, which attendance's holiday check reads
 		patcher.start()
 		self.addCleanup(patcher.stop)
-		today = mock.patch("campus.faculty.substitute_attendance.today", return_value="2026-11-20")  # after the substituted periods
+		today = mock.patch(
+			"campus.faculty.substitute_attendance.today", return_value="2026-11-20"
+		)  # after the substituted periods
 		self.today = today.start()
 		self.addCleanup(today.stop)
 
 	def assign(self, row, person):
-		frappe.db.set_value("Substitution", row.name, {"substitute": person, "substitute_user": frappe.db.get_value("Employee", person, "user_id")})
+		frappe.db.set_value(
+			"Substitution",
+			row.name,
+			{"substitute": person, "substitute_user": frappe.db.get_value("Employee", person, "user_id")},
+		)
 
 	def enrol(self, schedule):
 		group = frappe.db.get_value("Course Schedule", schedule, "student_group")
@@ -270,7 +326,12 @@ class TestSubstituteAttendance(SubstitutionFixture):
 		return students
 
 	def attendance(self, schedule):
-		return frappe.get_all("Student Attendance", {"course_schedule": schedule, "docstatus": 1}, ["student", "status"], order_by="student")
+		return frappe.get_all(
+			"Student Attendance",
+			{"course_schedule": schedule, "docstatus": 1},
+			["student", "status"],
+			order_by="student",
+		)
 
 	def test_the_confirmed_substitute_marks_attendance_for_that_period(self):
 		self.assertTrue(api.can_mark_substituted_attendance(SUB_USER, self.mine.course_schedule))
@@ -291,7 +352,9 @@ class TestSubstituteAttendance(SubstitutionFixture):
 		self.assertEqual(self.attendance(self.other.course_schedule), [])
 
 	def test_someone_else_cannot_use_the_substitution(self):
-		self.assertFalse(api.can_mark_substituted_attendance("faculty_1@" + demo.DOMAIN, self.mine.course_schedule))
+		self.assertFalse(
+			api.can_mark_substituted_attendance("faculty_1@" + demo.DOMAIN, self.mine.course_schedule)
+		)
 		frappe.set_user("faculty_1@" + demo.DOMAIN)
 		with self.assertRaises(frappe.PermissionError):
 			api.mark_substituted_attendance(self.mine.name, present=self.students, absent=[])
@@ -305,7 +368,12 @@ class TestSubstituteAttendance(SubstitutionFixture):
 		self.assertFalse(set(frappe.get_roles(SUB_USER)) & {"Academics User", "System Manager"})
 
 	def marked(self, schedule):
-		return frappe.get_all("Student Attendance", {"course_schedule": schedule}, ["name", "student", "status", "docstatus"], order_by="creation, name")
+		return frappe.get_all(
+			"Student Attendance",
+			{"course_schedule": schedule},
+			["name", "student", "status", "docstatus"],
+			order_by="creation, name",
+		)
 
 	def test_the_substitute_can_correct_a_mark_inside_the_grant(self):
 		student = self.students[0]
@@ -334,7 +402,9 @@ class TestSubstituteAttendance(SubstitutionFixture):
 	def test_student_lists_must_hold_student_names(self):
 		frappe.set_user(SUB_USER)
 		with self.assertRaises(frappe.ValidationError):
-			api.mark_substituted_attendance(self.mine.name, present=[{"student": self.students[0]}], absent=[])
+			api.mark_substituted_attendance(
+				self.mine.name, present=[{"student": self.students[0]}], absent=[]
+			)
 
 	def test_the_endpoints_accept_post_only(self):
 		for method in (api.mark_substituted_attendance, api.suggest_substitutes):
@@ -369,6 +439,8 @@ class TestSubstituteAttendance(SubstitutionFixture):
 		self.assertIn(self.mine.name, listed)
 		self.assertNotIn(self.other.name, listed)
 		# the leave also auto-proposed further periods to this free teacher: those are theirs too, nothing else is listed
-		self.assertEqual(set(listed), set(frappe.get_all("Substitution", {"substitute_user": SUB_USER}, pluck="name")))
+		self.assertEqual(
+			set(listed), set(frappe.get_all("Substitution", {"substitute_user": SUB_USER}, pluck="name"))
+		)
 		self.assertFalse(frappe.has_permission("Substitution", "read", self.other.name))
 		self.assertFalse(frappe.has_permission("Substitution", "write", self.mine.name))

@@ -41,7 +41,9 @@ RETIRED_ROLES = {"Academics User": {"Instructor", "HOD", "Class Advisor", "COE",
 
 def retired_roles(roles):
 	"""The retired roles a user with the spec `roles` must not hold."""
-	return {retired for retired, holders in RETIRED_ROLES.items() if holders & set(roles) and retired not in roles}
+	return {
+		retired for retired, holders in RETIRED_ROLES.items() if holders & set(roles) and retired not in roles
+	}
 
 
 def ensure_people(profile, companies, out, test_passwords, result):
@@ -70,10 +72,19 @@ def ensure_user(profile, spec, out, test_passwords, result):
 	email = user_email(profile, spec["key"])
 	if frappe.db.exists("User", email):
 		return email
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # skip Frappe's 60-users-per-minute creation throttle
+	was_importing, frappe.flags.in_import = (
+		frappe.flags.in_import,
+		True,
+	)  # skip Frappe's 60-users-per-minute creation throttle
 	try:
 		user = frappe.get_doc(
-			{"doctype": "User", "email": email, "first_name": spec["name"], "enabled": 1, "send_welcome_email": 0}
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": spec["name"],
+				"enabled": 1,
+				"send_welcome_email": 0,
+			}
 		).insert(ignore_permissions=True)
 	finally:
 		frappe.flags.in_import = was_importing
@@ -105,19 +116,38 @@ def ensure_employee(profile, spec, user, college, out):
 	defaults = profile["people_defaults"]
 	employee = frappe.db.get_value("Employee", {"user_id": user})
 	if not employee:
-		employee = frappe.get_doc(
-			{
-				"doctype": "Employee", "naming_series": "HR-EMP-", "first_name": spec["name"], "gender": defaults["gender"],
-				"date_of_birth": defaults["date_of_birth"], "date_of_joining": defaults["date_of_joining"],
-				"status": "Active", "company": college, "user_id": user, "create_user_permission": 0,
-				"department": department_name(spec["department"], college) if spec.get("department") else None,
-			}
-		).insert(ignore_permissions=True).name
+		employee = (
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"naming_series": "HR-EMP-",
+					"first_name": spec["name"],
+					"gender": defaults["gender"],
+					"date_of_birth": defaults["date_of_birth"],
+					"date_of_joining": defaults["date_of_joining"],
+					"status": "Active",
+					"company": college,
+					"user_id": user,
+					"create_user_permission": 0,
+					"department": department_name(spec["department"], college)
+					if spec.get("department")
+					else None,
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
 		out.created["Employee"] += 1
 	if spec.get("instructor"):
 		upsert(
-			out, "Instructor", {"employee": employee},
-			{"instructor_name": spec["name"], "oc_company": college, "department": department_name(spec["department"], college)},
+			out,
+			"Instructor",
+			{"employee": employee},
+			{
+				"instructor_name": spec["name"],
+				"oc_company": college,
+				"department": department_name(spec["department"], college),
+			},
 		)
 	return employee
 
@@ -127,7 +157,9 @@ def ensure_class_group(profile, college, out):
 	if not spec:
 		return None
 	return upsert(
-		out, "Student Group", {"student_group_name": spec["name"], "academic_year": spec["academic_year"]},
+		out,
+		"Student Group",
+		{"student_group_name": spec["name"], "academic_year": spec["academic_year"]},
 		{"group_based_on": "Batch", "program": spec["programme"]},
 	)
 
@@ -140,7 +172,9 @@ def ensure_position(profile, spec, user, college, group, employee, out):
 		"group": group,
 	}
 	upsert(
-		out, "Position Holder", {"position": position["code"], "scope_value": scopes[position["scope"]], "user": user},
+		out,
+		"Position Holder",
+		{"position": position["code"], "scope_value": scopes[position["scope"]], "user": user},
 		{"employee": employee, "from_date": profile["people_defaults"]["positions_from"]},
 	)
 
@@ -152,8 +186,14 @@ def ensure_pilot_student(profile, college, out):
 		return
 	email = user_email(profile, student_spec["key"])
 	student = upsert(
-		out, "Student", {"student_email_id": email},
-		{"first_name": student_spec["name"], "oc_company": college, "joining_date": student_spec["student"]["joining_date"]},
+		out,
+		"Student",
+		{"student_email_id": email},
+		{
+			"first_name": student_spec["name"],
+			"oc_company": college,
+			"joining_date": student_spec["student"]["joining_date"],
+		},
 	)
 	if frappe.db.get_value("Student", student, "user") != email:
 		frappe.db.set_value("Student", student, "user", email, update_modified=False)
@@ -162,10 +202,20 @@ def ensure_pilot_student(profile, college, out):
 		return
 	guardian_email = user_email(profile, guardian_spec["key"])
 	guardian = upsert(
-		out, "Guardian", {"email_address": guardian_email}, {"guardian_name": guardian_spec["name"], "user": guardian_email}
+		out,
+		"Guardian",
+		{"email_address": guardian_email},
+		{"guardian_name": guardian_spec["name"], "user": guardian_email},
 	)
 	if not frappe.db.exists("Student Guardian", {"parent": student, "guardian": guardian}):
 		doc = frappe.get_doc("Student", student)
-		doc.append("guardians", {"guardian": guardian, "guardian_name": guardian_spec["name"], "relation": guardian_spec["guardian"]["relation"]})
+		doc.append(
+			"guardians",
+			{
+				"guardian": guardian,
+				"guardian_name": guardian_spec["name"],
+				"relation": guardian_spec["guardian"]["relation"],
+			},
+		)
 		doc.save(ignore_permissions=True)
 		out.updated["Student"] += 1

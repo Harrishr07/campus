@@ -6,16 +6,35 @@ IDENTITY, ACADEMIC = "Identity Document", "Academic Identifier"
 
 # category -> (DocType the field belongs to, correctable fieldnames)
 CATEGORIES = {
-	PERSONAL: ("Student", ("first_name", "middle_name", "last_name", "date_of_birth", "gender", "blood_group", "nationality")),
+	PERSONAL: (
+		"Student",
+		("first_name", "middle_name", "last_name", "date_of_birth", "gender", "blood_group", "nationality"),
+	),
 	CONTACT: (
 		"Student",
-		("student_email_id", "student_mobile_number", "address_line_1", "address_line_2", "pincode", "city", "state", "country"),
+		(
+			"student_email_id",
+			"student_mobile_number",
+			"address_line_1",
+			"address_line_2",
+			"pincode",
+			"city",
+			"state",
+			"country",
+		),
 	),
-	GUARDIAN: ("Guardian", ("guardian_name", "email_address", "mobile_number", "alternate_number", "occupation")),
+	GUARDIAN: (
+		"Guardian",
+		("guardian_name", "email_address", "mobile_number", "alternate_number", "occupation"),
+	),
 	IDENTITY: ("Student", ("oc_aadhaar",)),
 	ACADEMIC: ("Student", ("oc_register_no", "oc_roll_no")),
 }
-PORTAL_CATEGORIES = (PERSONAL, CONTACT, GUARDIAN)  # a student or guardian may raise these; the office raises any
+PORTAL_CATEGORIES = (
+	PERSONAL,
+	CONTACT,
+	GUARDIAN,
+)  # a student or guardian may raise these; the office raises any
 HIGHER_CATEGORIES = (IDENTITY, ACADEMIC)  # need the Principal after the first approver
 EVIDENCE_FREE = (CONTACT,)  # every other category needs an evidence file
 MASK_PREFIX = "XXXX-XXXX-"

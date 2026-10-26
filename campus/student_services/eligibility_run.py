@@ -19,7 +19,11 @@ DOCTYPE, ROW = "Attendance Eligibility Run", "Attendance Eligibility Row"
 RUN_TYPE = "Attendance Eligibility Run"
 HANDLER = "campus.student_services.eligibility_run.run_student"
 LABELS = {ELIGIBLE: "Eligible", MEDICAL_BAND: "Condonation", "Shortage": "Detained (SA)"}
-COUNT_FIELDS = {"Eligible": "eligible_count", "Condonation": "condonation_count", "Detained (SA)": "detained_count"}
+COUNT_FIELDS = {
+	"Eligible": "eligible_count",
+	"Condonation": "condonation_count",
+	"Detained (SA)": "detained_count",
+}
 ALERT_EVENT = "attendance.shortage"
 SAVEPOINT = "eligibility_alert"
 IN_PROGRESS = ("Queued", "Running")
@@ -38,7 +42,9 @@ def term_students(doc):
 		conditions["oc_semester"] = doc.semester
 	students = {}
 	for group in frappe.get_all("Student Group", conditions, ["name", "program"], order_by="name"):
-		for student in frappe.get_all("Student Group Student", {"parent": group.name, "active": 1}, pluck="student"):
+		for student in frappe.get_all(
+			"Student Group Student", {"parent": group.name, "active": 1}, pluck="student"
+		):
 			students.setdefault(student, group.program)
 	return students
 
@@ -111,19 +117,31 @@ def program_of(student, summary):
 def shortage_summary(summary):
 	"""The courses below the per-course minimum (or, with none, below the overall minimum), e.g. "ATT A (70%)"."""
 	threshold = summary["per_course_min_pct"] or summary["overall_min_pct"]
-	return ", ".join(f"{row['course']} ({row['pct']:g}%)" for row in summary["offerings"] if row["pct"] < threshold)
+	return ", ".join(
+		f"{row['course']} ({row['pct']:g}%)" for row in summary["offerings"] if row["pct"] < threshold
+	)
 
 
 def refresh_counts(name):
 	counts = dict(
-		frappe.db.sql("select status, count(*) from `tabAttendance Eligibility Row` where parent = %s group by status", name)
+		frappe.db.sql(
+			"select status, count(*) from `tabAttendance Eligibility Row` where parent = %s group by status",
+			name,
+		)
 	)
-	frappe.db.set_value(DOCTYPE, name, {field: counts.get(status, 0) for status, field in COUNT_FIELDS.items()}, update_modified=False)
+	frappe.db.set_value(
+		DOCTYPE,
+		name,
+		{field: counts.get(status, 0) for status, field in COUNT_FIELDS.items()},
+		update_modified=False,
+	)
 
 
 def alert_guardians(student, summary):
 	"""Best effort: a messaging problem must never fail the student's row."""
-	guardians = frappe.get_all("Student Guardian", {"parent": student, "parenttype": "Student"}, pluck="guardian")
+	guardians = frappe.get_all(
+		"Student Guardian", {"parent": student, "parenttype": "Student"}, pluck="guardian"
+	)
 	if not (guardians and frappe.db.exists("Message Template", {"event_key": ALERT_EVENT, "enabled": 1})):
 		return
 	from campus.campus_messaging.api import send
@@ -131,7 +149,9 @@ def alert_guardians(student, summary):
 	frappe.db.savepoint(SAVEPOINT)
 	try:
 		send(
-			ALERT_EVENT, frappe.get_doc("Student", student), [f"Guardian:{g}" for g in guardians if g],
+			ALERT_EVENT,
+			frappe.get_doc("Student", student),
+			[f"Guardian:{g}" for g in guardians if g],
 			{"percentage": flt(summary["overall_pct"]), "dedupe_token": summary["term"]},
 		)
 	except Exception:

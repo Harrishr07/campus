@@ -20,23 +20,48 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 220},
-		{"fieldname": "academic_year", "label": _("Academic Year"), "fieldtype": "Link", "options": "Academic Year", "width": 130},
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 220,
+		},
+		{
+			"fieldname": "academic_year",
+			"label": _("Academic Year"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 130,
+		},
 		{"fieldname": "applicants", "label": _("Applicants"), "fieldtype": "Int", "width": 110},
 	]
 
 
 def data(filters):
 	permitted = permitted_companies(frappe.session.user)
-	if not filters.company or not filters.academic_year or (permitted is not None and filters.company not in permitted):
+	if (
+		not filters.company
+		or not filters.academic_year
+		or (permitted is not None and filters.company not in permitted)
+	):
 		return []
-	programs = frappe.get_list("Program", {"oc_company": filters.company}, pluck="name", order_by="name", limit=0)
+	programs = frappe.get_list(
+		"Program", {"oc_company": filters.company}, pluck="name", order_by="name", limit=0
+	)
 	with_matrix = set(
-		frappe.get_all("Seat Matrix", {"company": filters.company, "academic_year": filters.academic_year}, pluck="program")
+		frappe.get_all(
+			"Seat Matrix",
+			{"company": filters.company, "academic_year": filters.academic_year},
+			pluck="program",
+		)
 	)
 	missing = [program for program in programs if program not in with_matrix]
 	waiting = applicant_counts(missing, filters.academic_year)
-	return [{"program": p, "academic_year": filters.academic_year, "applicants": waiting.get(p, 0)} for p in missing]
+	return [
+		{"program": p, "academic_year": filters.academic_year, "applicants": waiting.get(p, 0)}
+		for p in missing
+	]
 
 
 def applicant_counts(programs, academic_year):
@@ -44,7 +69,11 @@ def applicant_counts(programs, academic_year):
 		return {}
 	rows = frappe.get_all(
 		"Student Applicant",
-		filters={"program": ["in", programs], "academic_year": academic_year, "application_status": ["in", WAITING]},
+		filters={
+			"program": ["in", programs],
+			"academic_year": academic_year,
+			"application_status": ["in", WAITING],
+		},
 		fields=["program", {"COUNT": "name", "as": "n"}],
 		group_by="program",
 	)

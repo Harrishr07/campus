@@ -32,14 +32,18 @@ def data(filters):
 	conditions = {"company": filters.company}
 	if filters.exam_session:
 		conditions["name"] = filters.exam_session
-	sessions = frappe.get_all("Exam Session", filters=conditions, pluck="name")  # the company is checked by in_scope
+	sessions = frappe.get_all(
+		"Exam Session", filters=conditions, pluck="name"
+	)  # the company is checked by in_scope
 	entries = frappe.get_list(
 		"Valuation Entry", filters={"exam_session": ["in", sessions or [""]], "docstatus": 1},
 		fields=["exam_session", "course", "dummy_number", "valuation_round", "total"],
 	)  # fmt: skip
 	scripts = {}
 	for entry in entries:
-		scripts.setdefault((entry.exam_session, entry.course, entry.dummy_number), {})[str(entry.valuation_round)] = flt(entry.total)
+		scripts.setdefault((entry.exam_session, entry.course, entry.dummy_number), {})[
+			str(entry.valuation_round)
+		] = flt(entry.total)
 	out = []
 	for (session, course, dummy), marks in sorted(scripts.items()):
 		if "1" in marks and "2" in marks:

@@ -31,7 +31,11 @@ def deadline_in_force(program):
 	"""The reporting deadline Admission Settings sets now for `program` (its own row, else the round's), or None."""
 	settings = frappe.get_cached_doc("Admission Settings")
 	row = next((row for row in settings.program_reporting_deadlines if row.program == program), None)
-	return getdate(row.reporting_deadline) if row else (settings.reporting_deadline and getdate(settings.reporting_deadline))
+	return (
+		getdate(row.reporting_deadline)
+		if row
+		else (settings.reporting_deadline and getdate(settings.reporting_deadline))
+	)
 
 
 def student_deadline(stamped, program):
@@ -46,16 +50,16 @@ def check_late_joining(applicant, deadline, date):
 	approved = frappe.db.get_value(LATE_REQUEST, {"applicant": applicant, "docstatus": 1}, "joining_date")
 	if not approved:
 		frappe.throw(
-			_("The joining date {0} is after the reporting deadline {1}: a Late Joining Request for {2} must be approved first.").format(
-				frappe.format(date, "Date"), frappe.format(deadline, "Date"), applicant
-			),
+			_(
+				"The joining date {0} is after the reporting deadline {1}: a Late Joining Request for {2} must be approved first."
+			).format(frappe.format(date, "Date"), frappe.format(deadline, "Date"), applicant),
 			title=_("Late Joining"),
 		)
 	if getdate(approved) != getdate(date):
 		frappe.throw(
-			_("The approved Late Joining Request of {0} is for joining on {1}; confirm the joining with that date.").format(
-				applicant, frappe.format(approved, "Date")
-			),
+			_(
+				"The approved Late Joining Request of {0} is for joining on {1}; confirm the joining with that date."
+			).format(applicant, frappe.format(approved, "Date")),
 			title=_("Late Joining"),
 		)
 
@@ -71,12 +75,23 @@ def no_shows(as_of=None, company=None):
 	grace = cint(frappe.db.get_single_value("Admission Settings", "no_show_grace_days"))
 	filters = {"oc_academic_status": ADMITTED, "enabled": 1, **({"oc_company": company} if company else {})}
 	students = frappe.get_all(
-		"Student", filters, ["name", "student_name", "student_applicant", "oc_company", "oc_reporting_deadline"], limit=0
+		"Student",
+		filters,
+		["name", "student_name", "student_applicant", "oc_company", "oc_reporting_deadline"],
+		limit=0,
 	)
 	applicants = [s.student_applicant for s in students if s.student_applicant]
-	programs = dict(frappe.get_all("Student Applicant", {"name": ("in", applicants or [""])}, ["name", "program"], as_list=True))
+	programs = dict(
+		frappe.get_all(
+			"Student Applicant", {"name": ("in", applicants or [""])}, ["name", "program"], as_list=True
+		)
+	)
 	late = set(
-		frappe.get_all(LATE_REQUEST, {"applicant": ("in", applicants or [""]), "docstatus": 1, "joining_date": (">=", day)}, pluck="applicant")
+		frappe.get_all(
+			LATE_REQUEST,
+			{"applicant": ("in", applicants or [""]), "docstatus": 1, "joining_date": (">=", day)},
+			pluck="applicant",
+		)
 	)
 	rows = []
 	for student in students:
@@ -102,7 +117,9 @@ def open_cancellation(student):
 
 def withdraw_referrals(student):
 	"""A referred no-show joined after all: their draft cancellations without an enrollment are deleted."""
-	frappe.db.delete(CANCELLATION, {"student": student, "docstatus": 0, "program_enrollment": ("is", "not set")})
+	frappe.db.delete(
+		CANCELLATION, {"student": student, "docstatus": 0, "program_enrollment": ("is", "not set")}
+	)
 
 
 def refer_no_shows(as_of=None):
@@ -123,9 +140,13 @@ def referral_key(item):
 def refer_no_show(item, run=None):
 	"""Bulk handler: a draft Admission Cancellation for a student still Admitted and not yet referred. DB-only."""
 	student = item["student"]
-	if frappe.db.get_value("Student", student, "oc_academic_status") != ADMITTED or open_cancellation(student):
+	if frappe.db.get_value("Student", student, "oc_academic_status") != ADMITTED or open_cancellation(
+		student
+	):
 		return
-	reason = _("No-show: did not join by the reporting deadline {0}.").format(frappe.format(item["reporting_deadline"], "Date"))
+	reason = _("No-show: did not join by the reporting deadline {0}.").format(
+		frappe.format(item["reporting_deadline"], "Date")
+	)
 	frappe.get_doc(
 		{"doctype": CANCELLATION, "student": student, "cancellation_date": today(), "reason": reason}
 	).insert(ignore_permissions=True)  # fmt: skip

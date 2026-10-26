@@ -11,5 +11,7 @@ class ResearchCall(Document):
 		scheme_agency = frappe.db.get_value("Funding Scheme", self.funding_scheme, "funding_agency")
 		if scheme_agency != self.funding_agency:
 			frappe.throw(
-				_("Funding Scheme {0} belongs to {1}, not {2}.").format(self.funding_scheme, scheme_agency, self.funding_agency)
+				_("Funding Scheme {0} belongs to {1}, not {2}.").format(
+					self.funding_scheme, scheme_agency, self.funding_agency
+				)
 			)
