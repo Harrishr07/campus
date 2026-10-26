@@ -25,6 +25,8 @@
 	},
 	"root": true,
 	"globals": {
+		"campus": true,
+		"cpPost": true,
 		"frappe": true,
 		"Vue": true,
 		"SetVueGlobals": true,

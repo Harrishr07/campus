@@ -84,7 +84,7 @@ class TestFiles(UnitTestCase):
 		self.assertEqual(lines, [["Reg", "Code", "Name", "CIA"], ["'@SUM(1)", "'-1+2", "'=1", "30.5"]])
 
 	def test_import_by_heading_and_by_position(self):
-		content = "grade,reg,code,extra\nA,R1,C1,x\n,,,\n".encode()
+		content = b"grade,reg,code,extra\nA,R1,C1,x\n,,,\n"
 		self.assertEqual(
 			parse_file(fmt(), "f.csv", content),
 			[(2, {"Grade": "A", "University Register No": "R1", "Course Code": "C1"})],

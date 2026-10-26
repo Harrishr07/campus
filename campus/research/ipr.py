@@ -25,7 +25,7 @@ def check_lifecycle(status, dates, before_status=None, today=None):
 	reached = STAGES.index(stage)
 	previous = None
 	for name in STAGES[: STAGES.index("Licensed")]:
-		field, value = STAGE_DATES[name], dates.get(STAGE_DATES[name])
+		value = dates.get(STAGE_DATES[name])
 		if STAGES.index(name) == reached and not value:
 			frappe.throw(
 				_("Enter the {0} date for a patent that is {1}.").format(_(name).lower(), _(status).lower())

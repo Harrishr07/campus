@@ -123,8 +123,8 @@ def plain_uploads(doc, field, url):
 	)
 	return [
 		f.name for f in files
-		if (f.attached_to_doctype, f.attached_to_name) == (QUESTION_PAPER, doc.name) and f.attached_to_field in (field, None, "")
-		or not f.attached_to_doctype and f.owner == frappe.session.user
+		if ((f.attached_to_doctype, f.attached_to_name) == (QUESTION_PAPER, doc.name) and f.attached_to_field in (field, None, ""))
+		or (not f.attached_to_doctype and f.owner == frappe.session.user)
 	]  # fmt: skip
 
 
@@ -184,7 +184,7 @@ def snapshot(doc):
 	for field in PAPER_FILE_FIELDS.values():
 		name = doc.get(field) and bound_file(doc, field)
 		doc.set(f"{field}_id", name or None)
-		doc.set(f"{field}_sha256", name and fingerprint(name) or None)
+		doc.set(f"{field}_sha256", (name and fingerprint(name)) or None)
 
 
 def read_sealed(doc, field):

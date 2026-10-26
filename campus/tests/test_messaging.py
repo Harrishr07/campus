@@ -256,7 +256,7 @@ class TestMessagingSend(CampusTestCase):
 	def test_repeat_send_is_a_no_op_returning_existing_logs(self):
 		sms = ok("sms-id")
 		with adapters(whatsapp=failing(), sms=sms):
-			first = self.send_fees()
+			self.send_fees()
 			second = self.send_fees()
 		self.assertEqual(second, [self.logs(channel="sms")[0].name])
 		self.assertEqual(sms.call_count, 1)

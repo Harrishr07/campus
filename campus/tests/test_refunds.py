@@ -202,7 +202,7 @@ class TestFeeRefund(RefundFixture):
 			(1, 1, invoice.name, COLLEGE, -4000),
 		)
 		entries = self.gl(note.name)
-		self.assertEqual(entries[f"Sales - RFDC"], (4000, 0))  # income reversed
+		self.assertEqual(entries["Sales - RFDC"], (4000, 0))  # income reversed
 		self.assertEqual(sum(d for d, _c in entries.values()), sum(c for _d, c in entries.values()))
 		payment = frappe.get_doc("Payment Entry", doc.payment_entry)
 		self.assertEqual(

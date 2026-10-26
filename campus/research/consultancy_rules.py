@@ -49,7 +49,7 @@ def check_team(members, pool_percents):
 			)
 		if rows and all(not flt(m.get("share_percent")) for m in rows):
 			for row, share in zip(rows, default_shares(len(rows)), strict=True):
-				setattr(row, "share_percent", share)
+				row.share_percent = share
 		total = flt(sum(flt(m.get("share_percent")) for m in rows), 2)
 		if rows and total != 100:
 			frappe.throw(

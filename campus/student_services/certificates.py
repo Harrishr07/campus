@@ -23,7 +23,7 @@ def next_certificate_number(certificate_type, company):
 
 def validate_prefix(prefix):
 	validate_number_prefix(prefix)
-	if "{abbr}" not in prefix or "{yyyy}" not in prefix and "{yy}" not in prefix:
+	if "{abbr}" not in prefix or ("{yyyy}" not in prefix and "{yy}" not in prefix):
 		frappe.throw(
 			_(
 				"The number prefix must contain {abbr} and {yyyy} (or {yy}) so that numbers run per company and year."

@@ -83,10 +83,8 @@ def had_arrears(student):
 def required_credits(regulation):
 	"""The regulation's credit total for the degree (Curriculum Rule min_total_credits), or 0 when none is set."""
 	return (
-		regulation
-		and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits")
-		or 0
-	)
+		regulation and frappe.db.get_value("Curriculum Rule", {"regulation": regulation}, "min_total_credits")
+	) or 0
 
 
 def classification_rule(regulation):

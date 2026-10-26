@@ -256,7 +256,7 @@ class TestPublicPage(VerificationTestCase):
 
 	def test_guest_can_call_api(self):
 		record = issue(make_certificate(), CERT_FORMAT)
-		frappe.db.commit()  # noqa: nothing
+		frappe.db.commit()  # nosemgrep
 		frappe.set_user("Guest")
 		self.assertEqual(frappe.call(verification.verify_public, code=record.code).status, "Valid")
 

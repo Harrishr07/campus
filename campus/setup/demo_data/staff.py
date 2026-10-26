@@ -60,7 +60,7 @@ def department_specs(ctx, programme):
 def add_member(ctx, spec, test_passwords, result):
 	profile = ctx.profile
 	user = people.ensure_user(profile, spec, ctx.out, test_passwords, result)
-	for token in spec["companies"]:
+	for _company in spec["companies"]:
 		upsert(ctx.out, "User Permission", {"user": user, "allow": "Company", "for_value": ctx.college})
 	employee = people.ensure_employee(profile, spec, user, ctx.college, ctx.out)
 	if spec.get("position"):

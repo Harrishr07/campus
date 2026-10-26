@@ -409,7 +409,7 @@ class TestSeatOverride(SeatTestCase):
 		self.assertEqual(self.row(matrix, GOVT, OC).vacant, -1)
 
 	def test_cancellation_frees_the_seat(self):
-		matrix = self.matrix([(GOVT, OC, 1)])
+		self.matrix([(GOVT, OC, 1)])
 		enrollment = self.enrollment(GOVT, OC)
 		frappe.set_user(PLAIN)
 		with self.assertRaises(frappe.ValidationError):

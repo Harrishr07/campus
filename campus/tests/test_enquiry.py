@@ -539,7 +539,7 @@ class TestLeadScoping(EnquiryTestCase):
 		self.assertNotIn(lead.name, frappe.get_list("Lead", pluck="name"))
 
 	def test_sales_user_keeps_standard_access_to_company_less_leads(self):
-		sales = make_user("enquiry-sales@example.com", [])
+		make_user("enquiry-sales@example.com", [])
 		frappe.get_doc("User", "enquiry-sales@example.com").add_roles("Sales User")
 		self.as_user("enquiry-sales@example.com")
 		lead = frappe.get_doc(
