@@ -7,7 +7,11 @@ frappe.listview_settings["Hall Ticket"] = {
 		};
 	},
 	onload(listview) {
-		if (!frappe.user.has_role("COE") && frappe.session.user !== "Administrator") {
+		if (
+			!frappe.user.has_role("COE") &&
+			!frappe.user.has_role("System Manager") &&
+			frappe.session.user !== "Administrator"
+		) {
 			return;
 		}
 		listview.page.add_inner_button(__("Generate Hall Tickets"), () => {
