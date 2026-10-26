@@ -1,6 +1,7 @@
 frappe.ui.form.on("Student Onboarding", {
 	student(frm) {
 		const current_student = frm.doc.student;
+		const current_template = frm.doc.template;
 		if (!current_student || (frm.doc.items && frm.doc.items.length)) {
 			return;
 		}
@@ -8,7 +9,11 @@ frappe.ui.form.on("Student Onboarding", {
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
 			args: { student: current_student },
 			callback(r) {
-				if (frm.doc.student !== current_student || (frm.doc.items && frm.doc.items.length)) {
+				if (
+					frm.doc.student !== current_student ||
+					frm.doc.template !== current_template ||
+					(frm.doc.items && frm.doc.items.length)
+				) {
 					return;
 				}
 				if (r.message && r.message.template) {
@@ -20,6 +25,7 @@ frappe.ui.form.on("Student Onboarding", {
 	},
 
 	template(frm) {
+		const current_student = frm.doc.student;
 		const current_template = frm.doc.template;
 		if (!current_template || (frm.doc.items && frm.doc.items.length)) {
 			return;
@@ -28,7 +34,11 @@ frappe.ui.form.on("Student Onboarding", {
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
 			args: { template: current_template },
 			callback(r) {
-				if (frm.doc.template !== current_template || (frm.doc.items && frm.doc.items.length)) {
+				if (
+					frm.doc.student !== current_student ||
+					frm.doc.template !== current_template ||
+					(frm.doc.items && frm.doc.items.length)
+				) {
 					return;
 				}
 				if (r.message && r.message.items) {
