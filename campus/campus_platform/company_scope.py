@@ -99,19 +99,34 @@ def permitted_companies(user):
 def before_validate(doc, method=None):
 	"""Set the company from the parent link, falling back to the user's default company."""
 	company_field = COMPANY_FIELD.get(doc.doctype, "oc_company")
-	parent_company = get_parent_company(doc)
 
 	if doc.doctype == "Curriculum" and doc.get("program"):
+		program = doc.get("program")
+		if not frappe.has_permission("Program", "read", program):
+			frappe.throw(
+				_("Not permitted to access Program {0}").format(frappe.bold(program)),
+				frappe.PermissionError,
+			)
+		parent_company = get_parent_company(doc)
 		if not parent_company:
 			frappe.throw(
 				_(
 					"Program {0} has no company assigned. Assign a company to the Program before saving a Curriculum."
-				).format(frappe.bold(doc.get("program"))),
+				).format(frappe.bold(program)),
 				title=_("Missing Program Company"),
+			)
+		allowed = permitted_companies(frappe.session.user)
+		if allowed and parent_company not in allowed:
+			frappe.throw(
+				_("Not permitted to create or modify Curriculum for Company {0}").format(
+					frappe.bold(parent_company)
+				),
+				frappe.PermissionError,
 			)
 		doc.set(company_field, parent_company)
 		return
 
+	parent_company = get_parent_company(doc)
 	company = (
 		parent_company
 		or doc.get(company_field)
