@@ -25,6 +25,19 @@ jobs:
       - name: Pre-commit
         uses: pre-commit/action@v3.0.1
 
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # diff-aware: only findings on lines a pull request adds or changes are reported
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
       - name: Download Frappe Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 
