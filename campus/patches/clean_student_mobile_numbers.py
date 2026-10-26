@@ -9,12 +9,12 @@ TARGETS = [
 		"""
 		UPDATE `tabStudent`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
-		WHERE `student_mobile_number` LIKE '%.0'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]0$'
 		""",
 		"""
 		UPDATE `tabStudent`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
-		WHERE `student_mobile_number` LIKE '%.00'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]00$'
 		""",
 	),
 	(
@@ -23,12 +23,12 @@ TARGETS = [
 		"""
 		UPDATE `tabStudent Applicant`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
-		WHERE `student_mobile_number` LIKE '%.0'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]0$'
 		""",
 		"""
 		UPDATE `tabStudent Applicant`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
-		WHERE `student_mobile_number` LIKE '%.00'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]00$'
 		""",
 	),
 	(
@@ -37,12 +37,12 @@ TARGETS = [
 		"""
 		UPDATE `tabGuardian`
 		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, CHAR_LENGTH(`mobile_number`) - 2)
-		WHERE `mobile_number` LIKE '%.0'
+		WHERE `mobile_number` REGEXP '^[+]?[0-9]+[.]0$'
 		""",
 		"""
 		UPDATE `tabGuardian`
 		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, CHAR_LENGTH(`mobile_number`) - 3)
-		WHERE `mobile_number` LIKE '%.00'
+		WHERE `mobile_number` REGEXP '^[+]?[0-9]+[.]00$'
 		""",
 	),
 	(
@@ -51,12 +51,12 @@ TARGETS = [
 		"""
 		UPDATE `tabStudent Attendance`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
-		WHERE `student_mobile_number` LIKE '%.0'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]0$'
 		""",
 		"""
 		UPDATE `tabStudent Attendance`
 		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
-		WHERE `student_mobile_number` LIKE '%.00'
+		WHERE `student_mobile_number` REGEXP '^[+]?[0-9]+[.]00$'
 		""",
 	),
 ]
