@@ -44,7 +44,7 @@ function confirm_joining(frm) {
 	dialog.show();
 }
 
-// BUG-07: Clean link-query for Guardian field in guardians child table and auto-fetch guardian details.
+// BUG-07: Clean link-query for Guardian field in guardians child table.
 // Prevents upstream education bug where empty/undefined guardian_list produced "Filtered by: Name is not one of ."
 function setup_guardians_filter(frm) {
 	if (!frm.fields_dict.guardians || !frm.fields_dict.guardians.grid) return;

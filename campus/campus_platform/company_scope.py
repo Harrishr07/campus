@@ -40,7 +40,6 @@ PARENT_LINKS = {
 	"Program Enrollment": ("program", "Program"),
 	"Course Schedule": ("student_group", "Student Group"),
 	"Student Group": ("program", "Program"),
-	"Curriculum": ("program", "Program"),
 }
 
 # doctype -> [(table fieldname or None, link fieldname, linked doctype)] that must share the company.
@@ -99,26 +98,7 @@ def permitted_companies(user):
 def before_validate(doc, method=None):
 	"""Set the company from the parent link, falling back to the user's default company."""
 	company_field = COMPANY_FIELD.get(doc.doctype, "oc_company")
-	if doc.doctype == "Curriculum" and doc.get("program"):
-		frappe.has_permission("Program", "read", doc=doc.program, throw=True)
 	parent_company = get_parent_company(doc)
-
-	if doc.doctype == "Curriculum" and doc.get("program"):
-		if not parent_company:
-			frappe.throw(
-				_(
-					"Program {0} has no company assigned. Assign a company to the Program before saving a Curriculum."
-				).format(frappe.bold(doc.get("program"))),
-				title=_("Missing Program Company"),
-			)
-		allowed_companies = permitted_companies(frappe.session.user)
-		if allowed_companies and parent_company not in allowed_companies:
-			frappe.throw(
-				_("You do not have permission to use Company {0}.").format(frappe.bold(parent_company)),
-				title=_("Company Permission Denied"),
-			)
-		doc.set(company_field, parent_company)
-		return
 
 	company = (
 		parent_company

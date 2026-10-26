@@ -244,7 +244,7 @@ doc_events["Student"]["validate"].append("campus.student_services.corrections.gu
 doc_events["Student"]["validate"].append(
 	"campus.examinations.affiliation.validate_university_register_no"
 )  # M06-10
-doc_events["Guardian"] = {"validate": "campus.campus_platform.sanitize.validate_mobile"}
+doc_events.setdefault("Guardian", {})["validate"] = "campus.campus_platform.sanitize.validate_mobile"
 _after_insert = doc_events["Student"].get("after_insert")
 doc_events["Student"]["after_insert"] = [
 	*([_after_insert] if isinstance(_after_insert, str) else _after_insert or []),

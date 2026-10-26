@@ -29,5 +29,3 @@ def execute():
 
 		if company:
 			frappe.db.set_value("Curriculum", cur.name, "company", company, update_modified=False)
-
-	frappe.db.commit()
