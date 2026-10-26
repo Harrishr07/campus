@@ -45,7 +45,7 @@ PARENT_LINKS = {
 
 # doctype -> [(table fieldname or None, link fieldname, linked doctype)] that must share the company.
 LINKED_RECORDS = {
-	"Curriculum": [(None, "program", "Program")],
+	"Curriculum": [(None, "program", "Program"), (None, "regulation", "Regulation")],
 	"Student Applicant": [(None, "program", "Program"), (None, "student_admission", "Student Admission")],
 	"Program": [("courses", "course", "Course")],
 	"Student Group": [

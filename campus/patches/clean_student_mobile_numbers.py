@@ -8,12 +8,12 @@ TARGETS = [
 		"student_mobile_number",
 		"""
 		UPDATE `tabStudent`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 2)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
 		WHERE `student_mobile_number` LIKE '%.0'
 		""",
 		"""
 		UPDATE `tabStudent`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 3)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
 		WHERE `student_mobile_number` LIKE '%.00'
 		""",
 	),
@@ -22,12 +22,12 @@ TARGETS = [
 		"student_mobile_number",
 		"""
 		UPDATE `tabStudent Applicant`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 2)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
 		WHERE `student_mobile_number` LIKE '%.0'
 		""",
 		"""
 		UPDATE `tabStudent Applicant`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 3)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
 		WHERE `student_mobile_number` LIKE '%.00'
 		""",
 	),
@@ -36,12 +36,12 @@ TARGETS = [
 		"mobile_number",
 		"""
 		UPDATE `tabGuardian`
-		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, LENGTH(`mobile_number`) - 2)
+		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, CHAR_LENGTH(`mobile_number`) - 2)
 		WHERE `mobile_number` LIKE '%.0'
 		""",
 		"""
 		UPDATE `tabGuardian`
-		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, LENGTH(`mobile_number`) - 3)
+		SET `mobile_number` = SUBSTRING(`mobile_number`, 1, CHAR_LENGTH(`mobile_number`) - 3)
 		WHERE `mobile_number` LIKE '%.00'
 		""",
 	),
@@ -50,12 +50,12 @@ TARGETS = [
 		"student_mobile_number",
 		"""
 		UPDATE `tabStudent Attendance`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 2)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 2)
 		WHERE `student_mobile_number` LIKE '%.0'
 		""",
 		"""
 		UPDATE `tabStudent Attendance`
-		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, LENGTH(`student_mobile_number`) - 3)
+		SET `student_mobile_number` = SUBSTRING(`student_mobile_number`, 1, CHAR_LENGTH(`student_mobile_number`) - 3)
 		WHERE `student_mobile_number` LIKE '%.00'
 		""",
 	),

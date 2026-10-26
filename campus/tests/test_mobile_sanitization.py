@@ -1,9 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-try:
-	from frappe.tests.utils import FrappeTestCase
-except ImportError:
-	from unittest import TestCase as FrappeTestCase
+from frappe.tests.utils import FrappeTestCase
 
 from campus.admissions.allotment_import import coerce
 from campus.campus_platform.sanitize import clean_mobile_number, validate_mobile
@@ -22,6 +19,7 @@ class TestMobileSanitization(FrappeTestCase):
 			("+916380168782.0", "+916380168782"),
 			("9876543210/9123456780", "9876543210/9123456780"),
 			("(044) 2345-6789 ext 12", "(044) 2345-6789 ext 12"),
+			("(044) 2345-6789 ext 12.0", "(044) 2345-6789 ext 12.0"),
 			(6380168782.5, "6380168782.5"),
 			("6.380168782e+09", "6.380168782e+09"),
 			(None, ""),

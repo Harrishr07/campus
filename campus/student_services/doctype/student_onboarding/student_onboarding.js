@@ -1,12 +1,16 @@
 frappe.ui.form.on("Student Onboarding", {
 	student(frm) {
-		if (!frm.doc.student || (frm.doc.items && frm.doc.items.length)) {
+		const current_student = frm.doc.student;
+		if (!current_student || (frm.doc.items && frm.doc.items.length)) {
 			return;
 		}
 		frm.call({
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
-			args: { student: frm.doc.student },
+			args: { student: current_student },
 			callback(r) {
+				if (frm.doc.student !== current_student || (frm.doc.items && frm.doc.items.length)) {
+					return;
+				}
 				if (r.message && r.message.template) {
 					frm.set_value("template", r.message.template);
 					populate_items(frm, r.message.items);
@@ -16,13 +20,17 @@ frappe.ui.form.on("Student Onboarding", {
 	},
 
 	template(frm) {
-		if (!frm.doc.template || (frm.doc.items && frm.doc.items.length)) {
+		const current_template = frm.doc.template;
+		if (!current_template || (frm.doc.items && frm.doc.items.length)) {
 			return;
 		}
 		frm.call({
 			method: "campus.student_services.doctype.student_onboarding.student_onboarding.get_onboarding_template_details",
-			args: { template: frm.doc.template },
+			args: { template: current_template },
 			callback(r) {
+				if (frm.doc.template !== current_template || (frm.doc.items && frm.doc.items.length)) {
+					return;
+				}
 				if (r.message && r.message.items) {
 					populate_items(frm, r.message.items);
 				}

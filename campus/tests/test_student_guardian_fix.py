@@ -52,6 +52,7 @@ class TestStudentGuardianFix(FrappeTestCase):
 				"doctype": "Student",
 				"first_name": "Test",
 				"last_name": "StudentBUG07",
+				"student_email_id": "test_student_bug07@example.com",
 			}
 		)
 		student.append(

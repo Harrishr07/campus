@@ -66,6 +66,8 @@ def get_onboarding_template_details(student: str | None = None, template: str | 
 	if not template:
 		return {"template": None, "items": []}
 
+	frappe.has_permission("Student Onboarding Template", "read", template, throw=True)
+
 	items = frappe.get_all(
 		"Student Onboarding Template Item",
 		filters={"parent": template},

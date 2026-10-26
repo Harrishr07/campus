@@ -42,6 +42,15 @@ class Curriculum(Document):
 			)
 
 	def validate(self):
+		if self.program:
+			prog_company = frappe.db.get_value("Program", self.program, "oc_company")
+			if not prog_company:
+				frappe.throw(
+					_(
+						"Program {0} has no company assigned. Assign a company to the Program before creating a Curriculum."
+					).format(frappe.bold(self.program)),
+					title=_("Missing Program Company"),
+				)
 		self.validate_status_change()
 		if self.validate_lock():
 			return

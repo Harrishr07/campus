@@ -27,9 +27,13 @@ def clean_mobile_number(val):
 		return ""
 
 	if val_str.endswith(".00"):
-		return val_str[:-3]
+		prefix = val_str[:-3]
+		if prefix.isdigit() or (prefix.startswith("+") and prefix[1:].isdigit()):
+			return prefix
 	if val_str.endswith(".0"):
-		return val_str[:-2]
+		prefix = val_str[:-2]
+		if prefix.isdigit() or (prefix.startswith("+") and prefix[1:].isdigit()):
+			return prefix
 
 	return val_str
 
