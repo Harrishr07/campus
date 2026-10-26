@@ -5,7 +5,13 @@ from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
 from campus.examinations import results
-from campus.examinations.access import held_scopes, instructed_offerings, instructor_users, mentees_of, students_of  # noqa: F401  (public API)
+from campus.examinations.access import (  # noqa: F401  (public API)
+	held_scopes,
+	instructed_offerings,
+	instructor_users,
+	mentees_of,
+	students_of,
+)
 from campus.examinations.arrears import arrear_courses, has_passed, passed_courses  # noqa: F401  (public API)
 from campus.examinations.registration_rules import TERM_KINDS  # noqa: F401  (public API)
 from campus.examinations.rules import WITHDRAWAL_CODES  # noqa: F401  (public API)
@@ -34,7 +40,9 @@ def issue_grade_sheet(student_result):
 	doc.check_permission("read")
 	status, publish_at = frappe.db.get_value("Exam Session", doc.exam_session, ["status", "publish_at"])
 	if status != "Published" or not publish_at or get_datetime(publish_at) > now_datetime():
-		frappe.throw(_("A Grade Sheet is issued only for a published Exam Session whose publication time has passed."))
+		frappe.throw(
+			_("A Grade Sheet is issued only for a published Exam Session whose publication time has passed.")
+		)
 	return issue(doc, "Grade Sheet").name
 
 
@@ -269,4 +277,6 @@ def next_payroll_date(employee, company, posting_date):
 	up only when it is recalculated. Used by consultancy revenue shares (P3-T20)."""
 	from campus.examinations import remuneration_payment, remuneration_rules
 
-	return remuneration_rules.next_payroll_date(posting_date, remuneration_payment.last_processed_slip_end(employee, company))
+	return remuneration_rules.next_payroll_date(
+		posting_date, remuneration_payment.last_processed_slip_end(employee, company)
+	)

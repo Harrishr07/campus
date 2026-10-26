@@ -20,10 +20,20 @@ class PFMSExportLayout(Document):
 		if repeated:
 			frappe.throw(_("Column headers {0} are used more than once.").format(", ".join(repeated)))
 		if not any(column.source == ROW_REFERENCE for column in self.columns):
-			frappe.throw(_("Add a {0} column: PFMS's status file is matched to the rows by it.").format(_(ROW_REFERENCE)))
+			frappe.throw(
+				_("Add a {0} column: PFMS's status file is matched to the rows by it.").format(
+					_(ROW_REFERENCE)
+				)
+			)
 		both = value_set(self.success_values) & value_set(self.failure_values)
 		if both:
-			frappe.throw(_("Status values {0} are listed as both success and failure.").format(", ".join(sorted(both))))
+			frappe.throw(
+				_("Status values {0} are listed as both success and failure.").format(", ".join(sorted(both)))
+			)
 		for column in self.columns:
 			if column.source == FIXED_VALUE and not (column.fixed_value or "").strip():
-				frappe.throw(_("Row {0}: enter the fixed value of column {1}.").format(column.idx, column.column_header))
+				frappe.throw(
+					_("Row {0}: enter the fixed value of column {1}.").format(
+						column.idx, column.column_header
+					)
+				)

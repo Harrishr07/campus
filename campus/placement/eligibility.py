@@ -10,7 +10,13 @@ from campus.examinations import api as exams
 from campus.placement import rules
 from campus.student_services.api import ON_ROLL
 
-CRITERIA_FIELDS = ("min_cgpa", "any_standing_arrears", "max_standing_arrears", "allow_arrear_history", "gender")
+CRITERIA_FIELDS = (
+	"min_cgpa",
+	"any_standing_arrears",
+	"max_standing_arrears",
+	"allow_arrear_history",
+	"gender",
+)
 
 
 def criteria_of(doc):
@@ -24,14 +30,19 @@ def criteria_of(doc):
 def current_program(student):
 	"""The program of the student's latest submitted Program Enrollment."""
 	return frappe.db.get_value(
-		"Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc, creation desc"
+		"Program Enrollment",
+		{"student": student, "docstatus": 1},
+		"program",
+		order_by="enrollment_date desc, creation desc",
 	)
 
 
 def student_standing(student):
 	"""The student's live standing: CGPA, standing arrears and history of arrears from published results, plus the
 	gender, program and batch the criteria look at."""
-	info = frappe.db.get_value("Student", student, ["gender", "oc_batch", "oc_company", "oc_academic_status"], as_dict=True)
+	info = frappe.db.get_value(
+		"Student", student, ["gender", "oc_batch", "oc_company", "oc_academic_status"], as_dict=True
+	)
 	return {
 		"cgpa": exams.cgpa(student), "standing_arrears": len(exams.arrear_courses(student)),
 		"had_arrears": bool(exams.had_arrears(student)), "gender": info.gender, "program": current_program(student),
@@ -49,7 +60,12 @@ def evaluate(drive, student, standing=None):
 	if standing["company"] != doc.company:
 		found.insert(0, _("{0} does not belong to {1}").format(student, doc.company))
 	if standing["status"] not in ON_ROLL:
-		found.insert(0, _("Only students on the roll can register; {0} is {1}").format(student, _(standing["status"] or "not set")))
+		found.insert(
+			0,
+			_("Only students on the roll can register; {0} is {1}").format(
+				student, _(standing["status"] or "not set")
+			),
+		)
 	return {
 		"eligible": not found, "reasons": found, "cgpa": standing["cgpa"],
 		"standing_arrears": standing["standing_arrears"], "had_arrears": standing["had_arrears"],

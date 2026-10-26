@@ -77,7 +77,9 @@ def validate_upload(name: str):
 	check = RowCheck(upload)
 	for row_no, values in rows:
 		save_row(upload, row_no, values, *check.preview(row_no, values))
-	upload.db_set({"status": "Validated", "total_rows": len(rows), "file_sha256": hashlib.sha256(content).hexdigest()})
+	upload.db_set(
+		{"status": "Validated", "total_rows": len(rows), "file_sha256": hashlib.sha256(content).hexdigest()}
+	)
 	return refresh_summary(name)
 
 
@@ -88,7 +90,9 @@ def start_import(name: str):
 	frappe.has_permission("Student Applicant", "create", throw=True)
 	if frappe.db.get_value(UPLOAD, name, "status", for_update=True) != "Validated":
 		frappe.throw(_("Validate the upload first; an upload is imported once."))
-	rows = frappe.get_all(ROW, {"applicant_upload": name, "status": ["in", QUEUED]}, ["name", "row_no"], order_by="row_no")
+	rows = frappe.get_all(
+		ROW, {"applicant_upload": name, "status": ["in", QUEUED]}, ["name", "row_no"], order_by="row_no"
+	)
 	frappe.db.set_value(UPLOAD, name, "status", "Importing")
 	if not rows:
 		refresh_status(name)
@@ -104,6 +108,7 @@ def row_key(item):
 
 
 # ---- import -------------------------------------------------------------------------------
+
 
 def process_row(item, run):
 	"""Bulk handler: create the applicant of one row, or hold it for review; DB-only, no commit."""
@@ -146,7 +151,9 @@ def import_row(item):
 
 def imported_applicant(fields):
 	"""Locking read: the applicant already holding this row's candidate key (latest committed), or None."""
-	return frappe.db.get_value("Student Applicant", {"oc_candidate_key": key_of(fields)}, "name", for_update=True)
+	return frappe.db.get_value(
+		"Student Applicant", {"oc_candidate_key": key_of(fields)}, "name", for_update=True
+	)
 
 
 def review_decided(review):
@@ -155,14 +162,30 @@ def review_decided(review):
 		return
 	if review.status == "Linked":
 		target = review.linked_applicant or review.linked_student
-		set_outcome(review.upload_row, "Linked", review.linked_applicant, review.name, _("Linked to {0}.").format(target))
+		set_outcome(
+			review.upload_row,
+			"Linked",
+			review.linked_applicant,
+			review.name,
+			_("Linked to {0}.").format(target),
+		)
 	else:
-		set_outcome(review.upload_row, "Created", review.new_applicant, review.name, _("Not a duplicate: {0}").format(review.note))
+		set_outcome(
+			review.upload_row,
+			"Created",
+			review.new_applicant,
+			review.name,
+			_("Not a duplicate: {0}").format(review.note),
+		)
 	refresh_status(review.applicant_upload)
 
 
 def set_outcome(row, status, applicant, review, message):
-	values = {"status": status, "applicant": applicant, "message": allotment_import.mask_numbers(message)[:500]}
+	values = {
+		"status": status,
+		"applicant": applicant,
+		"message": allotment_import.mask_numbers(message)[:500],
+	}
 	if review:
 		values["review"] = review
 	frappe.db.set_value(ROW, row, values)
@@ -200,7 +223,11 @@ def reconcile(name):
 	upload = frappe.db.get_value(UPLOAD, name, ["status", "bulk_run"], as_dict=True, for_update=True)
 	if not upload or upload.status != "Importing" or not upload.bulk_run:
 		return
-	if frappe.db.get_value("Bulk Run", upload.bulk_run, "status") not in ("Completed", "Completed with errors", "Failed"):
+	if frappe.db.get_value("Bulk Run", upload.bulk_run, "status") not in (
+		"Completed",
+		"Completed with errors",
+		"Failed",
+	):
 		return
 	message = _("Not imported: the import was interrupted at this row. Upload the file again to retry it.")
 	for row in frappe.get_all(ROW, {"applicant_upload": name, "status": ["in", QUEUED]}, pluck="name"):
@@ -216,12 +243,21 @@ def reconcile_finished_uploads():
 			frappe.db.commit()
 		except Exception:  # noqa: BLE001
 			frappe.db.rollback()
-			frappe.log_error(title=f"Applicant upload reconcile failed: {name}", message=frappe.get_traceback(with_context=False))
+			frappe.log_error(
+				title=f"Applicant upload reconcile failed: {name}",
+				message=frappe.get_traceback(with_context=False),
+			)
 
 
 def refresh_summary(name):
 	table = frappe.qb.DocType(ROW)
-	rows = frappe.qb.from_(table).select(table.status, Count("*")).where(table.applicant_upload == name).groupby(table.status).run()
+	rows = (
+		frappe.qb.from_(table)
+		.select(table.status, Count("*"))
+		.where(table.applicant_upload == name)
+		.groupby(table.status)
+		.run()
+	)
 	counts = dict(rows)
 	summary = ", ".join(f"{_(status)}: {count}" for status, count in sorted(counts.items()))
 	frappe.db.set_value(UPLOAD, name, "summary", summary, update_modified=False)
@@ -229,6 +265,7 @@ def refresh_summary(name):
 
 
 # ---- preview ------------------------------------------------------------------------------
+
 
 class RowCheck:
 	"""Preview of the rows of one upload, in file order; earlier rows are remembered to flag repeats."""
@@ -275,10 +312,15 @@ class RowCheck:
 
 	def earlier_row(self, row_no, fields):
 		"""An earlier row with the same name and birth date, or the same register number of a compatible exam."""
-		name = (duplicates.name_key(fields.get("first_name"), fields.get("middle_name"), fields.get("last_name")), str(fields["date_of_birth"]))
+		name = (
+			duplicates.name_key(fields.get("first_name"), fields.get("middle_name"), fields.get("last_name")),
+			str(fields["date_of_birth"]),
+		)
 		exam = duplicates.id_key(fields["oc_qualifying_exam"])
 		same_number = self.register_nos.setdefault(duplicates.id_key(fields["oc_qualifying_register_no"]), [])
-		earlier = self.names.get(name) or next((row for other, row in same_number if duplicates.same_exam(other, exam)), None)
+		earlier = self.names.get(name) or next(
+			(row for other, row in same_number if duplicates.same_exam(other, exam)), None
+		)
 		self.names.setdefault(name, row_no)
 		same_number.append((exam, row_no))
 		return earlier
@@ -295,7 +337,9 @@ def dry_run(fields):
 		doc._set_defaults()
 		doc.set_docstatus()
 		doc.check_if_latest()
-		doc.name = "preview"  # the checklist rows built by validate need a parent; no naming series is touched
+		doc.name = (
+			"preview"  # the checklist rows built by validate need a parent; no naming series is touched
+		)
 		doc.set_parent_in_children()
 		doc._validate_links()
 		doc.run_before_save_methods()
@@ -312,6 +356,7 @@ def dry_run(fields):
 
 # ---- file and values ----------------------------------------------------------------------
 
+
 def file_rows(rows):
 	"""[(sheet row no, {fieldname: text})] of the data rows; the template columns are checked first."""
 	if not rows:
@@ -324,19 +369,30 @@ def file_rows(rows):
 	data = []
 	for row_no, cells in enumerate(rows[1:], start=2):
 		if any(cells):
-			data.append((row_no, {field: cell for field, cell in zip(header, cells, strict=False) if field and cell}))
+			data.append(
+				(row_no, {field: cell for field, cell in zip(header, cells, strict=False) if field and cell})
+			)
 	return data
 
 
 def applicant_fields(upload, values):
 	"""The Student Applicant values of a row: the file's values as stored, plus the upload's company and year."""
 	fields = {field: allotment_import.coerce(field, value) for field, value in values.items()}
-	return {**fields, "oc_company": upload.company, "academic_year": upload.academic_year, "application_status": "Applied"}
+	return {
+		**fields,
+		"oc_company": upload.company,
+		"academic_year": upload.academic_year,
+		"application_status": "Applied",
+	}
 
 
 def key_of(fields):
 	return duplicates.candidate_key(
-		fields["oc_qualifying_register_no"], fields["oc_qualifying_exam"], fields["date_of_birth"], fields["program"], fields["academic_year"]
+		fields["oc_qualifying_register_no"],
+		fields["oc_qualifying_exam"],
+		fields["date_of_birth"],
+		fields["program"],
+		fields["academic_year"],
 	)
 
 

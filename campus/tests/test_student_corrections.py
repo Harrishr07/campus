@@ -25,12 +25,25 @@ ADMIN_USER = "campus-l08-sysmgr@example.com"
 ARTS_OFFICE = "campus-l08-arts-office@example.com"  # an Academics User of the other college
 TEACHER = "campus-l08-teacher@example.com"  # an Instructor and nothing else
 NEW_MOBILE, NEW_AADHAAR = "9876543210", "234123412346"
-RECORD_SECTIONS = {"profile", "lifecycle", "enrollments", "attendance", "results", "certificates", "corrections"}
-EVIDENCE = ("proof.png", b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\xdacd`\xf8_\x0f\x00\x02\x87\x01\x80\xebG\xba\x92\x00\x00\x00\x00IEND\xaeB`\x82')  # a 1x1 PNG
+RECORD_SECTIONS = {
+	"profile",
+	"lifecycle",
+	"enrollments",
+	"attendance",
+	"results",
+	"certificates",
+	"corrections",
+}
+EVIDENCE = (
+	"proof.png",
+	b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\xdacd`\xf8_\x0f\x00\x02\x87\x01\x80\xebG\xba\x92\x00\x00\x00\x00IEND\xaeB`\x82",
+)  # a 1x1 PNG
 
 
 def versions(student):
-	return frappe.get_all("Version", {"ref_doctype": "Student", "docname": student}, "data", order_by="creation asc")
+	return frappe.get_all(
+		"Version", {"ref_doctype": "Student", "docname": student}, "data", order_by="creation asc"
+	)
 
 
 class CorrectionFixture(MentoringFixture):
@@ -38,10 +51,18 @@ class CorrectionFixture(MentoringFixture):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.student = cls.guarded  # the guardian_1 login's ward; student_1 is linked to the same record
-		frappe.db.set_value("Student", cls.student, {"user": STUDENT_USER, "enabled": 1}, update_modified=False)
+		frappe.db.set_value(
+			"Student", cls.student, {"user": STUDENT_USER, "enabled": 1}, update_modified=False
+		)
 		if not frappe.db.exists("Position Holder", {"position": "COE", "user": COE}):
 			frappe.get_doc(
-				{"doctype": "Position Holder", "position": "COE", "scope_value": demo.ENGINEERING, "user": COE, "from_date": "2022-06-01"}
+				{
+					"doctype": "Position Holder",
+					"position": "COE",
+					"scope_value": demo.ENGINEERING,
+					"user": COE,
+					"from_date": "2022-06-01",
+				}
 			).insert()
 		corrections.seed_policies()
 		make_user(ADMIN_USER, [demo.ENGINEERING])
@@ -49,11 +70,25 @@ class CorrectionFixture(MentoringFixture):
 		make_user(ARTS_OFFICE, [demo.ARTS])
 		if not frappe.db.exists("User", TEACHER):
 			frappe.get_doc(
-				{"doctype": "User", "email": TEACHER, "first_name": "L08 Teacher", "send_welcome_email": 0, "roles": [{"role": "Instructor"}]}
+				{
+					"doctype": "User",
+					"email": TEACHER,
+					"first_name": "L08 Teacher",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Instructor"}],
+				}
 			).insert()
 
 	def correction(self, category="Contact", field="student_mobile_number", value=NEW_MOBILE, **values):
-		doc = {"doctype": DOCTYPE, "student": self.student, "category": category, "field_name": field, "new_value": value, "reason": "Wrong entry", **values}
+		doc = {
+			"doctype": DOCTYPE,
+			"student": self.student,
+			"category": category,
+			"field_name": field,
+			"new_value": value,
+			"reason": "Wrong entry",
+			**values,
+		}
 		return self.as_user(OFFICE, lambda: frappe.get_doc(doc).insert())
 
 	def send(self, doc):
@@ -104,7 +139,9 @@ class TestCorrectionWorkflow(CorrectionFixture):
 			self.as_user(OFFICE, doc.save)
 
 	def test_identity_correction_needs_the_principal_after_the_coe_and_never_shows_the_number(self):
-		doc = self.correction("Identity Document", "oc_aadhaar", NEW_AADHAAR, evidence="/private/files/aadhaar.pdf")
+		doc = self.correction(
+			"Identity Document", "oc_aadhaar", NEW_AADHAAR, evidence="/private/files/aadhaar.pdf"
+		)
 		self.assertEqual(doc.new_value, "XXXX-XXXX-2346")
 		request = self.send(doc)
 		self.as_user(COE, approve, request)
@@ -122,12 +159,18 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		self.assertEqual(self.status(doc), "Draft")
 
 	def test_a_duplicate_register_number_is_refused_when_raised(self):
-		other = frappe.db.get_value("Student", {"oc_register_no": ["is", "set"], "name": ["!=", self.student]}, "oc_register_no")
+		other = frappe.db.get_value(
+			"Student", {"oc_register_no": ["is", "set"], "name": ["!=", self.student]}, "oc_register_no"
+		)
 		with self.assertRaises(frappe.ValidationError):
 			self.correction("Academic Identifier", "oc_register_no", other, evidence="/private/files/x.pdf")
 
 	def test_lifecycle_status_and_fields_outside_the_category_are_not_correctable(self):
-		for category, field in (("Personal", "oc_academic_status"), ("Contact", "date_of_birth"), ("Personal", "oc_detained")):
+		for category, field in (
+			("Personal", "oc_academic_status"),
+			("Contact", "date_of_birth"),
+			("Personal", "oc_detained"),
+		):
 			with self.assertRaises(frappe.ValidationError):
 				self.correction(category, field, "Active")
 
@@ -136,13 +179,22 @@ class TestCorrectionWorkflow(CorrectionFixture):
 			self.correction(evidence="/files/public.pdf")
 
 	def test_guardian_correction_changes_the_guardian_of_the_student_only(self):
-		guardian = frappe.db.get_value("Student Guardian", {"parent": self.student, "parenttype": "Student"}, "guardian")
-		doc = self.correction("Guardian", "mobile_number", NEW_MOBILE, guardian=guardian, evidence="/private/files/g.pdf")
+		guardian = frappe.db.get_value(
+			"Student Guardian", {"parent": self.student, "parenttype": "Student"}, "guardian"
+		)
+		doc = self.correction(
+			"Guardian", "mobile_number", NEW_MOBILE, guardian=guardian, evidence="/private/files/g.pdf"
+		)
 		self.as_user(COE, approve, self.send(doc))
 		self.assertEqual(frappe.db.get_value("Guardian", guardian, "mobile_number"), NEW_MOBILE)
 		with self.assertRaises(frappe.ValidationError):
-			self.correction("Guardian", "mobile_number", NEW_MOBILE, guardian=self.other_guardian, evidence="/private/files/g.pdf")
-
+			self.correction(
+				"Guardian",
+				"mobile_number",
+				NEW_MOBILE,
+				guardian=self.other_guardian,
+				evidence="/private/files/g.pdf",
+			)
 
 	def test_an_office_user_of_another_college_cannot_raise_or_read_by_claiming_the_portal(self):
 		count = frappe.db.count(DOCTYPE)
@@ -153,12 +205,18 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		with self.assertRaises(frappe.PermissionError):
 			self.as_user(ARTS_OFFICE, frappe.client.insert, json.dumps(payload))
 		self.assertEqual(frappe.db.count(DOCTYPE), count)  # nothing kept, and no old value came back
-		self.assertEqual(self.correction(requested_via="Portal").requested_via, "Desk")  # the client value is ignored
+		self.assertEqual(
+			self.correction(requested_via="Portal").requested_via, "Desk"
+		)  # the client value is ignored
 
 	def test_server_fields_cannot_be_forged(self):
 		version = frappe.db.get_value("Version", {})
-		doc = self.correction(applied_by=COE, applied_on="2026-01-01 00:00:00", version=version, status="Applied")
-		self.assertEqual((doc.status, doc.applied_by, doc.applied_on, doc.version), ("Draft", None, None, None))
+		doc = self.correction(
+			applied_by=COE, applied_on="2026-01-01 00:00:00", version=version, status="Applied"
+		)
+		self.assertEqual(
+			(doc.status, doc.applied_by, doc.applied_on, doc.version), ("Draft", None, None, None)
+		)
 
 	def test_a_second_open_correction_of_the_same_field_is_refused(self):
 		self.correction()
@@ -174,7 +232,9 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		self.assertEqual(self.value(), "9111111111")
 
 	def test_a_failure_while_applying_is_reported_without_the_record(self):
-		doc = self.correction("Identity Document", "oc_aadhaar", NEW_AADHAAR, evidence="/private/files/aadhaar.pdf")
+		doc = self.correction(
+			"Identity Document", "oc_aadhaar", NEW_AADHAAR, evidence="/private/files/aadhaar.pdf"
+		)
 		request = self.send(doc)
 		self.as_user(COE, approve, request)
 		with patch.object(corrections, "save_target", side_effect=RuntimeError(NEW_AADHAAR)):
@@ -192,12 +252,23 @@ class TestCorrectionWorkflow(CorrectionFixture):
 		doc.new_value = "9000000000"
 		with self.assertRaises(frappe.ValidationError):
 			self.as_user(OFFICE, doc.save)
-		self.assertEqual((self.status(doc), frappe.db.count("Approval Request", {"reference_name": doc.name})), ("Rejected", 1))
+		self.assertEqual(
+			(self.status(doc), frappe.db.count("Approval Request", {"reference_name": doc.name})),
+			("Rejected", 1),
+		)
 		self.correction()  # a new correction of the same field may be raised
 
 	def test_a_masked_aadhaar_or_a_client_secret_is_never_taken(self):
-		other = next(f"2341234123{n:02d}" for n in range(100) if aadhaar.is_valid_aadhaar(f"2341234123{n:02d}") and f"2341234123{n:02d}" != NEW_AADHAAR)
-		identity = {"category": "Identity Document", "field": "oc_aadhaar", "evidence": "/private/files/aadhaar.pdf"}
+		other = next(
+			f"2341234123{n:02d}"
+			for n in range(100)
+			if aadhaar.is_valid_aadhaar(f"2341234123{n:02d}") and f"2341234123{n:02d}" != NEW_AADHAAR
+		)
+		identity = {
+			"category": "Identity Document",
+			"field": "oc_aadhaar",
+			"evidence": "/private/files/aadhaar.pdf",
+		}
 		with self.assertRaises(frappe.ValidationError):
 			self.correction(value="XXXX-XXXX-2346", new_secret=NEW_AADHAAR, **identity)
 		with self.assertRaises(frappe.ValidationError):
@@ -216,7 +287,9 @@ class TestCorrectionWorkflow(CorrectionFixture):
 class TestPortalCorrections(CorrectionFixture):
 	def raise_as(self, user, category, field, value=NEW_MOBILE, upload=None, **kwargs):
 		with patch.object(portal, "uploaded_file", return_value=upload):
-			return self.as_user(user, corrections.raise_correction, category, field, value, "Wrong entry", **kwargs)
+			return self.as_user(
+				user, corrections.raise_correction, category, field, value, "Wrong entry", **kwargs
+			)
 
 	def test_student_raises_a_contact_correction_that_waits_for_approval(self):
 		row = self.raise_as(STUDENT_USER, "Contact", "student_mobile_number")
@@ -251,7 +324,9 @@ class TestPortalCorrections(CorrectionFixture):
 		self.assertEqual(view.student, self.student)
 		self.assertIn("status", view)
 		self.assertNotIn("mentoring", view)
-		self.assertNotIn(self.student, [n for n in json.dumps(view, default=str).split('"') if n.startswith("CN-")])
+		self.assertNotIn(
+			self.student, [n for n in json.dumps(view, default=str).split('"') if n.startswith("CN-")]
+		)
 		ward = self.as_user(GUARDIAN_USER, student_360.portal_view)
 		self.assertEqual(ward.student, self.student)
 		with self.assertRaises(frappe.PermissionError):
@@ -264,6 +339,7 @@ class TestLockedFields(CorrectionFixture):
 			doc = frappe.get_doc("Student", self.student)
 			doc.set(field, value)
 			doc.save()
+
 		return self.as_user(user, save)
 
 	def test_locked_field_refuses_a_direct_edit_and_the_override_role_can(self):
@@ -278,9 +354,13 @@ class TestLockedFields(CorrectionFixture):
 	def test_unlocked_fields_and_the_correction_service_still_save(self):
 		self.edit(OFFICE, "city", "Madurai")
 		self.assertEqual(self.value("city"), "Madurai")
-		doc = self.correction("Academic Identifier", "oc_roll_no", "ROLL-L08-3", evidence="/private/files/r.pdf")
+		doc = self.correction(
+			"Academic Identifier", "oc_roll_no", "ROLL-L08-3", evidence="/private/files/r.pdf"
+		)
 		self.as_user(COE, approve, self.send(doc))
-		self.as_user(PRINCIPAL, approve, frappe.db.get_value("Approval Request", {"reference_name": doc.name}))
+		self.as_user(
+			PRINCIPAL, approve, frappe.db.get_value("Approval Request", {"reference_name": doc.name})
+		)
 		self.assertEqual(self.value("oc_roll_no"), "ROLL-L08-3")
 
 	def test_settings_reject_a_field_with_no_workflow(self):
@@ -314,7 +394,9 @@ class Test360View(CorrectionFixture):
 
 	def test_mentoring_shows_to_a_reader_of_parent_interactions_only(self):
 		real = student_360.can_read
-		with patch.object(student_360, "can_read", lambda doctype: doctype != "Counselling Note" and real(doctype)):
+		with patch.object(
+			student_360, "can_read", lambda doctype: doctype != "Counselling Note" and real(doctype)
+		):
 			mentoring = self.as_user(MENTOR_A, student_360.desk_view, self.a_student)["sections"]["mentoring"]
 		self.assertEqual(set(mentoring), {"parent_interactions"})
 
@@ -337,7 +419,12 @@ class Test360View(CorrectionFixture):
 		self.assertEqual(len(fees["invoices"]), 1)  # the page is capped, the total is not
 		self.assertEqual(fees["total_outstanding"], ledger_total)
 		with patch.object(student_360, "LIST_LIMIT", 50):
-			names = [row.name for row in self.as_user(OFFICE, student_360.desk_view, self.student)["sections"]["fees"]["invoices"]]
+			names = [
+				row.name
+				for row in self.as_user(OFFICE, student_360.desk_view, self.student)["sections"]["fees"][
+					"invoices"
+				]
+			]
 		self.assertTrue({"L08-SI-STUDENT", "L08-SI-CUSTOMER"} <= set(names))
 
 	def test_profile_masks_the_aadhaar_and_never_includes_it(self):
@@ -371,7 +458,8 @@ class Test360View(CorrectionFixture):
 
 class TestPortalPages(CorrectionFixture):
 	def test_profile_and_corrections_pages_show_the_students_own_data(self):
-		from campus.www.campus_portal import corrections as corrections_page, profile as profile_page
+		from campus.www.campus_portal import corrections as corrections_page
+		from campus.www.campus_portal import profile as profile_page
 
 		row = TestPortalCorrections.raise_as(self, STUDENT_USER, "Contact", "student_mobile_number")
 		for page in (profile_page, corrections_page):

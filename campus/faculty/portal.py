@@ -35,13 +35,19 @@ def page_context(context, active):
 
 def active_employee(user=None):
 	user = user or frappe.session.user
-	return None if user == "Guest" else frappe.db.get_value("Employee", {"user_id": user, "status": "Active"}, "name")
+	return (
+		None
+		if user == "Guest"
+		else frappe.db.get_value("Employee", {"user_id": user, "status": "Active"}, "name")
+	)
 
 
 def require_faculty():
 	employee = active_employee()
 	if not employee:
-		frappe.throw(_("The faculty portal is for staff with an active Employee record."), frappe.PermissionError)
+		frappe.throw(
+			_("The faculty portal is for staff with an active Employee record."), frappe.PermissionError
+		)
 	return employee
 
 
@@ -59,11 +65,21 @@ def my_timetable(from_date=None, to_date=None):
 	dates = ["between", [start, end]]
 	own = own_schedules(employee, {"schedule_date": dates})
 	covered = frappe.get_all(
-		"Substitution", {"substitute_user": frappe.session.user, "status": substitute_attendance.LIVE_GRANT, "schedule_date": dates}, pluck="course_schedule"
+		"Substitution",
+		{
+			"substitute_user": frappe.session.user,
+			"status": substitute_attendance.LIVE_GRANT,
+			"schedule_date": dates,
+		},
+		pluck="course_schedule",
 	)
 	grants = {**dict.fromkeys(covered, SUBSTITUTION), **dict.fromkeys(own, OWN)}
 	periods = [period_row(s, grants[s.name]) for s in schedules(list(grants))]
-	return {"from_date": start, "to_date": end, "periods": sorted(periods, key=lambda p: (p["schedule_date"], p["from_time"]))}
+	return {
+		"from_date": start,
+		"to_date": end,
+		"periods": sorted(periods, key=lambda p: (p["schedule_date"], p["from_time"])),
+	}
 
 
 def schedules(names):
@@ -121,13 +137,28 @@ def attendance_roll(course_schedule):
 	grant = period_grant(course_schedule, require_faculty())
 	schedule = schedules([course_schedule])[0]
 	marked = dict(
-		frappe.get_all("Student Attendance", {"course_schedule": course_schedule, "docstatus": 1}, ["student", "status"], as_list=True)
+		frappe.get_all(
+			"Student Attendance",
+			{"course_schedule": course_schedule, "docstatus": 1},
+			["student", "status"],
+			as_list=True,
+		)
 	)
 	students = [
-		{"student": s.student, "student_name": s.student_name, "roll": s.group_roll_number, "status": marked.get(s.student)}
+		{
+			"student": s.student,
+			"student_name": s.student_name,
+			"roll": s.group_roll_number,
+			"status": marked.get(s.student),
+		}
 		for s in roll(schedule.student_group)
 	]
-	return {"period": period_row(schedule, grant), "grant": grant, "students": students, "version": marks_version(course_schedule)}
+	return {
+		"period": period_row(schedule, grant),
+		"grant": grant,
+		"students": students,
+		"version": marks_version(course_schedule),
+	}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -135,9 +166,15 @@ def mark_attendance(course_schedule, absent=None, version=None):
 	"""Mark the period: the listed students Absent, every other active student of the group Present. `version` is the
 	roll's token: marks saved by someone else since the roll was opened refuse the post instead of being overwritten."""
 	period_grant(course_schedule, require_faculty())
-	frappe.db.get_value("Course Schedule", course_schedule, "name", for_update=True)  # mark_period holds the same lock
+	frappe.db.get_value(
+		"Course Schedule", course_schedule, "name", for_update=True
+	)  # mark_period holds the same lock
 	if not version or version != marks_version(course_schedule, for_update=True):
-		frappe.throw(_("The attendance of this period changed since you opened it. Please reload the page and mark again."))
+		frappe.throw(
+			_(
+				"The attendance of this period changed since you opened it. Please reload the page and mark again."
+			)
+		)
 	absent = substitute_attendance.as_list(absent)
 	group = frappe.db.get_value("Course Schedule", course_schedule, "student_group")
 	present = list(dict.fromkeys(s.student for s in roll(group) if s.student not in absent))
@@ -173,7 +210,9 @@ def course_plan():
 
 
 def plan_row(offering):
-	group = frappe.db.get_value("Student Group", offering, ["course", "academic_term", "oc_curriculum"], as_dict=True)
+	group = frappe.db.get_value(
+		"Student Group", offering, ["course", "academic_term", "oc_curriculum"], as_dict=True
+	)
 	weekly = frappe.db.get_value(
 		"Curriculum Course", {"parent": group.oc_curriculum or "", "course": group.course},
 		["lecture_periods", "tutorial_periods", "practical_periods"], as_dict=True,
@@ -190,12 +229,22 @@ def plan_row(offering):
 def my_mentees():
 	"""Read-only: the caller's mentees (Student.oc_mentor) with their current programme."""
 	require_faculty()
-	students = frappe.get_all("Student", {"name": ["in", list(mentees_of(frappe.session.user)) or [""]]}, ["name", "student_name"], order_by="student_name, name")
-	return [{"student": s.name, "student_name": s.student_name, "program": current_program(s.name)} for s in students]
+	students = frappe.get_all(
+		"Student",
+		{"name": ["in", list(mentees_of(frappe.session.user)) or [""]]},
+		["name", "student_name"],
+		order_by="student_name, name",
+	)
+	return [
+		{"student": s.name, "student_name": s.student_name, "program": current_program(s.name)}
+		for s in students
+	]
 
 
 def current_program(student):
-	return frappe.db.get_value("Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc")
+	return frappe.db.get_value(
+		"Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc"
+	)
 
 
 @frappe.whitelist()

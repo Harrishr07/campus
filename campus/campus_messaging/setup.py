@@ -14,7 +14,11 @@ LANGUAGE_FIELD = {
 	"module": MODULE,
 }
 # doctype -> field to insert the language after
-LANGUAGE_ANCHORS = {"Student": "student_mobile_number", "Guardian": "mobile_number", "Employee": "cell_number"}
+LANGUAGE_ANCHORS = {
+	"Student": "student_mobile_number",
+	"Guardian": "mobile_number",
+	"Employee": "cell_number",
+}
 
 # M04-10: a temporary clearance's reminder prints its due date
 DOCUMENT_PENDING_EN = (
@@ -33,8 +37,14 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms", "email"],
 		"bodies": {
-			"en": ("Fee due", "Dear {{ recipient.display_name or 'Parent' }}, a fee of {{ context.amount or '' }} is due for {{ doc.name }}."),
-			"ta": ("கட்டணம் நிலுவை", "அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} க்கான கட்டணம் {{ context.amount or '' }} நிலுவையில் உள்ளது."),
+			"en": (
+				"Fee due",
+				"Dear {{ recipient.display_name or 'Parent' }}, a fee of {{ context.amount or '' }} is due for {{ doc.name }}.",
+			),
+			"ta": (
+				"கட்டணம் நிலுவை",
+				"அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} க்கான கட்டணம் {{ context.amount or '' }} நிலுவையில் உள்ளது.",
+			),
 		},
 	},
 	{
@@ -44,7 +54,10 @@ SEED_TEMPLATES = [
 		"channels": ["whatsapp", "sms"],
 		"bodies": {
 			"en": ("{{ context.subject }}", "{{ context.subject }}: {{ context.message or '' }}"),
-			"ta": ("{{ context.subject }}", "{{ context.subject }}: {{ context.message or '' }} (அங்கீகாரம் தேவை)"),
+			"ta": (
+				"{{ context.subject }}",
+				"{{ context.subject }}: {{ context.message or '' }} (அங்கீகாரம் தேவை)",
+			),
 		},
 	},
 	{
@@ -53,8 +66,14 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms", "email"],
 		"bodies": {
-			"en": ("New circular: {{ doc.title }}", "A new circular has been published: {{ doc.title }}. Please log in to the portal to read it."),
-			"ta": ("புதிய சுற்றறிக்கை: {{ doc.title }}", "புதிய சுற்றறிக்கை வெளியிடப்பட்டுள்ளது: {{ doc.title }}. படிக்க இணையதளத்தில் உள்நுழையவும்."),
+			"en": (
+				"New circular: {{ doc.title }}",
+				"A new circular has been published: {{ doc.title }}. Please log in to the portal to read it.",
+			),
+			"ta": (
+				"புதிய சுற்றறிக்கை: {{ doc.title }}",
+				"புதிய சுற்றறிக்கை வெளியிடப்பட்டுள்ளது: {{ doc.title }}. படிக்க இணையதளத்தில் உள்நுழையவும்.",
+			),
 		},
 	},
 	{
@@ -73,8 +92,14 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp"],
 		"bodies": {
-			"en": ("Enquiry received", "Dear {{ doc.lead_name }}, thank you for your admission enquiry. Our admission office will contact you shortly."),
-			"ta": ("விசாரணை பெறப்பட்டது", "அன்புள்ள {{ doc.lead_name }}, உங்கள் சேர்க்கை விசாரணைக்கு நன்றி. எங்கள் சேர்க்கை அலுவலகம் விரைவில் உங்களை தொடர்பு கொள்ளும்."),
+			"en": (
+				"Enquiry received",
+				"Dear {{ doc.lead_name }}, thank you for your admission enquiry. Our admission office will contact you shortly.",
+			),
+			"ta": (
+				"விசாரணை பெறப்பட்டது",
+				"அன்புள்ள {{ doc.lead_name }}, உங்கள் சேர்க்கை விசாரணைக்கு நன்றி. எங்கள் சேர்க்கை அலுவலகம் விரைவில் உங்களை தொடர்பு கொள்ளும்.",
+			),
 		},
 	},
 	{
@@ -83,8 +108,14 @@ SEED_TEMPLATES = [
 		"urgent": 0,
 		"channels": ["whatsapp", "sms", "email"],
 		"bodies": {
-			"en": ("Attendance shortage", "Dear {{ recipient.display_name or 'Parent' }}, attendance of {{ doc.name }} is {{ context.percentage or '' }}%, below the required level."),
-			"ta": ("வருகைப் பற்றாக்குறை", "அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} வருகை {{ context.percentage or '' }}% ஆக குறைவாக உள்ளது."),
+			"en": (
+				"Attendance shortage",
+				"Dear {{ recipient.display_name or 'Parent' }}, attendance of {{ doc.name }} is {{ context.percentage or '' }}%, below the required level.",
+			),
+			"ta": (
+				"வருகைப் பற்றாக்குறை",
+				"அன்புள்ள {{ recipient.display_name or 'பெற்றோர்' }}, {{ doc.name }} வருகை {{ context.percentage or '' }}% ஆக குறைவாக உள்ளது.",
+			),
 		},
 	},
 ]
@@ -133,7 +164,8 @@ def seed_templates():
 				"urgent": spec["urgent"],
 				"channels": [{"channel": c} for c in spec["channels"]],
 				"bodies": [
-					{"language": lang, "subject": subject, "body": body} for lang, (subject, body) in spec["bodies"].items()
+					{"language": lang, "subject": subject, "body": body}
+					for lang, (subject, body) in spec["bodies"].items()
 				],
 			}
 		).insert(ignore_permissions=True)

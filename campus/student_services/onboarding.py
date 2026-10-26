@@ -84,7 +84,9 @@ def mark_item_done(student, item_code):
 	name = frappe.db.get_value(ONBOARDING, {"student": student})
 	if not name:
 		return
-	doc = frappe.get_doc(ONBOARDING, name, for_update=True)  # locking read: the status check sees the latest row
+	doc = frappe.get_doc(
+		ONBOARDING, name, for_update=True
+	)  # locking read: the status check sees the latest row
 	for row in doc.items:
 		if row.item_code == item_code and row.status == "Pending":
 			row.status = "Done"

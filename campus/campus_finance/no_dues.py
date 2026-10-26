@@ -20,7 +20,9 @@ def seed_office_roles():
 	for roles in DEFAULT_OFFICE_ROLES.values():
 		for role in roles:
 			if not frappe.db.exists("Role", role):
-				frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+				frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
+					ignore_permissions=True
+				)
 	settings = frappe.get_single("Campus Settings")
 	changed = False
 	for office, roles in DEFAULT_OFFICE_ROLES.items():
@@ -51,4 +53,7 @@ def may_clear(office, user=None):
 def check_may_clear(office, user=None):
 	if not may_clear(office, user):
 		roles = clearing_roles(office) or MANAGER_ROLES
-		frappe.throw(_("Only {0} can clear or reopen the {1} sign-off.").format(", ".join(sorted(roles)), office), frappe.PermissionError)
+		frappe.throw(
+			_("Only {0} can clear or reopen the {1} sign-off.").format(", ".join(sorted(roles)), office),
+			frappe.PermissionError,
+		)

@@ -28,18 +28,40 @@ COURSES = ("PLC1", "PLC2", "PLC3")
 
 class TestEligibilityRules(UnitTestCase):
 	def student(self, **kw):
-		return {"cgpa": 8, "standing_arrears": 0, "had_arrears": False, "gender": "Male", "program": "BE", "batch": "B1", **kw}
+		return {
+			"cgpa": 8,
+			"standing_arrears": 0,
+			"had_arrears": False,
+			"gender": "Male",
+			"program": "BE",
+			"batch": "B1",
+			**kw,
+		}
 
 	def test_everything_met_is_eligible(self):
-		criteria = {"min_cgpa": 7.5, "max_standing_arrears": 0, "allow_arrear_history": 0, "gender": "Male", "programs": ["BE"], "batches": ["B1"]}
+		criteria = {
+			"min_cgpa": 7.5,
+			"max_standing_arrears": 0,
+			"allow_arrear_history": 0,
+			"gender": "Male",
+			"programs": ["BE"],
+			"batches": ["B1"],
+		}
 		self.assertEqual(rules.reasons(criteria, self.student()), [])
 
 	def test_blank_criteria_restrict_nothing(self):
-		self.assertEqual(rules.reasons({"allow_arrear_history": 1}, self.student(gender=None, program=None, batch=None, cgpa=0)), [])
+		self.assertEqual(
+			rules.reasons(
+				{"allow_arrear_history": 1}, self.student(gender=None, program=None, batch=None, cgpa=0)
+			),
+			[],
+		)
 
 	def test_cgpa_boundary(self):
 		self.assertEqual(rules.reasons({"min_cgpa": 8, "allow_arrear_history": 1}, self.student(cgpa=8)), [])
-		self.assertEqual(len(rules.reasons({"min_cgpa": 8.01, "allow_arrear_history": 1}, self.student(cgpa=8))), 1)
+		self.assertEqual(
+			len(rules.reasons({"min_cgpa": 8.01, "allow_arrear_history": 1}, self.student(cgpa=8))), 1
+		)
 
 	def test_standing_arrear_limit(self):
 		base = {"max_standing_arrears": 1, "allow_arrear_history": 1}
@@ -89,7 +111,10 @@ class PlacementFixture(CampusTestCase):
 		for course in COURSES:
 			if not frappe.db.exists("Course", course):
 				frappe.get_doc({"doctype": "Course", "course_name": course, "oc_company": COLLEGE}).insert()
-		cls.terms = {key: cls.make_term(key, start, end) for key, start, end in (("S1", "2022-06-01", "2022-11-30"), ("S2", "2022-12-01", "2023-03-31"))}
+		cls.terms = {
+			key: cls.make_term(key, start, end)
+			for key, start, end in (("S1", "2022-06-01", "2022-11-30"), ("S2", "2022-12-01", "2023-03-31"))
+		}
 		cls.s1 = cls.make_session(cls.terms["S1"], add_days(now_datetime(), -3))
 		cls.s2 = cls.make_session(cls.terms["S2"], add_days(now_datetime(), -1), published=False)
 		cls.students = {}
@@ -117,8 +142,14 @@ class PlacementFixture(CampusTestCase):
 
 	@classmethod
 	def make_session(cls, term, publish_at, published=True):
-		session = frappe.get_doc({"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}).insert()
-		frappe.db.set_value("Exam Session", session.name, {"status": "Published" if published else "Marks Entry", "publish_at": publish_at})
+		session = frappe.get_doc(
+			{"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}
+		).insert()
+		frappe.db.set_value(
+			"Exam Session",
+			session.name,
+			{"status": "Published" if published else "Marks Entry", "publish_at": publish_at},
+		)
 		return session.name
 
 	@classmethod
@@ -143,7 +174,9 @@ class PlacementFixture(CampusTestCase):
 	def setUp(self):
 		frappe.db.savepoint("placement_test")
 		self.addCleanup(frappe.db.rollback, save_point="placement_test")
-		self.recruiter = frappe.get_doc({"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": COLLEGE}).insert()
+		self.recruiter = frappe.get_doc(
+			{"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": COLLEGE}
+		).insert()
 
 	def make_drive(self, status="Open", **kw):
 		values = {
@@ -156,7 +189,9 @@ class PlacementFixture(CampusTestCase):
 		return frappe.get_doc(values).insert()
 
 	def register(self, drive, key):
-		return frappe.get_doc({"doctype": "Drive Registration", "drive": drive.name, "student": self.students[key]}).insert()
+		return frappe.get_doc(
+			{"doctype": "Drive Registration", "drive": drive.name, "student": self.students[key]}
+		).insert()
 
 
 class TestLiveEligibility(PlacementFixture):
@@ -210,7 +245,14 @@ class TestLiveEligibility(PlacementFixture):
 			{"doctype": "Placement Eligibility Template", "template_name": "Tier 1", "company": COLLEGE, "min_cgpa": 8.5,
 			"allow_arrear_history": 0, "programs": [{"program": PROGRAM}]}
 		).insert()  # fmt: skip
-		drive = self.make_drive(eligibility_template=template.name, min_cgpa=0, allow_arrear_history=1, rounds=[], roles=[], status="Draft")
+		drive = self.make_drive(
+			eligibility_template=template.name,
+			min_cgpa=0,
+			allow_arrear_history=1,
+			rounds=[],
+			roles=[],
+			status="Draft",
+		)
 		self.assertEqual(drive.min_cgpa, 8.5)
 		self.assertEqual(drive.allow_arrear_history, 0)
 		self.assertEqual([row.program for row in drive.programs], [PROGRAM])
@@ -230,7 +272,9 @@ class TestLiveEligibility(PlacementFixture):
 		self.assertFalse(eligibility.student_standing(student)["had_arrears"])
 
 	def test_other_college_template_is_refused(self):
-		template = frappe.get_doc({"doctype": "Placement Eligibility Template", "template_name": "Other T", "company": OTHER}).insert()
+		template = frappe.get_doc(
+			{"doctype": "Placement Eligibility Template", "template_name": "Other T", "company": OTHER}
+		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.make_drive(eligibility_template=template.name)
 
@@ -238,7 +282,9 @@ class TestLiveEligibility(PlacementFixture):
 class TestRegistrationGate(PlacementFixture):
 	def test_eligible_student_registers_with_a_snapshot(self):
 		registration = self.register(self.make_drive(), "ace")
-		self.assertEqual((registration.status, registration.company, registration.cgpa), ("Registered", COLLEGE, 9))
+		self.assertEqual(
+			(registration.status, registration.company, registration.cgpa), ("Registered", COLLEGE, 9)
+		)
 		self.assertEqual(registration.standing_arrears, 0)
 
 	def test_ineligible_students_are_refused_with_reasons(self):
@@ -291,7 +337,14 @@ class TestRegistrationGate(PlacementFixture):
 		registration.cgpa = 10
 		registration.save()
 		self.assertEqual(registration.reload().cgpa, 9)
-		frappe.get_doc({"doctype": "Round Result", "drive": drive.name, "round_no": 1, "results": [{"student": self.students["ace"]}]}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Round Result",
+				"drive": drive.name,
+				"round_no": 1,
+				"results": [{"student": self.students["ace"]}],
+			}
+		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			registration.delete()
 
@@ -299,8 +352,18 @@ class TestRegistrationGate(PlacementFixture):
 		drive = self.make_drive(min_cgpa=0)
 		email = "pl-officer@placement-test.example.com"
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({"doctype": "User", "email": email, "first_name": "PlOfficer", "send_welcome_email": 0, "roles": [{"role": "Placement Officer"}]}).insert()
-		frappe.get_doc({"doctype": "User Permission", "user": email, "allow": "Company", "for_value": OTHER}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": "PlOfficer",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Placement Officer"}],
+				}
+			).insert()
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": email, "allow": "Company", "for_value": OTHER}
+		).insert()
 		self.addCleanup(frappe.set_user, "Administrator")
 		frappe.set_user(email)
 		with self.assertRaises(frappe.PermissionError):
@@ -316,7 +379,9 @@ class TestRegistrationGate(PlacementFixture):
 		self.assertEqual(api.open_drives(self.students["outsider"]), [])
 
 	def test_drive_roles_recruiter_and_company_are_checked(self):
-		other = frappe.get_doc({"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": OTHER}).insert()
+		other = frappe.get_doc(
+			{"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": OTHER}
+		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.make_drive(recruiter=other.name)
 		with self.assertRaises(frappe.ValidationError):
@@ -356,7 +421,9 @@ class TestRecruiterMou(PlacementFixture):
 
 	def test_recruiter_name_is_unique_per_company(self):
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": COLLEGE}).insert()
+			frappe.get_doc(
+				{"doctype": "Recruiter", "recruiter_name": "Acme Soft", "company": COLLEGE}
+			).insert()
 
 
 class TestRoundResults(PlacementFixture):
@@ -367,7 +434,9 @@ class TestRoundResults(PlacementFixture):
 			self.register(self.drive, key)
 
 	def result(self, round_no=1, **kw):
-		return frappe.get_doc({"doctype": "Round Result", "drive": self.drive.name, "round_no": round_no, **kw})
+		return frappe.get_doc(
+			{"doctype": "Round Result", "drive": self.drive.name, "round_no": round_no, **kw}
+		)
 
 	def test_shortlist_of_registered_students(self):
 		doc = self.result(results=[{"student": self.students["ace"], "result": "Shortlisted"}]).insert()
@@ -391,7 +460,9 @@ class TestRoundResults(PlacementFixture):
 		with self.assertRaises(frappe.ValidationError):
 			registration.save()
 		with self.assertRaises(frappe.ValidationError):
-			self.result(2, results=[{"student": self.students["ace"]}, {"student": self.students["ace"]}]).insert()
+			self.result(
+				2, results=[{"student": self.students["ace"]}, {"student": self.students["ace"]}]
+			).insert()
 
 	def test_round_must_exist_and_drive_must_be_open(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -402,7 +473,9 @@ class TestRoundResults(PlacementFixture):
 
 	def test_template_lists_registered_students_safely(self):
 		frappe.db.set_value("Student", self.students["ace"], "first_name", "=HYPERLINK(1)")
-		frappe.db.set_value("Drive Registration", f"{self.drive.name}-{self.students['ace']}", "student_name", "=HYPERLINK(1)")
+		frappe.db.set_value(
+			"Drive Registration", f"{self.drive.name}-{self.students['ace']}", "student_name", "=HYPERLINK(1)"
+		)
 		doc = self.result().insert()
 		rows = export.template_rows(doc.name)
 		self.assertEqual(rows[0], export.HEADER)
@@ -423,15 +496,38 @@ class TestRoundResults(PlacementFixture):
 
 	def test_bulk_upload_merges_rows(self):
 		doc = self.result(results=[{"student": self.students["ace"], "result": "Shortlisted"}]).insert()
-		self.attach(doc, self.csv([[self.students["ace"], "Selected", "Top"], [self.students["fresh"], "Not Shortlisted", "=cmd()"]]))
+		self.attach(
+			doc,
+			self.csv(
+				[
+					[self.students["ace"], "Selected", "Top"],
+					[self.students["fresh"], "Not Shortlisted", "=cmd()"],
+				]
+			),
+		)
 		self.assertEqual(round_upload.load_results(doc.name), 2)
 		doc.reload()
 		found = {row.student: (row.result, row.remarks) for row in doc.results}
-		self.assertEqual(found, {self.students["ace"]: ("Selected", "Top"), self.students["fresh"]: ("Not Shortlisted", "=cmd()")})
+		self.assertEqual(
+			found,
+			{
+				self.students["ace"]: ("Selected", "Top"),
+				self.students["fresh"]: ("Not Shortlisted", "=cmd()"),
+			},
+		)
 
 	def test_bulk_upload_refuses_the_whole_file_on_a_bad_row(self):
 		doc = self.result().insert()
-		self.attach(doc, self.csv([[self.students["ace"], "Selected", ""], [self.students["cleared"], "Selected", ""], [self.students["fresh"], "Maybe", ""]]))
+		self.attach(
+			doc,
+			self.csv(
+				[
+					[self.students["ace"], "Selected", ""],
+					[self.students["cleared"], "Selected", ""],
+					[self.students["fresh"], "Maybe", ""],
+				]
+			),
+		)
 		with self.assertRaises(frappe.ValidationError) as caught:
 			round_upload.load_results(doc.name)
 		message = str(caught.exception)
@@ -448,7 +544,9 @@ class TestRoundResults(PlacementFixture):
 		out = io.BytesIO()
 		book.save(out)
 		doc = self.result().insert()
-		file = frappe.get_doc({"doctype": "File", "file_name": "r.xlsx", "content": out.getvalue(), "is_private": 1}).insert(ignore_permissions=True)
+		file = frappe.get_doc(
+			{"doctype": "File", "file_name": "r.xlsx", "content": out.getvalue(), "is_private": 1}
+		).insert(ignore_permissions=True)
 		self.assertEqual(export.read_rows(file.file_url), [(2, self.students["ace"], "Selected", "ok")])
 		self.assertEqual(export.decode("caf\xe9".encode("cp1252")), "caf\xe9")
 		self.assertEqual(doc.round_no, 1)
@@ -456,14 +554,19 @@ class TestRoundResults(PlacementFixture):
 	def test_row_cap(self):
 		with self.assertRaises(frappe.ValidationError):
 			export.parse_table([["Student", "Result"], *[["S", "Absent"]] * (export.MAX_ROWS + 1)])
-		self.assertEqual(len(export.parse_table([["Student", "Result"], *[["S", "Absent"]] * export.MAX_ROWS])), export.MAX_ROWS)
+		self.assertEqual(
+			len(export.parse_table([["Student", "Result"], *[["S", "Absent"]] * export.MAX_ROWS])),
+			export.MAX_ROWS,
+		)
 
 	def test_bulk_upload_needs_the_columns(self):
 		with self.assertRaises(frappe.ValidationError):
 			export.parse_table([["Name", "Marks"], ["x", "1"]])
 		with self.assertRaises(frappe.ValidationError):
 			export.parse_table([])
-		self.assertEqual(export.parse_table([["student", "RESULT"], ["S1", "Absent"], ["", ""]]), [(2, "S1", "Absent", "")])
+		self.assertEqual(
+			export.parse_table([["student", "RESULT"], ["S1", "Absent"], ["", ""]]), [(2, "S1", "Absent", "")]
+		)
 
 
 class TestPortalOptIn(PlacementFixture):
@@ -474,7 +577,15 @@ class TestPortalOptIn(PlacementFixture):
 	def as_student(self, key):
 		email = f"{key}@placement-portal.example.com"
 		if not frappe.db.exists("User", email):
-			frappe.get_doc({"doctype": "User", "email": email, "first_name": key, "send_welcome_email": 0, "roles": [{"role": "Student"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": email,
+					"first_name": key,
+					"send_welcome_email": 0,
+					"roles": [{"role": "Student"}],
+				}
+			).insert()
 		frappe.db.set_value("Student", self.students[key], "user", email)
 		frappe.set_user(email)
 
@@ -501,9 +612,19 @@ class TestPortalOptIn(PlacementFixture):
 		drive = self.make_drive()
 		guardian = "pl-guardian@placement-portal.example.com"
 		if not frappe.db.exists("User", guardian):
-			frappe.get_doc({"doctype": "User", "email": guardian, "first_name": "PlG", "send_welcome_email": 0, "roles": [{"role": "Guardian"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": guardian,
+					"first_name": "PlG",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Guardian"}],
+				}
+			).insert()
 		if not frappe.db.exists("Guardian", {"user": guardian}):
-			frappe.get_doc({"doctype": "Guardian", "guardian_name": "PlG", "email_address": guardian, "user": guardian}).insert()
+			frappe.get_doc(
+				{"doctype": "Guardian", "guardian_name": "PlG", "email_address": guardian, "user": guardian}
+			).insert()
 		guardian_name = frappe.db.get_value("Guardian", {"user": guardian})
 		student = frappe.get_doc("Student", self.students["ace"])
 		student.append("guardians", {"guardian": guardian_name, "guardian_name": "PlG", "relation": "Father"})
@@ -517,7 +638,9 @@ class TestPortalOptIn(PlacementFixture):
 		drive = self.make_drive(registration_deadline=add_days(now_datetime(), 1))
 		self.as_student("ace")
 		self.assertTrue(portal.my_drives()["drives"][0]["can_register"])
-		frappe.db.set_value("Placement Drive", drive.name, "registration_deadline", add_days(now_datetime(), -1))
+		frappe.db.set_value(
+			"Placement Drive", drive.name, "registration_deadline", add_days(now_datetime(), -1)
+		)
 		row = portal.my_drives()["drives"][0]
 		self.assertTrue(row["closed"])
 		self.assertFalse(row["can_register"])

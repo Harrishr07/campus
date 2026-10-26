@@ -22,7 +22,9 @@ def publish_results(session, students, exam_end=None):
 		results.compute_student_result(student, session)
 	doc.status = "Published"
 	doc.publish_at = add_days(now_datetime(), -1)
-	doc.exam_end = exam_end or doc.exam_end or getdate(add_days(now_datetime(), -21))  # results 20 days after the last exam (AQAR 2.5.1)
+	doc.exam_end = (
+		exam_end or doc.exam_end or getdate(add_days(now_datetime(), -21))
+	)  # results 20 days after the last exam (AQAR 2.5.1)
 	doc.flags.passing_board_approval = True
 	doc.save(ignore_permissions=True)
 
@@ -31,6 +33,7 @@ def date_publication(session, exam_end):
 	"""Date the publication like a real term: results fifteen days after the last examination, and no release notice sent
 	for a past term."""
 	frappe.db.set_value(
-		"Exam Session", session,
+		"Exam Session",
+		session,
 		{"publish_at": f"{add_days(getdate(exam_end), 15)} 10:00:00", "results_notified_on": now_datetime()},
 	)

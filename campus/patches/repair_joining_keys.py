@@ -17,5 +17,7 @@ from campus.patches.joining_gate import key_joining_enrollments
 def execute():
 	if not frappe.db.has_column("Program Enrollment", "oc_joining_key"):
 		return  # joining_gate has not run on this site: it keys only submitted enrollments now
-	frappe.db.sql("update `tabProgram Enrollment` set oc_joining_key = null where docstatus = 2 and oc_joining_key is not null")
+	frappe.db.sql(
+		"update `tabProgram Enrollment` set oc_joining_key = null where docstatus = 2 and oc_joining_key is not null"
+	)
 	key_joining_enrollments()

@@ -15,7 +15,13 @@ DEFAULT_LANGUAGE = "en"
 SOURCES = {
 	"Student": (["student_email_id"], ["student_mobile_number"], "user", "oc_language", "student_name"),
 	"Guardian": (["email_address"], ["mobile_number"], "user", "oc_language", "guardian_name"),
-	"Employee": (["prefered_email", "company_email", "personal_email"], ["cell_number"], "user_id", "oc_language", "employee_name"),
+	"Employee": (
+		["prefered_email", "company_email", "personal_email"],
+		["cell_number"],
+		"user_id",
+		"oc_language",
+		"employee_name",
+	),
 	"User": (["email"], ["mobile_no", "phone"], "name", "language", "full_name"),
 	"External Member": (["email"], ["mobile_no"], None, None, "member_name"),  # no user account or language
 }

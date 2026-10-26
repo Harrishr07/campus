@@ -21,11 +21,16 @@ class ProgramEducationalObjective(Document):
 		seen = set()
 		for row in self.mission_mappings:
 			if row.mission in seen:
-				frappe.throw(_("Row {0}: mission {1} is mapped twice.").format(row.idx, frappe.bold(row.mission)))
+				frappe.throw(
+					_("Row {0}: mission {1} is mapped twice.").format(row.idx, frappe.bold(row.mission))
+				)
 			seen.add(row.mission)
 			if frappe.db.get_value("Department Mission", row.mission, "department") != department:
 				frappe.throw(
 					_("Row {0}: {1} is not a mission of {2}, the department of {3}.").format(
-						row.idx, frappe.bold(row.mission), frappe.bold(department or _("(none)")), frappe.bold(self.program)
+						row.idx,
+						frappe.bold(row.mission),
+						frappe.bold(department or _("(none)")),
+						frappe.bold(self.program),
 					)
 				)

@@ -37,13 +37,17 @@ def other_college():
 	profile["trust"] = {"name": "Other Pilot Trust", "abbr": "OPT"}
 	profile["college"].update(name="Other Pilot Engineering College", abbr="OPEC")
 	profile["user_domain"] = "other.example.edu"
-	profile["programmes"] = [dict(p, name="B.E. CSE (OPEC)") for p in profile["programmes"] if p["abbr"] == "CSE"]
+	profile["programmes"] = [
+		dict(p, name="B.E. CSE (OPEC)") for p in profile["programmes"] if p["abbr"] == "CSE"
+	]
 	profile["regulation"]["programmes"] = ["B.E. CSE (OPEC)"]
 	profile["fees"]["programmes"] = ["B.E. CSE (OPEC)"]
 	profile["class_group"]["programme"] = "B.E. CSE (OPEC)"
 	profile["college"]["leaders"] = {"principal": "principal"}
 	profile["class_group"]["name"] = "OPEC B.E. CSE 2026-27 A"
-	profile["users"] = [u for u in profile["users"] if u["key"] in ("office", "principal", "student", "guardian")]
+	profile["users"] = [
+		u for u in profile["users"] if u["key"] in ("office", "principal", "student", "guardian")
+	]
 	for user in profile["users"]:
 		user["position"] = user.get("position") if user["key"] == "principal" else None
 		if not user["position"]:
@@ -68,7 +72,9 @@ class TestPilotSetup(IntegrationTestCase):
 
 	def test_first_run_built_the_structure(self):
 		self.assertTrue(frappe.db.exists("Company", self.college))
-		self.assertEqual(frappe.db.get_value("Company", self.college, "parent_company"), SXCCE["trust"]["name"])
+		self.assertEqual(
+			frappe.db.get_value("Company", self.college, "parent_company"), SXCCE["trust"]["name"]
+		)
 		self.assertEqual(frappe.db.count("Program", {"oc_company": self.college}), 6)
 		self.assertEqual(frappe.db.get_value("Program", "B.Tech IT", "program_abbreviation"), "IT")
 		abbr = SXCCE["college"]["abbr"]
@@ -89,8 +95,17 @@ class TestPilotSetup(IntegrationTestCase):
 		name = regulation_name("R2022", self.college)
 		regulation = frappe.get_doc("Regulation", name)
 		self.assertEqual(regulation.status, "Effective")
-		self.assertEqual(sorted(row.program for row in regulation.programs), sorted(p["name"] for p in SXCCE["programmes"]))
-		for doctype in ("Exam Rule Set", "Grading Scheme", "Classification Rule", "Curriculum Rule", "Registration Rule", "Attendance Rule"):
+		self.assertEqual(
+			sorted(row.program for row in regulation.programs), sorted(p["name"] for p in SXCCE["programmes"])
+		)
+		for doctype in (
+			"Exam Rule Set",
+			"Grading Scheme",
+			"Classification Rule",
+			"Curriculum Rule",
+			"Registration Rule",
+			"Attendance Rule",
+		):
 			self.assertTrue(frappe.db.exists(doctype, {"regulation": name}), doctype)
 		# the exam values are the seeded R2022 ones (CIA 40 / ESE 60 for theory), not new ones
 		theory = frappe.get_doc("Exam Rule Set", {"regulation": name}).types[0]
@@ -98,13 +113,20 @@ class TestPilotSetup(IntegrationTestCase):
 
 	def test_seat_matrix_sums_to_the_programme_intake(self):
 		for programme in SXCCE["programmes"]:
-			matrix = frappe.get_doc("Seat Matrix", {"company": self.college, "program": programme["name"], "academic_year": "2026-27"})
+			matrix = frappe.get_doc(
+				"Seat Matrix",
+				{"company": self.college, "program": programme["name"], "academic_year": "2026-27"},
+			)
 			self.assertEqual(sum(row.sanctioned for row in matrix.rows), programme["intake"])
 		gq = frappe.get_doc("Seat Matrix", {"company": self.college, "program": "B.E. CSE"}).rows
 		self.assertEqual(sum(r.sanctioned for r in gq if r.quota == "GQ"), 39)  # 65% of 60
 
 	def test_fee_structures_per_programme_and_quota_are_submitted(self):
-		structures = frappe.get_all("Fee Structure", {"company": self.college}, ["name", "docstatus", "oc_admission_quota", "total_amount"])
+		structures = frappe.get_all(
+			"Fee Structure",
+			{"company": self.college},
+			["name", "docstatus", "oc_admission_quota", "total_amount"],
+		)
 		self.assertEqual(len(structures), 12)
 		self.assertTrue(all(s.docstatus == 1 for s in structures))
 		self.assertEqual({s.oc_admission_quota for s in structures}, {None, "MQ"})
@@ -112,8 +134,13 @@ class TestPilotSetup(IntegrationTestCase):
 	def test_a_fresh_site_gets_the_standard_selling_price_list_for_confirm_joining(self):
 		frappe.db.set_single_value("Selling Settings", "selling_price_list", "")
 		fees.ensure_selling_defaults()
-		self.assertEqual(frappe.db.get_single_value("Selling Settings", "selling_price_list"), "Standard Selling")
-		self.assertEqual(frappe.db.get_value("Price List", "Standard Selling", ["currency", "selling", "enabled"]), ("INR", 1, 1))
+		self.assertEqual(
+			frappe.db.get_single_value("Selling Settings", "selling_price_list"), "Standard Selling"
+		)
+		self.assertEqual(
+			frappe.db.get_value("Price List", "Standard Selling", ["currency", "selling", "enabled"]),
+			("INR", 1, 1),
+		)
 
 	def test_a_price_list_the_college_already_chose_is_kept(self):
 		frappe.db.set_single_value("Selling Settings", "selling_price_list", "Standard Selling")
@@ -123,24 +150,38 @@ class TestPilotSetup(IntegrationTestCase):
 
 	def test_every_company_of_the_kit_has_a_holiday_list_with_sundays_off(self):
 		trust, college = frappe.db.get_value("Company", self.college, "parent_company"), self.college
-		lists = {frappe.db.get_value("Company", company, "default_holiday_list") for company in (trust, college)}
+		lists = {
+			frappe.db.get_value("Company", company, "default_holiday_list") for company in (trust, college)
+		}
 		self.assertEqual(len(lists), 1)
 		holiday_list = lists.pop()
 		self.assertTrue(holiday_list)
 		self.assertTrue(frappe.db.exists("Holiday List", {"name": holiday_list, "weekly_off": "Sunday"}))
-		self.assertTrue(frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": "2026-07-05"}))  # a Sunday
+		self.assertTrue(
+			frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": "2026-07-05"})
+		)  # a Sunday
 
 	def test_wizard_fixtures_the_company_needs_are_installed(self):
 		self.assertTrue(frappe.db.exists("Warehouse Type", "Transit"))
 
 	def test_trust_provides_hostel_and_transport(self):
 		for service in ("Hostel", "Transport"):
-			agreement = frappe.get_doc("Shared Service Agreement", {"provider_company": SXCCE["trust"]["name"], "service": service})
+			agreement = frappe.get_doc(
+				"Shared Service Agreement", {"provider_company": SXCCE["trust"]["name"], "service": service}
+			)
 			self.assertEqual([m.company for m in agreement.members], [self.college])
 
 	def test_core_path_policies_exist(self):
-		for document_type in ("Certificate Request", "Result Ratification", "Rejoin Application", "Fee Refund", "Fee Concession"):
-			self.assertTrue(frappe.db.exists("Approval Policy", {"document_type": document_type}), document_type)
+		for document_type in (
+			"Certificate Request",
+			"Result Ratification",
+			"Rejoin Application",
+			"Fee Refund",
+			"Fee Concession",
+		):
+			self.assertTrue(
+				frappe.db.exists("Approval Policy", {"document_type": document_type}), document_type
+			)
 
 	def test_every_role_user_can_log_in_with_its_roles_and_company(self):
 		for spec in SXCCE["users"]:
@@ -149,7 +190,9 @@ class TestPilotSetup(IntegrationTestCase):
 			self.assertEqual(check_password(user, SXCCE["test_password"]), user)
 			held = set(frappe.get_roles(user))
 			self.assertTrue(set(spec["roles"]) <= held, f"{user}: {set(spec['roles']) - held}")
-			companies = set(frappe.get_all("User Permission", {"user": user, "allow": "Company"}, pluck="for_value"))
+			companies = set(
+				frappe.get_all("User Permission", {"user": user, "allow": "Company"}, pluck="for_value")
+			)
 			expected = {self.college if t == "college" else SXCCE["trust"]["name"] for t in spec["companies"]}
 			self.assertEqual(companies, expected, user)
 
@@ -167,7 +210,10 @@ class TestPilotSetup(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Employee", {"user_id": advisor, "status": "Active"}))
 		placement = f"placement@{domain}"
 		self.assertIn("Placement Officer", frappe.get_roles(placement))
-		self.assertEqual(frappe.get_all("User Permission", {"user": placement, "allow": "Company"}, pluck="for_value"), [self.college])
+		self.assertEqual(
+			frappe.get_all("User Permission", {"user": placement, "allow": "Company"}, pluck="for_value"),
+			[self.college],
+		)
 
 	def test_a_rerun_takes_away_only_the_retired_role_and_keeps_roles_given_by_hand(self):
 		faculty = f"faculty@{SXCCE['user_domain']}"
@@ -193,13 +239,17 @@ class TestPilotSetup(IntegrationTestCase):
 			user = f"{spec['key']}@{SXCCE['user_domain']}"
 			expected = spec.get("module_profile")
 			self.assertEqual(frappe.db.get_value("User", user, "module_profile"), expected, user)
-			blocked = set(frappe.get_all("Block Module", {"parent": user, "parenttype": "User"}, pluck="module"))
+			blocked = set(
+				frappe.get_all("Block Module", {"parent": user, "parenttype": "User"}, pluck="module")
+			)
 			if not expected:
 				self.assertEqual(blocked, set(), user)  # portal users are not given a profile
 				continue
 			self.assertFalse(blocked & campus, user)
 			self.assertFalse(blocked & profiles[expected], user)
-			self.assertTrue({"Selling", "Payroll", "Education", "Build"} <= blocked | profiles[expected], user)
+			self.assertTrue(
+				{"Selling", "Payroll", "Education", "Build"} <= blocked | profiles[expected], user
+			)
 
 	def test_each_pilot_role_docks_only_campus_areas_and_the_modules_its_profile_keeps(self):
 		self.addCleanup(frappe.set_user, "Administrator")
@@ -208,31 +258,56 @@ class TestPilotSetup(IntegrationTestCase):
 			if not spec.get("module_profile"):
 				continue
 			dock = desk_boot(f"{spec['key']}@{SXCCE['user_domain']}").dock
-			outside = {row["link_to"] for app, rows in dock.items() if app != "campus" for row in rows if not row.get("hidden")}
+			outside = {
+				row["link_to"]
+				for app, rows in dock.items()
+				if app != "campus"
+				for row in rows
+				if not row.get("hidden")
+			}
 			self.assertEqual(outside, profiles[spec["module_profile"]], spec["key"])
 			self.assertTrue(dock.get("campus"), spec["key"])
 
 	def test_a_rerun_restores_a_hand_cleared_profile_and_a_drifted_profile_for_every_user(self):
 		faculty = f"faculty@{SXCCE['user_domain']}"
 		frappe.db.set_value("User", faculty, "module_profile", None)
-		frappe.db.delete("Block Module", {"parent": "Campus Accounts", "parenttype": "Module Profile", "module": "Selling"})
+		frappe.db.delete(
+			"Block Module", {"parent": "Campus Accounts", "parenttype": "Module Profile", "module": "Selling"}
+		)
 		frappe.db.delete("Block Module", {"parent": faculty, "parenttype": "User"})
 		result = setup_college("sxcce", test_passwords=True)
 		self.assertEqual(result["updated"]["Module Profile"], 1)
 		self.assertEqual(frappe.db.get_value("User", faculty, "module_profile"), "Campus Teaching Staff")
-		self.assertIn("Selling", frappe.get_all("Block Module", {"parent": "Campus Accounts"}, pluck="module"))
-		self.assertIn("Selling", frappe.get_all("Block Module", {"parent": faculty, "parenttype": "User"}, pluck="module"))
+		self.assertIn(
+			"Selling", frappe.get_all("Block Module", {"parent": "Campus Accounts"}, pluck="module")
+		)
+		self.assertIn(
+			"Selling",
+			frappe.get_all("Block Module", {"parent": faculty, "parenttype": "User"}, pluck="module"),
+		)
 		self.assertEqual(setup_college("sxcce", test_passwords=True)["updated"], {})
 
 	def test_a_user_outside_the_kit_keeps_its_own_blocked_modules(self):
 		frappe.db.savepoint("bystander_user")
-		self.addCleanup(frappe.db.rollback, save_point="bystander_user")  # the class counts Users (second run test)
+		self.addCleanup(
+			frappe.db.rollback, save_point="bystander_user"
+		)  # the class counts Users (second run test)
 		email = "bystander.modules@example.com"
-		frappe.get_doc({"doctype": "User", "email": email, "first_name": "By", "send_welcome_email": 0,
-			"block_modules": [{"module": "Selling"}]}).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": "By",
+				"send_welcome_email": 0,
+				"block_modules": [{"module": "Selling"}],
+			}
+		).insert(ignore_permissions=True)
 		setup_college("sxcce", test_passwords=True)
 		self.assertIsNone(frappe.db.get_value("User", email, "module_profile"))
-		self.assertEqual(frappe.get_all("Block Module", {"parent": email, "parenttype": "User"}, pluck="module"), ["Selling"])
+		self.assertEqual(
+			frappe.get_all("Block Module", {"parent": email, "parenttype": "User"}, pluck="module"),
+			["Selling"],
+		)
 
 	def test_a_user_naming_an_unknown_module_profile_is_refused(self):
 		profile = copy.deepcopy(SXCCE)
@@ -255,11 +330,24 @@ class TestPilotSetup(IntegrationTestCase):
 	def test_position_holders_and_pilot_student(self):
 		domain = SXCCE["user_domain"]
 		hod_department = f"Computer Science and Engineering - {SXCCE['college']['abbr']}"
-		self.assertEqual(frappe.db.get_value("Position Holder", {"position": "HOD", "scope_value": hod_department}, "user"), f"hod@{domain}")
-		self.assertEqual(frappe.db.get_value("Position Holder", {"position": "PRINCIPAL", "scope_value": self.college}, "user"), f"principal@{domain}")
+		self.assertEqual(
+			frappe.db.get_value(
+				"Position Holder", {"position": "HOD", "scope_value": hod_department}, "user"
+			),
+			f"hod@{domain}",
+		)
+		self.assertEqual(
+			frappe.db.get_value(
+				"Position Holder", {"position": "PRINCIPAL", "scope_value": self.college}, "user"
+			),
+			f"principal@{domain}",
+		)
 		student = frappe.get_doc("Student", {"student_email_id": f"student@{domain}"})
 		self.assertEqual(student.user, f"student@{domain}")
-		self.assertEqual([g.guardian for g in student.guardians], [frappe.db.get_value("Guardian", {"email_address": f"guardian@{domain}"})])
+		self.assertEqual(
+			[g.guardian for g in student.guardians],
+			[frappe.db.get_value("Guardian", {"email_address": f"guardian@{domain}"})],
+		)
 
 	def test_a_changed_profile_value_updates_the_record(self):
 		profile = copy.deepcopy(SXCCE)
@@ -271,7 +359,9 @@ class TestPilotSetup(IntegrationTestCase):
 			self.assertEqual(result["updated"]["Seat Matrix"], 1)
 			self.assertEqual(result["created"], {})
 		finally:
-			setup_college("sxcce", test_passwords=True)  # the class shares its data: put the profile's values back
+			setup_college(
+				"sxcce", test_passwords=True
+			)  # the class shares its data: put the profile's values back
 
 
 class TestDefaultCompany(IntegrationTestCase):
@@ -279,7 +369,9 @@ class TestDefaultCompany(IntegrationTestCase):
 
 	@classmethod
 	def setUpClass(cls):
-		cls.addClassCleanup(clear_defaults_cache)  # runs after the rollback: drops the test's defaults from the cache
+		cls.addClassCleanup(
+			clear_defaults_cache
+		)  # runs after the rollback: drops the test's defaults from the cache
 		super().setUpClass()
 
 	def setUp(self):
@@ -295,7 +387,9 @@ class TestDefaultCompany(IntegrationTestCase):
 		clear_defaults_cache()
 
 	def stores(self):
-		return (frappe.db.get_single_value("Global Defaults", "default_company") or None), frappe.db.get_default("company")
+		return (
+			frappe.db.get_single_value("Global Defaults", "default_company") or None
+		), frappe.db.get_default("company")
 
 	def test_sets_both_stores_to_the_college_when_there_is_no_default(self):
 		structure.ensure_default_company("College A", self.out)
@@ -366,7 +460,9 @@ class TestPilotProfile(IntegrationTestCase):
 	def test_test_passwords_flag_is_parsed_strictly(self):
 		from campus.setup.pilot import parse_flag
 
-		self.assertEqual([parse_flag(v) for v in (None, True, "false", "Yes", "0")], [None, True, False, True, False])
+		self.assertEqual(
+			[parse_flag(v) for v in (None, True, "false", "Yes", "0")], [None, True, False, True, False]
+		)
 		with self.assertRaises(frappe.ValidationError):
 			parse_flag("maybe")
 
@@ -395,8 +491,13 @@ class TestPilotProfile(IntegrationTestCase):
 		self.assertEqual(counts(), counted)
 
 	def test_largest_remainder_adds_up(self):
-		self.assertEqual(largest_remainder(60, {"a": 31, "b": 30, "c": 20, "d": 18, "e": 1}), {"a": 19, "b": 18, "c": 12, "d": 11, "e": 0})
-		self.assertEqual(sum(largest_remainder(39, {"a": 31, "b": 30, "c": 20, "d": 18, "e": 1}).values()), 39)
+		self.assertEqual(
+			largest_remainder(60, {"a": 31, "b": 30, "c": 20, "d": 18, "e": 1}),
+			{"a": 19, "b": 18, "c": 12, "d": 11, "e": 0},
+		)
+		self.assertEqual(
+			sum(largest_remainder(39, {"a": 31, "b": 30, "c": 20, "d": 18, "e": 1}).values()), 39
+		)
 		self.assertEqual(largest_remainder(5, {}), {})
 
 
@@ -409,7 +510,10 @@ class TestPilotPasswords(IntegrationTestCase):
 	def test_a_real_site_stores_no_password_and_returns_reset_links(self):
 		with patch.object(people, "test_passwords_allowed", return_value=False):
 			result = setup_college(other_college())
-		self.assertEqual(sorted(result["reset_links"]), sorted(f"{k}@other.example.edu" for k in ("office", "principal", "student", "guardian")))
+		self.assertEqual(
+			sorted(result["reset_links"]),
+			sorted(f"{k}@other.example.edu" for k in ("office", "principal", "student", "guardian")),
+		)
 		user = "office@other.example.edu"
 		self.assertNotIn("UAT Tester", frappe.get_roles(user))
 		self.assertTrue(result["reset_links"][user].startswith("http"))

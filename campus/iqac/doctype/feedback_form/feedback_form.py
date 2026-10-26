@@ -11,9 +11,15 @@ class FeedbackForm(Document):
 		for row in self.questions:
 			row.course_outcome = (row.course_outcome or "").strip().upper() or None
 			if row.question_type == "Choice" and len(choice_options(row)) < 2:
-				frappe.throw(_("Row {0}: a choice question needs at least two options, one per line.").format(row.idx))
+				frappe.throw(
+					_("Row {0}: a choice question needs at least two options, one per line.").format(row.idx)
+				)
 			if row.course_outcome and row.question_type != "Likert":
-				frappe.throw(_("Row {0}: only a Likert question can carry a CO tag (its rating is the CO score).").format(row.idx))
+				frappe.throw(
+					_(
+						"Row {0}: only a Likert question can carry a CO tag (its rating is the CO score)."
+					).format(row.idx)
+				)
 
 
 def choice_options(row):

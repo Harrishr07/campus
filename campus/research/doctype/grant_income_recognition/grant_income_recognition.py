@@ -16,7 +16,13 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from campus.research.api import check_sanction_open, get_research_settings
-from campus.research.grant_recognition import journal_rows, lock_sanction, recognised, recognition_amounts, spent_to
+from campus.research.grant_recognition import (
+	journal_rows,
+	lock_sanction,
+	recognised,
+	recognition_amounts,
+	spent_to,
+)
 
 AMOUNT_FIELDS = {"revenue": "revenue_amount", "capital": "capital_amount", "release": "release_amount"}
 
@@ -30,22 +36,29 @@ class GrantIncomeRecognition(Document):
 			self.add_sanctions()
 		self.check_sanctions()
 		for row in self.sanctions:  # a preview; recomputed under the lock on submit
-			self.set_amounts(row, frappe.db.get_value("Sanction", row.sanction, ["name", "company", "cost_center"], as_dict=True))
+			self.set_amounts(
+				row,
+				frappe.db.get_value(
+					"Sanction", row.sanction, ["name", "company", "cost_center"], as_dict=True
+				),
+			)
 
 	def before_submit(self):
 		kept = []
 		for row in sorted(self.sanctions, key=lambda r: r.sanction):  # one lock order across runs
 			sanction = lock_sanction(row.sanction)
 			if sanction.docstatus != 1:
-				frappe.throw(_("Sanction {0} must be submitted to recognise its grant income.").format(row.sanction))
+				frappe.throw(
+					_("Sanction {0} must be submitted to recognise its grant income.").format(row.sanction)
+				)
 			if self.set_amounts(row, sanction, lock=True):
 				row.recognition_key = f"{row.sanction}|{getdate(self.to_date)}"
 				kept.append((row, sanction))
 		if not kept:
 			frappe.throw(
-				_("Nothing to recognise up to {0}: the sanctions are already recognised for the period or have nothing new.").format(
-					frappe.format(self.to_date, "Date")
-				)
+				_(
+					"Nothing to recognise up to {0}: the sanctions are already recognised for the period or have nothing new."
+				).format(frappe.format(self.to_date, "Date"))
 			)
 		self.set("sanctions", [row for row, _sanction in kept])
 		self.journal_entry = self.make_journal_entry(kept)
@@ -53,7 +66,10 @@ class GrantIncomeRecognition(Document):
 	def before_cancel(self):
 		"""A closed sanction's ledger doesn't change: its recognition stays (each sanction locked in name order)."""
 		for row in sorted(self.sanctions, key=lambda r: r.sanction):
-			check_sanction_open(row.sanction, frappe.db.get_value("Sanction", row.sanction, "project_closure", for_update=True))
+			check_sanction_open(
+				row.sanction,
+				frappe.db.get_value("Sanction", row.sanction, "project_closure", for_update=True),
+			)
 
 	def on_cancel(self):
 		for row in sorted(self.sanctions, key=lambda r: r.sanction):
@@ -68,20 +84,30 @@ class GrantIncomeRecognition(Document):
 
 	def add_sanctions(self):
 		for name in frappe.get_all(
-			"Sanction", {"company": self.company, "docstatus": 1, "start_date": ["<=", self.to_date]}, pluck="name", order_by="name"
+			"Sanction",
+			{"company": self.company, "docstatus": 1, "start_date": ["<=", self.to_date]},
+			pluck="name",
+			order_by="name",
 		):
 			self.append("sanctions", {"sanction": name})
 
 	def check_sanctions(self):
 		seen = set()
 		for row in self.sanctions:
-			docstatus, company = frappe.db.get_value("Sanction", row.sanction, ["docstatus", "company"]) or (None, None)
+			docstatus, company = frappe.db.get_value("Sanction", row.sanction, ["docstatus", "company"]) or (
+				None,
+				None,
+			)
 			if docstatus != 1:
 				frappe.throw(_("Row {0}: Sanction {1} must be submitted.").format(row.idx, row.sanction))
 			if company != self.company:
-				frappe.throw(_("Row {0}: Sanction {1} is not of {2}.").format(row.idx, row.sanction, self.company))
+				frappe.throw(
+					_("Row {0}: Sanction {1} is not of {2}.").format(row.idx, row.sanction, self.company)
+				)
 			if row.sanction in seen:
-				frappe.throw(_("Row {0}: Sanction {1} is listed more than once.").format(row.idx, row.sanction))
+				frappe.throw(
+					_("Row {0}: Sanction {1} is listed more than once.").format(row.idx, row.sanction)
+				)
 			seen.add(row.sanction)
 
 	def set_amounts(self, row, sanction, lock=False):
@@ -96,7 +122,10 @@ class GrantIncomeRecognition(Document):
 		return any(amounts.values())
 
 	def check_latest(self, sanction):
-		row, doc = frappe.qb.DocType("Grant Income Recognition Sanction"), frappe.qb.DocType("Grant Income Recognition")
+		row, doc = (
+			frappe.qb.DocType("Grant Income Recognition Sanction"),
+			frappe.qb.DocType("Grant Income Recognition"),
+		)
 		later = (
 			frappe.qb.from_(row).join(doc).on(doc.name == row.parent)
 			.select(doc.name)
@@ -113,15 +142,20 @@ class GrantIncomeRecognition(Document):
 
 	def make_journal_entry(self, kept):
 		settings = get_research_settings(self.company)
-		accounts = frappe._dict(income=settings.grant_income_account, deferred=settings.deferred_capital_grant_account)
+		accounts = frappe._dict(
+			income=settings.grant_income_account, deferred=settings.deferred_capital_grant_account
+		)
 		rows = []
 		for row, sanction in kept:
 			amounts = {key: row.get(field) for key, field in AMOUNT_FIELDS.items()}
 			rows.extend(journal_rows(sanction, amounts, accounts))
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "voucher_type": "Journal Entry", "company": self.company,
-				"posting_date": self.to_date, "accounts": rows,
+				"doctype": "Journal Entry",
+				"voucher_type": "Journal Entry",
+				"company": self.company,
+				"posting_date": self.to_date,
+				"accounts": rows,
 				"user_remark": _("Grant Income Recognition {0} for {1} to {2}").format(
 					self.name, frappe.format(self.from_date, "Date"), frappe.format(self.to_date, "Date")
 				),
@@ -129,7 +163,9 @@ class GrantIncomeRecognition(Document):
 		)
 		entry.flags.ignore_permissions = True
 		entry.insert()
-		if not self.is_new():  # linked before its GL posts, so the UC recheck leaves it out of the liability inflows
+		if (
+			not self.is_new()
+		):  # linked before its GL posts, so the UC recheck leaves it out of the liability inflows
 			self.db_set("journal_entry", entry.name, update_modified=False)
 		entry.submit()
 		return entry.name

@@ -33,11 +33,18 @@ def position_user(ctx, key):
 
 def positions(ctx, group):
 	"""The class advisor advises the CSE 2025 class too; two faculty and the class advisor mentor it (so My students lists mentees for each)."""
-	for code, key in (("CLASS-ADVISOR", "class_advisor"), ("MENTOR", "faculty"), ("MENTOR", "hod"), ("MENTOR", "class_advisor")):
+	for code, key in (
+		("CLASS-ADVISOR", "class_advisor"),
+		("MENTOR", "faculty"),
+		("MENTOR", "hod"),
+		("MENTOR", "class_advisor"),
+	):
 		user = position_user(ctx, key)
 		employee = frappe.db.get_value("Employee", {"user_id": user})
 		upsert(
-			ctx.out, "Position Holder", {"position": code, "scope_value": group, "user": user},
+			ctx.out,
+			"Position Holder",
+			{"position": code, "scope_value": group, "user": user},
 			{"employee": employee, "from_date": ctx.profile["people_defaults"]["positions_from"]},
 		)
 
@@ -53,9 +60,15 @@ def mentoring(ctx, group, students):
 	if not frappe.db.exists("Counselling Note", {"student": student}):
 		frappe.get_doc(
 			{
-				"doctype": "Counselling Note", "student": student, "note_date": add_days(getdate(), -40), "category": "Academic", "mentor": mentor,
-				"author": user, "notes": "Discussed the semester 3 timetable and study plan. Student is regular and confident.",
-				"is_confidential": 0, "follow_up_date": add_days(getdate(), 14),
+				"doctype": "Counselling Note",
+				"student": student,
+				"note_date": add_days(getdate(), -40),
+				"category": "Academic",
+				"mentor": mentor,
+				"author": user,
+				"notes": "Discussed the semester 3 timetable and study plan. Student is regular and confident.",
+				"is_confidential": 0,
+				"follow_up_date": add_days(getdate(), 14),
 			}
 		).insert(ignore_permissions=True)
 		ctx.out.created["Counselling Note"] += 1
@@ -63,8 +76,13 @@ def mentoring(ctx, group, students):
 	if guardian and not frappe.db.exists("Parent Interaction", {"student": student}):
 		frappe.get_doc(
 			{
-				"doctype": "Parent Interaction", "student": student, "guardian": guardian, "interaction_date": add_days(getdate(), -30),
-				"mode": "Phone", "recorded_by": user, "outcome": "Informed the parent about the CIA schedule and attendance so far.",
+				"doctype": "Parent Interaction",
+				"student": student,
+				"guardian": guardian,
+				"interaction_date": add_days(getdate(), -30),
+				"mode": "Phone",
+				"recorded_by": user,
+				"outcome": "Informed the parent about the CIA schedule and attendance so far.",
 			}
 		).insert(ignore_permissions=True)
 		ctx.out.created["Parent Interaction"] += 1
@@ -76,11 +94,17 @@ def scholarship(ctx, student):
 	abbr = frappe.db.get_value("Company", ctx.college, "abbr")
 	account = f"Scholarship Expense - {abbr}"
 	if not frappe.db.exists("Account", account):
-		was_ignoring, frappe.flags.ignore_root_company_validation = frappe.flags.ignore_root_company_validation, True  # the college is a child of the trust
+		was_ignoring, frappe.flags.ignore_root_company_validation = (
+			frappe.flags.ignore_root_company_validation,
+			True,
+		)  # the college is a child of the trust
 		try:
 			frappe.get_doc(
 				{
-					"doctype": "Account", "account_name": "Scholarship Expense", "company": ctx.college, "root_type": "Expense",
+					"doctype": "Account",
+					"account_name": "Scholarship Expense",
+					"company": ctx.college,
+					"root_type": "Expense",
 					"parent_account": f"Indirect Expenses - {abbr}",
 				}
 			).insert(ignore_permissions=True)
@@ -88,15 +112,30 @@ def scholarship(ctx, student):
 			frappe.flags.ignore_root_company_validation = was_ignoring
 		ctx.out.created["Account"] += 1
 	scheme = upsert(
-		ctx.out, "Scholarship Scheme", {"scheme_name": "Institutional Merit Scholarship"},
-		{"company": ctx.college, "scheme_type": "Institutional", "account": account, "amount_type": "Fixed", "amount": 20000},
+		ctx.out,
+		"Scholarship Scheme",
+		{"scheme_name": "Institutional Merit Scholarship"},
+		{
+			"company": ctx.college,
+			"scheme_type": "Institutional",
+			"account": account,
+			"amount_type": "Fixed",
+			"amount": 20000,
+		},
 	)
 	if frappe.db.exists("Scholarship Application", {"student": student, "scheme": scheme}):
 		return
 	application = frappe.get_doc(
-		{"doctype": "Scholarship Application", "student": student, "scheme": scheme, "academic_year": BATCH_YEAR}
+		{
+			"doctype": "Scholarship Application",
+			"student": student,
+			"scheme": scheme,
+			"academic_year": BATCH_YEAR,
+		}
 	).insert(ignore_permissions=True)
-	request_approval("Scholarship Application", application.name)  # waits for the Principal in the approval inbox
+	request_approval(
+		"Scholarship Application", application.name
+	)  # waits for the Principal in the approval inbox
 	ctx.out.created["Scholarship Application"] += 1
 
 
@@ -105,16 +144,25 @@ def authorities(ctx):
 	university = ctx.profile["college"]["institution"]["affiliating_university"]
 	for programme in ctx.profile["programmes"]:
 		upsert(
-			ctx.out, "Official Document", {"company": ctx.college, "reference_no": f"AU-AFF-{programme['abbr']}-2022"},
+			ctx.out,
+			"Official Document",
+			{"company": ctx.college, "reference_no": f"AU-AFF-{programme['abbr']}-2022"},
 			{
-				"program": programme["name"], "authority": "University", "document_type": "Affiliation",
-				"valid_from": "2022-06-01", "valid_to": "2030-05-31",
+				"program": programme["name"],
+				"authority": "University",
+				"document_type": "Affiliation",
+				"valid_from": "2022-06-01",
+				"valid_to": "2030-05-31",
 			},
 		)
 		upsert(
-			ctx.out, "Degree Awarding Authority", {"company": ctx.college, "program": programme["name"]},
+			ctx.out,
+			"Degree Awarding Authority",
+			{"company": ctx.college, "program": programme["name"]},
 			{
-				"awarding_body": "Affiliating University", "authority_name": university, "document_type": "Affiliation",
+				"awarding_body": "Affiliating University",
+				"authority_name": university,
+				"document_type": "Affiliation",
 				"document_authority": "University",
 			},
 		)
@@ -122,20 +170,39 @@ def authorities(ctx):
 
 def placement(ctx, cohort):
 	"""A campus drive by a synthetic recruiter, open to CSE and IT of the 2025 batch; eligible students register."""
-	recruiter = upsert(ctx.out, "Recruiter", {"recruiter_name": "Example Software Services", "company": ctx.college})
+	recruiter = upsert(
+		ctx.out, "Recruiter", {"recruiter_name": "Example Software Services", "company": ctx.college}
+	)
 	title = "Example Software Campus Drive 2026"
 	drive = frappe.db.get_value("Placement Drive", {"drive_title": title, "company": ctx.college})
 	if not drive:
-		drive = frappe.get_doc(
-			{
-				"doctype": "Placement Drive", "drive_title": title, "company": ctx.college, "academic_year": "2026-27",
-				"recruiter": recruiter, "drive_date": add_days(getdate(), 60), "status": "Open", "venue": "Seminar Hall",
-				"registration_deadline": add_days(now_datetime(), 45), "min_cgpa": 6.5, "max_standing_arrears": 1,
-				"allow_arrear_history": 1, "roles": [{"role_title": "Software Engineer", "openings": 10, "ctc": 450000}],
-				"programs": [{"program": "B.E. CSE"}, {"program": "B.Tech IT"}], "batches": [{"batch": BATCH_YEAR}],
-				"rounds": [{"round_no": 1, "round_name": "Aptitude"}, {"round_no": 2, "round_name": "Interview"}],
-			}
-		).insert(ignore_permissions=True).name
+		drive = (
+			frappe.get_doc(
+				{
+					"doctype": "Placement Drive",
+					"drive_title": title,
+					"company": ctx.college,
+					"academic_year": "2026-27",
+					"recruiter": recruiter,
+					"drive_date": add_days(getdate(), 60),
+					"status": "Open",
+					"venue": "Seminar Hall",
+					"registration_deadline": add_days(now_datetime(), 45),
+					"min_cgpa": 6.5,
+					"max_standing_arrears": 1,
+					"allow_arrear_history": 1,
+					"roles": [{"role_title": "Software Engineer", "openings": 10, "ctc": 450000}],
+					"programs": [{"program": "B.E. CSE"}, {"program": "B.Tech IT"}],
+					"batches": [{"batch": BATCH_YEAR}],
+					"rounds": [
+						{"round_no": 1, "round_name": "Aptitude"},
+						{"round_no": 2, "round_name": "Interview"},
+					],
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
 		ctx.out.created["Placement Drive"] += 1
 	for programme in ctx.profile["programmes"]:
 		if programme["abbr"] in ("CSE", "IT"):
@@ -147,7 +214,9 @@ def register_for_drive(ctx, drive, students):
 		if frappe.db.exists("Drive Registration", {"drive": drive, "student": student}):
 			continue
 		try:
-			frappe.get_doc({"doctype": "Drive Registration", "drive": drive, "student": student}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Drive Registration", "drive": drive, "student": student}).insert(
+				ignore_permissions=True
+			)
 			ctx.out.created["Drive Registration"] += 1
 		except frappe.ValidationError:
 			continue  # not eligible (CGPA or arrears): a student the drive turns away
@@ -156,6 +225,8 @@ def register_for_drive(ctx, drive, students):
 def accreditation(ctx):
 	seed_framework()
 	cycle = upsert(
-		ctx.out, "Accreditation Cycle", {"framework": FRAMEWORK, "company": ctx.college, "academic_year": BATCH_YEAR}
+		ctx.out,
+		"Accreditation Cycle",
+		{"framework": FRAMEWORK, "company": ctx.college, "academic_year": BATCH_YEAR},
 	)
 	compute.compute_cycle(cycle)

@@ -22,7 +22,9 @@ class ValidationRule(Document):
 		for field in ("node", "compare_node"):
 			node = self.get(field)
 			if node and frappe.db.get_value("Framework Node", node, "framework") != self.framework:
-				frappe.throw(_("{0} is not a node of {1}.").format(frappe.bold(node), frappe.bold(self.framework)))
+				frappe.throw(
+					_("{0} is not a node of {1}.").format(frappe.bold(node), frappe.bold(self.framework))
+				)
 
 	def validate_comparison(self):
 		if not (self.compare_node and self.operator):

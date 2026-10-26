@@ -45,7 +45,9 @@ class Applicant:
 		self.person, self.programme, self.ordinal = person, programme["name"], ordinal
 		self.quota, self.category, self.path, self.end = ORDINALS[ordinal]
 		self.register_no = f"TNHSC26{number:06d}"
-		self.marks = [(subject, 100, 62 + (number * (index + 3)) % 36) for index, subject in enumerate(SUBJECTS)]
+		self.marks = [
+			(subject, 100, 62 + (number * (index + 3)) % 36) for index, subject in enumerate(SUBJECTS)
+		]
 
 
 def plan(ctx):
@@ -63,7 +65,12 @@ def load(ctx):
 	prepare_eligibility(ctx)
 	applicants = plan(ctx)
 	make_enquiries(ctx, applicants)
-	upsert(ctx.out, "Admission Document Rule", {"document_type": "Transfer Certificate"}, {"mandatory": 1, "verification_needed": 0})
+	upsert(
+		ctx.out,
+		"Admission Document Rule",
+		{"document_type": "Transfer Certificate"},
+		{"mandatory": 1, "verification_needed": 0},
+	)
 	upload_missing(ctx, [a for a in applicants if a.path == "upload"])
 	for applicant in applicants:
 		name = applicant_of(applicant.person.email) or make_applicant(ctx, applicant)
@@ -83,7 +90,10 @@ def prepare_eligibility(ctx):
 			continue
 		frappe.get_doc(
 			{
-				"doctype": "Eligibility Rule", "program": programme["name"], "enabled": 1, "qualifying_exam": QUALIFYING_EXAM,
+				"doctype": "Eligibility Rule",
+				"program": programme["name"],
+				"enabled": 1,
+				"qualifying_exam": QUALIFYING_EXAM,
 				"required_subjects": "\n".join(SUBJECTS),
 				"category_marks": [{"student_category": c, "min_percent": p} for c, p in MINIMUMS.items()],
 			}
@@ -109,8 +119,14 @@ def ensure_lead(ctx, person, programme):
 		return
 	frappe.get_doc(
 		{
-			"doctype": "Lead", "first_name": person.first_name, "last_name": person.last_name, "email_id": person.email,
-			"mobile_no": person.mobile, "company": ctx.college, "oc_program_interest": programme, "status": "Open",
+			"doctype": "Lead",
+			"first_name": person.first_name,
+			"last_name": person.last_name,
+			"email_id": person.email,
+			"mobile_no": person.mobile,
+			"company": ctx.college,
+			"oc_program_interest": programme,
+			"status": "Open",
 		}
 	).insert(ignore_permissions=True)
 	ctx.out.created["Lead"] += 1
@@ -123,7 +139,9 @@ def make_applicant(ctx, applicant):
 		lead = frappe.db.get_value("Lead", {"email_id": person.email})
 		ctx.out.created["Student Applicant"] += 1
 		return convert_lead_to_applicant(lead, ctx.year)
-	doc = frappe.get_doc({"doctype": "Student Applicant", **applicant_values(ctx, applicant)}).insert(ignore_permissions=True)
+	doc = frappe.get_doc({"doctype": "Student Applicant", **applicant_values(ctx, applicant)}).insert(
+		ignore_permissions=True
+	)
 	ctx.out.created["Student Applicant"] += 1
 	return doc.name
 
@@ -149,17 +167,43 @@ def upload_missing(ctx, applicants):
 	csv.writer(out).writerows(rows)
 	content = out.getvalue().encode()
 	file = frappe.get_doc(
-		{"doctype": "File", "file_name": f"sxcce-applicants-{ctx.seed}.csv", "content": content, "is_private": 1}
+		{
+			"doctype": "File",
+			"file_name": f"sxcce-applicants-{ctx.seed}.csv",
+			"content": content,
+			"is_private": 1,
+		}
 	).insert(ignore_permissions=True)
 	upload = frappe.get_doc(
-		{"doctype": "Applicant Upload", "company": ctx.college, "academic_year": ctx.year, "upload_file": file.file_url}
+		{
+			"doctype": "Applicant Upload",
+			"company": ctx.college,
+			"academic_year": ctx.year,
+			"upload_file": file.file_url,
+		}
 	).insert(ignore_permissions=True)
-	file.db_set({"attached_to_doctype": "Applicant Upload", "attached_to_name": upload.name, "attached_to_field": "upload_file"})
+	file.db_set(
+		{
+			"attached_to_doctype": "Applicant Upload",
+			"attached_to_name": upload.name,
+			"attached_to_field": "upload_file",
+		}
+	)
 	summary = applicant_upload.validate_upload(upload.name)
 	if summary.get("Valid") != len(missing):
-		problems = frappe.get_all("Applicant Upload Row", {"applicant_upload": upload.name, "status": ["!=", "Valid"]}, ["row_no", "status", "message"], limit=3)
-		frappe.throw(f"Applicant Upload preview: expected {len(missing)} valid rows, got {summary}: {problems}")
-	with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):  # run the queued import here, in this process
+		problems = frappe.get_all(
+			"Applicant Upload Row",
+			{"applicant_upload": upload.name, "status": ["!=", "Valid"]},
+			["row_no", "status", "message"],
+			limit=3,
+		)
+		frappe.throw(
+			f"Applicant Upload preview: expected {len(missing)} valid rows, got {summary}: {problems}"
+		)
+	with (
+		patch.object(bulk, "enqueue_run"),
+		patch.object(frappe.db, "commit"),
+	):  # run the queued import here, in this process
 		run = applicant_upload.start_import(upload.name)
 		bulk.process_bulk_run(run)
 	ctx.out.created["Applicant Upload"] += 1
@@ -169,8 +213,18 @@ def upload_missing(ctx, applicants):
 def upload_row(applicant):
 	person = applicant.person
 	return [
-		person.first_name, "", person.last_name, person.date_of_birth, person.gender, person.email, person.mobile,
-		applicant.programme, applicant.category, applicant.quota, QUALIFYING_EXAM, applicant.register_no,
+		person.first_name,
+		"",
+		person.last_name,
+		person.date_of_birth,
+		person.gender,
+		person.email,
+		person.mobile,
+		applicant.programme,
+		applicant.category,
+		applicant.quota,
+		QUALIFYING_EXAM,
+		applicant.register_no,
 	]
 
 
@@ -186,7 +240,10 @@ def complete(ctx, applicant, name):
 		return
 	values = applicant_values(ctx, applicant)
 	doc.update({k: v for k, v in values.items() if k != "application_status"})
-	doc.set("oc_qualifying_marks", [{"subject": s, "max_marks": m, "obtained_marks": o} for s, m, o in applicant.marks])
+	doc.set(
+		"oc_qualifying_marks",
+		[{"subject": s, "max_marks": m, "obtained_marks": o} for s, m, o in applicant.marks],
+	)
 	doc.set("oc_documents", [{"document_type": "Transfer Certificate", "status": "Submitted"}])
 	doc.application_status = "Approved"
 	doc.save(ignore_permissions=True)
@@ -201,6 +258,9 @@ def process(ctx, applicant, name):
 	if status == "Approved":
 		admit(name)
 		ctx.out.created["Student"] += 1
-	if applicant.end == "Joined" and frappe.db.get_value("Student", {"student_applicant": name}, "oc_academic_status") == "Admitted":
+	if (
+		applicant.end == "Joined"
+		and frappe.db.get_value("Student", {"student_applicant": name}, "oc_academic_status") == "Admitted"
+	):
 		confirm_joining(name)
 		ctx.out.created["Program Enrollment"] += 1

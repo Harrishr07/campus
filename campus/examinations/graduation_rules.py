@@ -26,7 +26,11 @@ def specialisation(attempts, registration_types, credits_needed):
 	if not credits_needed:
 		return REGULAR
 	for variant in (HONOURS, MINOR):
-		passed = {a["course"]: a["credits"] for a in attempts if a["result"] == PASS and registration_types.get(a["course"]) == variant}
+		passed = {
+			a["course"]: a["credits"]
+			for a in attempts
+			if a["result"] == PASS and registration_types.get(a["course"]) == variant
+		}
 		if sum(passed.values()) >= credits_needed:
 			return variant
 	return REGULAR
@@ -45,7 +49,9 @@ def consolidate(attempts, registration_types, credits_needed=0, count_additional
 	courses = []
 	for course, row in final.items():
 		kind = registration_types.get(course) or REGULAR
-		counted[course] = bool(row["in_gpa"]) and rules.counts_in_gpa({"additional": kind in ADDITIONAL_TYPES}, (), additional_counts)
+		counted[course] = bool(row["in_gpa"]) and rules.counts_in_gpa(
+			{"additional": kind in ADDITIONAL_TYPES}, (), additional_counts
+		)
 		courses.append({**row, "registration_type": kind, "in_cgpa": counted[course]})
 	core = [c for c in courses if c["registration_type"] not in ADDITIONAL_TYPES]
 	core_names = {c["course"] for c in core}
@@ -53,7 +59,13 @@ def consolidate(attempts, registration_types, credits_needed=0, count_additional
 	for row in attempts:
 		if row["course"] in core_names:
 			history.setdefault(row["course"], []).append(row["result"])
-	cgpa = rules.cgpa([(a["course"], a["credits"], a["grade_point"], a["result"] == PASS) for a in attempts if counted[a["course"]]])
+	cgpa = rules.cgpa(
+		[
+			(a["course"], a["credits"], a["grade_point"], a["result"] == PASS)
+			for a in attempts
+			if counted[a["course"]]
+		]
+	)
 	return {
 		"variant": variant,
 		"cgpa": cgpa,

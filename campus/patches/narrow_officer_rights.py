@@ -25,7 +25,9 @@ def execute():
 def narrow(doctype, role, rights, change):
 	"""Apply change to the role's plain row when its rights are exactly `rights` (export aside)."""
 	rows = frappe.get_all(
-		"Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0}, ["name", "read", "write", "create", "report", *OTHER_RIGHTS]
+		"Custom DocPerm",
+		{"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0},
+		["name", "read", "write", "create", "report", *OTHER_RIGHTS],
 	)
 	for row in rows:
 		held = {right for right in ("read", "write", "create", "report", *OTHER_RIGHTS) if row[right]}

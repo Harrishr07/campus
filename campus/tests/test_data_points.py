@@ -147,7 +147,13 @@ class TestFormulaSandbox(ScratchCase):
 				node("9.9.1", formula=formula).insert()
 
 	def test_whitelisted_namespace_still_evaluates(self):
-		self.assertEqual(evaluate("round(total_students / full_time_teachers, 2)", {"total_students": 10, "full_time_teachers": 4}), 2.5)
+		self.assertEqual(
+			evaluate(
+				"round(total_students / full_time_teachers, 2)",
+				{"total_students": 10, "full_time_teachers": 4},
+			),
+			2.5,
+		)
 		self.assertEqual(evaluate("max(a, b) - min(a, b)", {"a": 7, "b": 2}), 5)
 		self.assertEqual(evaluate("a if a > b else b", {"a": 1, "b": 2}), 2)
 		self.assertEqual(evaluate("a > 0 and b > 0", {"a": 1, "b": 2}), True)
@@ -253,7 +259,12 @@ class TestComputeSnapshot(ScratchCase):
 		frappe.db.set_value("Accreditation Framework", SCRATCH, "status", "Published")
 		year = frappe.get_all("Academic Year", pluck="name", limit=1)[0]
 		self.cycle = frappe.get_doc(
-			{"doctype": "Accreditation Cycle", "framework": SCRATCH, "company": "DP College", "academic_year": year}
+			{
+				"doctype": "Accreditation Cycle",
+				"framework": SCRATCH,
+				"company": "DP College",
+				"academic_year": year,
+			}
 		).insert()
 
 	def points(self, teachers=4):
@@ -273,7 +284,9 @@ class TestComputeSnapshot(ScratchCase):
 		self.assertEqual(snapshot["result"], 25)
 		self.assertEqual(snapshot["engine_version"], ENGINE_VERSION)
 		self.assertEqual(snapshot["inputs"]["total_students"]["value"], 100)
-		self.assertEqual(snapshot["inputs"]["total_students"]["records"], [{"doctype": "Student", "name": "S1"}])
+		self.assertEqual(
+			snapshot["inputs"]["total_students"]["records"], [{"doctype": "Student", "name": "S1"}]
+		)
 		self.assertEqual(metric.value, 25)
 
 	def test_node_reference_input_carries_the_referenced_metric_value(self):
@@ -282,7 +295,10 @@ class TestComputeSnapshot(ScratchCase):
 		snapshot = json.loads(frappe.db.get_value("Metric Value", name, "snapshot"))
 		upstream = f"{self.cycle.name}-9.9.1"
 		self.assertEqual(snapshot["result"], 50)
-		self.assertEqual(snapshot["inputs"]["n_9_9_1"], {"value": 25, "records": [{"doctype": "Metric Value", "name": upstream}]})
+		self.assertEqual(
+			snapshot["inputs"]["n_9_9_1"],
+			{"value": 25, "records": [{"doctype": "Metric Value", "name": upstream}]},
+		)
 		self.assertTrue(frappe.db.exists("Metric Value", upstream))
 
 	def test_compute_cycle_computes_each_node_once_in_dependency_order(self):
@@ -314,7 +330,12 @@ class TestFrameworkCarryOver(ScratchCase):
 		make_company("DP College Two", "DPT")
 		company = "DP College Two"
 		year = frappe.get_all("Academic Year", pluck="name", limit=1)[0]
-		cycle = {"doctype": "Accreditation Cycle", "framework": SCRATCH, "company": company, "academic_year": year}
+		cycle = {
+			"doctype": "Accreditation Cycle",
+			"framework": SCRATCH,
+			"company": company,
+			"academic_year": year,
+		}
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc(cycle).insert()
 		frappe.db.set_value("Accreditation Framework", SCRATCH, "status", "Published")
@@ -323,7 +344,12 @@ class TestFrameworkCarryOver(ScratchCase):
 	def test_code_and_version_are_unique_per_framework(self):
 		def make(name, code, version):
 			return frappe.get_doc(
-				{"doctype": "Accreditation Framework", "framework_name": name, "framework_code": code, "version": version}
+				{
+					"doctype": "Accreditation Framework",
+					"framework_name": name,
+					"framework_code": code,
+					"version": version,
+				}
 			)
 
 		make("DP Code A", "DP-CODE", "1").insert()

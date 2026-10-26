@@ -91,12 +91,16 @@ def enroll(student, program, year, submit=False):
 
 def make_rule(regulation, program, kind):
 	"""An Eligibility Rule of `regulation`; `kind` goes in qualifying_exam, the field the test filters on."""
-	return frappe.get_doc({"doctype": RULE_DOCTYPE, "program": program, "regulation": regulation, "qualifying_exam": kind}).insert()
+	return frappe.get_doc(
+		{"doctype": RULE_DOCTYPE, "program": program, "regulation": regulation, "qualifying_exam": kind}
+	).insert()
 
 
 def clear_previous_run():
 	"""Test data may be committed by an earlier run; remove it so every run starts clean."""
-	students = frappe.get_all("Student", filters={"oc_company": ["in", [COLLEGE, OTHER_COLLEGE]]}, pluck="name")
+	students = frappe.get_all(
+		"Student", filters={"oc_company": ["in", [COLLEGE, OTHER_COLLEGE]]}, pluck="name"
+	)
 	if students:
 		frappe.db.delete("Program Enrollment", {"student": ["in", students]})
 		frappe.db.delete("Regulation History", {"parent": ["in", students]})
@@ -215,7 +219,13 @@ class TestRegulation(CampusTestCase):
 		self.assertEqual(len(student.oc_regulation_history), 1)
 		row = student.oc_regulation_history[0]
 		self.assertEqual(
-			(row.from_regulation, row.to_regulation, str(row.change_date), row.reason, row.bridge_courses_note),
+			(
+				row.from_regulation,
+				row.to_regulation,
+				str(row.change_date),
+				row.reason,
+				row.bridge_courses_note,
+			),
 			(self.r2022, self.r2026, today(), "Rejoined after break", "Bridge: Maths I"),
 		)
 
@@ -319,4 +329,3 @@ class TestRegulation(CampusTestCase):
 		student = make_student("RegNoRule", COLLEGE)
 		with self.assertRaises(frappe.ValidationError):
 			get_rule(student.name, "Program")
-

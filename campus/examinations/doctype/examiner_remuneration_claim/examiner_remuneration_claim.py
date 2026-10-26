@@ -57,7 +57,9 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 			remuneration_payment.cancel_additional_salary(self)
 		else:
 			remuneration_payment.cancel_or_delete_invoice(self)
-		frappe.db.set_value(remuneration.CLAIM_ITEM, {"parenttype": self.doctype, "parent": self.name}, "source_key", None)
+		frappe.db.set_value(
+			remuneration.CLAIM_ITEM, {"parenttype": self.doctype, "parent": self.name}, "source_key", None
+		)
 
 	def approval_excluded_users(self):
 		return [self.examiner_user]
@@ -66,7 +68,9 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 		"""Name, user, and for an external examiner the Supplier and its TDS section, from the masters."""
 		if self.examiner_type == INTERNAL:
 			self.external_member = self.supplier = self.tds_section = None
-			employee = frappe.db.get_value("Employee", self.employee, ["employee_name", "user_id", "company"], as_dict=True)
+			employee = frappe.db.get_value(
+				"Employee", self.employee, ["employee_name", "user_id", "company"], as_dict=True
+			)
 			if not employee:
 				frappe.throw(_("Employee {0} does not exist.").format(self.employee))
 			if employee.company != self.company:
@@ -74,13 +78,19 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 			self.examiner_name, self.examiner_user = employee.employee_name, employee.user_id
 			return
 		self.employee = None
-		member = frappe.db.get_value("External Member", self.external_member, ["member_name", "email", "supplier"], as_dict=True)
+		member = frappe.db.get_value(
+			"External Member", self.external_member, ["member_name", "email", "supplier"], as_dict=True
+		)
 		if not member:
 			frappe.throw(_("External Member {0} does not exist.").format(self.external_member))
 		self.examiner_name, self.supplier = member.member_name, member.supplier
 		self.examiner_user = member.email and frappe.db.get_value("User", {"email": member.email})
 		if not self.supplier:
-			frappe.throw(_("{0} has no Supplier; create one from the External Member first.").format(self.examiner_name))
+			frappe.throw(
+				_("{0} has no Supplier; create one from the External Member first.").format(
+					self.examiner_name
+				)
+			)
 		self.tds_section = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
 		if not self.tds_section:
 			frappe.throw(_("Ask Accounts to set the TDS category on Supplier {0}.").format(self.supplier))
@@ -89,15 +99,26 @@ class ExaminerRemunerationClaim(ApprovableDocument, Document):
 		lines, held_by = remuneration.work_lines(self)
 		if not lines:
 			if held_by:
-				frappe.throw(_("The work of {0} in {1} is already claimed in {2}.").format(self.examiner_name, self.exam_session, ", ".join(held_by)))
-			frappe.throw(_("{0} has no completed work in {1} to claim.").format(self.examiner_name, self.exam_session))
+				frappe.throw(
+					_("The work of {0} in {1} is already claimed in {2}.").format(
+						self.examiner_name, self.exam_session, ", ".join(held_by)
+					)
+				)
+			frappe.throw(
+				_("{0} has no completed work in {1} to claim.").format(self.examiner_name, self.exam_session)
+			)
 		if self.line_values(lines) != self.line_values(self.items):
 			if self._action == "submit":
-				frappe.throw(_("The work or rates of this claim changed after it was approved. Cancel and amend it."))
+				frappe.throw(
+					_("The work or rates of this claim changed after it was approved. Cancel and amend it.")
+				)
 			self.set("items", lines)  # unchanged rows are kept, so a save while pending changes nothing
 		self.total_amount = flt(sum(flt(row.amount) for row in self.items), 2)
 
 	@staticmethod
 	def line_values(rows):
 		numeric = ("quantity", "rate", "amount")
-		return sorted(tuple(str(flt(row.get(f)) if f in numeric else row.get(f) or "") for f in LINE_FIELDS) for row in rows)
+		return sorted(
+			tuple(str(flt(row.get(f)) if f in numeric else row.get(f) or "") for f in LINE_FIELDS)
+			for row in rows
+		)

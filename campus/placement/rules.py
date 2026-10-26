@@ -14,10 +14,16 @@ def reasons(criteria, student):
 	found = []
 	minimum = flt(criteria.get("min_cgpa"))
 	if minimum and flt(student.get("cgpa")) < minimum:
-		found.append(_("CGPA {0} is below the minimum {1}").format(flt(student.get("cgpa"), 2), flt(minimum, 2)))
+		found.append(
+			_("CGPA {0} is below the minimum {1}").format(flt(student.get("cgpa"), 2), flt(minimum, 2))
+		)
 	allowed = cint(criteria.get("max_standing_arrears"))
 	if not cint(criteria.get("any_standing_arrears")) and cint(student.get("standing_arrears")) > allowed:
-		found.append(_("{0} standing arrears; at most {1} allowed").format(cint(student.get("standing_arrears")), allowed))
+		found.append(
+			_("{0} standing arrears; at most {1} allowed").format(
+				cint(student.get("standing_arrears")), allowed
+			)
+		)
 	if not cint(criteria.get("allow_arrear_history")) and student.get("had_arrears"):
 		found.append(_("A history of arrears is not allowed"))
 	if criteria.get("gender") and student.get("gender") != criteria["gender"]:

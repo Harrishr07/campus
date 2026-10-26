@@ -11,7 +11,9 @@ COORDINATOR = "uat-coord@example.com"
 
 def make_login(email, role):
 	if not frappe.db.exists("User", email):
-		frappe.get_doc({"doctype": "User", "email": email, "first_name": "uat", "send_welcome_email": 0}).insert()
+		frappe.get_doc(
+			{"doctype": "User", "email": email, "first_name": "uat", "send_welcome_email": 0}
+		).insert()
 	frappe.get_doc("User", email).add_roles(role)
 
 
@@ -24,7 +26,15 @@ def as_user(user, fn):
 
 
 def file_feedback(**values):
-	doc = {"doctype": "UAT Feedback", "script": "faculty", "step": "4", "severity": "High", "expected": "e", "actual": "a", **values}
+	doc = {
+		"doctype": "UAT Feedback",
+		"script": "faculty",
+		"step": "4",
+		"severity": "High",
+		"expected": "e",
+		"actual": "a",
+		**values,
+	}
 	return frappe.get_doc(doc).insert()
 
 
@@ -43,7 +53,10 @@ class TestUATFeedback(IntegrationTestCase):
 		scripts = frappe.get_app_path("campus", "..", "docs", "usage", "uat")
 		import os
 
-		self.assertEqual(sorted(f[:-3] for f in os.listdir(scripts) if f.endswith(".md") and f != "README.md"), sorted(uat.SCRIPTS))
+		self.assertEqual(
+			sorted(f[:-3] for f in os.listdir(scripts) if f.endswith(".md") and f != "README.md"),
+			sorted(uat.SCRIPTS),
+		)
 
 	def test_a_tester_files_feedback_with_defaults_and_owns_it(self):
 		doc = as_user(TESTER_A, file_feedback)

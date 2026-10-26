@@ -28,14 +28,19 @@ class TestRecognitionAmounts(UnitTestCase):
 		)
 
 	def test_first_period_recognises_everything_spent(self):
-		self.assertEqual(self.amounts(spent=(45000, 300000, 5000)), {"revenue": 45000, "capital": 300000, "release": 5000})
+		self.assertEqual(
+			self.amounts(spent=(45000, 300000, 5000)), {"revenue": 45000, "capital": 300000, "release": 5000}
+		)
 
 	def test_only_the_new_spending_is_recognised(self):
 		result = self.amounts(spent=(70000, 300000, 8000), done=(45000, 300000, 5000))
 		self.assertEqual(result, {"revenue": 25000, "capital": 0, "release": 3000})
 
 	def test_nothing_new_gives_zero(self):
-		self.assertEqual(self.amounts(spent=(45000, 300000, 5000), done=(45000, 300000, 5000)), {"revenue": 0, "capital": 0, "release": 0})
+		self.assertEqual(
+			self.amounts(spent=(45000, 300000, 5000), done=(45000, 300000, 5000)),
+			{"revenue": 0, "capital": 0, "release": 0},
+		)
 
 	def test_a_credit_note_reverses_recognised_income(self):
 		self.assertEqual(self.amounts(spent=(40000, 0, 0), done=(45000, 0, 0))["revenue"], -5000)
@@ -70,11 +75,22 @@ class TestGrantRecognition(SanctionFixtures):
 	def spend(self, sanction, account, amount, head, posting_date=None):
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": posting_date or today(),
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": posting_date or today(),
 				"accounts": [
-					{"account": account, "debit_in_account_currency": amount, "cost_center": sanction.cost_center,
-					 "project": sanction.project, BUDGET_HEAD_FIELD: head},
-					{"account": self.bank, "credit_in_account_currency": amount, "cost_center": sanction.cost_center},
+					{
+						"account": account,
+						"debit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
+						BUDGET_HEAD_FIELD: head,
+					},
+					{
+						"account": self.bank,
+						"credit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+					},
 				],
 			}  # fmt: skip
 		).insert()
@@ -85,10 +101,21 @@ class TestGrantRecognition(SanctionFixtures):
 		"""What ERPNext's depreciation entry posts for an asset whose cost centre is the sanction's."""
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(), "voucher_type": "Depreciation Entry",
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": today(),
+				"voucher_type": "Depreciation Entry",
 				"accounts": [
-					{"account": self.depreciation_account, "debit_in_account_currency": amount, "cost_center": sanction.cost_center},
-					{"account": self.accumulated_account, "credit_in_account_currency": amount, "cost_center": sanction.cost_center},
+					{
+						"account": self.depreciation_account,
+						"debit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+					},
+					{
+						"account": self.accumulated_account,
+						"credit_in_account_currency": amount,
+						"cost_center": sanction.cost_center,
+					},
 				],
 			}  # fmt: skip
 		).insert()
@@ -97,8 +124,13 @@ class TestGrantRecognition(SanctionFixtures):
 	def interest(self, sanction, amount, **values):
 		doc = frappe.get_doc(
 			{
-				"doctype": "Grant Interest", "sanction": sanction.name, "posting_date": today(), "amount": amount,
-				"received_in": self.bank, "reference_no": "INT0001", **values,
+				"doctype": "Grant Interest",
+				"sanction": sanction.name,
+				"posting_date": today(),
+				"amount": amount,
+				"received_in": self.bank,
+				"reference_no": "INT0001",
+				**values,
 			}  # fmt: skip
 		).insert()
 		doc.submit()
@@ -107,8 +139,10 @@ class TestGrantRecognition(SanctionFixtures):
 	def recognition(self, sanctions=None, from_date=None, to_date=None, submit=True):
 		doc = frappe.get_doc(
 			{
-				"doctype": "Grant Income Recognition", "company": COLLEGE,
-				"from_date": from_date or self.year1.start, "to_date": to_date or today(),
+				"doctype": "Grant Income Recognition",
+				"company": COLLEGE,
+				"from_date": from_date or self.year1.start,
+				"to_date": to_date or today(),
 				"sanctions": [{"sanction": s.name} for s in sanctions or []],
 			}  # fmt: skip
 		).insert()
@@ -156,7 +190,9 @@ class TestGrantRecognition(SanctionFixtures):
 		entry = frappe.get_doc("Journal Entry", doc.journal_entry)
 		self.assertEqual(entry.docstatus, 1)
 		self.assertEqual(str(entry.posting_date), str(doc.to_date))
-		self.assertEqual({(r.cost_center, r.project) for r in entry.accounts}, {(sanction.cost_center, sanction.project)})
+		self.assertEqual(
+			{(r.cost_center, r.project) for r in entry.accounts}, {(sanction.cost_center, sanction.project)}
+		)
 		self.assertEqual(
 			{r.account for r in entry.accounts}, {sanction.liability_account, self.income, self.deferred}
 		)
@@ -182,7 +218,9 @@ class TestGrantRecognition(SanctionFixtures):
 		sanction = self.submitted_sanction()
 		self.receipt(sanction).submit()
 		self.spend(sanction, self.consumables_account, 1000, self.consumables)
-		self.spend(sanction, self.consumables_account, 700, self.consumables, posting_date=add_days(today(), 1))
+		self.spend(
+			sanction, self.consumables_account, 700, self.consumables, posting_date=add_days(today(), 1)
+		)
 		self.recognition([sanction])
 		self.assertEqual(self.balance(self.income, sanction), 1000)
 		self.recognition([sanction], from_date=add_days(today(), 1), to_date=add_days(today(), 1))
@@ -191,22 +229,38 @@ class TestGrantRecognition(SanctionFixtures):
 	def test_a_credit_note_in_a_later_period_reverses_income_with_flipped_rows(self):
 		sanction = self.submitted_sanction()
 		self.receipt(sanction).submit()
-		self.spend(sanction, self.consumables_account, 4000, self.consumables, posting_date=add_days(today(), -2))
+		self.spend(
+			sanction, self.consumables_account, 4000, self.consumables, posting_date=add_days(today(), -2)
+		)
 		self.recognition([sanction], to_date=add_days(today(), -1))
 		credit = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "company": COLLEGE, "posting_date": today(),
+				"doctype": "Journal Entry",
+				"company": COLLEGE,
+				"posting_date": today(),
 				"accounts": [
-					{"account": self.consumables_account, "credit_in_account_currency": 1500, "cost_center": sanction.cost_center,
-					 "project": sanction.project, BUDGET_HEAD_FIELD: self.consumables},
-					{"account": self.bank, "debit_in_account_currency": 1500, "cost_center": sanction.cost_center},
+					{
+						"account": self.consumables_account,
+						"credit_in_account_currency": 1500,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
+						BUDGET_HEAD_FIELD: self.consumables,
+					},
+					{
+						"account": self.bank,
+						"debit_in_account_currency": 1500,
+						"cost_center": sanction.cost_center,
+					},
 				],
 			}  # fmt: skip
 		).insert()
 		credit.submit()  # e.g. a supplier's credit note for returned consumables
 		doc = self.recognition([sanction], from_date=today(), to_date=today())
 		self.assertEqual(doc.sanctions[0].revenue_amount, -1500)
-		rows = {(r.account, r.debit, r.credit) for r in frappe.get_doc("Journal Entry", doc.journal_entry).accounts}
+		rows = {
+			(r.account, r.debit, r.credit)
+			for r in frappe.get_doc("Journal Entry", doc.journal_entry).accounts
+		}
 		self.assertEqual(rows, {(self.income, 1500, 0), (sanction.liability_account, 0, 1500)})
 		self.assertEqual(self.balance(self.income, sanction), 2500)
 		self.assertEqual(self.balance(sanction.liability_account, sanction), 510000 - 2500)
@@ -229,7 +283,9 @@ class TestGrantRecognition(SanctionFixtures):
 		self.receipt(sanction).submit()
 		self.spend(sanction, self.consumables_account, 1000, self.consumables)
 		self.recognition([sanction])
-		self.spend(sanction, self.consumables_account, 300, self.consumables)  # back-dated into the recognised period
+		self.spend(
+			sanction, self.consumables_account, 300, self.consumables
+		)  # back-dated into the recognised period
 		with self.assertRaisesRegex(frappe.ValidationError, "Nothing to recognise"):
 			self.recognition([sanction])
 		self.recognition([sanction], from_date=add_days(today(), 1), to_date=add_days(today(), 1))
@@ -269,7 +325,9 @@ class TestGrantRecognition(SanctionFixtures):
 
 	# acceptance 3: a fully spent revenue grant nets to zero
 	def test_fully_spent_revenue_grant_nets_to_zero(self):
-		sanction = self.submitted_sanction(heads=[(self.consumables, self.year1.name, 1000)], instalments=[("First", 1000)])
+		sanction = self.submitted_sanction(
+			heads=[(self.consumables, self.year1.name, 1000)], instalments=[("First", 1000)]
+		)
 		self.receipt(sanction).submit()
 		self.spend(sanction, self.consumables_account, 1000, self.consumables)
 		self.recognition([sanction])
@@ -291,7 +349,9 @@ class TestGrantRecognition(SanctionFixtures):
 		doc.cancel()
 		self.assertEqual(frappe.db.get_value("Journal Entry", doc.journal_entry, "docstatus"), 2)
 		self.assertEqual(self.balance(sanction.liability_account, sanction), 511000)
-		self.assertIsNone(frappe.db.get_value("Grant Income Recognition Sanction", doc.sanctions[0].name, "recognition_key"))
+		self.assertIsNone(
+			frappe.db.get_value("Grant Income Recognition Sanction", doc.sanctions[0].name, "recognition_key")
+		)
 		self.recognition([sanction])  # the period can be recognised again
 		self.assertEqual(self.balance(sanction.liability_account, sanction), 166000)
 
@@ -300,7 +360,9 @@ class TestGrantRecognition(SanctionFixtures):
 		self.receipt(sanction).submit()
 		self.spend(sanction, self.consumables_account, 1000, self.consumables)
 		first = self.recognition([sanction])
-		self.spend(sanction, self.consumables_account, 500, self.consumables, posting_date=add_days(today(), 1))
+		self.spend(
+			sanction, self.consumables_account, 500, self.consumables, posting_date=add_days(today(), 1)
+		)
 		self.recognition([sanction], from_date=add_days(today(), 1), to_date=add_days(today(), 1))
 		with self.assertRaisesRegex(frappe.ValidationError, "later"):
 			first.cancel()
@@ -317,16 +379,24 @@ class TestGrantRecognition(SanctionFixtures):
 	def test_interest_goes_to_the_liability_by_default(self):
 		sanction = self.submitted_sanction()
 		doc = self.interest(sanction, 1000)
-		self.assertEqual((doc.interest_treatment, doc.credited_to), ("Grant Liability", sanction.liability_account))
+		self.assertEqual(
+			(doc.interest_treatment, doc.credited_to), ("Grant Liability", sanction.liability_account)
+		)
 		self.assertEqual(self.balance(sanction.liability_account, sanction), 1000)
 		doc.cancel()
 		self.assertEqual(self.balance(sanction.liability_account, sanction), 0)
 
 	def test_interest_treated_as_income_is_kept_out_of_the_liability(self):
 		interest_income = make_account(COLLEGE, ABBR, "RSA Interest Income", "Indirect Income")
-		frappe.db.set_value("Research Settings", COLLEGE, {"interest_treatment": "Interest Income", "interest_income_account": interest_income})
+		frappe.db.set_value(
+			"Research Settings",
+			COLLEGE,
+			{"interest_treatment": "Interest Income", "interest_income_account": interest_income},
+		)
 		frappe.clear_document_cache("Research Settings", COLLEGE)
-		self.addCleanup(frappe.clear_document_cache, "Research Settings", COLLEGE)  # the rollback restores the row, not the cache
+		self.addCleanup(
+			frappe.clear_document_cache, "Research Settings", COLLEGE
+		)  # the rollback restores the row, not the cache
 		sanction = self.submitted_sanction()
 		self.receipt(sanction).submit()
 		doc = self.interest(sanction, 1000)

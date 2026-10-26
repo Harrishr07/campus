@@ -42,10 +42,22 @@ def summary(rows):
 
 def columns():
 	return [
-		{"fieldname": "employee", "label": _("Employee"), "fieldtype": "Link", "options": "Employee", "width": 130},
+		{
+			"fieldname": "employee",
+			"label": _("Employee"),
+			"fieldtype": "Link",
+			"options": "Employee",
+			"width": 130,
+		},
 		{"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 180},
 		department_column(),
 		{"fieldname": "cadre", "label": _("Cadre"), "fieldtype": "Data", "width": 160},
 		{"fieldname": "date_of_joining", "label": _("Joined"), "fieldtype": "Date", "width": 110},
-		{"fieldname": "years", "label": _("Experience (Years)"), "fieldtype": "Float", "precision": 1, "width": 140},
+		{
+			"fieldname": "years",
+			"label": _("Experience (Years)"),
+			"fieldtype": "Float",
+			"precision": 1,
+			"width": 140,
+		},
 	]

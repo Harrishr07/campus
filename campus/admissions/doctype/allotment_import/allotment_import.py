@@ -17,4 +17,8 @@ class AllotmentImport(Document):
 			seen.add(code)
 			company = frappe.db.get_value("Program", row.program, "oc_company")
 			if company != self.company:
-				frappe.throw(_("Row {0}: program {1} belongs to {2}, not {3}.").format(row.idx, row.program, company, self.company))
+				frappe.throw(
+					_("Row {0}: program {1} belongs to {2}, not {3}.").format(
+						row.idx, row.program, company, self.company
+					)
+				)

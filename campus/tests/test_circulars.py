@@ -7,7 +7,9 @@ from frappe.utils import add_to_date, now_datetime
 
 from campus.campus_messaging import circulars
 from campus.campus_messaging.doctype.circular import circular as circular_module
-from campus.campus_messaging.report.circular_acknowledgement_status import circular_acknowledgement_status as ack_report
+from campus.campus_messaging.report.circular_acknowledgement_status import (
+	circular_acknowledgement_status as ack_report,
+)
 from campus.campus_messaging.report.consent_register import consent_register
 from campus.campus_messaging.report.delivery_summary import delivery_summary
 from campus.campus_platform import bulk
@@ -47,7 +49,9 @@ class CircularTestCase(BroadcastTestCase):
 	def process_pending_runs(self):
 		frappe.db.commit()
 		with adapters():
-			for run in frappe.get_all("Bulk Run", filters={"status": "Queued", "run_type": ["like", "Circular %"]}, pluck="name"):
+			for run in frappe.get_all(
+				"Bulk Run", filters={"status": "Queued", "run_type": ["like", "Circular %"]}, pluck="name"
+			):
 				bulk.process_bulk_run(run)
 
 	def acknowledge_as(self, user, name):
@@ -72,7 +76,12 @@ class TestCircularVisibility(CircularTestCase):
 		self.assertEqual(self.listed_for(fx.GUARDIAN_USER), [])
 		self.assertIsNone(frappe.db.get_value("Circular", circular.name, "published_on"))
 		circular_module.publish_due()
-		self.assertEqual(frappe.db.count("Message Log", {"reference_name": circular.name, "event_key": "circular.published"}), 0)
+		self.assertEqual(
+			frappe.db.count(
+				"Message Log", {"reference_name": circular.name, "event_key": "circular.published"}
+			),
+			0,
+		)
 
 	def test_published_circular_shows_to_the_audience_only(self):
 		circular = self.circular()
@@ -135,7 +144,11 @@ class TestCircularPublishing(CircularTestCase):
 		return sorted(
 			frappe.get_all(
 				"Message Log",
-				filters={"reference_doctype": "Circular", "reference_name": circular.name, "event_key": "circular.published"},
+				filters={
+					"reference_doctype": "Circular",
+					"reference_name": circular.name,
+					"event_key": "circular.published",
+				},
 				pluck="recipient",
 			)
 		)
@@ -205,7 +218,9 @@ class TestCircularFeedAndAcknowledgement(CircularTestCase):
 		name = self.acknowledge_as(fx.GUARDIAN_USER, self.published.name)
 		self.assertEqual(self.acknowledge_as(fx.GUARDIAN_USER, self.published.name), name)
 		rows = frappe.get_all(
-			"Circular Acknowledgement", filters={"circular": self.published.name}, fields=["user", "party_type", "party", "company"]
+			"Circular Acknowledgement",
+			filters={"circular": self.published.name},
+			fields=["user", "party_type", "party", "company"],
 		)
 		self.assertEqual(
 			[(r.user, r.party_type, r.party, r.company) for r in rows],
@@ -257,14 +272,21 @@ class TestReports(CircularTestCase):
 		circular = self.circular()
 		circular.submit()
 		self.acknowledge_as(fx.GUARDIAN_USER, circular.name)
-		summary = [r for r in self.rows(ack_report, {"company": fx.COLLEGE}) if r["circular"] == circular.name]
+		summary = [
+			r for r in self.rows(ack_report, {"company": fx.COLLEGE}) if r["circular"] == circular.name
+		]
 		self.assertEqual([(r["audience"], r["acknowledged"], r["pending"]) for r in summary], [(2, 1, 1)])
 
 		detail = {r["recipient"]: r for r in self.rows(ack_report, {"circular": circular.name})}
-		asha, chitra = detail[f"Guardian:{self.world['g_asha']}"], detail[f"Guardian:{self.world['g_chitra']}"]
+		asha, chitra = (
+			detail[f"Guardian:{self.world['g_asha']}"],
+			detail[f"Guardian:{self.world['g_chitra']}"],
+		)
 		self.assertEqual((asha["status"], asha["user"]), ("Acknowledged", fx.GUARDIAN_USER))
 		self.assertTrue(asha["acknowledged_on"])
-		self.assertEqual((chitra["status"], chitra["user"], chitra["acknowledged_on"]), ("Pending", None, None))
+		self.assertEqual(
+			(chitra["status"], chitra["user"], chitra["acknowledged_on"]), ("Pending", None, None)
+		)
 
 	def test_acknowledgement_report_skips_circulars_not_requiring_it_and_other_colleges(self):
 		plain = self.circular(acknowledgement_required=0)
@@ -282,12 +304,22 @@ class TestReports(CircularTestCase):
 		self.process_pending_runs()
 		rows = self.rows(delivery_summary, {"company": fx.COLLEGE, "event_key": "circular.published"})
 		# the seeded template honours quiet hours, so the two messages are Sent or Scheduled depending on the clock
-		self.assertEqual([(r["event_key"], r["channel"]) for r in rows], [("circular.published", "email")] * len(rows))
-		self.assertEqual(sum(r["count"] for r in rows), 2)
-		self.assertEqual(self.rows(delivery_summary, {"company": fx.OTHER_COLLEGE, "event_key": "circular.published"}), [])
-		self.assertEqual(self.rows(delivery_summary, {"event_key": "circular.published"}, user=fx.OTHER_COLLEGE_USER), [])
 		self.assertEqual(
-			self.rows(delivery_summary, {"company": fx.COLLEGE, "event_key": "circular.published", "status": "Failed"}), []
+			[(r["event_key"], r["channel"]) for r in rows], [("circular.published", "email")] * len(rows)
+		)
+		self.assertEqual(sum(r["count"] for r in rows), 2)
+		self.assertEqual(
+			self.rows(delivery_summary, {"company": fx.OTHER_COLLEGE, "event_key": "circular.published"}), []
+		)
+		self.assertEqual(
+			self.rows(delivery_summary, {"event_key": "circular.published"}, user=fx.OTHER_COLLEGE_USER), []
+		)
+		self.assertEqual(
+			self.rows(
+				delivery_summary,
+				{"company": fx.COLLEGE, "event_key": "circular.published", "status": "Failed"},
+			),
+			[],
 		)
 
 	def test_consent_register_lists_consents_by_company(self):
@@ -298,7 +330,10 @@ class TestReports(CircularTestCase):
 		self.addCleanup(frappe.delete_doc, "Communication Consent", consent.name)
 		self.assertEqual(consent.company, fx.COLLEGE)
 		rows = self.rows(consent_register, {"company": fx.COLLEGE, "channel": "sms"})
-		self.assertIn(("Guardian", self.world["g_asha"], "Opted Out"), [(r["party_type"], r["party"], r["status"]) for r in rows])
+		self.assertIn(
+			("Guardian", self.world["g_asha"], "Opted Out"),
+			[(r["party_type"], r["party"], r["status"]) for r in rows],
+		)
 		self.assertEqual(self.rows(consent_register, {"company": fx.OTHER_COLLEGE}), [])
 		self.assertEqual(self.rows(consent_register, user=fx.OTHER_COLLEGE_USER), [])
 
@@ -327,18 +362,28 @@ class TestMessagingJavascript(CircularTestCase):
 		circular = self.circular()
 		circular.submit()
 		name = self.acknowledge_as(fx.GUARDIAN_USER, circular.name)
-		with patch("frappe.db.exists", return_value=None):  # the pre-check misses the row another request just wrote
+		with patch(
+			"frappe.db.exists", return_value=None
+		):  # the pre-check misses the row another request just wrote
 			self.assertEqual(self.acknowledge_as(fx.GUARDIAN_USER, circular.name), name)
 		self.assertEqual(frappe.db.count("Circular Acknowledgement", {"circular": circular.name}), 1)
 
 	def test_refresh_status_needs_write_permission(self):
 		broadcast = frappe.get_doc(
-			{"doctype": "Broadcast", "title": "x", "company": fx.COLLEGE, "audience_rule": self.rule, "message_template": "t11.notice"}
+			{
+				"doctype": "Broadcast",
+				"title": "x",
+				"company": fx.COLLEGE,
+				"audience_rule": self.rule,
+				"message_template": "t11.notice",
+			}
 		).insert()
 		broadcast.submit()
 		frappe.set_user(fx.STUDENT_USER)
 		try:
 			with self.assertRaises(frappe.PermissionError):
-				frappe.get_attr("campus.campus_messaging.doctype.broadcast.broadcast.refresh_status")(broadcast.name)
+				frappe.get_attr("campus.campus_messaging.doctype.broadcast.broadcast.refresh_status")(
+					broadcast.name
+				)
 		finally:
 			frappe.set_user("Administrator")

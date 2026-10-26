@@ -14,7 +14,10 @@ DEFAULT_INTEREST_TREATMENT = "Grant Liability"
 def unmapped_heads(scheme, company):
 	"""Budget heads of `scheme` with no account mapped for `company`, in template order."""
 	heads = frappe.get_all(
-		"Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head", order_by="idx"
+		"Funding Scheme Head",
+		{"parent": scheme, "parenttype": "Funding Scheme"},
+		pluck="budget_head",
+		order_by="idx",
 	)
 	mapped = set(
 		frappe.get_all(
@@ -30,16 +33,18 @@ def validate_scheme_usable(scheme, company):
 	"""Throw unless `company` has Research Settings, `scheme` has budget heads, every head maps to an account of
 	`company` and no item group sits under two of its heads."""
 	get_research_settings(company)
-	heads = frappe.get_all("Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head")
+	heads = frappe.get_all(
+		"Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head"
+	)
 	if not heads:
 		frappe.throw(_("Funding Scheme {0} has no budget heads.").format(scheme))
 	validate_item_groups_distinct(heads)
 	missing = unmapped_heads(scheme, company)
 	if missing:
 		frappe.throw(
-			_("Funding Scheme {0} can't be used by {1}: budget heads {2} have no account mapped for it.").format(
-				scheme, company, ", ".join(missing)
-			)
+			_(
+				"Funding Scheme {0} can't be used by {1}: budget heads {2} have no account mapped for it."
+			).format(scheme, company, ", ".join(missing))
 		)
 
 
@@ -55,7 +60,11 @@ def validate_item_groups_distinct(heads):
 		heads_by_group.setdefault(row.item_group, set()).add(row.parent)
 	shared = sorted(group for group, owners in heads_by_group.items() if len(owners) > 1)
 	if shared:
-		frappe.throw(_("Item groups {0} are mapped under more than one budget head of the scheme.").format(", ".join(shared)))
+		frappe.throw(
+			_("Item groups {0} are mapped under more than one budget head of the scheme.").format(
+				", ".join(shared)
+			)
+		)
 
 
 def head_accounts(head, company):
@@ -77,9 +86,12 @@ def get_research_settings(company):
 def interest_treatment(company, agency):
 	"""Where interest on `agency`'s grant funds goes for `company`: the agency's choice, else the college's setting
 	(Grant Liability by default, blueprint D9). Interest Income needs the college's Interest Income Account."""
-	settings = frappe.db.get_value(
-		"Research Settings", company, ["interest_treatment", "interest_income_account"], as_dict=True
-	) or frappe._dict()
+	settings = (
+		frappe.db.get_value(
+			"Research Settings", company, ["interest_treatment", "interest_income_account"], as_dict=True
+		)
+		or frappe._dict()
+	)
 	treatment = (
 		frappe.db.get_value("Funding Agency", agency, "interest_treatment")
 		or settings.interest_treatment
@@ -87,9 +99,9 @@ def interest_treatment(company, agency):
 	)
 	if treatment == "Interest Income" and not settings.interest_income_account:
 		frappe.throw(
-			_("Funding Agency {0} treats interest as income: set the Interest Income Account in {1}'s Research Settings.").format(
-				agency, company
-			)
+			_(
+				"Funding Agency {0} treats interest as income: set the Interest Income Account in {1}'s Research Settings."
+			).format(agency, company)
 		)
 	return treatment
 
@@ -98,9 +110,9 @@ def check_sanction_open(sanction, project_closure):
 	"""Throw when the sanction is closed (P3-T19): a closed project's ledger and set-up don't change any more."""
 	if project_closure:
 		frappe.throw(
-			_("Sanction {0} is closed by Project Closure {1}: nothing more can be spent, received, cancelled or appointed on it.").format(
-				sanction, project_closure
-			),
+			_(
+				"Sanction {0} is closed by Project Closure {1}: nothing more can be spent, received, cancelled or appointed on it."
+			).format(sanction, project_closure),
 			title=_("Sanction Closed"),
 		)
 
@@ -167,13 +179,20 @@ def consultancy_received(company, academic_year, department=None):
 
 def consultancy_projects(company, academic_year, department=None):
 	"""Projects with consultancy revenue (net of credit notes) in the academic year."""
-	projects = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "oc_consultancy_project")
-	return {"value": len(projects), "records": [{"doctype": consultancy.PROJECT, "name": name} for name in projects]}
+	projects = consultancy.net_positive(
+		consultancy.invoices_in_year(company, academic_year, department), "oc_consultancy_project"
+	)
+	return {
+		"value": len(projects),
+		"records": [{"doctype": consultancy.PROJECT, "name": name} for name in projects],
+	}
 
 
 def consultancy_clients(company, academic_year, department=None):
 	"""Distinct client organisations with consultancy revenue (net of credit notes) in the academic year."""
-	clients = consultancy.net_positive(consultancy.invoices_in_year(company, academic_year, department), "customer")
+	clients = consultancy.net_positive(
+		consultancy.invoices_in_year(company, academic_year, department), "customer"
+	)
 	return {"value": len(clients), "records": [{"doctype": "Customer", "name": name} for name in clients]}
 
 

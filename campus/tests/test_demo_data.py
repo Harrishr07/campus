@@ -27,7 +27,9 @@ MAIN_LISTS = {
 class TestDemoData(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
-		cls.addClassCleanup(clear_defaults_cache)  # runs after the rollback: drops the kit's default company from the cache
+		cls.addClassCleanup(
+			clear_defaults_cache
+		)  # runs after the rollback: drops the kit's default company from the cache
 		super().setUpClass()
 		setup_college("sxcce", test_passwords=True)
 		cls.first = load("sxcce", 2026)
@@ -45,10 +47,16 @@ class TestDemoData(IntegrationTestCase):
 		self.assertEqual(self.count("Student Applicant", oc_company=COLLEGE), 60)
 		self.assertEqual(self.count("Lead", company=COLLEGE), 18)
 		self.assertEqual(self.count("Applicant Upload", company=COLLEGE), 1)
-		self.assertEqual(self.count("Student Applicant", oc_company=COLLEGE, application_status="Admitted"), 48)
-		self.assertEqual(self.count("Student Applicant", oc_company=COLLEGE, application_status="Approved"), 6)
+		self.assertEqual(
+			self.count("Student Applicant", oc_company=COLLEGE, application_status="Admitted"), 48
+		)
+		self.assertEqual(
+			self.count("Student Applicant", oc_company=COLLEGE, application_status="Approved"), 6
+		)
 		self.assertEqual(self.count("Student", oc_company=COLLEGE, oc_batch="2025-26"), 120)
-		self.assertEqual(self.count("Student", oc_company=COLLEGE, oc_batch="2026-27", oc_academic_status="Active"), 42)
+		self.assertEqual(
+			self.count("Student", oc_company=COLLEGE, oc_batch="2026-27", oc_academic_status="Active"), 42
+		)
 		self.assertEqual(self.count("Student", oc_company=COLLEGE, oc_academic_status="Admitted"), 6)
 		self.assertEqual(self.count("Instructor", oc_company=COLLEGE), 18)
 		self.assertEqual(self.count("Curriculum", company=COLLEGE, status="Effective"), 6)
@@ -56,14 +64,18 @@ class TestDemoData(IntegrationTestCase):
 		self.assertEqual(self.count("Student Result", company=COLLEGE, is_latest=1), 240)
 
 	def test_fees_are_paid_in_part_and_outstanding_in_part(self):
-		invoices = frappe.get_all("Sales Invoice", {"company": COLLEGE, "docstatus": 1}, ["grand_total", "outstanding_amount"])
+		invoices = frappe.get_all(
+			"Sales Invoice", {"company": COLLEGE, "docstatus": 1}, ["grand_total", "outstanding_amount"]
+		)
 		self.assertEqual(len(invoices), 42)
 		self.assertTrue(any(i.outstanding_amount == 0 for i in invoices))
 		self.assertTrue(any(i.outstanding_amount == i.grand_total for i in invoices))
 		self.assertTrue(any(0 < i.outstanding_amount < i.grand_total for i in invoices))
 
 	def test_the_first_year_has_cgpa_and_arrears(self):
-		results = frappe.get_all("Student Result", {"company": COLLEGE, "is_latest": 1}, ["cgpa", "arrear_count"])
+		results = frappe.get_all(
+			"Student Result", {"company": COLLEGE, "is_latest": 1}, ["cgpa", "arrear_count"]
+		)
 		self.assertGreater(sum(1 for r in results if r.cgpa), len(results) * 0.9)
 		self.assertTrue(any(r.arrear_count for r in results))
 		self.assertTrue(any(not r.arrear_count for r in results))
@@ -101,9 +113,19 @@ class TestDemoData(IntegrationTestCase):
 
 	def test_personal_data_is_synthetic(self):
 		domain = PROFILE["user_domain"]
-		self.assertFalse(frappe.db.count("Student", {"oc_company": COLLEGE, "student_email_id": ["not like", f"%@{domain}"]}))
-		self.assertFalse(frappe.db.count("Student", {"oc_company": COLLEGE, "student_mobile_number": ["not like", "0%"]}))
-		self.assertFalse(frappe.db.count("Student", {"oc_company": COLLEGE, "aadhaar_number": ["is", "set"]}) if frappe.db.has_column("Student", "aadhaar_number") else 0)
+		self.assertFalse(
+			frappe.db.count(
+				"Student", {"oc_company": COLLEGE, "student_email_id": ["not like", f"%@{domain}"]}
+			)
+		)
+		self.assertFalse(
+			frappe.db.count("Student", {"oc_company": COLLEGE, "student_mobile_number": ["not like", "0%"]})
+		)
+		self.assertFalse(
+			frappe.db.count("Student", {"oc_company": COLLEGE, "aadhaar_number": ["is", "set"]})
+			if frappe.db.has_column("Student", "aadhaar_number")
+			else 0
+		)
 
 
 class TestDemoGuard(IntegrationTestCase):
@@ -119,9 +141,13 @@ class TestDemoShape(IntegrationTestCase):
 
 	@classmethod
 	def setUpClass(cls):
-		cls.addClassCleanup(clear_defaults_cache)  # runs after the rollback: drops the kit's default company from the cache
+		cls.addClassCleanup(
+			clear_defaults_cache
+		)  # runs after the rollback: drops the kit's default company from the cache
 		super().setUpClass()
-		setup_college("sxcce", test_passwords=True)  # idempotent and rolled back with the class: the kit is always there
+		setup_college(
+			"sxcce", test_passwords=True
+		)  # idempotent and rolled back with the class: the kit is always there
 
 	# TestDemoData rolls its 10-minute load back, so the tests that need the loaded people skip unless it was committed (bench execute)
 
@@ -198,7 +224,12 @@ class TestDemoShape(IntegrationTestCase):
 		students = ctx.cohort.students(ctx, cse)
 		term_name = academics.term_of(term.YEAR, term.TERM_NAME)
 		taught = frappe.get_all("Student Group Instructor", {"parenttype": "Student Group"}, pluck="parent")
-		source = frappe.get_doc("Student Group", frappe.db.get_value("Student Group", {"name": ["in", taught], "academic_term": term_name, "program": cse["name"]}))
+		source = frappe.get_doc(
+			"Student Group",
+			frappe.db.get_value(
+				"Student Group", {"name": ["in", taught], "academic_term": term_name, "program": cse["name"]}
+			),
+		)
 		offerings = {}
 		for number in (1, 2):
 			group = frappe.copy_doc(source)
@@ -206,10 +237,23 @@ class TestDemoShape(IntegrationTestCase):
 			offerings[f"T{number}"] = group.insert(ignore_permissions=True).name
 		with patch.object(term, "today", return_value="2026-10-22"):
 			term.make_timetable_and_attendance(ctx, cse, term_name, offerings, students)
-		medical = frappe.get_doc("Student Leave Application", {"student": students[2], "oc_leave_kind": "Medical", "from_date": ["like", "2026-10%"]})
+		medical = frappe.get_doc(
+			"Student Leave Application",
+			{"student": students[2], "oc_leave_kind": "Medical", "from_date": ["like", "2026-10%"]},
+		)
 		self.assertEqual(medical.docstatus, 1)
 		self.assertTrue(medical.oc_certificate)
-		on_leave = frappe.get_all("Student Attendance", {"student": students[2], "leave_application": medical.name, "docstatus": 1}, pluck="status")
+		on_leave = frappe.get_all(
+			"Student Attendance",
+			{"student": students[2], "leave_application": medical.name, "docstatus": 1},
+			pluck="status",
+		)
 		self.assertTrue(on_leave)
 		self.assertEqual(set(on_leave), {"Leave"})
-		self.assertEqual(frappe.db.count("Student Attendance", {"student": students[0], "student_group": ["in", list(offerings.values())], "docstatus": 1}), 18)
+		self.assertEqual(
+			frappe.db.count(
+				"Student Attendance",
+				{"student": students[0], "student_group": ["in", list(offerings.values())], "docstatus": 1},
+			),
+			18,
+		)

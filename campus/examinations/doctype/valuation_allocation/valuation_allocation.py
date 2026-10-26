@@ -19,7 +19,9 @@ THIRD = "3"
 
 class ValuationAllocation(Document):
 	def validate(self):
-		bundle = frappe.db.get_value("Answer Script Bundle", self.bundle, ["exam_session", "course", "company", "status"], as_dict=True)
+		bundle = frappe.db.get_value(
+			"Answer Script Bundle", self.bundle, ["exam_session", "course", "company", "status"], as_dict=True
+		)
 		if bundle.pop("status") != "Complete":
 			frappe.throw(_("Only a Complete bundle can be allocated."))
 		self.update(bundle)
@@ -46,7 +48,11 @@ class ValuationAllocation(Document):
 			return
 		rule_sets = valuation.bundle_rule_sets(self.bundle)
 		if not rule_sets or not all(cint(r.allow_course_teacher_as_examiner) for r in rule_sets):
-			frappe.throw(_("{0} teaches {1} this term and cannot value its scripts.").format(self.examiner, self.course))
+			frappe.throw(
+				_("{0} teaches {1} this term and cannot value its scripts.").format(
+					self.examiner, self.course
+				)
+			)
 
 	def check_unique(self):
 		others = frappe.get_all(
@@ -56,7 +62,11 @@ class ValuationAllocation(Document):
 			frappe.throw(_("Round {0} of this bundle is already allocated.").format(self.valuation_round))
 		for other in others:
 			if self.examiner and other.examiner == self.examiner:
-				frappe.throw(_("{0} already values this bundle in round {1}.").format(self.examiner, other.valuation_round))
+				frappe.throw(
+					_("{0} already values this bundle in round {1}.").format(
+						self.examiner, other.valuation_round
+					)
+				)
 
 	def set_scripts(self):
 		if self.valuation_round == THIRD:
@@ -74,7 +84,9 @@ class ValuationAllocation(Document):
 		return [s.dummy_number for s in self.scripts] != before
 
 	def check_frozen_after_valuation(self):
-		if self.is_new() or not frappe.db.exists("Valuation Entry", {"allocation": self.name, "docstatus": ["<", 2]}):
+		if self.is_new() or not frappe.db.exists(
+			"Valuation Entry", {"allocation": self.name, "docstatus": ["<", 2]}
+		):
 			return
 		before = self.get_doc_before_save()
 		if any(self.get(f) != before.get(f) for f in ("bundle", "valuation_round", "examiner")):
@@ -83,9 +95,19 @@ class ValuationAllocation(Document):
 	def computed_status(self):
 		if not self.examiner:
 			return "Unassigned"
-		valued = set(frappe.get_all("Valuation Entry", {"allocation": self.name, "docstatus": 1}, pluck="dummy_number"))
-		void = set(frappe.get_all("Dummy Number Map", {"dummy_number": ["in", [s.dummy_number for s in self.scripts] or [""]], "void": 1}, pluck="dummy_number"))
-		due = [s.dummy_number for s in self.scripts if s.dummy_number not in void]  # a void script is never valued
+		valued = set(
+			frappe.get_all("Valuation Entry", {"allocation": self.name, "docstatus": 1}, pluck="dummy_number")
+		)
+		void = set(
+			frappe.get_all(
+				"Dummy Number Map",
+				{"dummy_number": ["in", [s.dummy_number for s in self.scripts] or [""]], "void": 1},
+				pluck="dummy_number",
+			)
+		)
+		due = [
+			s.dummy_number for s in self.scripts if s.dummy_number not in void
+		]  # a void script is never valued
 		return "Completed" if self.scripts and all(d in valued for d in due) else "Allocated"
 
 

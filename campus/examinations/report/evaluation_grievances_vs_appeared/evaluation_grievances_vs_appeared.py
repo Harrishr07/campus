@@ -33,7 +33,9 @@ def data(filters):
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and filters.company not in permitted:
 		return []
-	sessions = released_sessions(filters.company, filters.academic_year, lister=frappe.get_list, fields=("name", "academic_term"))
+	sessions = released_sessions(
+		filters.company, filters.academic_year, lister=frappe.get_list, fields=("name", "academic_term")
+	)
 	applications = frappe.get_list(
 		"Revaluation Application",
 		filters={"exam_session": ["in", [s.name for s in sessions] or [""]], "docstatus": 1, "application_type": ["in", GRIEVANCE_TYPES]},

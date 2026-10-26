@@ -29,13 +29,19 @@ class Timetable(Document):
 			self.status = "Changed since publish"
 
 	def content(self):
-		grid = sorted((e.offering, e.kind, e.faculty, e.room, e.day, int(e.period or 0)) for e in self.entries)
+		grid = sorted(
+			(e.offering, e.kind, e.faculty, e.room, e.day, int(e.period or 0)) for e in self.entries
+		)
 		return grid, sorted((u.faculty, u.day, int(u.period or 0)) for u in self.unavailability)
 
 	def check_template(self):
 		company = frappe.db.get_value("Timetable Slot Template", self.slot_template, "company")
 		if company != self.company:
-			frappe.throw(_("Slot Template {0} belongs to {1}, not {2}.").format(self.slot_template, company, self.company))
+			frappe.throw(
+				_("Slot Template {0} belongs to {1}, not {2}.").format(
+					self.slot_template, company, self.company
+				)
+			)
 
 	def violations(self):
 		return rules.violations(context.entries_of(self), context.build_grid(self))
@@ -44,7 +50,9 @@ class Timetable(Document):
 		found = self.violations()
 		if found:
 			extra = len(found) - SHOWN
-			lines = [v.message for v in found[:SHOWN]] + ([_("... and {0} more.").format(extra)] if extra > 0 else [])
+			lines = [v.message for v in found[:SHOWN]] + (
+				[_("... and {0} more.").format(extra)] if extra > 0 else []
+			)
 			frappe.throw("<br>".join(lines), title=_("Timetable Clashes"))
 
 	def warn_soft_issues(self):

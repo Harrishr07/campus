@@ -12,8 +12,13 @@ frappe.ui.form.on("PFMS Export Batch", {
 				on_success(file) {
 					frm.call("import_status", { file_url: file.file_url }).then((r) => {
 						const result = r.message || {};
-						const skipped = (result.skipped || []).map((line) => frappe.utils.escape_html(line)).join("<br>");
-						frappe.msgprint(__("{0} rows updated.", [result.updated || 0]) + (skipped ? "<br><br>" + skipped : ""));
+						const skipped = (result.skipped || [])
+							.map((line) => frappe.utils.escape_html(line))
+							.join("<br>");
+						frappe.msgprint(
+							__("{0} rows updated.", [result.updated || 0]) +
+								(skipped ? "<br><br>" + skipped : "")
+						);
 						frm.reload_doc();
 					});
 				},
@@ -24,20 +29,42 @@ frappe.ui.form.on("PFMS Export Batch", {
 
 // An Accounts Manager releases an excluded line held for review, with a reason; the server checks it again.
 function add_release_button(frm) {
-	if (frm.is_new() || !(frm.doc.exclusions || []).length || !frappe.user.has_role("Accounts Manager")) return;
+	if (
+		frm.is_new() ||
+		!(frm.doc.exclusions || []).length ||
+		!frappe.user.has_role("Accounts Manager")
+	)
+		return;
 	frm.add_custom_button(__("Release After Review"), () => {
 		const options = frm.doc.exclusions.map((row) => ({
 			value: row.name,
-			label: `${row.voucher_no} ${row.reference_name || ""} (${format_currency(row.amount, frm.doc.currency)})`,
+			label: `${row.voucher_no} ${row.reference_name || ""} (${format_currency(
+				row.amount,
+				frm.doc.currency
+			)})`,
 		}));
 		frappe.prompt(
 			[
-				{ fieldname: "exclusion", fieldtype: "Select", label: __("Excluded Line"), options, reqd: 1 },
-				{ fieldname: "reason", fieldtype: "Small Text", label: __("Reason (what was checked)"), reqd: 1 },
+				{
+					fieldname: "exclusion",
+					fieldtype: "Select",
+					label: __("Excluded Line"),
+					options,
+					reqd: 1,
+				},
+				{
+					fieldname: "reason",
+					fieldtype: "Small Text",
+					label: __("Reason (what was checked)"),
+					reqd: 1,
+				},
 			],
 			(values) => {
 				frm.call("release_after_review", values).then((r) => {
-					frappe.show_alert({ message: __("Released: {0}", [r.message]), indicator: "green" });
+					frappe.show_alert({
+						message: __("Released: {0}", [r.message]),
+						indicator: "green",
+					});
 					frm.reload_doc();
 				});
 			},

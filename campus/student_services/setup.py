@@ -8,8 +8,8 @@ from frappe.permissions import add_permission
 
 from campus.examinations.access import COMMITTEE_ROLE, MENTOR_ROLE
 from campus.student_services import lifecycle_rules
-from campus.student_services.certificate_reissue import seed_reissue_policy
 from campus.student_services.attendance_rules import MEDICAL, ON_DUTY
+from campus.student_services.certificate_reissue import seed_reissue_policy
 from campus.student_services.onboarding import ensure_default_templates
 from campus.student_services.student_records_setup import setup_student_records
 
@@ -71,20 +71,26 @@ def seed_lifecycle_rules():
 	if frappe.db.count("Lifecycle Transition Rule"):
 		return
 	for from_status, to_status in lifecycle_rules.DEFAULT_TRANSITIONS:
-		frappe.get_doc({"doctype": "Lifecycle Transition Rule", "from_status": from_status, "to_status": to_status}).insert(
-			ignore_permissions=True
-		)
+		frappe.get_doc(
+			{"doctype": "Lifecycle Transition Rule", "from_status": from_status, "to_status": to_status}
+		).insert(ignore_permissions=True)
 
 
 GRIEVANCE_POLICY = "Student Grievance Escalation"
 # title, position, scope field, SLA hours
-GRIEVANCE_LEVELS = [("HOD", "HOD", "department", 48), ("COE", "COE", "company", 48), ("Principal", "PRINCIPAL", "company", 72)]
+GRIEVANCE_LEVELS = [
+	("HOD", "HOD", "department", 48),
+	("COE", "COE", "company", 48),
+	("Principal", "PRINCIPAL", "company", 72),
+]
 
 
 def ensure_grievance_role():
 	"""The committee role Student Grievance permissions and the confidentiality rule refer to."""
 	if not frappe.db.exists("Role", COMMITTEE_ROLE):
-		frappe.get_doc({"doctype": "Role", "role_name": COMMITTEE_ROLE, "desk_access": 1}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Role", "role_name": COMMITTEE_ROLE, "desk_access": 1}).insert(
+			ignore_permissions=True
+		)
 
 
 def setup_grievances():
@@ -172,7 +178,9 @@ def ensure_mentor_read_access():
 	"""The Mentor role (granted by holding the MENTOR position) reads Student; campus.examinations.access narrows
 	that to the user's own mentees."""
 	if not frappe.db.exists("Role", MENTOR_ROLE):
-		frappe.get_doc({"doctype": "Role", "role_name": MENTOR_ROLE, "desk_access": 1}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Role", "role_name": MENTOR_ROLE, "desk_access": 1}).insert(
+			ignore_permissions=True
+		)
 	if not frappe.db.exists("Custom DocPerm", {"parent": "Student", "role": MENTOR_ROLE, "permlevel": 0}):
 		add_permission("Student", MENTOR_ROLE, 0)
 
@@ -183,8 +191,14 @@ def seed_certificate_types():
 		if not frappe.db.exists("Certificate Type", name) and frappe.db.exists("Print Format", print_format):
 			frappe.get_doc(
 				{
-					"doctype": "Certificate Type", "type_name": name, "print_format": print_format, "number_prefix": prefix,
-					"needs_approval": needs_approval, "verifiable": 1, "is_transfer_certificate": transfer, "enabled": 1,
+					"doctype": "Certificate Type",
+					"type_name": name,
+					"print_format": print_format,
+					"number_prefix": prefix,
+					"needs_approval": needs_approval,
+					"verifiable": 1,
+					"is_transfer_certificate": transfer,
+					"enabled": 1,
 				}
 			).insert(ignore_permissions=True)
 
@@ -195,14 +209,24 @@ def setup_leave_fields():
 		{
 			"Student Leave Application": [
 				{
-					"fieldname": "oc_leave_kind", "fieldtype": "Select", "label": "Leave Kind",
-					"options": "\n".join(LEAVE_KINDS), "default": "Leave", "insert_after": "to_date", "reqd": 1,
-					"in_list_view": 1, "in_standard_filter": 1, "module": MODULE,
+					"fieldname": "oc_leave_kind",
+					"fieldtype": "Select",
+					"label": "Leave Kind",
+					"options": "\n".join(LEAVE_KINDS),
+					"default": "Leave",
+					"insert_after": "to_date",
+					"reqd": 1,
+					"in_list_view": 1,
+					"in_standard_filter": 1,
+					"module": MODULE,
 					"description": "Medical and On Duty leave count towards attendance as the Attendance Rule says.",
 				},
 				{
-					"fieldname": "oc_certificate", "fieldtype": "Attach", "label": "Certificate",
-					"insert_after": "oc_leave_kind", "module": MODULE,
+					"fieldname": "oc_certificate",
+					"fieldtype": "Attach",
+					"label": "Certificate",
+					"insert_after": "oc_leave_kind",
+					"module": MODULE,
 					"depends_on": "eval:doc.oc_leave_kind != 'Leave'",
 					"description": "Medical certificate or On Duty permission letter.",
 				},
@@ -215,4 +239,6 @@ def setup_leave_fields():
 def require_certificate(doc, method=None):
 	"""Doc event (Student Leave Application before_submit): Medical and On Duty leave need their certificate."""
 	if doc.oc_leave_kind in EVIDENCE_KINDS and not doc.oc_certificate:
-		frappe.throw(_("Attach the certificate for {0} leave before submitting.").format(_(doc.oc_leave_kind)))
+		frappe.throw(
+			_("Attach the certificate for {0} leave before submitting.").format(_(doc.oc_leave_kind))
+		)

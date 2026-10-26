@@ -17,13 +17,26 @@ class CourseOutcome(Document):
 
 	def validate(self):
 		self.co_code = normalise_code(self.co_code)
-		curriculum = frappe.db.get_value("Curriculum", self.curriculum, ["program", "regulation"], as_dict=True)
+		curriculum = frappe.db.get_value(
+			"Curriculum", self.curriculum, ["program", "regulation"], as_dict=True
+		)
 		self.program, self.regulation = curriculum.program, curriculum.regulation
 		self.company = frappe.db.get_value("Program", self.program, "oc_company")
-		if not frappe.db.exists("Curriculum Course", {"parent": self.curriculum, "parenttype": "Curriculum", "course": self.course}):
-			frappe.throw(_("{0} is not a course of curriculum {1}.").format(frappe.bold(self.course), frappe.bold(self.curriculum)))
+		if not frappe.db.exists(
+			"Curriculum Course",
+			{"parent": self.curriculum, "parenttype": "Curriculum", "course": self.course},
+		):
+			frappe.throw(
+				_("{0} is not a course of curriculum {1}.").format(
+					frappe.bold(self.course), frappe.bold(self.curriculum)
+				)
+			)
 		filters = {"course": self.course, "curriculum": self.curriculum, "co_code": self.co_code}
 		if not self.is_new():
 			filters["name"] = ["!=", self.name]
 		if frappe.db.exists("Course Outcome", filters):
-			frappe.throw(_("{0} already has {1} in {2}.").format(frappe.bold(self.course), frappe.bold(self.co_code), frappe.bold(self.curriculum)))
+			frappe.throw(
+				_("{0} already has {1} in {2}.").format(
+					frappe.bold(self.course), frappe.bold(self.co_code), frappe.bold(self.curriculum)
+				)
+			)

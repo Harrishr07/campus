@@ -36,7 +36,9 @@ def submit_marks(allocation, dummy_number, **marks):
 		if marks.get(f"q_{i}") in (None, ""):
 			frappe.throw(_("Enter the marks of {0}.").format(question.question))
 		rows.append({"question": question.question, "marks": flt(marks[f"q_{i}"])})
-	entry = frappe.get_doc({"doctype": ENTRY, "allocation": alloc.name, "dummy_number": dummy_number, "marks": rows})
+	entry = frappe.get_doc(
+		{"doctype": ENTRY, "allocation": alloc.name, "dummy_number": dummy_number, "marks": rows}
+	)
 	entry.insert()
 	entry.submit()
 	return entry.name
@@ -54,7 +56,9 @@ def my_allocations():
 		alloc.packet_no = frappe.db.get_value(BUNDLE, alloc.bundle, "packet_no")
 		alloc.questions = bundle_questions(alloc.bundle)
 		valued = dict(
-			frappe.get_all(ENTRY, {"allocation": alloc.name, "docstatus": 1}, ["dummy_number", "total"], as_list=True)
+			frappe.get_all(
+				ENTRY, {"allocation": alloc.name, "docstatus": 1}, ["dummy_number", "total"], as_list=True
+			)
 		)
 		alloc.scripts = [
 			frappe._dict(dummy_number=d, total=valued.get(d), valued=d in valued)
@@ -71,12 +75,19 @@ def bundle_rule_sets(bundle):
 		pluck="student",
 	)  # fmt: skip
 	regulations = set(frappe.get_all("Student", {"name": ["in", students or [""]]}, pluck="oc_regulation"))
-	return frappe.get_all("Exam Rule Set", {"regulation": ["in", list(regulations) or [""]]}, ["name", "allow_course_teacher_as_examiner"])
+	return frappe.get_all(
+		"Exam Rule Set",
+		{"regulation": ["in", list(regulations) or [""]]},
+		["name", "allow_course_teacher_as_examiner"],
+	)
 
 
 def bundle_questions(bundle):
 	return frappe.get_all(
-		"Answer Script Bundle Question", {"parent": bundle, "parenttype": BUNDLE}, ["question", "max_marks"], order_by="idx"
+		"Answer Script Bundle Question",
+		{"parent": bundle, "parenttype": BUNDLE},
+		["question", "max_marks"],
+		order_by="idx",
 	)
 
 
@@ -94,7 +105,9 @@ def lock_script(entry):
 def check_script(entry, row):
 	"""Refuse an entry over the ESE maximum or on a script whose result has been run (`row` locked)."""
 	if result_locked(row):
-		frappe.throw(_("The marks of script {0} are locked: its result has been run.").format(entry.dummy_number))
+		frappe.throw(
+			_("The marks of script {0} are locked: its result has been run.").format(entry.dummy_number)
+		)
 	ese_max = ese_max_of(row)
 	if flt(entry.total) > ese_max:
 		frappe.throw(_("Script {0}: the total is above the ESE maximum.").format(entry.dummy_number))
@@ -116,7 +129,11 @@ def anonymous(row, lookup):
 		return lookup()
 	except (frappe.ValidationError, frappe.PermissionError):
 		frappe.clear_messages()
-		frappe.throw(_("Script {0} cannot be valued yet: its course rules are incomplete. Please contact the exam cell.").format(row.dummy_number))
+		frappe.throw(
+			_(
+				"Script {0} cannot be valued yet: its course rules are incomplete. Please contact the exam cell."
+			).format(row.dummy_number)
+		)
 
 
 def offering_of(row):
@@ -152,7 +169,10 @@ def settle(entry, row):
 	marks = {
 		int(r.valuation_round): flt(r.total)
 		for r in frappe.qb.get_query(
-			ENTRY, filters={"dummy_number": entry.dummy_number, "docstatus": 1}, fields=["valuation_round", "total"], for_update=True
+			ENTRY,
+			filters={"dummy_number": entry.dummy_number, "docstatus": 1},
+			fields=["valuation_round", "total"],
+			for_update=True,
 		).run(as_dict=True)
 	}
 	refresh_allocation_status(entry.allocation)
@@ -160,17 +180,27 @@ def settle(entry, row):
 		return
 	rule = get_rule(row.student, "Exam Rule Set")
 	ese_max = student_limits(row.student, offering_course(offering_of(row)))["ese_max"]
-	if 3 not in marks and valuation_rules.needs_third_valuation(marks[1], marks[2], ese_max, rule.third_valuation_diff_pct):
+	if 3 not in marks and valuation_rules.needs_third_valuation(
+		marks[1], marks[2], ese_max, rule.third_valuation_diff_pct
+	):
 		allocate_third(entry.bundle, entry.dummy_number)
 		return
 	final = valuation_rules.final_mark(marks, rule.final_valuation_method)
-	frappe.db.set_value(DUMMY_NUMBER_MAP, row.name, {"finalised": 1, "final_ese": final, "ese_written": 0, "write_back_issue": None})
+	frappe.db.set_value(
+		DUMMY_NUMBER_MAP,
+		row.name,
+		{"finalised": 1, "final_ese": final, "ese_written": 0, "write_back_issue": None},
+	)
 
 
 def allocate_third(bundle, dummy_number):
 	frappe.db.get_value(BUNDLE, bundle, "name", for_update=True)  # one third-valuation allocation per bundle
 	name = frappe.db.get_value(ALLOCATION, {"bundle": bundle, "valuation_round": "3"}, for_update=True)
-	alloc = frappe.get_doc(ALLOCATION, name) if name else frappe.get_doc({"doctype": ALLOCATION, "bundle": bundle, "valuation_round": "3"})
+	alloc = (
+		frappe.get_doc(ALLOCATION, name)
+		if name
+		else frappe.get_doc({"doctype": ALLOCATION, "bundle": bundle, "valuation_round": "3"})
+	)
 	if dummy_number not in {s.dummy_number for s in alloc.scripts}:
 		alloc.append("scripts", {"dummy_number": dummy_number})
 	alloc.flags.third_valuation = True

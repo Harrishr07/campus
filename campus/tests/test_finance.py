@@ -15,10 +15,10 @@ from campus.campus_platform import bulk
 from campus.tests.finance_factories import (
 	FISCAL_YEARS,
 	make_challan_format,
+	make_company_with_accounts,
 	make_enrolled_students,
 	make_fee_schedule,
 	make_fee_structure,
-	make_company_with_accounts,
 	make_finance_company,
 	make_year_and_program,
 )
@@ -63,8 +63,19 @@ class TestFineCalculation(CampusTestCase):
 		def rule(*slabs, **values):
 			return frappe.get_doc(
 				{
-					"doctype": "Fine Rule", "company": COLLEGE, "enabled": 0,
-					"slabs": [dict(from_day=s.from_day, to_day=s.to_day, amount=s.amount, percent=s.percent, per_day=s.per_day) for s in slabs],
+					"doctype": "Fine Rule",
+					"company": COLLEGE,
+					"enabled": 0,
+					"slabs": [
+						dict(
+							from_day=s.from_day,
+							to_day=s.to_day,
+							amount=s.amount,
+							percent=s.percent,
+							per_day=s.per_day,
+						)
+						for s in slabs
+					],
 					**values,
 				}
 			)
@@ -91,7 +102,10 @@ class FinanceTestCase(CampusTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.original_settings = frappe.db.get_value(
-			"Education Settings", None, ["auto_submit_sales_invoice", "sales_invoice_posting_date_fee_schedule", "create_so"], as_dict=True
+			"Education Settings",
+			None,
+			["auto_submit_sales_invoice", "sales_invoice_posting_date_fee_schedule", "create_so"],
+			as_dict=True,
 		)
 		frappe.db.set_single_value(
 			"Education Settings",
@@ -102,9 +116,15 @@ class FinanceTestCase(CampusTestCase):
 		make_year_and_program(COLLEGE, PROGRAM, YEAR)
 		cls.group, cls.students = make_enrolled_students(COLLEGE, PROGRAM, YEAR, STUDENT_COUNT, "FeeStu")
 		cls.structure = make_fee_structure(
-			COLLEGE, PROGRAM, YEAR, {TUITION: TUITION_FEE, "Exam": EXAM_FEE, CAUTION_DEPOSIT: DEPOSIT}, cls.accounts
+			COLLEGE,
+			PROGRAM,
+			YEAR,
+			{TUITION: TUITION_FEE, "Exam": EXAM_FEE, CAUTION_DEPOSIT: DEPOSIT},
+			cls.accounts,
 		)
-		cls.schedule = make_fee_schedule(cls.structure, cls.group, due_date=add_days(today(), -LATE_BY), submit=False)
+		cls.schedule = make_fee_schedule(
+			cls.structure, cls.group, due_date=add_days(today(), -LATE_BY), submit=False
+		)
 		cls.schedule.posting_date = add_days(today(), -LATE_BY - 5)
 		cls.schedule.save().submit()
 		started = time.monotonic()
@@ -114,7 +134,10 @@ class FinanceTestCase(CampusTestCase):
 		cls.generation_seconds = time.monotonic() - started
 		print(f"\nfee schedule generation of {STUDENT_COUNT} invoices: {cls.generation_seconds:.1f}s")
 		cls.invoices = frappe.get_all(
-			"Sales Invoice", {"fee_schedule": cls.schedule.name}, ["name", "student", "oc_challan_no", "due_date"], order_by="name"
+			"Sales Invoice",
+			{"fee_schedule": cls.schedule.name},
+			["name", "student", "oc_challan_no", "due_date"],
+			order_by="name",
 		)
 
 	@classmethod
@@ -132,7 +155,9 @@ class FinanceTestCase(CampusTestCase):
 		frappe.db.delete("Fine Rule")  # savepoint-scoped: restored with the rollback
 		self.rule = frappe.get_doc(
 			{
-				"doctype": "Fine Rule", "company": COLLEGE, "grace_days": 5,
+				"doctype": "Fine Rule",
+				"company": COLLEGE,
+				"grace_days": 5,
 				"slabs": [
 					{"from_day": 1, "to_day": 10, "amount": 100},
 					{"from_day": 11, "to_day": 30, "percent": 1},
@@ -149,8 +174,12 @@ class FinanceTestCase(CampusTestCase):
 		customer = frappe.db.get_value("Student", student, "customer")
 		invoice = frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": company, "customer": customer, "student": student,
-				"posting_date": today(), "due_date": add_days(today(), due_in),
+				"doctype": "Sales Invoice",
+				"company": company,
+				"customer": customer,
+				"student": student,
+				"posting_date": today(),
+				"due_date": add_days(today(), due_in),
 				"items": [{"item_code": item, "qty": 1, "rate": rate}],
 			}
 		).insert()
@@ -162,7 +191,9 @@ class FeeHeadTests:
 		for head, (refundable, gst) in FEE_HEADS.items():
 			category = frappe.get_doc("Fee Category", head)
 			self.assertEqual(
-				(category.oc_fee_head_type, category.oc_refundable, category.oc_gst_applicable), (head, refundable, gst), head
+				(category.oc_fee_head_type, category.oc_refundable, category.oc_gst_applicable),
+				(head, refundable, gst),
+				head,
 			)
 			self.assertEqual(category.item, head)
 			item = frappe.get_doc("Item", head)
@@ -177,10 +208,11 @@ class FeeHeadTests:
 		self.assertEqual((frappe.db.count("Fee Category"), frappe.db.count("Item")), before)
 
 	def test_item_defaults_carry_the_company_account_and_cost_centre(self):
-		defaults = {
-			d.company: d for d in frappe.get_doc("Item", TUITION).item_defaults
-		}[COLLEGE]
-		self.assertEqual((defaults.income_account, defaults.selling_cost_center), (self.accounts["income"], self.accounts["cost_center"]))
+		defaults = {d.company: d for d in frappe.get_doc("Item", TUITION).item_defaults}[COLLEGE]
+		self.assertEqual(
+			(defaults.income_account, defaults.selling_cost_center),
+			(self.accounts["income"], self.accounts["cost_center"]),
+		)
 		deposit = {d.company: d for d in frappe.get_doc("Item", CAUTION_DEPOSIT).item_defaults}[COLLEGE]
 		self.assertEqual(deposit.income_account, self.accounts["deposit"])
 
@@ -197,9 +229,20 @@ class FeeHeadTests:
 		student = self.students[0]
 		invoice = frappe.get_doc(
 			{
-				"doctype": "Sales Invoice", "company": COLLEGE, "customer": frappe.db.get_value("Student", student, "customer"),
-				"student": student, "posting_date": today(), "due_date": today(),
-				"items": [{"item_code": CAUTION_DEPOSIT, "qty": 1, "rate": 100, "income_account": self.accounts["income"]}],
+				"doctype": "Sales Invoice",
+				"company": COLLEGE,
+				"customer": frappe.db.get_value("Student", student, "customer"),
+				"student": student,
+				"posting_date": today(),
+				"due_date": today(),
+				"items": [
+					{
+						"item_code": CAUTION_DEPOSIT,
+						"qty": 1,
+						"rate": 100,
+						"income_account": self.accounts["income"],
+					}
+				],
 			}
 		)
 		with self.assertRaises(frappe.ValidationError):
@@ -208,7 +251,10 @@ class FeeHeadTests:
 	def test_fee_structure_needs_a_liability_default_for_a_caution_deposit(self):
 		structure = frappe.get_doc(
 			{
-				"doctype": "Fee Structure", "company": OTHER_COLLEGE, "program": PROGRAM, "academic_year": YEAR,
+				"doctype": "Fee Structure",
+				"company": OTHER_COLLEGE,
+				"program": PROGRAM,
+				"academic_year": YEAR,
 				"components": [{"fees_category": CAUTION_DEPOSIT, "amount": 100}],
 			}
 		)
@@ -237,9 +283,17 @@ class FeeStructureLookupTests:
 		quota = lambda code: frappe.db.get_value("Admission Quota", {"code": code})  # noqa: E731
 		gq, mq, nq = quota("FEE-GQ"), quota("FEE-MQ"), quota("FEE-NQ")
 		generic = self.structure.name
-		by_quota = make_fee_structure(COLLEGE, PROGRAM, YEAR, {TUITION: 1}, self.accounts, oc_admission_quota=gq).name
+		by_quota = make_fee_structure(
+			COLLEGE, PROGRAM, YEAR, {TUITION: 1}, self.accounts, oc_admission_quota=gq
+		).name
 		by_quota_category = make_fee_structure(
-			COLLEGE, PROGRAM, YEAR, {TUITION: 2}, self.accounts, oc_admission_quota=gq, student_category=self.category()
+			COLLEGE,
+			PROGRAM,
+			YEAR,
+			{TUITION: 2},
+			self.accounts,
+			oc_admission_quota=gq,
+			student_category=self.category(),
 		).name
 		by_category = make_fee_structure(
 			COLLEGE, PROGRAM, YEAR, {TUITION: 3}, self.accounts, student_category=self.category()
@@ -247,7 +301,9 @@ class FeeStructureLookupTests:
 		lookup = lambda q, c: api.fee_structure_for(PROGRAM, YEAR, q, c, COLLEGE)  # noqa: E731
 		self.assertEqual(lookup(gq, self.category()), by_quota_category)
 		self.assertEqual(lookup(gq, None), by_quota)
-		self.assertEqual(lookup(mq, self.category()), by_category)  # no MQ structure: category-specific fallback
+		self.assertEqual(
+			lookup(mq, self.category()), by_category
+		)  # no MQ structure: category-specific fallback
 		self.assertEqual(lookup(nq, None), generic)
 		self.assertIsNone(api.fee_structure_for(PROGRAM, YEAR, gq, None, OTHER_COLLEGE))
 		self.assertIsNone(api.fee_structure_for("No Such Program", YEAR, gq, None, COLLEGE))
@@ -265,13 +321,19 @@ class FeeScheduleGenerationTests:
 		self.assertEqual({i.student for i in self.invoices}, set(self.students))
 		for name in [self.invoices[0].name, self.invoices[-1].name]:
 			invoice = frappe.get_doc("Sales Invoice", name)
-			self.assertEqual((invoice.company, invoice.docstatus, invoice.grand_total), (COLLEGE, 1, TUITION_FEE + EXAM_FEE + DEPOSIT))
+			self.assertEqual(
+				(invoice.company, invoice.docstatus, invoice.grand_total),
+				(COLLEGE, 1, TUITION_FEE + EXAM_FEE + DEPOSIT),
+			)
 			self.assertEqual(invoice.debit_to, "Debtors - FTC")
 			accounts = {row.item_code: (row.income_account, row.cost_center) for row in invoice.items}
 			self.assertEqual(accounts[TUITION], (self.accounts["income"], self.accounts["cost_center"]))
-			self.assertEqual(accounts[CAUTION_DEPOSIT], (self.accounts["deposit"], self.accounts["cost_center"]))
+			self.assertEqual(
+				accounts[CAUTION_DEPOSIT], (self.accounts["deposit"], self.accounts["cost_center"])
+			)
 		self.assertEqual(
-			frappe.db.count("Sales Invoice", {"fee_schedule": self.schedule.name, "student": ("is", "set")}), STUDENT_COUNT
+			frappe.db.count("Sales Invoice", {"fee_schedule": self.schedule.name, "student": ("is", "set")}),
+			STUDENT_COUNT,
 		)
 
 	def test_every_invoice_has_a_unique_challan_number(self):
@@ -290,7 +352,9 @@ class FeeScheduleGenerationTests:
 		first = self.make_invoice(self.students[0])
 		second = self.make_invoice(self.students[1])
 		year = today()[:4]
-		self.assertEqual((first.oc_challan_no, second.oc_challan_no), (f"CHL/{year}/0001", f"CHL/{year}/0002"))
+		self.assertEqual(
+			(first.oc_challan_no, second.oc_challan_no), (f"CHL/{year}/0001", f"CHL/{year}/0002")
+		)
 
 	def test_no_challan_format_means_no_challan_number(self):
 		frappe.delete_doc("Challan Format", COLLEGE)
@@ -303,7 +367,14 @@ class FeeScheduleGenerationTests:
 	def test_bank_challan_print_shows_challan_and_bank_details(self):
 		invoice = self.invoice()
 		html = frappe.get_print("Sales Invoice", invoice.name, print_format="Bank Challan")
-		for text in (invoice.oc_challan_no, "SBIN0000001", "30000000001", "State Bank of India", COLLEGE, invoice.student):
+		for text in (
+			invoice.oc_challan_no,
+			"SBIN0000001",
+			"30000000001",
+			"State Bank of India",
+			COLLEGE,
+			invoice.student,
+		):
 			self.assertIn(text, html)
 
 
@@ -319,7 +390,10 @@ class DailyFineRunTests:
 
 	def fines_of(self, invoice):
 		return frappe.get_all(
-			"Fine Applied", {"sales_invoice": invoice.name}, ["slab_key", "amount", "fine_invoice"], order_by="amount"
+			"Fine Applied",
+			{"sales_invoice": invoice.name},
+			["slab_key", "amount", "fine_invoice"],
+			order_by="amount",
 		)
 
 	def test_one_fine_per_slab_crossed_and_rerun_adds_nothing(self):
@@ -339,7 +413,10 @@ class DailyFineRunTests:
 		invoice = self.invoice()
 		self.run_fines(6)
 		fine = frappe.get_doc("Sales Invoice", self.fines_of(invoice)[0].fine_invoice)
-		self.assertEqual((fine.docstatus, fine.company, fine.student, fine.customer), (1, COLLEGE, invoice.student, invoice.customer))
+		self.assertEqual(
+			(fine.docstatus, fine.company, fine.student, fine.customer),
+			(1, COLLEGE, invoice.student, invoice.customer),
+		)
 		self.assertEqual((fine.items[0].item_code, fine.grand_total), (FINE, 100))
 		self.assertEqual(fine.items[0].income_account, self.accounts["income"])
 		self.assertTrue(fine.oc_challan_no)  # payable at the bank like any fee
@@ -350,7 +427,8 @@ class DailyFineRunTests:
 		self.assertEqual(len(fine_invoices), 3)
 		paid = self.invoice(5)
 		bank_import.make_payment_entry(
-			{"company": COLLEGE, "reference": "PAID-1", "date": today(), "amount": paid.outstanding_amount}, paid
+			{"company": COLLEGE, "reference": "PAID-1", "date": today(), "amount": paid.outstanding_amount},
+			paid,
 		)
 		items = fines.fine_items(add_days(self.due, 90))  # the fine invoices are long overdue by now
 		self.assertNotIn(paid.name, {i["invoice"] for i in items})
@@ -360,7 +438,10 @@ class DailyFineRunTests:
 	def test_category_rule_beats_the_all_fees_rule(self):
 		tuition_rule = frappe.get_doc(
 			{
-				"doctype": "Fine Rule", "company": COLLEGE, "fee_category": TUITION, "grace_days": 0,
+				"doctype": "Fine Rule",
+				"company": COLLEGE,
+				"fee_category": TUITION,
+				"grace_days": 0,
 				"slabs": [{"from_day": 1, "to_day": 0, "amount": 7}],
 			}
 		).insert()
@@ -371,7 +452,11 @@ class DailyFineRunTests:
 	def test_only_one_enabled_rule_per_company_and_fee(self):
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc(
-				{"doctype": "Fine Rule", "company": COLLEGE, "slabs": [{"from_day": 1, "to_day": 0, "amount": 1}]}
+				{
+					"doctype": "Fine Rule",
+					"company": COLLEGE,
+					"slabs": [{"from_day": 1, "to_day": 0, "amount": 1}],
+				}
 			).insert()
 
 	def test_invoice_without_student_or_company_rule_is_not_fined(self):
@@ -385,8 +470,12 @@ class DailyFineRunTests:
 		with self.assertRaises(frappe.DuplicateEntryError):
 			frappe.get_doc(
 				{
-					"doctype": "Fine Applied", "sales_invoice": invoice.name, "slab_key": row.slab_key, "fine_rule": self.rule.name,
-					"company": COLLEGE, "amount": 1,
+					"doctype": "Fine Applied",
+					"sales_invoice": invoice.name,
+					"slab_key": row.slab_key,
+					"fine_rule": self.rule.name,
+					"company": COLLEGE,
+					"amount": 1,
 				}
 			).insert()
 
@@ -402,10 +491,25 @@ class DailyFineRunTests:
 
 	def test_bulk_runner_applies_fines_exactly_once_without_committing(self):
 		items = fines.fine_items(add_days(self.due, 16))[:10]
-		with patch.object(bulk, "enqueue_run"), patch.object(frappe.db, "commit"):  # keep the test transaction
-			run = bulk.run_bulk(fines.RUN_TYPE, items, fines.HANDLER, key=fines.KEY, parameters={"as_of": add_days(self.due, 16)})
+		with (
+			patch.object(bulk, "enqueue_run"),
+			patch.object(frappe.db, "commit"),
+		):  # keep the test transaction
+			run = bulk.run_bulk(
+				fines.RUN_TYPE,
+				items,
+				fines.HANDLER,
+				key=fines.KEY,
+				parameters={"as_of": add_days(self.due, 16)},
+			)
 			bulk.process_bulk_run(run)
-			again = bulk.run_bulk(fines.RUN_TYPE, items, fines.HANDLER, key=fines.KEY, parameters={"as_of": add_days(self.due, 16)})
+			again = bulk.run_bulk(
+				fines.RUN_TYPE,
+				items,
+				fines.HANDLER,
+				key=fines.KEY,
+				parameters={"as_of": add_days(self.due, 16)},
+			)
 			bulk.process_bulk_run(again)
 		for name in (run, again):
 			self.assertEqual(frappe.db.get_value("Bulk Run", name, "status"), "Completed")
@@ -425,18 +529,28 @@ def bank_csv(rows):
 class BankCollectionImportTests:
 	def file_rows(self, matched=48, unmatched=2, tag="A"):
 		rows = [
-			[self.invoices[n].oc_challan_no, TUITION_FEE + EXAM_FEE + DEPOSIT, today(), f"UTR-{tag}-{n:03d}", "x"]
+			[
+				self.invoices[n].oc_challan_no,
+				TUITION_FEE + EXAM_FEE + DEPOSIT,
+				today(),
+				f"UTR-{tag}-{n:03d}",
+				"x",
+			]
 			for n in range(matched)
 		]
 		rows += [[f"CH-NOPE-{n}", 1000, today(), f"UTR-{tag}-X{n}", "x"] for n in range(unmatched)]
 		return rows
 
 	def run_import(self, rows):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/bank.csv"}).insert()
+		doc = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/bank.csv"}
+		).insert()
 		with (
 			patch.object(bank_import, "read_file", return_value=bank_csv(rows)),
 			patch.object(bulk, "enqueue_run"),
-			patch.object(frappe.db, "commit"),  # keep the test transaction; the runner's chunk commit is a no-op
+			patch.object(
+				frappe.db, "commit"
+			),  # keep the test transaction; the runner's chunk commit is a no-op
 		):
 			run = bank_import.start_import(doc.name)
 			bulk.process_bulk_run(run)
@@ -447,14 +561,20 @@ class BankCollectionImportTests:
 		self.assertEqual(len(rows), 50)
 		first, run = self.run_import(rows)
 		self.assertEqual(frappe.db.get_value("Bulk Run", run, "status"), "Completed")
-		self.assertEqual((first.total_rows, first.matched_rows, first.unmatched_rows, first.duplicate_rows), (50, 48, 2, 0))
+		self.assertEqual(
+			(first.total_rows, first.matched_rows, first.unmatched_rows, first.duplicate_rows), (50, 48, 2, 0)
+		)
 		self.assertEqual(first.status, "Completed with errors")
 		unmatched = frappe.get_all(
-			"Bank Collection Row", {"bank_collection_import": first.name, "status": "Unmatched"}, ["challan_no", "message"]
+			"Bank Collection Row",
+			{"bank_collection_import": first.name, "status": "Unmatched"},
+			["challan_no", "message"],
 		)
 		self.assertEqual(sorted(r.challan_no for r in unmatched), ["CH-NOPE-0", "CH-NOPE-1"])
 		self.assertTrue(all(r.message for r in unmatched))
-		payments = frappe.get_all("Payment Entry", {"reference_no": ("like", "UTR-A-%"), "docstatus": 1}, ["name", "paid_amount"])
+		payments = frappe.get_all(
+			"Payment Entry", {"reference_no": ("like", "UTR-A-%"), "docstatus": 1}, ["name", "paid_amount"]
+		)
 		self.assertEqual(len(payments), 48)
 		self.assertEqual({p.paid_amount for p in payments}, {TUITION_FEE + EXAM_FEE + DEPOSIT})
 		self.assertEqual(self.invoice(0).outstanding_amount, 0)
@@ -471,9 +591,13 @@ class BankCollectionImportTests:
 		row = frappe.get_doc("Bank Collection Row", {"bank_collection_import": first.name})
 		payment = frappe.get_doc("Payment Entry", row.payment_entry)
 		invoice = self.invoice(0)
-		self.assertEqual((payment.company, payment.paid_to, payment.reference_no), (COLLEGE, self.accounts["bank"], "UTR-B-000"))
 		self.assertEqual(
-			(payment.references[0].reference_name, payment.references[0].allocated_amount), (invoice.name, invoice.grand_total)
+			(payment.company, payment.paid_to, payment.reference_no),
+			(COLLEGE, self.accounts["bank"], "UTR-B-000"),
+		)
+		self.assertEqual(
+			(payment.references[0].reference_name, payment.references[0].allocated_amount),
+			(invoice.name, invoice.grand_total),
 		)
 		self.assertEqual((row.status, row.sales_invoice), ("Matched", invoice.name))
 
@@ -501,20 +625,31 @@ class BankCollectionImportTests:
 			bank_import.parse_rows(b"challan_no,amount\nA,1\n")
 
 	def test_import_is_for_the_company_of_the_challan(self):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": OTHER_COLLEGE, "collection_file": "/files/x.csv"})
+		doc = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": OTHER_COLLEGE, "collection_file": "/files/x.csv"}
+		)
 		doc.insert()
 		item = {"import": doc.name, "company": OTHER_COLLEGE, "row_no": 1, "challan_no": self.invoices[0].oc_challan_no,
 			"amount": "100", "date": today(), "reference": "UTR-E-1"}  # fmt: skip
 		bank_import.process_row(item, None)
-		self.assertEqual(frappe.db.get_value("Bank Collection Row", {"bank_collection_import": doc.name}, "status"), "Unmatched")
+		self.assertEqual(
+			frappe.db.get_value("Bank Collection Row", {"bank_collection_import": doc.name}, "status"),
+			"Unmatched",
+		)
 
 	def test_import_and_rows_deletable_only_before_they_write_anything(self):
-		draft = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/d.csv"}).insert()
+		draft = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/d.csv"}
+		).insert()
 		draft.delete()
 		self.assertFalse(frappe.db.exists("Bank Collection Import", draft.name))
 		doc, _run = self.run_import(self.file_rows(matched=1, unmatched=1, tag="G"))
-		posted = frappe.get_doc("Bank Collection Row", {"bank_collection_import": doc.name, "status": "Matched"})
-		unmatched = frappe.get_doc("Bank Collection Row", {"bank_collection_import": doc.name, "status": "Unmatched"})
+		posted = frappe.get_doc(
+			"Bank Collection Row", {"bank_collection_import": doc.name, "status": "Matched"}
+		)
+		unmatched = frappe.get_doc(
+			"Bank Collection Row", {"bank_collection_import": doc.name, "status": "Unmatched"}
+		)
 		self.assertTrue(posted.payment_entry)
 		with self.assertRaises(frappe.ValidationError):
 			posted.delete()
@@ -526,7 +661,12 @@ class BankCollectionImportTests:
 class FeeReceiptTests:
 	def collect(self, reference="UTR-R-1", challan_format=None):
 		invoice = self.invoice(0)
-		item = {"company": COLLEGE, "reference": reference, "date": today(), "amount": invoice.outstanding_amount}
+		item = {
+			"company": COLLEGE,
+			"reference": reference,
+			"date": today(),
+			"amount": invoice.outstanding_amount,
+		}
 		return bank_import.make_payment_entry(item, invoice), invoice
 
 	def test_receipt_numbers_follow_the_college_series_and_name_the_student(self):
@@ -535,12 +675,20 @@ class FeeReceiptTests:
 			{"company": COLLEGE, "reference": "UTR-R-2", "date": today(), "amount": 100}, self.invoice(1)
 		)
 		year = today()[2:4]
-		self.assertEqual((first.oc_receipt_no, second.oc_receipt_no), (f"FR-FTC-{year}-000001", f"FR-FTC-{year}-000002"))
+		self.assertEqual(
+			(first.oc_receipt_no, second.oc_receipt_no), (f"FR-FTC-{year}-000001", f"FR-FTC-{year}-000002")
+		)
 		self.assertEqual((first.oc_student, second.oc_student), (invoice.student, self.invoice(1).student))
 
 	def test_receipt_takes_the_college_letter_head(self):
 		if not frappe.db.exists("Letter Head", "Fee Test LH"):
-			frappe.get_doc({"doctype": "Letter Head", "letter_head_name": "Fee Test LH", "content": "<b>Fee Test College</b>"}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Letter Head",
+					"letter_head_name": "Fee Test LH",
+					"content": "<b>Fee Test College</b>",
+				}
+			).insert()
 		make_challan_format(COLLEGE, self.accounts["bank"], letter_head="Fee Test LH")
 		payment, _invoice = self.collect("UTR-R-3")
 		self.assertEqual(payment.letter_head, "Fee Test LH")
@@ -549,16 +697,33 @@ class FeeReceiptTests:
 		payment, invoice = self.collect("UTR-R-4")
 		html = frappe.get_print("Payment Entry", payment.name, print_format="Fee Receipt")
 		student_name = frappe.db.get_value("Student", invoice.student, "student_name")
-		for text in (payment.oc_receipt_no, student_name, invoice.name, invoice.oc_challan_no, COLLEGE, "UTR-R-4"):
+		for text in (
+			payment.oc_receipt_no,
+			student_name,
+			invoice.name,
+			invoice.oc_challan_no,
+			COLLEGE,
+			"UTR-R-4",
+		):
 			self.assertIn(text, html)
 
 	def test_a_payment_without_a_student_gets_no_receipt_number(self):
-		customer = frappe.get_doc({"doctype": "Customer", "customer_name": "Fee Test Walk-in", "customer_group": "Student"}).insert()
+		customer = frappe.get_doc(
+			{"doctype": "Customer", "customer_name": "Fee Test Walk-in", "customer_group": "Student"}
+		).insert()
 		payment = frappe.get_doc(
 			{
-				"doctype": "Payment Entry", "payment_type": "Receive", "party_type": "Customer", "party": customer.name,
-				"company": COLLEGE, "paid_from": "Debtors - FTC", "paid_to": self.accounts["bank"], "paid_amount": 10,
-				"received_amount": 10, "reference_no": "UTR-W", "reference_date": today(),
+				"doctype": "Payment Entry",
+				"payment_type": "Receive",
+				"party_type": "Customer",
+				"party": customer.name,
+				"company": COLLEGE,
+				"paid_from": "Debtors - FTC",
+				"paid_to": self.accounts["bank"],
+				"paid_amount": 10,
+				"received_amount": 10,
+				"reference_no": "UTR-W",
+				"reference_date": today(),
 			}
 		).insert()
 		payment.submit()
@@ -568,26 +733,63 @@ class FeeReceiptTests:
 class FixRoundTests:
 	def item(self, n=0, **values):
 		base = {
-			"import": self.import_doc().name, "company": COLLEGE, "row_no": 1, "challan_no": self.invoices[n].oc_challan_no,
-			"amount": "100", "date": today(), "reference": f"UTR-F-{n}",
+			"import": self.import_doc().name,
+			"company": COLLEGE,
+			"row_no": 1,
+			"challan_no": self.invoices[n].oc_challan_no,
+			"amount": "100",
+			"date": today(),
+			"reference": f"UTR-F-{n}",
 		}
 		return {**base, **values}
 
 	def import_doc(self):
 		if not hasattr(self, "_import"):
-			self._import = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv", "total_rows": 99}).insert()
+			self._import = frappe.get_doc(
+				{
+					"doctype": "Bank Collection Import",
+					"company": COLLEGE,
+					"collection_file": "/files/f.csv",
+					"total_rows": 99,
+				}
+			).insert()
 		return self._import
 
 	def row_status(self, reference):
-		return frappe.db.get_value("Bank Collection Row", {"bank_reference": reference}, ["status", "message", "company", "reference_key"], as_dict=True)
+		return frappe.db.get_value(
+			"Bank Collection Row",
+			{"bank_reference": reference},
+			["status", "message", "company", "reference_key"],
+			as_dict=True,
+		)
 
 	def test_lost_race_on_the_bank_reference_is_reported_as_duplicate(self):
 		item = self.item()
-		invoice = frappe.db.get_value("Sales Invoice", self.invoices[0].name, ["name", "company", "customer", "currency", "outstanding_amount"], as_dict=True)
-		bank_import.insert_row({**item, "reference": "UTR-F-0"}, "Matched", "", invoice.name, reference_key=bank_import.reference_key(item))
-		bank_import.post_collection(item, invoice)  # the unique key is taken: the insert raises, the row is a Duplicate
+		invoice = frappe.db.get_value(
+			"Sales Invoice",
+			self.invoices[0].name,
+			["name", "company", "customer", "currency", "outstanding_amount"],
+			as_dict=True,
+		)
+		bank_import.insert_row(
+			{**item, "reference": "UTR-F-0"},
+			"Matched",
+			"",
+			invoice.name,
+			reference_key=bank_import.reference_key(item),
+		)
+		bank_import.post_collection(
+			item, invoice
+		)  # the unique key is taken: the insert raises, the row is a Duplicate
 		self.assertEqual(frappe.db.count("Bank Collection Row", {"bank_reference": "UTR-F-0"}), 2)
-		self.assertEqual(frappe.db.get_value("Bank Collection Row", {"bank_reference": "UTR-F-0", "reference_key": ("is", "not set")}, "status"), "Duplicate")
+		self.assertEqual(
+			frappe.db.get_value(
+				"Bank Collection Row",
+				{"bank_reference": "UTR-F-0", "reference_key": ("is", "not set")},
+				"status",
+			),
+			"Duplicate",
+		)
 		self.assertFalse(frappe.db.exists("Payment Entry", {"reference_no": "UTR-F-0"}))
 
 	def test_payment_entry_failure_rolls_back_frees_the_reference_and_is_reported(self):
@@ -609,7 +811,9 @@ class FixRoundTests:
 		row = self.row_status("UTR-F-2")
 		self.assertEqual(row.status, "Invalid")
 		self.assertIn("lock wait", row.message)
-		self.assertEqual(frappe.db.get_value("Bank Collection Import", doc.name, "status"), "Completed with errors")
+		self.assertEqual(
+			frappe.db.get_value("Bank Collection Import", doc.name, "status"), "Completed with errors"
+		)
 
 	def test_non_finite_amounts_and_foreign_currency_invoices_are_refused(self):
 		for amount in ("nan", "inf", "-inf"):
@@ -634,22 +838,39 @@ class FixRoundTests:
 		row = self.row_status("UTR-F-5")
 		self.assertEqual(row.status, "Invalid")
 		self.assertIn("Lock wait", row.message)
-		self.assertEqual(frappe.db.get_value("Bank Collection Import", doc.name, "status"), "Completed with errors")
+		self.assertEqual(
+			frappe.db.get_value("Bank Collection Import", doc.name, "status"), "Completed with errors"
+		)
 
 	def test_start_import_runs_one_row_per_transaction(self):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}).insert()
-		with patch.object(bank_import, "read_file", return_value=bank_csv([["A", 1, today(), "R"]])), patch.object(bank_import, "run_bulk", return_value="X") as run_bulk:
+		doc = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}
+		).insert()
+		with (
+			patch.object(bank_import, "read_file", return_value=bank_csv([["A", 1, today(), "R"]])),
+			patch.object(bank_import, "run_bulk", return_value="X") as run_bulk,
+		):
 			bank_import.start_import(doc.name)
 		self.assertEqual(run_bulk.call_args.kwargs["chunk"], 1)
 
 	def test_file_read_checks_file_permission(self):
-		private = frappe.get_doc({"doctype": "File", "file_name": "fee-private.csv", "content": b"a,b\n1,2\n", "is_private": 1}).insert()
+		private = frappe.get_doc(
+			{"doctype": "File", "file_name": "fee-private.csv", "content": b"a,b\n1,2\n", "is_private": 1}
+		).insert()
 		self.assertEqual(bank_import.read_file(private.file_url).strip(), "a,b\n1,2")  # the owner reads it
 		user = "fee-nofile@example.com"
 		if not frappe.db.exists("User", user):
 			frappe.flags.in_import = True  # skip the user-creation throttle
 			self.addCleanup(setattr, frappe.flags, "in_import", False)
-			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Nofile", "send_welcome_email": 0, "roles": [{"role": "Accounts User"}]}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": user,
+					"first_name": "Nofile",
+					"send_welcome_email": 0,
+					"roles": [{"role": "Accounts User"}],
+				}
+			).insert()
 		frappe.set_user(user)
 		self.addCleanup(frappe.set_user, "Administrator")
 		with self.assertRaises(frappe.PermissionError):
@@ -667,17 +888,32 @@ class FixRoundTests:
 				make_challan_format(COLLEGE, account)
 
 	def test_a_second_start_of_the_same_import_is_refused(self):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}).insert()
-		with patch.object(bank_import, "read_file", return_value=bank_csv([])), patch.object(bulk, "enqueue_run"):
+		doc = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}
+		).insert()
+		with (
+			patch.object(bank_import, "read_file", return_value=bank_csv([])),
+			patch.object(bulk, "enqueue_run"),
+		):
 			bank_import.start_import(doc.name)
 			with self.assertRaises(frappe.ValidationError):
 				bank_import.start_import(doc.name)
-		self.assertEqual(frappe.db.count("Bulk Run", {"name": frappe.db.get_value("Bank Collection Import", doc.name, "bulk_run")}), 1)
+		self.assertEqual(
+			frappe.db.count(
+				"Bulk Run", {"name": frappe.db.get_value("Bank Collection Import", doc.name, "bulk_run")}
+			),
+			1,
+		)
 
 	def test_start_import_sorts_rows_by_challan_for_a_stable_lock_order(self):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}).insert()
+		doc = frappe.get_doc(
+			{"doctype": "Bank Collection Import", "company": COLLEGE, "collection_file": "/files/f.csv"}
+		).insert()
 		rows = [["B-2", 1, today(), "R1"], ["A-1", 1, today(), "R2"]]
-		with patch.object(bank_import, "read_file", return_value=bank_csv(rows)), patch.object(bank_import, "run_bulk", return_value="X") as run_bulk:
+		with (
+			patch.object(bank_import, "read_file", return_value=bank_csv(rows)),
+			patch.object(bank_import, "run_bulk", return_value="X") as run_bulk,
+		):
 			bank_import.start_import(doc.name)
 		self.assertEqual([i["challan_no"] for i in run_bulk.call_args.args[1]], ["A-1", "B-2"])
 
@@ -686,7 +922,14 @@ class FixRoundTests:
 		rule = frappe.get_doc("Fine Rule", self.rule.name)
 		rule.slabs[0].amount = 250
 		rule.save()
-		self.assertEqual([i for i in fines.fine_items(add_days(self.due, 6)) if i["invoice"] in {x.name for x in self.invoices[:3]}], [])
+		self.assertEqual(
+			[
+				i
+				for i in fines.fine_items(add_days(self.due, 6))
+				if i["invoice"] in {x.name for x in self.invoices[:3]}
+			],
+			[],
+		)
 
 
 class TestCampusFinance(
@@ -718,24 +961,39 @@ class TestBankImportAcrossCommits(CampusTestCase):
 		super().setUpClass()
 		cls.clean_up()
 		cls.original = frappe.db.get_value(
-			"Education Settings", None, ["auto_submit_sales_invoice", "sales_invoice_posting_date_fee_schedule", "create_so"], as_dict=True
+			"Education Settings",
+			None,
+			["auto_submit_sales_invoice", "sales_invoice_posting_date_fee_schedule", "create_so"],
+			as_dict=True,
 		)
 		cls.original_price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list")
 		cls.shared = {  # shared test data this class may be the first to create; removed again if so
 			"Fiscal Year": [str(y) for y in FISCAL_YEARS if not frappe.db.exists("Fiscal Year", str(y))],
 			"Price List": [] if frappe.db.exists("Price List", "Standard Selling") else ["Standard Selling"],
 		}
-		frappe.db.set_single_value("Education Settings", {"auto_submit_sales_invoice": 1, "sales_invoice_posting_date_fee_schedule": 0, "create_so": 0})
+		frappe.db.set_single_value(
+			"Education Settings",
+			{"auto_submit_sales_invoice": 1, "sales_invoice_posting_date_fee_schedule": 0, "create_so": 0},
+		)
 		cls.accounts = make_finance_company(COMMIT_COLLEGE, "FCM")
 		make_year_and_program(COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR)
-		group, cls.students = make_enrolled_students(COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR, 3, "FeeCommit")
-		structure = make_fee_structure(COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR, {TUITION: 1000}, cls.accounts)
+		group, cls.students = make_enrolled_students(
+			COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR, 3, "FeeCommit"
+		)
+		structure = make_fee_structure(
+			COMMIT_COLLEGE, COMMIT_PROGRAM, COMMIT_YEAR, {TUITION: 1000}, cls.accounts
+		)
 		schedule = make_fee_schedule(structure, group)
 		from education.education.doctype.fee_schedule.fee_schedule import generate_fees
 
 		generate_fees(schedule.name)
 		frappe.db.commit()
-		cls.challans = frappe.get_all("Sales Invoice", {"company": COMMIT_COLLEGE, "docstatus": 1}, pluck="oc_challan_no", order_by="name")
+		cls.challans = frappe.get_all(
+			"Sales Invoice",
+			{"company": COMMIT_COLLEGE, "docstatus": 1},
+			pluck="oc_challan_no",
+			order_by="name",
+		)
 
 	@classmethod
 	def tearDownClass(cls):
@@ -775,7 +1033,9 @@ class TestBankImportAcrossCommits(CampusTestCase):
 		company = {"company": COMMIT_COLLEGE}
 		invoices = frappe.get_all("Sales Invoice", company, pluck="name") or [""]
 		payments = frappe.get_all("Payment Entry", company, pluck="name") or [""]
-		students = frappe.get_all("Student", {"oc_company": COMMIT_COLLEGE}, ["name", "customer", "student_email_id"])
+		students = frappe.get_all(
+			"Student", {"oc_company": COMMIT_COLLEGE}, ["name", "customer", "student_email_id"]
+		)
 		imports = frappe.get_all("Bank Collection Import", company, pluck="name") or [""]
 		runs = frappe.get_all("Bank Collection Import", {"name": ("in", imports)}, pluck="bulk_run")
 		voucher = {"voucher_no": ("in", invoices + payments)}
@@ -791,7 +1051,15 @@ class TestBankImportAcrossCommits(CampusTestCase):
 			frappe.delete_doc("Bulk Run", run, force=True)
 		schedules = frappe.get_all("Fee Schedule", company, pluck="name") or [""]
 		for doctype in ("Fee Schedule Student Group", "Fee Component"):
-			frappe.db.delete(doctype, {"parent": ("in", schedules + (frappe.get_all("Fee Structure", company, pluck="name") or [""]))})
+			frappe.db.delete(
+				doctype,
+				{
+					"parent": (
+						"in",
+						schedules + (frappe.get_all("Fee Structure", company, pluck="name") or [""]),
+					)
+				},
+			)
 		frappe.db.delete("Fee Schedule", {"name": ("in", schedules)})
 		frappe.db.delete("Fee Structure", company)
 		groups = frappe.get_all("Student Group", {"oc_company": COMMIT_COLLEGE}, pluck="name") or [""]
@@ -823,8 +1091,17 @@ class TestBankImportAcrossCommits(CampusTestCase):
 			frappe.db.sql(f"delete from `{table}` where company = %s", COMMIT_COLLEGE)
 
 	def run_import(self, rows):
-		doc = frappe.get_doc({"doctype": "Bank Collection Import", "company": COMMIT_COLLEGE, "collection_file": "/files/c.csv"}).insert()
-		with patch.object(bank_import, "read_file", return_value=bank_csv(rows)), patch.object(bulk, "enqueue_run"):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Bank Collection Import",
+				"company": COMMIT_COLLEGE,
+				"collection_file": "/files/c.csv",
+			}
+		).insert()
+		with (
+			patch.object(bank_import, "read_file", return_value=bank_csv(rows)),
+			patch.object(bulk, "enqueue_run"),
+		):
 			run = bank_import.start_import(doc.name)
 			frappe.db.commit()
 			bulk.process_bulk_run(run)  # commits per chunk for real
@@ -832,11 +1109,17 @@ class TestBankImportAcrossCommits(CampusTestCase):
 		return frappe.get_doc("Bank Collection Import", doc.name)
 
 	def test_reimport_after_a_real_commit_adds_no_payment_entries(self):
-		rows = [[c, 1000, today(), f"UTR-CM-{n}", ""] for n, c in enumerate(self.challans)] + [["CH-NOPE", 5, today(), "UTR-CM-X", ""]]
+		rows = [[c, 1000, today(), f"UTR-CM-{n}", ""] for n, c in enumerate(self.challans)] + [
+			["CH-NOPE", 5, today(), "UTR-CM-X", ""]
+		]
 		first = self.run_import(rows)
-		self.assertEqual((first.matched_rows, first.unmatched_rows, first.status), (3, 1, "Completed with errors"))
+		self.assertEqual(
+			(first.matched_rows, first.unmatched_rows, first.status), (3, 1, "Completed with errors")
+		)
 		self.assertEqual(frappe.db.count("Payment Entry", {"company": COMMIT_COLLEGE, "docstatus": 1}), 3)
 		second = self.run_import(rows)
 		self.assertEqual((second.matched_rows, second.duplicate_rows, second.unmatched_rows), (0, 3, 1))
 		self.assertEqual(frappe.db.count("Payment Entry", {"company": COMMIT_COLLEGE, "docstatus": 1}), 3)
-		self.assertEqual(frappe.db.count("Bank Collection Row", {"reference_key": ("like", f"{COMMIT_COLLEGE}::%")}), 3)
+		self.assertEqual(
+			frappe.db.count("Bank Collection Row", {"reference_key": ("like", f"{COMMIT_COLLEGE}::%")}), 3
+		)

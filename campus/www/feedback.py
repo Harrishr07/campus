@@ -44,6 +44,12 @@ def get_context(context):
 	else:
 		context.state = "open"
 		context.questions = [
-			frappe._dict(name=q.name, question=q.question, question_type=q.question_type, is_required=q.is_required, options=choice_options(q))
+			frappe._dict(
+				name=q.name,
+				question=q.question,
+				question_type=q.question_type,
+				is_required=q.is_required,
+				options=choice_options(q),
+			)
 			for q in frappe.get_doc("Feedback Form", campaign.form).questions
 		]

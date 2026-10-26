@@ -49,7 +49,13 @@ def plain(rich_text):
 
 def sheet_name(name):
 	"""`name` as a sheet name Excel accepts: forbidden characters become spaces, no leading formula sign or quote, 31 characters."""
-	text = FORBIDDEN_IN_SHEET.sub(" ", CONTROL.sub("", name or "")).strip().lstrip("=+-@").strip("' ")[:31].strip("' ")
+	text = (
+		FORBIDDEN_IN_SHEET.sub(" ", CONTROL.sub("", name or ""))
+		.strip()
+		.lstrip("=+-@")
+		.strip("' ")[:31]
+		.strip("' ")
+	)
 	return text or "Sheet"
 
 
@@ -62,7 +68,9 @@ def sheet_problem(name):
 	if sheet_name(name) != name:
 		return _("use at most 31 characters, none of [ ] : * ? / \\, and not starting with = + - @ or '.")
 	if name.lower() == COVER.lower() or name.lower().startswith(DATA_PREFIX.lower()):
-		return _("{0} and names starting with {1} are used by the export itself.").format(COVER, DATA_PREFIX.strip())
+		return _("{0} and names starting with {1} are used by the export itself.").format(
+			COVER, DATA_PREFIX.strip()
+		)
 
 
 def parse_cell(ref):
@@ -85,7 +93,11 @@ def export(cycle_name, template_name):
 	template = frappe.get_doc("Export Template", template_name)
 	template.check_permission("read")
 	if template.framework != cycle.framework:
-		frappe.throw(_("{0} is a template of {1}, not of {2}.").format(frappe.bold(template.name), frappe.bold(template.framework), frappe.bold(cycle.framework)))
+		frappe.throw(
+			_("{0} is a template of {1}, not of {2}.").format(
+				frappe.bold(template.name), frappe.bold(template.framework), frappe.bold(cycle.framework)
+			)
+		)
 	exported = Exported(cycle, template)
 	build = {"Excel": exported.workbook, "PDF": exported.pdf}[template.export_format]
 	content = build()
@@ -99,7 +111,14 @@ class Exported:
 
 	def __init__(self, cycle, template):
 		self.cycle, self.template = cycle, template
-		self.nodes = {n.name: n for n in frappe.get_all("Framework Node", {"framework": cycle.framework}, ["name", "code", "title", "answer_type", "unit"])}
+		self.nodes = {
+			n.name: n
+			for n in frappe.get_all(
+				"Framework Node",
+				{"framework": cycle.framework},
+				["name", "code", "title", "answer_type", "unit"],
+			)
+		}
 		self.values = frappe.get_list(
 			"Metric Value", {"cycle": cycle.name}, ["node", "department", "value", "answered", "choice", "narrative", "status", "snapshot"],
 			order_by="name",
@@ -127,9 +146,23 @@ class Exported:
 			(_("Exported By"), frappe.session.user), (_("Exported On"), str(now_datetime().replace(microsecond=0))),
 		]  # fmt: skip
 		if self.template.is_placeholder:
-			rows.append((_("Notice"), _("Placeholder layout: the official template was not available. Replace the mappings with the official layout.")))
+			rows.append(
+				(
+					_("Notice"),
+					_(
+						"Placeholder layout: the official template was not available. Replace the mappings with the official layout."
+					),
+				)
+			)
 		if unlocked:
-			rows.append((_("Notice"), _("{0} of {1} values are not Locked; these figures are not final.").format(len(unlocked), len(self.values))))
+			rows.append(
+				(
+					_("Notice"),
+					_("{0} of {1} values are not Locked; these figures are not final.").format(
+						len(unlocked), len(self.values)
+					),
+				)
+			)
 		return rows
 
 	# Excel
@@ -163,7 +196,13 @@ class Exported:
 		meta = self.nodes[node]
 		sheet = book.create_sheet(unique_sheet_name(book, data_sheet_name(meta.code)))
 		put(sheet, "A1", f"{meta.code} {meta.title}")
-		put(sheet, "A2", _("Cycle {0}, status of the college value: {1}").format(self.cycle.name, _(self.college[node].status) if node in self.college else "-"))
+		put(
+			sheet,
+			"A2",
+			_("Cycle {0}, status of the college value: {1}").format(
+				self.cycle.name, _(self.college[node].status) if node in self.college else "-"
+			),
+		)
 		for column, label in enumerate(DATA_HEADER, 1):
 			put(sheet, f"{get_column_letter(column)}4", label)
 		for number, row in enumerate(rows, 5):
@@ -175,11 +214,21 @@ class Exported:
 	def listing(self, node):
 		"""Rows of the records behind the node's values that the user may read, and how many were left out."""
 		rows = []
-		for value in sorted((v for v in self.values if v.node == node), key=lambda v: (bool(v.department), v.department or "")):
+		for value in sorted(
+			(v for v in self.values if v.node == node), key=lambda v: (bool(v.department), v.department or "")
+		):
 			inputs = json.loads(value.snapshot or "{}").get("inputs", {})
 			for key, point in inputs.items():
 				for record in point.get("records") or [{}]:
-					rows.append([value.department or _("College"), key, flt(point.get("value")), record.get("doctype"), record.get("name")])
+					rows.append(
+						[
+							value.department or _("College"),
+							key,
+							flt(point.get("value")),
+							record.get("doctype"),
+							record.get("name"),
+						]
+					)
 		names = defaultdict(set)
 		for row in rows:
 			if row[3]:
@@ -195,7 +244,9 @@ class Exported:
 		if unknown:
 			allowed = set()
 			if frappe.db.exists("DocType", doctype) and frappe.has_permission(doctype, "read"):
-				allowed = set(frappe.get_list(doctype, {"name": ["in", unknown]}, pluck="name", limit_page_length=0))
+				allowed = set(
+					frappe.get_list(doctype, {"name": ["in", unknown]}, pluck="name", limit_page_length=0)
+				)
 			cached.update({name: name in allowed for name in unknown})
 		return {name for name in names if cached[name]}
 
@@ -207,15 +258,29 @@ class Exported:
 		sections = {}
 		for row in self.mappings:
 			sections.setdefault(row.section.strip(), []).append(row)
-		body = [f"<h1>{html.escape(self.template.name)}</h1>", f"<h2>{html.escape(self.template.cover_heading or _('Part A - Institutional Details'))}</h2>"]
-		body.append("<table>" + "".join(f"<tr><th>{html.escape(str(k))}</th><td>{html.escape(str(v))}</td></tr>" for k, v in self.cover_rows()) + "</table>")
+		body = [
+			f"<h1>{html.escape(self.template.name)}</h1>",
+			f"<h2>{html.escape(self.template.cover_heading or _('Part A - Institutional Details'))}</h2>",
+		]
+		body.append(
+			"<table>"
+			+ "".join(
+				f"<tr><th>{html.escape(str(k))}</th><td>{html.escape(str(v))}</td></tr>"
+				for k, v in self.cover_rows()
+			)
+			+ "</table>"
+		)
 		for section, rows in sections.items():
 			body.append(f"<h2 class='section'>{html.escape(section)}</h2><table>")
 			for row in rows:
 				meta = self.nodes[row.node]
-				body.append(f"<tr><th>{html.escape(meta.code)}</th><td>{html.escape(meta.title)}</td><td class='v'>{html.escape(self.printed(row.node))}</td></tr>")
+				body.append(
+					f"<tr><th>{html.escape(meta.code)}</th><td>{html.escape(meta.title)}</td><td class='v'>{html.escape(self.printed(row.node))}</td></tr>"
+				)
 			body.append("</table>")
-		return get_pdf(f"<html><head><meta charset='utf-8'><style>{PDF_STYLE}</style></head><body>{''.join(body)}</body></html>")
+		return get_pdf(
+			f"<html><head><meta charset='utf-8'><style>{PDF_STYLE}</style></head><body>{''.join(body)}</body></html>"
+		)
 
 	def printed(self, node):
 		answer = self.answer(node)
@@ -255,4 +320,3 @@ def unique_sheet_name(book, base):
 		suffix = f" {number}"
 		name = base[: 31 - len(suffix)] + suffix
 	return name
-

@@ -73,5 +73,7 @@ def link(campaign, recipient):
 	path = f"/feedback/{campaign.name}"
 	if recipient.startswith("External Member:"):
 		member = recipient.partition(":")[2]
-		path += "?" + urlencode({"member": member, "signature": feedback.invite_signature(campaign.name, recipient)})
+		path += "?" + urlencode(
+			{"member": member, "signature": feedback.invite_signature(campaign.name, recipient)}
+		)
 	return get_url(path)

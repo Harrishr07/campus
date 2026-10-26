@@ -39,7 +39,14 @@ def composition_shortfalls(rules, members, on_date):
 			text = rule_text(rule)
 			message = _("Rule: {0}. {1} in office on {2}.").format(text, actual, formatdate(on_date))
 			shortfalls.append(
-				frappe._dict(category=rule.category, minimum=minimum, maximum=maximum, actual=actual, rule=text, message=message)
+				frappe._dict(
+					category=rule.category,
+					minimum=minimum,
+					maximum=maximum,
+					actual=actual,
+					rule=text,
+					message=message,
+				)
 			)
 	return shortfalls
 
@@ -60,7 +67,11 @@ def mandatory_quorum_categories(rules):
 
 def shortfall_gap(shortfall):
 	"""How far the count is from the rule (members missing, or members over the maximum)."""
-	return shortfall.minimum - shortfall.actual if shortfall.actual < shortfall.minimum else shortfall.actual - shortfall.maximum
+	return (
+		shortfall.minimum - shortfall.actual
+		if shortfall.actual < shortfall.minimum
+		else shortfall.actual - shortfall.maximum
+	)
 
 
 def is_worse(new_shortfalls, old_shortfalls):

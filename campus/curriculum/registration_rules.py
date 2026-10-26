@@ -60,7 +60,9 @@ def drop_problems(rows, on_date, deadline, max_credits, prefix):
 	if getdate(on_date) > getdate(deadline):
 		problems.append(prefix + _("courses can be dropped only until {0}.").format(getdate(deadline)))
 	if dropped > flt(max_credits):
-		problems.append(prefix + _("{0} credits dropped; at most {1} may be dropped.").format(n(dropped), n(max_credits)))
+		problems.append(
+			prefix + _("{0} credits dropped; at most {1} may be dropped.").format(n(dropped), n(max_credits))
+		)
 	return problems
 
 
@@ -69,15 +71,23 @@ def add_problems(rows, semester, rule, prefix):
 	if not added:
 		return []
 	if cint(semester) < cint(rule.add_from_semester):
-		return [prefix + _("additional courses are allowed from semester {0}.").format(rule.add_from_semester)]
+		return [
+			prefix + _("additional courses are allowed from semester {0}.").format(rule.add_from_semester)
+		]
 	problems = []
 	if sum(added) > flt(rule.max_add_credits):
 		problems.append(
-			prefix + _("{0} additional credits; at most {1} may be added.").format(n(sum(added)), n(rule.max_add_credits))
+			prefix
+			+ _("{0} additional credits; at most {1} may be added.").format(
+				n(sum(added)), n(rule.max_add_credits)
+			)
 		)
 	if len(added) > cint(rule.max_add_courses):
 		problems.append(
-			prefix + _("{0} additional courses; at most {1} may be added.").format(len(added), cint(rule.max_add_courses))
+			prefix
+			+ _("{0} additional courses; at most {1} may be added.").format(
+				len(added), cint(rule.max_add_courses)
+			)
 		)
 	return problems
 
@@ -90,7 +100,9 @@ def prerequisite_codes(text):
 def hold_reason(missing):
 	"""Why a row is held for review: the prerequisites with no Pass in a published result (None when all are met)."""
 	if missing:
-		return _("Prerequisite(s) {0} not passed in a published result; held for review.").format(", ".join(missing))
+		return _("Prerequisite(s) {0} not passed in a published result; held for review.").format(
+			", ".join(missing)
+		)
 
 
 def honours_problems(kinds, cgpa, arrears, rule, prefix):
@@ -105,13 +117,15 @@ def honours_problems(kinds, cgpa, arrears, rule, prefix):
 		upto = cint(rule.honours_cgpa_upto_semester)
 		scope = _("up to semester {0}").format(upto) if upto else _("over all semesters")
 		problems.append(
-			prefix + _("{0} registration needs a CGPA of at least {1} {2}; the CGPA is {3}.").format(
+			prefix
+			+ _("{0} registration needs a CGPA of at least {1} {2}; the CGPA is {3}.").format(
 				" / ".join(_(k) for k in special), n(minimum), scope, n(flt(cgpa, 2))
 			)
 		)
 	if HONOURS in kinds and cint(rule.honours_no_arrears) and arrears:
 		problems.append(
-			prefix + _("Honours registration needs no outstanding arrear; arrears: {0}.").format(", ".join(arrears))
+			prefix
+			+ _("Honours registration needs no outstanding arrear; arrears: {0}.").format(", ".join(arrears))
 		)
 	return problems
 

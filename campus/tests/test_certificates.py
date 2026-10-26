@@ -55,7 +55,13 @@ class CertificateFixture(CampusTestCase):
 
 	def request(self, student, certificate_type=BONAFIDE, **values):
 		return frappe.get_doc(
-			{"doctype": "Certificate Request", "student": student, "certificate_type": certificate_type, "purpose": "Bank account", **values}
+			{
+				"doctype": "Certificate Request",
+				"student": student,
+				"certificate_type": certificate_type,
+				"purpose": "Bank account",
+				**values,
+			}
 		).insert()
 
 	def approve_request(self, doc):
@@ -83,7 +89,9 @@ class TestIssue(CertificateFixture):
 		self.assertEqual(doc.docstatus, 1)
 		self.assertTrue(doc.certificate_number.startswith("BON/CRTC/"))
 		record = verify(doc.verification_code)
-		self.assertEqual((record.status, record.company, record.holder_name), ("Valid", COLLEGE, doc.student_name))
+		self.assertEqual(
+			(record.status, record.company, record.holder_name), ("Valid", COLLEGE, doc.student_name)
+		)
 		html = frappe.get_print("Certificate Request", doc.name, "Bonafide Certificate")
 		self.assertIn("bonafide student", html)
 		self.assertIn(doc.certificate_number, html)
@@ -159,14 +167,18 @@ class TestIssue(CertificateFixture):
 		certificate_fee.raise_fee(doc.name)  # idempotent
 		doc.reload()
 		invoice = frappe.get_doc("Sales Invoice", doc.fee_invoice)
-		self.assertEqual((invoice.docstatus, invoice.grand_total, invoice.items[0].item_code), (1, 150, "Certificate"))
+		self.assertEqual(
+			(invoice.docstatus, invoice.grand_total, invoice.items[0].item_code), (1, 150, "Certificate")
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "fee invoice"):
 			doc.cancel()
 
 
 class TestTransferCertificate(CertificateFixture):
 	def tc(self, student=None, **values):
-		return self.request(student or self.a, TRANSFER, reason_for_leaving="Migrating to another city", **values)
+		return self.request(
+			student or self.a, TRANSFER, reason_for_leaving="Migrating to another city", **values
+		)
 
 	def test_blocked_while_dues_exist_in_any_company(self):
 		for company in (COLLEGE, TRUST):
@@ -206,12 +218,30 @@ class TestTransferCertificate(CertificateFixture):
 		self.assertEqual(student.date_of_leaving, getdate(add_days(today(), 3)))
 		self.assertEqual(student.reason_for_leaving, "Migrating to another city")
 		self.assertEqual(student.oc_academic_status, "Withdrawn")
-		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
-		self.assertEqual(
-			(log.from_status, log.to_status, log.effective_date, log.source_doctype, log.source_name, log.reason),
-			("Active", "Withdrawn", getdate(add_days(today(), 3)), "Certificate Request", doc.name, "Migrating to another city"),
+		log = frappe.get_last_doc(
+			"Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc"
 		)
-		self.assertIn("Date of leaving", frappe.get_print("Certificate Request", doc.name, "Transfer Certificate"))
+		self.assertEqual(
+			(
+				log.from_status,
+				log.to_status,
+				log.effective_date,
+				log.source_doctype,
+				log.source_name,
+				log.reason,
+			),
+			(
+				"Active",
+				"Withdrawn",
+				getdate(add_days(today(), 3)),
+				"Certificate Request",
+				doc.name,
+				"Migrating to another city",
+			),
+		)
+		self.assertIn(
+			"Date of leaving", frappe.get_print("Certificate Request", doc.name, "Transfer Certificate")
+		)
 
 	def test_a_second_tc_is_refused_and_cancelling_the_first_restores_the_student(self):
 		doc = self.approve_request(self.tc())
@@ -222,8 +252,13 @@ class TestTransferCertificate(CertificateFixture):
 		self.assertFalse(student.leaving_certificate_number)
 		self.assertFalse(student.date_of_leaving)
 		self.assertEqual(student.oc_academic_status, "Active")
-		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.source_name), ("Reversal", "Withdrawn", "Active", doc.name))
+		log = frappe.get_last_doc(
+			"Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc"
+		)
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.source_name),
+			("Reversal", "Withdrawn", "Active", doc.name),
+		)
 
 	def test_cancelling_a_migrated_tc_restores_active(self):
 		doc = self.approve_request(self.tc())
@@ -231,11 +266,19 @@ class TestTransferCertificate(CertificateFixture):
 		frappe.db.set_value("Student", self.a, "oc_academic_status", "Discontinued")
 		self.assertEqual(lifecycle.migrate_student(self.a), "Withdrawn")
 		migrated = frappe.get_last_doc("Lifecycle Transition", {"student": self.a})
-		self.assertEqual((migrated.kind, migrated.source_doctype, migrated.source_name), ("Migrated", "Certificate Request", doc.name))
+		self.assertEqual(
+			(migrated.kind, migrated.source_doctype, migrated.source_name),
+			("Migrated", "Certificate Request", doc.name),
+		)
 		doc.cancel()
 		self.assertEqual(frappe.db.get_value("Student", self.a, "oc_academic_status"), "Active")
-		log = frappe.get_last_doc("Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc")
-		self.assertEqual((log.kind, log.from_status, log.to_status, log.reverses), ("Reversal", "Withdrawn", "Active", migrated.name))
+		log = frappe.get_last_doc(
+			"Lifecycle Transition", {"student": self.a}, order_by="creation desc, name desc"
+		)
+		self.assertEqual(
+			(log.kind, log.from_status, log.to_status, log.reverses),
+			("Reversal", "Withdrawn", "Active", migrated.name),
+		)
 
 	def test_a_tc_to_a_student_who_completed_the_programme_keeps_the_status(self):
 		frappe.db.set_value("Student", self.a, "oc_academic_status", "Graduated")
@@ -261,7 +304,9 @@ class TestTransferCertificate(CertificateFixture):
 		_cols, rows = tc_register.execute({"company": COLLEGE})
 		self.assertEqual([r["certificate_number"] for r in rows], [tc.certificate_number])
 		_cols, rows = certificates_issued.execute({"company": COLLEGE})
-		self.assertEqual({r["certificate_number"] for r in rows}, {tc.certificate_number, bonafide.certificate_number})
+		self.assertEqual(
+			{r["certificate_number"] for r in rows}, {tc.certificate_number, bonafide.certificate_number}
+		)
 		_cols, rows = certificates_issued.execute({"company": COLLEGE, "certificate_type": BONAFIDE})
 		self.assertEqual([r["name"] for r in rows], [bonafide.name])
 		self.assertEqual(certificates_issued.execute({"company": TRUST})[1], [])
@@ -276,11 +321,11 @@ class TestNumbering(CertificateFixture):
 		first, second = self.number(self.a), self.number(self.b)
 		prefix = f"BON/CRTC/{year}/"
 		self.assertTrue(first.startswith(prefix), first)
-		self.assertEqual(int(second[len(prefix):]), int(first[len(prefix):]) + 1)
-		self.assertEqual(len(first[len(prefix):]), 4)
+		self.assertEqual(int(second[len(prefix) :]), int(first[len(prefix) :]) + 1)
+		self.assertEqual(len(first[len(prefix) :]), 4)
 		other_type = self.number(self.c, "Conduct")  # its own series
 		self.assertTrue(other_type.startswith(f"CON/CRTC/{year}/"))
-		self.assertEqual(other_type[len(f"CON/CRTC/{year}/"):], "0001")
+		self.assertEqual(other_type[len(f"CON/CRTC/{year}/") :], "0001")
 
 	def test_each_company_has_its_own_series(self):
 		college = self.number(self.a)
@@ -293,7 +338,13 @@ class TestNumbering(CertificateFixture):
 
 	def trust_student(self):
 		student = frappe.get_doc(
-			{"doctype": "Student", "enabled": 1, "first_name": "Crttrust", "student_email_id": "crttrust@fees.example.com", "oc_company": TRUST}
+			{
+				"doctype": "Student",
+				"enabled": 1,
+				"first_name": "Crttrust",
+				"student_email_id": "crttrust@fees.example.com",
+				"oc_company": TRUST,
+			}
 		).insert()
 		return student.name
 

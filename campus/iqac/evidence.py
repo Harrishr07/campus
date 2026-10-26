@@ -44,7 +44,11 @@ def is_public_file(file_url):
 def current_file(doc):
 	"""The file an Evidence points at now: the source field's current value when linked to a source record, else its own file."""
 	if doc.get("source_field"):
-		if not (doc.get("source_doctype") and doc.get("source_name") and frappe.db.exists(doc.source_doctype, doc.source_name)):
+		if not (
+			doc.get("source_doctype")
+			and doc.get("source_name")
+			and frappe.db.exists(doc.source_doctype, doc.source_name)
+		):
 			return None
 		return frappe.db.get_value(doc.source_doctype, doc.source_name, doc.source_field) or None
 	return doc.get("file") or None
@@ -75,21 +79,30 @@ def public_listing():
 	groups = []
 	for company in sorted({row.company or "" for row in rows}):
 		mine = [row for row in rows if (row.company or "") == company]
-		for year in sorted({row.academic_year for row in mine}, key=lambda y: str(years.get(y) or ""), reverse=True):
-			by_type = [(kind, [r for r in mine if r.academic_year == year and r.evidence_type == kind]) for kind in types]
+		for year in sorted(
+			{row.academic_year for row in mine}, key=lambda y: str(years.get(y) or ""), reverse=True
+		):
+			by_type = [
+				(kind, [r for r in mine if r.academic_year == year and r.evidence_type == kind])
+				for kind in types
+			]
 			groups.append((company, year, [(kind, found) for kind, found in by_type if found]))
 	return groups
 
 
 def check_may_publish():
 	if not has_role(frappe.session.user, ROLES):
-		frappe.throw(_("Only an IQAC Coordinator or System Manager can make evidence public."), frappe.PermissionError)
+		frappe.throw(
+			_("Only an IQAC Coordinator or System Manager can make evidence public."), frappe.PermissionError
+		)
 
 
 def slot_status(cycle, node=None):
 	"""One row per evidence slot of `node` (or of every node of the cycle's framework): filled when an Evidence of the cycle's
 	college and academic year names the slot, has the slot's kind and currently has a file or address."""
-	scope = frappe.db.get_value("Accreditation Cycle", cycle, ["framework", "company", "academic_year"], as_dict=True)
+	scope = frappe.db.get_value(
+		"Accreditation Cycle", cycle, ["framework", "company", "academic_year"], as_dict=True
+	)
 	nodes = [node] if node else frappe.get_all("Framework Node", {"framework": scope.framework}, pluck="name")
 	slots = frappe.get_all(
 		"Framework Node Evidence Slot", {"parenttype": "Framework Node", "parent": ["in", nodes or [""]]},
@@ -97,7 +110,11 @@ def slot_status(cycle, node=None):
 	)  # fmt: skip
 	found = filled_by(scope, nodes)
 	return [
-		frappe._dict(**slot, evidence=found.get((slot.node, slot.slot_name, slot.kind), []), filled=bool(found.get((slot.node, slot.slot_name, slot.kind))))
+		frappe._dict(
+			**slot,
+			evidence=found.get((slot.node, slot.slot_name, slot.kind), []),
+			filled=bool(found.get((slot.node, slot.slot_name, slot.kind))),
+		)
 		for slot in slots
 	]
 
@@ -106,7 +123,9 @@ def filled_by(scope, nodes):
 	"""{(node, slot name, kind): [Evidence names]} for evidence of the college and year that currently has content."""
 	docs = {
 		doc.name: doc
-		for doc in frappe.get_all("Evidence", {"company": scope.company, "academic_year": scope.academic_year}, EVIDENCE_FIELDS)
+		for doc in frappe.get_all(
+			"Evidence", {"company": scope.company, "academic_year": scope.academic_year}, EVIDENCE_FIELDS
+		)
 	}
 	if not docs:
 		return {}
@@ -122,13 +141,19 @@ def filled_by(scope, nodes):
 
 def source_file_field(doctype):
 	"""The file field Campus Settings > Evidence Sources lists for `doctype` ("" for none); throws when it is not listed."""
-	field = frappe.db.get_value("Evidence Source Doctype", {"parent": "Campus Settings", "document_type": doctype}, "file_field")
+	field = frappe.db.get_value(
+		"Evidence Source Doctype", {"parent": "Campus Settings", "document_type": doctype}, "file_field"
+	)
 	if field is None:
-		frappe.throw(_("{0} is not listed under Evidence Sources in Campus Settings.").format(frappe.bold(doctype)))
+		frappe.throw(
+			_("{0} is not listed under Evidence Sources in Campus Settings.").format(frappe.bold(doctype))
+		)
 	return field
 
 
-def attach_as_evidence(doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None):
+def attach_as_evidence(
+	doctype, name, title, evidence_type, academic_year, nodes=None, is_public=0, file=None, url=None
+):
 	"""Make an Evidence from any record whose document type is listed in Campus Settings > Evidence Sources; returns its name."""
 	source = source_file_field(doctype)
 	frappe.has_permission(doctype, "read", name, throw=True)
@@ -155,5 +180,7 @@ def source_company(doctype, name):
 			return frappe.db.get_value(doctype, name, field)
 	company = frappe.db.get_single_value("Campus Settings", "default_company")
 	if not company:
-		frappe.throw(_("{0} has no company; set a Default Company in Campus Settings.").format(frappe.bold(name)))
+		frappe.throw(
+			_("{0} has no company; set a Default Company in Campus Settings.").format(frappe.bold(name))
+		)
 	return company

@@ -33,7 +33,11 @@ class LateJoiningRequest(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		if not find_policy(self):
-			frappe.throw(_("No Approval Policy is set for {0}; it cannot be submitted without approval.").format(_(self.doctype)))
+			frappe.throw(
+				_("No Approval Policy is set for {0}; it cannot be submitted without approval.").format(
+					_(self.doctype)
+				)
+			)
 
 	def set_context(self):
 		student = frappe.db.get_value(
@@ -50,15 +54,23 @@ class LateJoiningRequest(ApprovableDocument, Document):
 
 	def check_late(self):
 		if not self.reporting_deadline:
-			frappe.throw(_("{0} has no reporting deadline: they may join on any date.").format(frappe.bold(self.student)))
+			frappe.throw(
+				_("{0} has no reporting deadline: they may join on any date.").format(
+					frappe.bold(self.student)
+				)
+			)
 		if getdate(self.joining_date) <= getdate(self.reporting_deadline):
 			frappe.throw(
-				_("The joining date {0} is not after the reporting deadline {1}: no approval is needed.").format(
+				_(
+					"The joining date {0} is not after the reporting deadline {1}: no approval is needed."
+				).format(
 					frappe.format(self.joining_date, "Date"), frappe.format(self.reporting_deadline, "Date")
 				)
 			)
 
 	def other_requests(self):
 		return frappe.get_all(
-			LATE_REQUEST, {"applicant": self.applicant, "docstatus": ("<", 2), "name": ("!=", self.name)}, pluck="name"
+			LATE_REQUEST,
+			{"applicant": self.applicant, "docstatus": ("<", 2), "name": ("!=", self.name)},
+			pluck="name",
 		)

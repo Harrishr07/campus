@@ -19,7 +19,9 @@ def pick_curriculum(candidates, batch):
 def effective_curriculum(program, regulation, batch=None):
 	"""The Effective curriculum of `program` under `regulation` for students admitted in `batch` (an Academic Year)."""
 	rows = frappe.get_all(
-		"Curriculum", {"program": program, "regulation": regulation, "status": "Effective"}, ["name", "version"]
+		"Curriculum",
+		{"program": program, "regulation": regulation, "status": "Effective"},
+		["name", "version"],
 	)
 	batches = frappe.get_all(
 		"Curriculum Batch",

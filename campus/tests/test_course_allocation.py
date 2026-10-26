@@ -10,12 +10,12 @@ import frappe
 from frappe.tests import UnitTestCase
 from frappe.utils import add_days, today
 
-from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.approval_engine import latest_request
+from campus.campus_platform.approvals import approve, request_approval
 from campus.faculty import workload
-from campus.faculty.setup import seed_course_allocation_policy
 from campus.faculty.report.workload_balance.workload_balance import execute as balance_report
 from campus.faculty.report.workload_balance.workload_balance import status_of
+from campus.faculty.setup import seed_course_allocation_policy
 from campus.tests import demo
 from campus.tests.factories import make_user
 from campus.tests.utils import CampusTestCase
@@ -25,7 +25,13 @@ CSE = f"{demo.CSE_DEPARTMENT} - DCE"  # demo.department_name, which needs the co
 ECE = f"{demo.ECE_DEPARTMENT} - DCE"
 DEAN = "wl-dean@example.com"
 ECE_HOD = "wl-hod-ece@example.com"
-HOD, PROFESSOR, ASSOCIATE, ASSISTANT_A, ASSISTANT_B = "hod_cse", "hod_cse", "faculty_1", "faculty_2", "faculty_3"
+HOD, PROFESSOR, ASSOCIATE, ASSISTANT_A, ASSISTANT_B = (
+	"hod_cse",
+	"hod_cse",
+	"faculty_1",
+	"faculty_2",
+	"faculty_3",
+)
 # offering, teacher, lecture, tutorial, practical
 BASE = [
 	("O1", PROFESSOR, 3, 0, 0),  # Professor: 3 (min 4) -> Under
@@ -70,7 +76,10 @@ class AllocationFixture(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		was_importing, frappe.flags.in_import = frappe.flags.in_import, True  # skip the users-per-minute throttle
+		was_importing, frappe.flags.in_import = (
+			frappe.flags.in_import,
+			True,
+		)  # skip the users-per-minute throttle
 		try:
 			make_user(DEAN, [demo.ENGINEERING])
 			make_user(ECE_HOD, [demo.ENGINEERING])
@@ -98,7 +107,13 @@ class AllocationFixture(CampusTestCase):
 	def hold(position, scope, user):
 		if not frappe.db.exists("Position Holder", {"position": position, "scope_value": scope}):
 			frappe.get_doc(
-				{"doctype": "Position Holder", "position": position, "scope_value": scope, "user": user, "from_date": add_days(today(), -30)}
+				{
+					"doctype": "Position Holder",
+					"position": position,
+					"scope_value": scope,
+					"user": user,
+					"from_date": add_days(today(), -30),
+				}
 			).insert(ignore_permissions=True)
 
 	@staticmethod
@@ -119,15 +134,25 @@ class AllocationFixture(CampusTestCase):
 	def make_term_and_offerings(cls):
 		year = demo.year_name(2026)
 		frappe.get_doc(
-			{"doctype": "Academic Term", "academic_year": year, "term_name": "WL Test Odd", "term_start_date": "2026-06-01", "term_end_date": "2026-11-30"}
+			{
+				"doctype": "Academic Term",
+				"academic_year": year,
+				"term_name": "WL Test Odd",
+				"term_start_date": "2026-06-01",
+				"term_end_date": "2026-11-30",
+			}
 		).insert()
 		cls.term = frappe.db.get_value("Academic Term", {"academic_year": year, "term_name": "WL Test Odd"})
 		cls.offerings = {}
 		for key, department in (("O1", CSE), ("O2", CSE), ("O3", CSE), ("O4", CSE), ("O5", ECE)):
 			program = demo.get_or_insert(
-				"Program", {"program_name": f"WL Test {department[:3]}"}, {"oc_company": demo.ENGINEERING, "department": department}
+				"Program",
+				{"program_name": f"WL Test {department[:3]}"},
+				{"oc_company": demo.ENGINEERING, "department": department},
 			)
-			course = demo.get_or_insert("Course", {"course_name": "Data Structures"}, {"oc_company": demo.ENGINEERING})
+			course = demo.get_or_insert(
+				"Course", {"course_name": "Data Structures"}, {"oc_company": demo.ENGINEERING}
+			)
 			cls.offerings[key] = frappe.get_doc(
 				{
 					"doctype": "Student Group", "student_group_name": f"WL Test {key}", "group_based_on": "Course",
@@ -158,7 +183,9 @@ class AllocationFixture(CampusTestCase):
 		doc.reload()
 
 	def instructors(self, key):
-		return set(frappe.get_all("Student Group Instructor", {"parent": self.offerings[key]}, pluck="instructor"))
+		return set(
+			frappe.get_all("Student Group Instructor", {"parent": self.offerings[key]}, pluck="instructor")
+		)
 
 	def instructor_of(self, username):
 		return frappe.db.get_value("Instructor", {"employee": demo.employee_of(username)})
@@ -166,7 +193,10 @@ class AllocationFixture(CampusTestCase):
 
 def over_limit_rows():
 	"""Assistant B: 6 (O3) + 9 (O4) = 15 hours, past the maximum of 12 plus the margin of 2."""
-	return [r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 4, 1, 4)]
+	return [r for r in BASE if r[1] != ASSISTANT_B] + [
+		("O3", ASSISTANT_B, 3, 0, 3),
+		("O4", ASSISTANT_B, 4, 1, 4),
+	]
 
 
 class TestWorkloadChecks(AllocationFixture):
@@ -186,12 +216,18 @@ class TestWorkloadChecks(AllocationFixture):
 
 	def test_exactly_the_maximum_does_not_warn(self):
 		frappe.clear_messages()
-		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 3, 0, 3)]  # 6 + 6 = 12
+		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [
+			("O3", ASSISTANT_B, 3, 0, 3),
+			("O4", ASSISTANT_B, 3, 0, 3),
+		]  # 6 + 6 = 12
 		self.allocation(rows).insert()
 		self.assertFalse([m for m in frappe.get_message_log() if "maximum of" in m["message"]])
 
 	def test_max_plus_margin_itself_only_warns(self):
-		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 4, 1, 3)]  # 6 + 8 = 14
+		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [
+			("O3", ASSISTANT_B, 3, 0, 3),
+			("O4", ASSISTANT_B, 4, 1, 3),
+		]  # 6 + 8 = 14
 		frappe.clear_messages()
 		self.assertTrue(self.allocation(rows).insert().name)
 		self.assertEqual(len([m for m in frappe.get_message_log() if "14.0 hours" in m["message"]]), 1)
@@ -206,7 +242,10 @@ class TestWorkloadChecks(AllocationFixture):
 		ece = self.allocation([("O5", ASSISTANT_B, 3, 0, 2)], department=ECE).insert()  # 5 hours in ECE
 		self.submit_through_hod(ece)
 		self.assertEqual(ece.docstatus, 1)
-		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 2, 0, 0)]
+		rows = [r for r in BASE if r[1] != ASSISTANT_B] + [
+			("O3", ASSISTANT_B, 3, 0, 3),
+			("O4", ASSISTANT_B, 2, 0, 0),
+		]
 		frappe.clear_messages()
 		frappe.db.savepoint("first_draft")
 		self.allocation(rows).insert()  # 6 + 2 in CSE alone is 8, but with the 5 in ECE it is 13
@@ -258,7 +297,13 @@ class TestSubmission(AllocationFixture):
 	def test_an_offering_without_faculty_blocks_submit(self):
 		frappe.clear_messages()
 		doc = self.allocation(self.rows_without("O4")).insert()  # O4 has nobody
-		self.assertTrue([m for m in frappe.get_message_log() if "still have no faculty" in m["message"] and self.offerings["O4"] in m["message"]])
+		self.assertTrue(
+			[
+				m
+				for m in frappe.get_message_log()
+				if "still have no faculty" in m["message"] and self.offerings["O4"] in m["message"]
+			]
+		)
 		with self.assertRaises(frappe.ValidationError) as caught:
 			doc.submit()
 		self.assertIn(self.offerings["O4"], str(caught.exception))
@@ -283,7 +328,10 @@ class TestSubmission(AllocationFixture):
 
 	def test_instructors_follow_the_allocation_and_cancel_takes_them_off(self):
 		group = frappe.get_doc("Student Group", self.offerings["O2"])
-		for username in (ASSISTANT_A, ASSOCIATE):  # on O2 before the allocation; the Associate is allocated there too
+		for username in (
+			ASSISTANT_A,
+			ASSOCIATE,
+		):  # on O2 before the allocation; the Associate is allocated there too
 			group.append("instructors", {"instructor": self.instructor_of(username)})
 		group.save()
 		doc = self.allocation().insert()
@@ -294,7 +342,10 @@ class TestSubmission(AllocationFixture):
 		self.assertEqual(self.instructors("O3"), {ins(ASSISTANT_A), ins(ASSISTANT_B)})
 		self.assertEqual(self.instructors("O4"), {ins(ASSISTANT_B)})
 		doc.cancel()
-		self.assertEqual([self.instructors(k) for k in ("O1", "O2", "O3", "O4")], [set(), {ins(ASSISTANT_A), ins(ASSOCIATE)}, set(), set()])
+		self.assertEqual(
+			[self.instructors(k) for k in ("O1", "O2", "O3", "O4")],
+			[set(), {ins(ASSISTANT_A), ins(ASSOCIATE)}, set(), set()],
+		)
 
 	def test_row_checks(self):
 		duplicate_pair = BASE + [("O1", PROFESSOR, 1, 0, 0)]
@@ -312,7 +363,9 @@ class TestSubmission(AllocationFixture):
 		first = self.allocation().insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.allocation().insert()
-		self.assertEqual(self.allocation(department=ECE, rows=[("O5", PROFESSOR, 2, 0, 0)]).insert().department, ECE)
+		self.assertEqual(
+			self.allocation(department=ECE, rows=[("O5", PROFESSOR, 2, 0, 0)]).insert().department, ECE
+		)
 		self.assertTrue(first.name)
 
 
@@ -334,11 +387,32 @@ class TestWorkloadBalanceReport(AllocationFixture):
 		}
 		for username, values in expected.items():
 			row = by_teacher[demo.employee_of(username)]
-			self.assertEqual((row["lecture"], row["tutorial"], row["practical"], row["total"], row["minimum"], row["maximum"], row["status"]), values)
+			self.assertEqual(
+				(
+					row["lecture"],
+					row["tutorial"],
+					row["practical"],
+					row["total"],
+					row["minimum"],
+					row["maximum"],
+					row["status"],
+				),
+				values,
+			)
 		total = next(r for r in rows if r.get("bold") and r["department"] == CSE)
-		self.assertEqual((total["lecture"], total["tutorial"], total["practical"], total["total"]), (16, 2, 7, 25))
+		self.assertEqual(
+			(total["lecture"], total["tutorial"], total["practical"], total["total"]), (16, 2, 7, 25)
+		)
 		figures = {s["label"]: s["value"] for s in summary}
-		self.assertEqual((figures["Teachers"], figures["Total Weekly Hours"], figures["Under Minimum"], figures["Over Maximum"]), (4, 25, 2, 1))
+		self.assertEqual(
+			(
+				figures["Teachers"],
+				figures["Total Weekly Hours"],
+				figures["Under Minimum"],
+				figures["Over Maximum"],
+			),
+			(4, 25, 2, 1),
+		)
 
 	def test_a_cancelled_allocation_drops_out(self):
 		doc = self.allocation().insert()
@@ -370,18 +444,25 @@ class TestFixRound1(AllocationFixture):
 			doc = self.allocation(over_limit_rows(), dean_override_reason="Visiting faculty left").insert()
 		finally:
 			frappe.set_user("Administrator")
-		self.assertTrue(request_approval(doc.doctype, doc.name))  # the Dean's override carries into the request
+		self.assertTrue(
+			request_approval(doc.doctype, doc.name)
+		)  # the Dean's override carries into the request
 		frappe.db.set_value("Course Allocation", doc.name, "dean_override_by", None)
 		frappe.db.delete("Approval Request", {"reference_name": doc.name})
 		with self.assertRaises(frappe.PermissionError):
 			request_approval(doc.doctype, doc.name)
 
 	def test_policy_is_seeded_idempotently_and_only_the_departments_hod_approves(self):
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": "Course Allocation - HOD"})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": "Course Allocation - HOD"}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": "Course Allocation"})
 		seed_course_allocation_policy()
 		seed_course_allocation_policy()
-		self.assertEqual(frappe.get_all("Approval Policy", {"document_type": "Course Allocation"}, pluck="name"), ["Course Allocation - HOD"])
+		self.assertEqual(
+			frappe.get_all("Approval Policy", {"document_type": "Course Allocation"}, pluck="name"),
+			["Course Allocation - HOD"],
+		)
 		doc = self.allocation().insert()
 		request = request_approval(doc.doctype, doc.name)
 		for user in (ECE_HOD, DEAN):  # the HOD of another department and a stranger
@@ -400,7 +481,12 @@ class TestFixRound1(AllocationFixture):
 		self.assertIn(demo.ARTS, str(caught.exception))
 
 	def test_offering_of_another_company_is_refused(self):
-		frappe.db.set_value("Program", frappe.db.get_value("Student Group", self.offerings["O1"], "program"), "oc_company", demo.ARTS)
+		frappe.db.set_value(
+			"Program",
+			frappe.db.get_value("Student Group", self.offerings["O1"], "program"),
+			"oc_company",
+			demo.ARTS,
+		)
 		with self.assertRaises(frappe.ValidationError):
 			self.allocation().insert()
 
@@ -412,7 +498,12 @@ class TestFixRound1(AllocationFixture):
 
 	def test_no_cadre_and_no_maximum_warn_instead_of_passing_silently(self):
 		frappe.db.set_value("Employee", demo.employee_of(ASSISTANT_A), "oc_cadre", None)
-		frappe.db.set_value("Faculty Norm Cadre", {"parent": ["like", "%"], "cadre": "Associate Professor", "min_hours_per_week": 5}, "max_hours_per_week", 0)
+		frappe.db.set_value(
+			"Faculty Norm Cadre",
+			{"parent": ["like", "%"], "cadre": "Associate Professor", "min_hours_per_week": 5},
+			"max_hours_per_week",
+			0,
+		)
 		frappe.clear_messages()
 		self.allocation().insert()
 		texts = [m["message"] for m in frappe.get_message_log()]
@@ -420,7 +511,10 @@ class TestFixRound1(AllocationFixture):
 		self.assertTrue([t for t in texts if demo.employee_of(ASSOCIATE) in t and "no maximum" in t])
 
 	def test_submit_rechecks_hours_other_allocations_added_since_the_draft(self):
-		mine = self.allocation([r for r in BASE if r[1] != ASSISTANT_B] + [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 2, 0, 0)]).insert()  # 8 hours
+		mine = self.allocation(
+			[r for r in BASE if r[1] != ASSISTANT_B]
+			+ [("O3", ASSISTANT_B, 3, 0, 3), ("O4", ASSISTANT_B, 2, 0, 0)]
+		).insert()  # 8 hours
 		ece = self.allocation([("O5", ASSISTANT_B, 4, 1, 4)], department=ECE).insert()  # 9 hours
 		self.submit_through_hod(ece)
 		with self.assertRaises(frappe.ValidationError):  # 9 + 8 = 17

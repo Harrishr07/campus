@@ -48,7 +48,13 @@ class TestInterleaving(UnitTestCase):
 			for courses in (2, 3, 4):
 				largest = size // 2
 				rest = size - largest
-				mix = {"A": largest, **{chr(66 + i): rest // (courses - 1) + (i < rest % (courses - 1)) for i in range(courses - 1)}}
+				mix = {
+					"A": largest,
+					**{
+						chr(66 + i): rest // (courses - 1) + (i < rest % (courses - 1))
+						for i in range(courses - 1)
+					},
+				}
 				plan = assign(hall_seats("H1", rows, columns), students(**mix))
 				self.assertEqual((len(occupied(plan)), conflicts(plan)), (size, 0), (rows, columns, mix))
 

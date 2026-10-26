@@ -32,7 +32,9 @@ ACADEMIC_OFFICE_ROLES = ("HOD", "Dean Academics", "Principal", "System Manager")
 def cutoff_hours():
 	"""The Campus Settings value; the field's default while the settings were never saved with it."""
 	fieldname = "attendance_correction_hours"
-	stored = frappe.db.sql("select value from `tabSingles` where doctype = %s and field = %s", (SETTINGS, fieldname))
+	stored = frappe.db.sql(
+		"select value from `tabSingles` where doctype = %s and field = %s", (SETTINGS, fieldname)
+	)
 	if stored and stored[0][0] not in (None, ""):
 		return cint(stored[0][0])
 	return cint(frappe.get_meta(SETTINGS).get_field(fieldname).default)
@@ -41,7 +43,12 @@ def cutoff_hours():
 def past_cutoff(course_schedule):
 	"""True when the cut-off after the period's first marking (any record, also a cancelled one) has passed."""
 	attendance = frappe.qb.DocType("Student Attendance")
-	first = frappe.qb.from_(attendance).select(Min(attendance.creation)).where(attendance.course_schedule == course_schedule).run()[0][0]
+	first = (
+		frappe.qb.from_(attendance)
+		.select(Min(attendance.creation))
+		.where(attendance.course_schedule == course_schedule)
+		.run()[0][0]
+	)
 	return bool(first) and now_datetime() > add_to_date(get_datetime(first), hours=cutoff_hours())
 
 
@@ -59,9 +66,9 @@ def refuse_late_changes(course_schedule, wanted):
 	changed = sorted(student for student, status in wanted.items() if marked.get(student) != status)
 	if changed:
 		frappe.throw(
-			_("The attendance of {0} was marked more than {1} hours ago. Raise an Attendance Correction Request for: {2}").format(
-				course_schedule, cutoff_hours(), ", ".join(changed)
-			)
+			_(
+				"The attendance of {0} was marked more than {1} hours ago. Raise an Attendance Correction Request for: {2}"
+			).format(course_schedule, cutoff_hours(), ", ".join(changed))
 		)
 
 
@@ -80,7 +87,9 @@ def guard_record(doc, method=None):
 
 def past_day_cutoff(date):
 	"""True when the cut-off after the end of `date` has passed."""
-	return bool(date) and now_datetime() > add_to_date(get_datetime(add_days(getdate(date), 1)), hours=cutoff_hours())
+	return bool(date) and now_datetime() > add_to_date(
+		get_datetime(add_days(getdate(date), 1)), hours=cutoff_hours()
+	)
 
 
 def backed_by_leave(doc):
@@ -99,7 +108,10 @@ def backed_by_leave(doc):
 		and leave.student == doc.student
 		and getdate(leave.from_date) <= getdate(doc.date) <= getdate(leave.to_date)
 		and leave.course_schedule in (None, "", doc.course_schedule)
-		and (leave.attendance_based_on != "Student Group" or leave.student_group in (None, "", doc.student_group))
+		and (
+			leave.attendance_based_on != "Student Group"
+			or leave.student_group in (None, "", doc.student_group)
+		)
 		and doc.status == ("Present" if leave.mark_as_present else "Leave")
 	)
 
@@ -115,9 +127,9 @@ def guard_cancel(doc, method=None):
 
 
 def late_change_message(doc):
-	return _("The attendance of {0} was first marked more than {1} hours ago; {2} changes only through an approved Attendance Correction Request.").format(
-		doc.course_schedule, cutoff_hours(), frappe.bold(doc.student)
-	)
+	return _(
+		"The attendance of {0} was first marked more than {1} hours ago; {2} changes only through an approved Attendance Correction Request."
+	).format(doc.course_schedule, cutoff_hours(), frappe.bold(doc.student))
 
 
 # ---- the request ----------------------------------------------------------------------------
@@ -125,19 +137,35 @@ def late_change_message(doc):
 
 def prepare(doc):
 	"""Fill what the server decides: the session, its company and department, and the marked record being corrected."""
-	session = frappe.db.get_value("Course Schedule", doc.course_schedule, ["student_group", "schedule_date", "course"], as_dict=True)
+	session = frappe.db.get_value(
+		"Course Schedule", doc.course_schedule, ["student_group", "schedule_date", "course"], as_dict=True
+	)
 	if not session:
 		frappe.throw(_("Session {0} does not exist.").format(frappe.bold(doc.course_schedule)))
-	group = frappe.db.get_value("Student Group", session.student_group, ["oc_company", "program", "course"], as_dict=True)
-	doc.student_group, doc.schedule_date, doc.company = session.student_group, session.schedule_date, group.oc_company
+	group = frappe.db.get_value(
+		"Student Group", session.student_group, ["oc_company", "program", "course"], as_dict=True
+	)
+	doc.student_group, doc.schedule_date, doc.company = (
+		session.student_group,
+		session.schedule_date,
+		group.oc_company,
+	)
 	doc.department = department_of(session.course or group.course, group.program)
 	doc.student_name = frappe.db.get_value("Student", doc.student, "student_name")
-	if not frappe.db.exists("Student Group Student", {"parent": session.student_group, "student": doc.student, "active": 1}):
-		frappe.throw(_("{0} is not an active student of {1}.").format(frappe.bold(doc.student), session.student_group))
+	if not frappe.db.exists(
+		"Student Group Student", {"parent": session.student_group, "student": doc.student, "active": 1}
+	):
+		frappe.throw(
+			_("{0} is not an active student of {1}.").format(frappe.bold(doc.student), session.student_group)
+		)
 	marked = marked_record(doc)
 	doc.attendance, doc.current_status = (marked.name, marked.status) if marked else (None, None)
 	if doc.new_status == doc.current_status:
-		frappe.throw(_("{0} is already marked {1}; there is nothing to correct.").format(frappe.bold(doc.student), _(doc.new_status)))
+		frappe.throw(
+			_("{0} is already marked {1}; there is nothing to correct.").format(
+				frappe.bold(doc.student), _(doc.new_status)
+			)
+		)
 
 
 def check_requester(doc):
@@ -151,9 +179,11 @@ def check_requester(doc):
 
 
 def department_of(course, program):
-	return (course and frappe.db.get_value("Course", course, "department")) or (
-		program and frappe.db.get_value("Program", program, "department")
-	) or None
+	return (
+		(course and frappe.db.get_value("Course", course, "department"))
+		or (program and frappe.db.get_value("Program", program, "department"))
+		or None
+	)
 
 
 def marked_record(doc, for_update=False):
@@ -166,7 +196,9 @@ def marked_record(doc, for_update=False):
 def before_request(doc):
 	"""A correction is never applied without approval: refuse the request when no policy matches."""
 	if not find_policy(doc):
-		frappe.throw(_("No Approval Policy is set for {0}; it cannot be applied without approval.").format(_(DOCTYPE)))
+		frappe.throw(
+			_("No Approval Policy is set for {0}; it cannot be applied without approval.").format(_(DOCTYPE))
+		)
 
 
 def apply(doc):
@@ -176,23 +208,37 @@ def apply(doc):
 	from campus.faculty.substitute_attendance import record
 
 	session = frappe.db.get_value(
-		"Course Schedule", doc.course_schedule, ["student_group", "schedule_date", "oc_session_state"], as_dict=True, for_update=True
+		"Course Schedule",
+		doc.course_schedule,
+		["student_group", "schedule_date", "oc_session_state"],
+		as_dict=True,
+		for_update=True,
 	)
 	session_states.check_held(doc.course_schedule, session.oc_session_state)
 	marked = marked_record(doc, for_update=True)
 	if (marked.name if marked else None) != (doc.attendance or None):
-		frappe.throw(_("The attendance of {0} in {1} changed after this request was raised; raise a new one.").format(doc.student, doc.course_schedule))
+		frappe.throw(
+			_("The attendance of {0} in {1} changed after this request was raised; raise a new one.").format(
+				doc.student, doc.course_schedule
+			)
+		)
 	before = frappe.get_doc("Student Attendance", marked.name) if marked else None
 	after = frappe.get_doc(
-		"Student Attendance", record(doc.student, doc.student_name, doc.new_status, doc.course_schedule, session, correction=True)
+		"Student Attendance",
+		record(doc.student, doc.student_name, doc.new_status, doc.course_schedule, session, correction=True),
 	)
 	version = None
 	if before:
 		version = frappe.new_doc("Version")
 		version.update_version_info(before, after)
 		version.insert(ignore_permissions=True)
-	after.add_comment("Info", _("Corrected from {0} by {1}").format(_(before.status) if before else _("not marked"), doc.name))
-	doc.db_set({"corrected_attendance": after.name, "version": version and version.name}, update_modified=False)
+	after.add_comment(
+		"Info",
+		_("Corrected from {0} by {1}").format(_(before.status) if before else _("not marked"), doc.name),
+	)
+	doc.db_set(
+		{"corrected_attendance": after.name, "version": version and version.name}, update_modified=False
+	)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -203,9 +249,17 @@ def request_correction(course_schedule, student, status, reason):
 
 	portal.period_grant(course_schedule, portal.require_faculty())
 	doc = frappe.get_doc(
-		{"doctype": DOCTYPE, "course_schedule": course_schedule, "student": student, "new_status": status, "reason": (reason or "").strip()}
+		{
+			"doctype": DOCTYPE,
+			"course_schedule": course_schedule,
+			"student": student,
+			"new_status": status,
+			"reason": (reason or "").strip(),
+		}
 	)
-	doc.flags.ignore_permissions = True  # the period grant above is the permission; the request still needs approval
+	doc.flags.ignore_permissions = (
+		True  # the period grant above is the permission; the request still needs approval
+	)
 	doc.insert()
 	start_request(doc)
 	return doc.name
@@ -216,7 +270,9 @@ def request_correction(course_schedule, student, status, reason):
 
 def seed_policy():
 	"""Corrections are approved by the HOD of the course's department, unless the college has its own policy."""
-	if frappe.db.exists("Approval Policy", {"document_type": DOCTYPE}) or not frappe.db.exists("Position", "HOD"):
+	if frappe.db.exists("Approval Policy", {"document_type": DOCTYPE}) or not frappe.db.exists(
+		"Position", "HOD"
+	):
 		return
 	frappe.get_doc(
 		{

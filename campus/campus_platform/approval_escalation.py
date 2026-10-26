@@ -17,8 +17,13 @@ def escalate_overdue():
 	overdue = frappe.get_all(
 		"Approval Request",
 		filters={
-			"status": rules.PENDING, "escalated": 0, "due_at": ["<", now_datetime()],
-			"reference_doctype": ["!=", "Student Grievance"],  # grievances move up a level in student_services.grievances
+			"status": rules.PENDING,
+			"escalated": 0,
+			"due_at": ["<", now_datetime()],
+			"reference_doctype": [
+				"!=",
+				"Student Grievance",
+			],  # grievances move up a level in student_services.grievances
 		},
 		pluck="name",
 	)

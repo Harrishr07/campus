@@ -50,14 +50,21 @@ SYSTEM_FIELDS = (
 	"name", "docstatus", "application_status", "oc_company", "oc_counselling_authority", "oc_allotment_key",
 	"oc_documents", "oc_qualifying_marks", "academic_year", "oc_eligibility_status", "oc_eligibility_reasons",
 )  # fmt: skip
-COUNTER = {"Created": "created_rows", "Updated": "updated_rows", "Unchanged": "unchanged_rows", "Error": "error_rows"}
+COUNTER = {
+	"Created": "created_rows",
+	"Updated": "updated_rows",
+	"Unchanged": "unchanged_rows",
+	"Error": "error_rows",
+}
 
 
 @frappe.whitelist()
 def start_import(name):
 	"""Parse the attached file and queue the bulk run that applies its rows; returns the Bulk Run name."""
 	frappe.has_permission("Allotment Import", "write", name, throw=True)
-	status = frappe.db.get_value("Allotment Import", name, "status", for_update=True)  # a double click waits here
+	status = frappe.db.get_value(
+		"Allotment Import", name, "status", for_update=True
+	)  # a double click waits here
 	if status != "Draft":
 		frappe.throw(_("This import has already been started."))
 	doc = frappe.get_doc("Allotment Import", name)
@@ -68,7 +75,9 @@ def start_import(name):
 	make_private(doc.import_file)
 	rows = parse_file(doc.import_file, content)
 	items = build_items(doc, mapping, rows)
-	doc.db_set({"total_rows": len(items), "status": "Processing", "file_sha256": hashlib.sha256(content).hexdigest()})
+	doc.db_set(
+		{"total_rows": len(items), "status": "Processing", "file_sha256": hashlib.sha256(content).hexdigest()}
+	)
 	run = run_bulk(RUN_TYPE, items, HANDLER, chunk=1, key=KEY, parameters={"import": name})
 	doc.db_set("bulk_run", run)
 	return run
@@ -76,8 +85,14 @@ def start_import(name):
 
 def column_mapping(authority):
 	"""{source column (lower case): target field} of the authority; both identity targets must be mapped."""
-	rows = frappe.get_all("Import Column Mapping", {"parent": authority}, ["source_column", "target_field"], limit=0)
-	mapping = {cstr(r.source_column).strip().lower(): r.target_field for r in rows if r.target_field not in AADHAAR_FIELDS}
+	rows = frappe.get_all(
+		"Import Column Mapping", {"parent": authority}, ["source_column", "target_field"], limit=0
+	)
+	mapping = {
+		cstr(r.source_column).strip().lower(): r.target_field
+		for r in rows
+		if r.target_field not in AADHAAR_FIELDS
+	}
 	for target in (ALLOTMENT_FIELD, PROGRAM_FIELD):
 		if target not in mapping.values():
 			frappe.throw(_("{0} has no column mapped to {1}.").format(authority, target))
@@ -114,7 +129,9 @@ def make_private(file_url, doctype="Allotment Import", fieldname="import_file"):
 		public_path = frappe.get_site_path("public", "files", file.file_url.split("/")[-1])
 		frappe.delete_doc("File", file.name, ignore_permissions=True, force=True)
 		if os.path.exists(public_path) and not frappe.db.exists("File", {"file_url": file.file_url}):
-			os.remove(public_path)  # content-hash dedupe can skip the disk deletion: never leave the data readable
+			os.remove(
+				public_path
+			)  # content-hash dedupe can skip the disk deletion: never leave the data readable
 		new_url = private.file_url
 	else:
 		file.is_private = 1
@@ -129,7 +146,11 @@ def discard_file(import_name, doctype="Allotment Import", fieldname="import_file
 	file_url = frappe.db.get_value(doctype, import_name, fieldname)
 	if not file_url:
 		return
-	for name in frappe.get_all("File", {"file_url": file_url, "attached_to_doctype": doctype, "attached_to_name": import_name}, pluck="name"):
+	for name in frappe.get_all(
+		"File",
+		{"file_url": file_url, "attached_to_doctype": doctype, "attached_to_name": import_name},
+		pluck="name",
+	):
 		frappe.delete_doc("File", name, ignore_permissions=True, force=True)
 	frappe.db.set_value(doctype, import_name, fieldname, None, update_modified=False)
 
@@ -233,7 +254,11 @@ def apply_row(item):
 	values = coerce_values(item["values"])
 	wanted = {**values, "program": item["program"], "academic_year": item["academic_year"]}
 	existing = frappe.db.get_value(
-		"Student Applicant", {"oc_allotment_key": key}, ["name", "oc_company", "application_status", *wanted], as_dict=True, for_update=True
+		"Student Applicant",
+		{"oc_allotment_key": key},
+		["name", "oc_company", "application_status", *wanted],
+		as_dict=True,
+		for_update=True,
 	)
 	if not existing:
 		return create_applicant(item, key, wanted)
@@ -267,7 +292,9 @@ def invalid_reason(item):
 	if len(applicant_key(item["authority"], item["allotment_no"])) > KEY_LENGTH:
 		return _("The allotment number is too long.")
 	if not item["program"]:
-		return _("Branch code {0} is not in the program mapping.").format(item["program_code"] or _("(blank)"))
+		return _("Branch code {0} is not in the program mapping.").format(
+			item["program_code"] or _("(blank)")
+		)
 
 
 def coerce_values(values):
@@ -307,18 +334,29 @@ def record(item, status, applicant, message):
 def bump(import_name, status):
 	"""Count one more row; once every file row has an outcome the import is complete and its matrices refresh."""
 	column = COUNTER[status]
-	frappe.db.sql(f"update `tabAllotment Import` set `{column}` = `{column}` + 1 where name = %s", import_name)
-	counts = frappe.db.get_value("Allotment Import", import_name, ["total_rows", *COUNTER.values()], as_dict=True)
+	frappe.db.sql(
+		f"update `tabAllotment Import` set `{column}` = `{column}` + 1 where name = %s", import_name
+	)
+	counts = frappe.db.get_value(
+		"Allotment Import", import_name, ["total_rows", *COUNTER.values()], as_dict=True
+	)
 	if sum(counts[c] or 0 for c in COUNTER.values()) < counts.total_rows:
 		return
-	frappe.db.set_value("Allotment Import", import_name, "status", "Completed with errors" if counts.error_rows else "Completed")
+	frappe.db.set_value(
+		"Allotment Import",
+		import_name,
+		"status",
+		"Completed with errors" if counts.error_rows else "Completed",
+	)
 	refresh_matrices(import_name)
 	discard_file(import_name)
 
 
 def refresh_matrices(import_name):
 	company, year = frappe.db.get_value("Allotment Import", import_name, ["company", "academic_year"])
-	for program in frappe.get_all("Allotment Program Mapping", {"parent": import_name}, pluck="program", distinct=True):
+	for program in frappe.get_all(
+		"Allotment Program Mapping", {"parent": import_name}, pluck="program", distinct=True
+	):
 		seat_matrix.refresh_allotted(company, program, year)
 
 
@@ -335,8 +373,12 @@ def reconcile(import_name):
 	status = frappe.db.get_value("Bulk Run", doc.bulk_run, "status")
 	if status not in ("Completed", "Completed with errors", "Failed"):
 		return
-	recorded = set(frappe.get_all("Allotment Import Row", {"allotment_import": import_name}, pluck="row_no", limit=0))
-	for failed in frappe.get_all("Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], limit=0):
+	recorded = set(
+		frappe.get_all("Allotment Import Row", {"allotment_import": import_name}, pluck="row_no", limit=0)
+	)
+	for failed in frappe.get_all(
+		"Bulk Run Row Error", {"parent": doc.bulk_run}, ["item_key", "error"], limit=0
+	):
 		record_missing(import_name, failed.item_key, failed.error, recorded)
 	if status == "Failed":
 		keys = frappe.get_all("Bulk Run Item Key", {"parent": doc.bulk_run}, pluck="item_key", limit=0)
@@ -364,4 +406,7 @@ def reconcile_finished_imports():
 			frappe.db.commit()
 		except Exception:  # noqa: BLE001
 			frappe.db.rollback()
-			frappe.log_error(title=f"Allotment import reconcile failed: {name}", message=frappe.get_traceback(with_context=False))
+			frappe.log_error(
+				title=f"Allotment import reconcile failed: {name}",
+				message=frappe.get_traceback(with_context=False),
+			)

@@ -16,7 +16,9 @@ PAIRINGS = {  # awarding body -> (document authority, document types)
 class DegreeAwardingAuthority(Document):
 	def validate(self):
 		if frappe.db.get_value("Program", self.program, "oc_company") != self.company:
-			frappe.throw(_("{0} is not a program of {1}.").format(frappe.bold(self.program), frappe.bold(self.company)))
+			frappe.throw(
+				_("{0} is not a program of {1}.").format(frappe.bold(self.program), frappe.bold(self.company))
+			)
 		authority, types = PAIRINGS[self.awarding_body]
 		if self.document_authority != authority or self.document_type not in types:
 			frappe.throw(
@@ -25,7 +27,12 @@ class DegreeAwardingAuthority(Document):
 				)
 			)
 		other = frappe.db.get_value(
-			"Degree Awarding Authority", {"company": self.company, "program": self.program, "name": ["!=", self.name]}
+			"Degree Awarding Authority",
+			{"company": self.company, "program": self.program, "name": ["!=", self.name]},
 		)
 		if other:
-			frappe.throw(_("{0} already sets the degree-awarding authority of {1}.").format(other, frappe.bold(self.program)))
+			frappe.throw(
+				_("{0} already sets the degree-awarding authority of {1}.").format(
+					other, frappe.bold(self.program)
+				)
+			)

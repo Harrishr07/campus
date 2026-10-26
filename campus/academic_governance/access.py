@@ -36,5 +36,7 @@ def permission_query(user=None, doctype="Body Meeting"):
 
 
 def has_permission(doc, ptype=None, user=None):
-	body = doc.get("body") or (doc.get("body_meeting") and frappe.db.get_value("Body Meeting", doc.body_meeting, "body"))
+	body = doc.get("body") or (
+		doc.get("body_meeting") and frappe.db.get_value("Body Meeting", doc.body_meeting, "body")
+	)
 	return not body or body not in hidden_bodies(user or frappe.session.user)

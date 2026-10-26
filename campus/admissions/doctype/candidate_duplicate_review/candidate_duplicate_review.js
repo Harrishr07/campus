@@ -9,10 +9,18 @@ frappe.ui.form.on("Candidate Duplicate Review", {
 				callback: () => frm.reload_doc(),
 			});
 		frm.add_custom_button(__("Link to Existing Record"), () => {
-			frappe.prompt({ fieldname: "note", fieldtype: "Small Text", label: __("Note") }, (v) => decide("Link", v.note), __("Link"));
+			frappe.prompt(
+				{ fieldname: "note", fieldtype: "Small Text", label: __("Note") },
+				(v) => decide("Link", v.note),
+				__("Link")
+			);
 		});
 		frm.add_custom_button(__("Not a Duplicate"), () => {
-			frappe.prompt({ fieldname: "note", fieldtype: "Small Text", label: __("Reason"), reqd: 1 }, (v) => decide("Not Duplicate", v.note), __("Not a Duplicate"));
+			frappe.prompt(
+				{ fieldname: "note", fieldtype: "Small Text", label: __("Reason"), reqd: 1 },
+				(v) => decide("Not Duplicate", v.note),
+				__("Not a Duplicate")
+			);
 		});
 	},
 });

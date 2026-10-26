@@ -27,7 +27,15 @@ def root_criterion(node):
 
 def owns(user, cycle, node):
 	return bool(
-		frappe.db.exists(OWNER_ROW, {"parent": cycle, "parenttype": "Accreditation Cycle", "user": user, "criterion": root_criterion(node)})
+		frappe.db.exists(
+			OWNER_ROW,
+			{
+				"parent": cycle,
+				"parenttype": "Accreditation Cycle",
+				"user": user,
+				"criterion": root_criterion(node),
+			},
+		)
 	)
 
 
@@ -49,13 +57,19 @@ def permission_query(user=None):
 	user = user or frappe.session.user
 	if has_role(user, READERS):
 		return ""
-	rows = frappe.get_all(OWNER_ROW, {"parenttype": "Accreditation Cycle", "user": user}, ["parent", "criterion"])
+	rows = frappe.get_all(
+		OWNER_ROW, {"parenttype": "Accreditation Cycle", "user": user}, ["parent", "criterion"]
+	)
 	conditions = []
 	for row in rows:
 		framework, code = frappe.db.get_value("Framework Node", row.criterion, ["framework", "code"])
-		nodes = frappe.get_all("Framework Node", {"framework": framework, "code": ["like", f"{code}.%"]}, pluck="name")
+		nodes = frappe.get_all(
+			"Framework Node", {"framework": framework, "code": ["like", f"{code}.%"]}, pluck="name"
+		)
 		if nodes:
-			conditions.append(f"(`tabMetric Value`.cycle = {frappe.db.escape(row.parent)} and `tabMetric Value`.node in ({', '.join(frappe.db.escape(n) for n in nodes)}))")
+			conditions.append(
+				f"(`tabMetric Value`.cycle = {frappe.db.escape(row.parent)} and `tabMetric Value`.node in ({', '.join(frappe.db.escape(n) for n in nodes)}))"
+			)
 	return f"({' or '.join(conditions)})" if conditions else "1=0"
 
 
@@ -64,7 +78,11 @@ def override_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if has_role(user, READERS):
 		return True
-	values = frappe.db.get_value("Metric Value", doc.metric_value, ["cycle", "node"], as_dict=True) if doc.metric_value else None
+	values = (
+		frappe.db.get_value("Metric Value", doc.metric_value, ["cycle", "node"], as_dict=True)
+		if doc.metric_value
+		else None
+	)
 	return bool(values and owns(user, values.cycle, values.node))
 
 

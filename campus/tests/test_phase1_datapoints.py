@@ -10,7 +10,19 @@ from campus.iqac import registry
 from campus.tests import test_scholarships as sch
 from campus.tests.finance_factories import make_enrolled_students, make_year_and_program
 from campus.tests.test_scholarships import ScholarshipFixture
-from campus.tests.test_seats_allotments import BC, COLLEGE, GOVT, MBC, MGMT, OC, OTHER_COLLEGE, SUPER, PROGRAM, SeatTestCase, year
+from campus.tests.test_seats_allotments import (
+	BC,
+	COLLEGE,
+	GOVT,
+	MBC,
+	MGMT,
+	OC,
+	OTHER_COLLEGE,
+	PROGRAM,
+	SUPER,
+	SeatTestCase,
+	year,
+)
 
 DEPARTMENT = "P1T27 Dept"
 COURSE = "P1T27 Course"
@@ -34,7 +46,10 @@ class TestPhase1DataPoints(SeatTestCase):
 		frappe.db.set_value("Student Category", MBC, "oc_is_reserved", 1)
 		frappe.db.set_value("Student Category", OC, "oc_is_reserved", 0)
 		self.matrix([(GOVT, OC, 10), (GOVT, BC, 4), (MGMT, BC, 2), (GOVT, MBC, 1), (SUPER, BC, 3)])
-		self.enrolments = [self.enrollment(*pair) for pair in ((GOVT, OC), (GOVT, BC), (GOVT, BC), (MGMT, BC), (SUPER, BC), (GOVT, MBC))]
+		self.enrolments = [
+			self.enrollment(*pair)
+			for pair in ((GOVT, OC), (GOVT, BC), (GOVT, BC), (MGMT, BC), (SUPER, BC), (GOVT, MBC))
+		]
 
 	def test_every_function_is_registered_with_the_company_period_department_signature(self):
 		keys = registry.data_point_keys()
@@ -48,7 +63,9 @@ class TestPhase1DataPoints(SeatTestCase):
 		counted = [r for r in report if not r["supernumerary"] and r["category"] in (BC, MBC)]
 		filled, earmarked = point("reserved_seats_filled"), point("seats_earmarked_reserved")
 		self.assertEqual(filled["value"], sum(r["filled"] for r in counted))
-		self.assertEqual(filled["value"], 4)  # hand count: BC x2 + BC management + MBC; OC and supernumerary excluded
+		self.assertEqual(
+			filled["value"], 4
+		)  # hand count: BC x2 + BC management + MBC; OC and supernumerary excluded
 		self.assertEqual(earmarked["value"], sum(r["sanctioned"] for r in counted))
 		self.assertEqual(earmarked["value"], 7)  # 4 + 2 + 1, supernumerary row excluded
 		names = {r["name"] for r in filled["records"]}
@@ -63,7 +80,9 @@ class TestPhase1DataPoints(SeatTestCase):
 
 	def test_total_students_and_department_filter(self):
 		self.assertEqual(point("total_students")["value"], 6)
-		self.assertEqual({r["name"] for r in point("total_students")["records"]}, {e.student for e in self.enrolments})
+		self.assertEqual(
+			{r["name"] for r in point("total_students")["records"]}, {e.student for e in self.enrolments}
+		)
 		department = make_department(DEPARTMENT, COLLEGE)
 		self.assertEqual(point("total_students", department=department)["value"], 0)
 		frappe.db.set_value("Program", PROGRAM, "department", department)
@@ -76,7 +95,9 @@ class TestPhase1DataPoints(SeatTestCase):
 		leaver, earlier, no_tc, cancelled, draft_cancel = (e.student for e in self.enrolments[:5])
 		self.leave(leaver, in_year, "TC-1")
 		self.leave(earlier, year_before, "TC-2")  # left the year before
-		self.leave(no_tc, in_year, None)  # date of leaving without a TC (an admission cancellation sets only the date)
+		self.leave(
+			no_tc, in_year, None
+		)  # date of leaving without a TC (an admission cancellation sets only the date)
 		self.leave(cancelled, in_year, "TC-3")
 		self.leave(draft_cancel, in_year, "TC-4")
 		self.cancellation(self.enrolments[3], docstatus=1)
@@ -90,7 +111,9 @@ class TestPhase1DataPoints(SeatTestCase):
 		self.assertEqual(point("outgoing_students", department=department)["value"], 2)
 
 	def leave(self, student, date, certificate):
-		frappe.db.set_value("Student", student, {"date_of_leaving": date, "leaving_certificate_number": certificate})
+		frappe.db.set_value(
+			"Student", student, {"date_of_leaving": date, "leaving_certificate_number": certificate}
+		)
 
 	def cancellation(self, enrolment, docstatus):
 		"""An Admission Cancellation row of the given docstatus (its refund workflow is T16's and not exercised here)."""
@@ -100,7 +123,9 @@ class TestPhase1DataPoints(SeatTestCase):
 		doc.db_insert()
 
 	def test_programmes_offered_counts_programs_with_a_seat_matrix(self):
-		self.assertEqual(point("programmes_offered"), {"value": 1, "records": [{"doctype": "Program", "name": PROGRAM}]})
+		self.assertEqual(
+			point("programmes_offered"), {"value": 1, "records": [{"doctype": "Program", "name": PROGRAM}]}
+		)
 		self.assertEqual(point("programmes_offered", OTHER_COLLEGE)["value"], 0)
 
 	def test_courses_offered_counts_distinct_courses_of_course_groups(self):
@@ -108,7 +133,9 @@ class TestPhase1DataPoints(SeatTestCase):
 			frappe.get_doc({"doctype": "Student Group", "student_group_name": f"P1T27 Group {index}",
 				"group_based_on": "Course", "program": PROGRAM, "course": self.course(), "academic_year": year(),
 				"oc_company": COLLEGE}).insert()  # fmt: skip
-		self.assertEqual(point("courses_offered"), {"value": 1, "records": [{"doctype": "Course", "name": COURSE}]})
+		self.assertEqual(
+			point("courses_offered"), {"value": 1, "records": [{"doctype": "Course", "name": COURSE}]}
+		)
 
 	def course(self):
 		if not frappe.db.exists("Course", COURSE):
@@ -119,7 +146,11 @@ class TestPhase1DataPoints(SeatTestCase):
 		students = [e.student for e in self.enrolments]
 		self.assertEqual(point("mentor_ratio")["value"], 0)  # no mentor assigned yet
 		active_a, active_b, left = (self.employee(f"P1T27 Mentor {n}") for n in "ABC")
-		frappe.db.set_value("Employee", left, {"status": "Left", "relieving_date": add_days(self.enrolments[0].enrollment_date, 1)})
+		frappe.db.set_value(
+			"Employee",
+			left,
+			{"status": "Left", "relieving_date": add_days(self.enrolments[0].enrollment_date, 1)},
+		)
 		for student, mentor in zip(students[:4], (active_a, active_a, active_b, left), strict=True):
 			frappe.db.set_value("Student", student, "oc_mentor", mentor)
 		result = point("mentor_ratio")
@@ -144,9 +175,19 @@ class TestPhase1DataPoints(SeatTestCase):
 		self.assertEqual(point("students_admitted", department=department)["value"], 6)
 
 	def test_scholarship_beneficiaries_reuse_the_aqar_511_512_functions(self):
-		self.assertIs(registry.REGISTRY["scholarship_beneficiaries_govt"], registry.REGISTRY["scholarship_govt_students"])
-		self.assertIs(registry.REGISTRY["scholarship_beneficiaries_institution"], registry.REGISTRY["scholarship_inst_students"])
-		rows = [frappe._dict(name="SA-1", student="S1"), frappe._dict(name="SA-2", student="S1"), frappe._dict(name="SA-3", student="S2")]
+		self.assertIs(
+			registry.REGISTRY["scholarship_beneficiaries_govt"],
+			registry.REGISTRY["scholarship_govt_students"],
+		)
+		self.assertIs(
+			registry.REGISTRY["scholarship_beneficiaries_institution"],
+			registry.REGISTRY["scholarship_inst_students"],
+		)
+		rows = [
+			frappe._dict(name="SA-1", student="S1"),
+			frappe._dict(name="SA-2", student="S1"),
+			frappe._dict(name="SA-3", student="S2"),
+		]
 		with patch("campus.iqac.datapoints.scholarship_beneficiaries", return_value=rows) as report:
 			result = point("scholarship_beneficiaries_govt")
 		report.assert_called_once_with(COLLEGE, year(), "Government")
@@ -173,6 +214,8 @@ class TestScholarshipDepartment(ScholarshipFixture):
 
 		self.assertEqual(students("scholarship_beneficiaries_govt")[0], 2)
 		self.assertEqual(students("scholarship_beneficiaries_govt", department), (1, [inside.name]))
-		self.assertEqual(students("scholarship_beneficiaries_institution", department), (1, [institutional.name]))
+		self.assertEqual(
+			students("scholarship_beneficiaries_institution", department), (1, [institutional.name])
+		)
 		empty = make_department("P1T27 Empty Dept", sch.COLLEGE)
 		self.assertEqual(students("scholarship_beneficiaries_govt", empty), (0, []))

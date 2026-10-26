@@ -21,7 +21,11 @@ from campus.research import consultancy, consultancy_rules
 from campus.research.report.consultancy_revenue import consultancy_revenue
 from campus.research.setup import seed_research
 from campus.tests.factories import make_company, make_user
-from campus.tests.finance_factories import ensure_fiscal_years, ensure_selling_setup, make_company_with_accounts
+from campus.tests.finance_factories import (
+	ensure_fiscal_years,
+	ensure_selling_setup,
+	make_company_with_accounts,
+)
 from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR = "Consultancy Test College", "CONT"
@@ -53,19 +57,29 @@ class TestShareRules(UnitTestCase):
 
 	def test_a_pool_needs_members_and_an_empty_pool_has_none(self):
 		with self.assertRaises(frappe.ValidationError):
-			consultancy_rules.check_team([frappe._dict(employee="E1", category="Faculty", share_percent=100)], {"Faculty": 40, "Staff": 10})
+			consultancy_rules.check_team(
+				[frappe._dict(employee="E1", category="Faculty", share_percent=100)],
+				{"Faculty": 40, "Staff": 10},
+			)
 		with self.assertRaises(frappe.ValidationError):
-			consultancy_rules.check_team([frappe._dict(employee="E1", category="Staff", share_percent=100)], {"Faculty": 0, "Staff": 0})
+			consultancy_rules.check_team(
+				[frappe._dict(employee="E1", category="Staff", share_percent=100)], {"Faculty": 0, "Staff": 0}
+			)
 
 	def test_blank_shares_are_equal_and_given_shares_total_100(self):
 		team = [frappe._dict(employee=e, category="Faculty") for e in ("E1", "E2", "E3")]
 		consultancy_rules.check_team(team, {"Faculty": 30})
 		self.assertEqual([m.share_percent for m in team], [33.33, 33.33, 33.34])
 		with self.assertRaises(frappe.ValidationError):
-			consultancy_rules.check_team([frappe._dict(employee="E1", category="Faculty", share_percent=60)], {"Faculty": 30})
+			consultancy_rules.check_team(
+				[frappe._dict(employee="E1", category="Faculty", share_percent=60)], {"Faculty": 30}
+			)
 
 	def test_an_employee_is_listed_once(self):
-		team = [frappe._dict(employee="E1", category="Faculty", share_percent=100), frappe._dict(employee="E1", category="Staff", share_percent=100)]
+		team = [
+			frappe._dict(employee="E1", category="Faculty", share_percent=100),
+			frappe._dict(employee="E1", category="Staff", share_percent=100),
+		]
 		with self.assertRaises(frappe.ValidationError):
 			consultancy_rules.check_team(team, {"Faculty": 40, "Staff": 10})
 
@@ -74,7 +88,9 @@ class TestShareRules(UnitTestCase):
 			frappe._dict(category="Faculty", share_percent=33.33), frappe._dict(category="Staff", share_percent=100),
 			frappe._dict(category="Faculty", share_percent=66.67),
 		]  # fmt: skip
-		self.assertEqual(consultancy_rules.member_amounts(team, {"Faculty": 100, "Staff": 7}), [33.33, 7, 66.67])
+		self.assertEqual(
+			consultancy_rules.member_amounts(team, {"Faculty": 100, "Staff": 7}), [33.33, 7, 66.67]
+		)
 
 
 class ConsultancyFixture(CampusTestCase):
@@ -100,7 +116,9 @@ class ConsultancyFixture(CampusTestCase):
 		seed_research()
 		seed_mandatory_approval()
 		if not frappe.db.exists("GST HSN Code", SAC):
-			frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": SAC, "description": "Management consulting"}).insert()
+			frappe.get_doc(
+				{"doctype": "GST HSN Code", "hsn_code": SAC, "description": "Management consulting"}
+			).insert()
 		if not frappe.db.exists("Item", ITEM):
 			frappe.get_doc(
 				{"doctype": "Item", "item_code": ITEM, "item_group": frappe.db.get_value("Item Group", {"is_group": 0}, "name"), "stock_uom": "Nos", "is_stock_item": 0,
@@ -132,12 +150,21 @@ class ConsultancyFixture(CampusTestCase):
 		return frappe._dict(name=name, address=self.address("Customer", name, gstin, state, pincode))
 
 	def employee(self, first_name, company=COLLEGE):
-		return frappe.get_doc(
-			{
-				"doctype": "Employee", "first_name": first_name, "last_name": frappe.generate_hash(length=6), "gender": "Male",
-				"date_of_birth": "1980-01-01", "date_of_joining": "2010-01-01", "company": company,
-			}  # fmt: skip
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Employee",
+					"first_name": first_name,
+					"last_name": frappe.generate_hash(length=6),
+					"gender": "Male",
+					"date_of_birth": "1980-01-01",
+					"date_of_joining": "2010-01-01",
+					"company": company,
+				}  # fmt: skip
+			)
+			.insert()
+			.name
+		)
 
 	def salary_structures(self):
 		"""Basic = base 20,000 for each team member, and a holiday list for the slips."""
@@ -163,16 +190,27 @@ class ConsultancyFixture(CampusTestCase):
 		client = client or self.local_client
 		return frappe.get_doc(
 			{
-				"doctype": "Consultancy Project", "title": "Water audit", "company": COLLEGE, "client": client.name,
-				"client_address": client.address, "principal_consultant": self.faculty1, "service_item": ITEM,
-				"status": "Agreed", "agreement_date": today(), "agreement_value": 100000, "estimate_amount": 100000,
-				"institution_percent": 50, "faculty_percent": 40, "staff_percent": 10,
+				"doctype": "Consultancy Project",
+				"title": "Water audit",
+				"company": COLLEGE,
+				"client": client.name,
+				"client_address": client.address,
+				"principal_consultant": self.faculty1,
+				"service_item": ITEM,
+				"status": "Agreed",
+				"agreement_date": today(),
+				"agreement_value": 100000,
+				"estimate_amount": 100000,
+				"institution_percent": 50,
+				"faculty_percent": 40,
+				"staff_percent": 10,
 				"team": [
 					{"employee": self.faculty1, "category": "Faculty", "share_percent": 60},
 					{"employee": self.faculty2, "category": "Faculty", "share_percent": 40},
 					{"employee": self.staff, "category": "Staff"},
 				],
-				"deliverables": [{"deliverable": "Audit report", "due_date": today()}], **values,
+				"deliverables": [{"deliverable": "Audit report", "due_date": today()}],
+				**values,
 			}  # fmt: skip
 		).insert()
 
@@ -183,7 +221,9 @@ class ConsultancyFixture(CampusTestCase):
 		return invoice
 
 	def pay(self, invoice, amount=None):
-		entry = get_payment_entry("Sales Invoice", invoice.name, party_amount=amount, bank_account=f"Cash - {ABBR}")
+		entry = get_payment_entry(
+			"Sales Invoice", invoice.name, party_amount=amount, bank_account=f"Cash - {ABBR}"
+		)
 		entry.reference_no, entry.reference_date = "UTR-CON-1", today()
 		entry.insert()
 		entry.submit()
@@ -191,7 +231,9 @@ class ConsultancyFixture(CampusTestCase):
 
 	def share(self, project, invoice, submit=True):
 		"""A share; submitted means approved by Accounts, then the Principal."""
-		share = frappe.get_doc({"doctype": SHARE, "consultancy_project": project.name, "sales_invoice": invoice.name}).insert()
+		share = frappe.get_doc(
+			{"doctype": SHARE, "consultancy_project": project.name, "sales_invoice": invoice.name}
+		).insert()
 		if submit:
 			request = request_approval(SHARE, share.name)
 			for approver in (ACCOUNTS, PRINCIPAL):
@@ -223,7 +265,9 @@ class TestInvoiceGST(ConsultancyFixture):
 	def test_a_client_in_the_colleges_state_is_charged_cgst_and_sgst(self):
 		invoice = self.invoice(self.project())
 		self.assertEqual(invoice.place_of_supply, "24-Gujarat")
-		self.assertEqual(self.taxes(invoice), {f"Output Tax CGST - {ABBR}": 900, f"Output Tax SGST - {ABBR}": 900})
+		self.assertEqual(
+			self.taxes(invoice), {f"Output Tax CGST - {ABBR}": 900, f"Output Tax SGST - {ABBR}": 900}
+		)
 		self.assertEqual((invoice.net_total, invoice.grand_total), (10000, 11800))
 		self.assertEqual(invoice.items[0].gst_hsn_code, SAC)
 
@@ -238,7 +282,10 @@ class TestInvoiceGST(ConsultancyFixture):
 		invoice.taxes_and_charges = f"Output GST In-state - {ABBR}"
 		invoice.set("taxes", [])
 		invoice.append_taxes_from_master("Sales Taxes and Charges Template")
-		self.assertEqual({row.account_head for row in invoice.taxes}, {f"Output Tax CGST - {ABBR}", f"Output Tax SGST - {ABBR}"})
+		self.assertEqual(
+			{row.account_head for row in invoice.taxes},
+			{f"Output Tax CGST - {ABBR}", f"Output Tax SGST - {ABBR}"},
+		)
 		with self.assertRaises(frappe.ValidationError) as caught:
 			invoice.save()
 		self.assertIn("Inter-State", str(caught.exception).title())
@@ -247,7 +294,13 @@ class TestInvoiceGST(ConsultancyFixture):
 		project = self.project()
 		invoice = self.invoice(project, submit=False)
 		self.assertEqual(
-			(invoice.docstatus, invoice.company, invoice.customer, invoice.oc_consultancy_project, invoice.items[0].item_code),
+			(
+				invoice.docstatus,
+				invoice.company,
+				invoice.customer,
+				invoice.oc_consultancy_project,
+				invoice.items[0].item_code,
+			),
 			(0, COLLEGE, self.local_client.name, project.name, ITEM),
 		)
 
@@ -307,14 +360,23 @@ class TestRevenueShare(ConsultancyFixture):
 		self.pay(invoice)
 		share = self.share(project, invoice)
 		self.assertEqual(
-			(share.taxable_amount, share.institution_amount, share.faculty_amount, share.staff_amount), (10000, 5000, 4000, 1000)
+			(share.taxable_amount, share.institution_amount, share.faculty_amount, share.staff_amount),
+			(10000, 5000, 4000, 1000),
 		)
 		amounts = {m.employee: m.amount for m in share.members}
 		self.assertEqual(amounts, {self.faculty1: 2400, self.faculty2: 1600, self.staff: 1000})
 		for member in share.members:
-			additional = frappe.get_doc("Additional Salary", frappe.db.get_value(member.doctype, member.name, "additional_salary"))
+			additional = frappe.get_doc(
+				"Additional Salary", frappe.db.get_value(member.doctype, member.name, "additional_salary")
+			)
 			self.assertEqual(
-				(additional.docstatus, additional.employee, additional.salary_component, additional.amount, str(additional.payroll_date)),
+				(
+					additional.docstatus,
+					additional.employee,
+					additional.salary_component,
+					additional.amount,
+					str(additional.payroll_date),
+				),
 				(1, member.employee, consultancy.SALARY_COMPONENT, member.amount, today()),
 			)
 			self.assertEqual((additional.ref_doctype, additional.ref_docname), (SHARE, share.name))
@@ -322,7 +384,9 @@ class TestRevenueShare(ConsultancyFixture):
 			{"doctype": "Salary Slip", "employee": self.faculty1, "start_date": get_first_day(today()), "end_date": get_last_day(today()),
 			 "posting_date": get_last_day(today()), "payroll_frequency": "Monthly"}
 		).insert()  # fmt: skip
-		self.assertEqual({r.salary_component: r.amount for r in slip.earnings}.get(consultancy.SALARY_COMPONENT), 2400)
+		self.assertEqual(
+			{r.salary_component: r.amount for r in slip.earnings}.get(consultancy.SALARY_COMPONENT), 2400
+		)
 
 	def test_an_invoice_is_shared_once(self):
 		self.salary_structures()
@@ -340,7 +404,9 @@ class TestRevenueShare(ConsultancyFixture):
 		share = self.share(project, invoice, submit=False)
 		request = request_approval(SHARE, share.name)
 		self.act_as(ACCOUNTS, approve, request)
-		frappe.db.set_value("Sales Invoice", invoice.name, "outstanding_amount", 100)  # as a payment taken off meanwhile
+		frappe.db.set_value(
+			"Sales Invoice", invoice.name, "outstanding_amount", 100
+		)  # as a payment taken off meanwhile
 		with self.assertRaises(frappe.ValidationError):
 			self.act_as(PRINCIPAL, approve, request)
 		self.assertEqual(frappe.db.get_value(SHARE, share.name, "docstatus"), 0)
@@ -383,12 +449,19 @@ class TestRevenueShare(ConsultancyFixture):
 		share.reload()
 		share.cancel()
 		for member in share.members:
-			self.assertEqual(frappe.db.get_value("Additional Salary", member.additional_salary, "docstatus"), 2)
+			self.assertEqual(
+				frappe.db.get_value("Additional Salary", member.additional_salary, "docstatus"), 2
+			)
 		frappe.get_doc("Payment Entry", payment.name).cancel()
 
 	def test_the_team_is_paid_by_its_own_college(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.project(team=[{"employee": self.employee("Out", OTHER), "category": "Faculty"}, {"employee": self.staff, "category": "Staff"}])
+			self.project(
+				team=[
+					{"employee": self.employee("Out", OTHER), "category": "Faculty"},
+					{"employee": self.staff, "category": "Staff"},
+				]
+			)
 
 	def test_the_share_is_approved_by_accounts_then_the_principal(self):
 		self.salary_structures()
@@ -487,7 +560,9 @@ class TestRevenueShare(ConsultancyFixture):
 	def journal(self, invoice, account):
 		"""A submitted Journal Entry settling the invoice's total against `account`."""
 		if not frappe.db.exists("Party Type", "Customer"):  # bare test site: no ERPNext setup data
-			frappe.get_doc({"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}).insert()
+			frappe.get_doc(
+				{"doctype": "Party Type", "party_type": "Customer", "account_type": "Receivable"}
+			).insert()
 		frappe.db.set_value("Party Type", "Customer", "account_type", "Receivable")
 		entry = frappe.get_doc(
 			{
@@ -536,7 +611,9 @@ class TestConsultancyRevenue(ConsultancyFixture):
 
 	def test_received_is_the_years_receipts_before_gst(self):
 		point = registry.data_point("consultancy_received", COLLEGE, YEAR)
-		self.assertEqual(point["value"], 10000)  # 11,800 received on a 10,000 + GST invoice; the unpaid ones add nothing
+		self.assertEqual(
+			point["value"], 10000
+		)  # 11,800 received on a 10,000 + GST invoice; the unpaid ones add nothing
 		self.assertEqual(len(point["records"]), 1)
 
 	def test_report_shows_gst_received_and_shares_by_project(self):
@@ -544,12 +621,28 @@ class TestConsultancyRevenue(ConsultancyFixture):
 		by_project = {row.consultancy_project: row for row in rows}
 		first, second = by_project[self.first.name], by_project[self.second.name]
 		self.assertEqual(
-			(first.invoices, first.taxable_value, first.gst, first.received, first.institution_share, first.faculty_share, first.staff_share),
+			(
+				first.invoices,
+				first.taxable_value,
+				first.gst,
+				first.received,
+				first.institution_share,
+				first.faculty_share,
+				first.staff_share,
+			),
 			(2, 10000, 1800, 11800, 5000, 4000, 1000),
 		)
-		self.assertEqual(first.paid_not_shared, 0)  # the credited invoice has outstanding nil but was never received
-		self.pay(frappe.get_doc("Sales Invoice", {"oc_consultancy_project": self.second.name, "docstatus": 1}))
+		self.assertEqual(
+			first.paid_not_shared, 0
+		)  # the credited invoice has outstanding nil but was never received
+		self.pay(
+			frappe.get_doc("Sales Invoice", {"oc_consultancy_project": self.second.name, "docstatus": 1})
+		)
 		rows = consultancy_revenue.execute({"company": COLLEGE, "academic_year": YEAR})[1]
-		self.assertEqual(next(r for r in rows if r.consultancy_project == self.second.name).paid_not_shared, 1)
-		self.assertEqual((second.taxable_value, second.gst, second.received, second.faculty_share), (20000, 3600, 0, 0))
+		self.assertEqual(
+			next(r for r in rows if r.consultancy_project == self.second.name).paid_not_shared, 1
+		)
+		self.assertEqual(
+			(second.taxable_value, second.gst, second.received, second.faculty_share), (20000, 3600, 0, 0)
+		)
 		self.assertEqual(consultancy_revenue.execute({"company": OTHER})[1], [])

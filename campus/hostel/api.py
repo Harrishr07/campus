@@ -25,7 +25,9 @@ def validate_allotment(hostel, student):
 	if not details:
 		frappe.throw(_("Student {0} does not exist").format(student))
 	if not gender_allowed(row.gender, details.gender):
-		frappe.throw(_("{0} cannot take a student of gender {1}").format(hostel, details.gender or _("not set")))
+		frappe.throw(
+			_("{0} cannot take a student of gender {1}").format(hostel, details.gender or _("not set"))
+		)
 	if not details.oc_company:
 		frappe.throw(_("Student {0} has no college set").format(student))
 	if details.oc_company not in served_colleges(hostel):
@@ -34,7 +36,9 @@ def validate_allotment(hostel, student):
 
 def fee_rate(company, academic_year, room_type):
 	"""{fee category: amount} for the room type in the academic year, or {} when no rate is set."""
-	name = frappe.db.exists("Hostel Fee Rate", {"company": company, "academic_year": academic_year, "room_type": room_type})
+	name = frappe.db.exists(
+		"Hostel Fee Rate", {"company": company, "academic_year": academic_year, "room_type": room_type}
+	)
 	if not name:
 		return {}
 	rows = frappe.get_all("Hostel Fee Rate Item", filters={"parent": name}, fields=["fee_category", "amount"])
@@ -48,5 +52,7 @@ def add_beds(room, count):
 	start = max((int(n) for n in existing if str(n).isdigit()), default=0)
 	beds = []
 	for number in range(start + 1, start + 1 + int(count)):
-		beds.append(frappe.get_doc({"doctype": "Hostel Bed", "room": room, "bed_no": str(number)}).insert().name)
+		beds.append(
+			frappe.get_doc({"doctype": "Hostel Bed", "room": room, "bed_no": str(number)}).insert().name
+		)
 	return beds

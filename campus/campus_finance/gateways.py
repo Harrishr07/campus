@@ -72,7 +72,9 @@ class RazorpayAdapter(GatewayAdapter):
 		request = (entity.get("notes") or {}).get("payment_request")
 		if not request or not entity.get("id"):
 			return None
-		return PaymentEvent(request, entity["id"], flt(entity.get("amount")) / 100, entity.get("currency") or "")
+		return PaymentEvent(
+			request, entity["id"], flt(entity.get("amount")) / 100, entity.get("currency") or ""
+		)
 
 
 ADAPTERS = {"Razorpay": RazorpayAdapter()}
@@ -91,9 +93,14 @@ def adapter_for(payment_gateway):
 def gateway_account(company):
 	"""The company's default Payment Gateway Account (never another company's), with a supported gateway."""
 	account = frappe.db.get_value(
-		"Payment Gateway Account", {"company": company, "is_default": 1}, ["name", "payment_gateway", "payment_account", "payment_channel", "message"], as_dict=True
+		"Payment Gateway Account",
+		{"company": company, "is_default": 1},
+		["name", "payment_gateway", "payment_account", "payment_channel", "message"],
+		as_dict=True,
 	)
-	if not account or account.payment_channel == "Phone":  # a phone request is paid on the payer's phone, not by a link
+	if (
+		not account or account.payment_channel == "Phone"
+	):  # a phone request is paid on the payer's phone, not by a link
 		frappe.throw(_("{0} has no payment gateway set up.").format(company))
 	adapter_for(account.payment_gateway)
 	return account
@@ -115,15 +122,37 @@ def fee_payment_link(invoice):
 	current outstanding amount; a stale one is cancelled first."""
 	user = frappe.session.user
 	found = frappe.db.get_value(
-		"Sales Invoice", invoice, ["name", "company", "customer", "student", "docstatus", "is_return", "currency", "party_account_currency"], as_dict=True
+		"Sales Invoice",
+		invoice,
+		[
+			"name",
+			"company",
+			"customer",
+			"student",
+			"docstatus",
+			"is_return",
+			"currency",
+			"party_account_currency",
+		],
+		as_dict=True,
 	)
-	if user == "Guest" or not found or found.docstatus != 1 or found.is_return or not owns_invoice(user, found):
+	if (
+		user == "Guest"
+		or not found
+		or found.docstatus != 1
+		or found.is_return
+		or not owns_invoice(user, found)
+	):
 		frappe.throw(_("You cannot pay this invoice."), frappe.PermissionError)
-	outstanding = flt(frappe.db.get_value("Sales Invoice", invoice, "outstanding_amount", for_update=True), 2)  # serialise the requests
+	outstanding = flt(
+		frappe.db.get_value("Sales Invoice", invoice, "outstanding_amount", for_update=True), 2
+	)  # serialise the requests
 	if outstanding <= 0:
 		frappe.throw(_("Nothing is due on {0}.").format(invoice))
 	account = gateway_account(found.company)
-	request = open_request(invoice, account.name, outstanding) or new_request(found, account, outstanding, user)
+	request = open_request(invoice, account.name, outstanding) or new_request(
+		found, account, outstanding, user
+	)
 	if not request.payment_url:
 		frappe.throw(_("The payment gateway is not available. Try again later."))
 	return request.payment_url
@@ -133,10 +162,22 @@ def open_request(invoice, account, outstanding):
 	"""The invoice's open Payment Request if it is for `outstanding` through `account`; any other open one is cancelled."""
 	chosen = None
 	for name in frappe.get_all(
-		"Payment Request", {"reference_doctype": "Sales Invoice", "reference_name": invoice, "docstatus": 1, "status": ["in", OPEN_STATUSES]}, pluck="name"
+		"Payment Request",
+		{
+			"reference_doctype": "Sales Invoice",
+			"reference_name": invoice,
+			"docstatus": 1,
+			"status": ["in", OPEN_STATUSES],
+		},
+		pluck="name",
 	):
 		request = frappe.get_doc("Payment Request", name, for_update=True)
-		if not chosen and request.payment_gateway_account == account and flt(request.outstanding_amount, 2) == outstanding and request.payment_url:
+		if (
+			not chosen
+			and request.payment_gateway_account == account
+			and flt(request.outstanding_amount, 2) == outstanding
+			and request.payment_url
+		):
 			chosen = request
 			continue
 		request.flags.ignore_permissions = True
@@ -179,7 +220,17 @@ def webhook(gateway_account):
 		frappe.throw(_("Invalid payment notification."), BadPayload)
 	if not event:
 		return {"status": "ignored"}
-	frappe.enqueue(JOB, queue="short", enqueue_after_commit=True, now=frappe.in_test, account=account, request=event.payment_request, amount=event.amount, currency=event.currency, payment_id=event.gateway_payment_id)
+	frappe.enqueue(
+		JOB,
+		queue="short",
+		enqueue_after_commit=True,
+		now=frappe.in_test,
+		account=account,
+		request=event.payment_request,
+		amount=event.amount,
+		currency=event.currency,
+		payment_id=event.gateway_payment_id,
+	)
 	return {"status": "accepted"}
 
 
@@ -187,7 +238,9 @@ def verified_account(gateway_account, body):
 	"""(account name, adapter) when the request body is signed with the account's secret, else PermissionError.
 
 	The secret lives only in this frame, which is gone before any work is done, so no later error report can carry it."""
-	account = frappe.db.get_value("Payment Gateway Account", gateway_account, ["name", "payment_gateway"], as_dict=True)
+	account = frappe.db.get_value(
+		"Payment Gateway Account", gateway_account, ["name", "payment_gateway"], as_dict=True
+	)
 	adapter = ADAPTERS.get(account and account.payment_gateway)
 	secret = (frappe.conf.get("campus_gateway_secrets") or {}).get(gateway_account)
 	signature = frappe.get_request_header(adapter.signature_header) if adapter else None
@@ -215,15 +268,24 @@ def settle(account, event):
 	A capture that cannot be settled (unknown or cancelled request, another account's, a second distinct payment) is
 	money taken that no invoice shows: it goes to the Error Log, with a plain message, for accounts to resolve."""
 	found = frappe.db.get_value(
-		"Payment Request", event.payment_request, ["payment_gateway_account", "docstatus", "status", "grand_total", "currency"], for_update=True, as_dict=True
+		"Payment Request",
+		event.payment_request,
+		["payment_gateway_account", "docstatus", "status", "grand_total", "currency"],
+		for_update=True,
+		as_dict=True,
 	)  # the lock: a repeated delivery waits here and then sees Paid
 	if not found or found.docstatus != 1 or found.payment_gateway_account != account:
 		return unsettled(event, _("no open Payment Request for this account"))
 	if found.status == "Paid":
-		if frappe.db.sql("select name from `tabComment` where reference_doctype = 'Payment Request' and reference_name = %s and content = %s for update", (event.payment_request, settled_comment(event)["content"])):
+		if frappe.db.sql(
+			"select name from `tabComment` where reference_doctype = 'Payment Request' and reference_name = %s and content = %s for update",
+			(event.payment_request, settled_comment(event)["content"]),
+		):
 			return {"status": "duplicate"}
 		return unsettled(event, _("the Payment Request is already paid by another payment"))
-	if event.currency != found.currency:  # also a payment that names no currency; logged, not raised, so the log survives
+	if (
+		event.currency != found.currency
+	):  # also a payment that names no currency; logged, not raised, so the log survives
 		return unsettled(event, _("paid in {0}, asked in {1}").format(event.currency or "?", found.currency))
 	if abs(flt(found.grand_total) - event.amount) > 0.005:
 		return unsettled(event, _("paid {0}, asked {1}").format(event.amount, found.grand_total))
@@ -236,7 +298,9 @@ def settle(account, event):
 
 def settled_comment(event):
 	return {
-		"reference_doctype": "Payment Request", "reference_name": event.payment_request, "comment_type": "Info",
+		"reference_doctype": "Payment Request",
+		"reference_name": event.payment_request,
+		"comment_type": "Info",
 		"content": f"Gateway payment {event.gateway_payment_id} settled",
 	}
 

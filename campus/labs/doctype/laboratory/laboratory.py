@@ -20,7 +20,9 @@ class Laboratory(Document):
 		]
 		for doctype, name, field in links:
 			if name and frappe.db.get_value(doctype, name, field) != self.company:
-				frappe.throw(_("{0} {1} does not belong to {2}").format(_(doctype), frappe.bold(name), self.company))
+				frappe.throw(
+					_("{0} {1} does not belong to {2}").format(_(doctype), frappe.bold(name), self.company)
+				)
 
 	def after_insert(self):
 		location = frappe.get_doc(

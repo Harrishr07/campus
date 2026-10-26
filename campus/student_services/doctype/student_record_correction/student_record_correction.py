@@ -17,7 +17,11 @@ class StudentRecordCorrection(ApprovableDocument, Document):
 		self.keep_server_fields()
 		super().validate()
 		if self.status == corrections.REJECTED:
-			frappe.throw(_("{0} was rejected and is kept as the record of the refusal; raise a new correction.").format(self.name))
+			frappe.throw(
+				_(
+					"{0} was rejected and is kept as the record of the refusal; raise a new correction."
+				).format(self.name)
+			)
 		if self.status in FROZEN:
 			return  # frozen by the approval; guard_edits already refused changes
 		if not self.flags.from_portal:

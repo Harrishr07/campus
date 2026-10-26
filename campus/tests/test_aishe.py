@@ -6,21 +6,28 @@ import io
 import frappe
 from openpyxl import load_workbook
 
-from campus.campus_finance.report.scholarship_beneficiaries import scholarship_beneficiaries as beneficiaries_report
+from campus.campus_finance.report.scholarship_beneficiaries import (
+	scholarship_beneficiaries as beneficiaries_report,
+)
 from campus.examinations.report.result_analysis import result_analysis
 from campus.iqac import aishe, registry
 from campus.iqac.official_seed import seed_official_register
 from campus.tests import demo
-from campus.tests.demo_faculty import YEAR
 from campus.tests import test_scholarships as scholarship_year
+from campus.tests.demo_faculty import YEAR
 from campus.tests.factories import make_user
 from campus.tests.test_iqac import COLLEGE, IqacFixture
 from campus.tests.test_regulation import year_name
-from campus.tests.test_scholarships import COLLEGE as SCHOLARSHIP_COLLEGE, ScholarshipFixture
+from campus.tests.test_scholarships import COLLEGE as SCHOLARSHIP_COLLEGE
+from campus.tests.test_scholarships import ScholarshipFixture
 from campus.tests.utils import CampusTestCase
 
 INJECTION = '=HYPERLINK("http://evil.example","x")'
-COORDINATOR, OUTSIDER, PLAIN = "aishe-coordinator@example.com", "aishe-outsider@example.com", "aishe-plain@example.com"
+COORDINATOR, OUTSIDER, PLAIN = (
+	"aishe-coordinator@example.com",
+	"aishe-outsider@example.com",
+	"aishe-plain@example.com",
+)
 QUOTA = "AISHE Test Quota"
 
 
@@ -36,7 +43,11 @@ class TestLayoutRecord(CampusTestCase):
 
 	def layout(self, sections):
 		return frappe.get_doc(
-			{"doctype": "AISHE Layout", "layout_name": f"Test Layout {frappe.generate_hash(length=5)}", "sections": sections}
+			{
+				"doctype": "AISHE Layout",
+				"layout_name": f"Test Layout {frappe.generate_hash(length=5)}",
+				"sections": sections,
+			}
 		)
 
 	def test_the_seeded_layout_is_labelled_a_placeholder_and_maps_every_section(self):
@@ -49,13 +60,22 @@ class TestLayoutRecord(CampusTestCase):
 		self.assertEqual(options, aishe.SECTIONS)
 
 	def test_a_bad_sheet_name_or_cell_is_refused(self):
-		for row in ({"section": "Institution", "sheet": "A/B", "first_cell": "A1"}, {"section": "Institution", "sheet": "Basic", "first_cell": "ZZZZ9"}):
+		for row in (
+			{"section": "Institution", "sheet": "A/B", "first_cell": "A1"},
+			{"section": "Institution", "sheet": "Basic", "first_cell": "ZZZZ9"},
+		):
 			with self.subTest(row=row), self.assertRaises(frappe.ValidationError):
 				self.layout([row]).insert()
 
 	def test_a_section_is_mapped_once_and_two_sections_do_not_start_in_the_same_cell(self):
-		same_section = [{"section": "Institution", "sheet": "A", "first_cell": "A1"}, {"section": "Institution", "sheet": "B", "first_cell": "A1"}]
-		same_cell = [{"section": "Institution", "sheet": "A", "first_cell": "a1"}, {"section": "Faculty", "sheet": "A", "first_cell": "A1"}]
+		same_section = [
+			{"section": "Institution", "sheet": "A", "first_cell": "A1"},
+			{"section": "Institution", "sheet": "B", "first_cell": "A1"},
+		]
+		same_cell = [
+			{"section": "Institution", "sheet": "A", "first_cell": "a1"},
+			{"section": "Faculty", "sheet": "A", "first_cell": "A1"},
+		]
 		for rows in (same_section, same_cell):
 			with self.subTest(rows=rows), self.assertRaises(frappe.ValidationError):
 				self.layout(rows).insert()
@@ -67,7 +87,11 @@ class AisheCase(CampusTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		for user, roles, companies in ((COORDINATOR, ["IQAC Coordinator"], [demo.ENGINEERING]), (OUTSIDER, ["IQAC Coordinator"], [demo.ARTS]), (PLAIN, [], [demo.ENGINEERING])):
+		for user, roles, companies in (
+			(COORDINATOR, ["IQAC Coordinator"], [demo.ENGINEERING]),
+			(OUTSIDER, ["IQAC Coordinator"], [demo.ARTS]),
+			(PLAIN, [], [demo.ENGINEERING]),
+		):
 			make_user(user, companies)
 			frappe.get_doc("User", user).add_roles(*roles)
 
@@ -77,10 +101,19 @@ class AisheCase(CampusTestCase):
 		self.addCleanup(frappe.set_user, "Administrator")
 		seed_official_register()
 		self.enrolments = frappe.get_all(
-			"Program Enrollment", {"oc_company": demo.ENGINEERING, "academic_year": YEAR, "docstatus": 1}, ["student", "program", "student_category"], order_by="name"
+			"Program Enrollment",
+			{"oc_company": demo.ENGINEERING, "academic_year": YEAR, "docstatus": 1},
+			["student", "program", "student_category"],
+			order_by="name",
 		)
-		for number, row in enumerate(self.enrolments):  # gender and state alternate so the split has several cells
-			frappe.db.set_value("Student", row.student, {"gender": ("Male", "Female")[number % 2], "state": ("Tamil Nadu", "Kerala", "")[number % 3]})
+		for number, row in enumerate(
+			self.enrolments
+		):  # gender and state alternate so the split has several cells
+			frappe.db.set_value(
+				"Student",
+				row.student,
+				{"gender": ("Male", "Female")[number % 2], "state": ("Tamil Nadu", "Kerala", "")[number % 3]},
+			)
 
 	def rows(self, section):
 		return aishe.build(demo.ENGINEERING, YEAR)[section]["rows"]
@@ -97,7 +130,11 @@ class TestSections(AisheCase):
 		students = {r.student: r for r in self.enrolments}
 		hand = {}
 		for number, row in enumerate(self.enrolments):
-			key = (row.student_category, ("Male", "Female")[number % 2], ("Tamil Nadu", "Kerala", aishe.NOT_RECORDED)[number % 3])
+			key = (
+				row.student_category,
+				("Male", "Female")[number % 2],
+				("Tamil Nadu", "Kerala", aishe.NOT_RECORDED)[number % 3],
+			)
 			hand[key] = hand.get(key, 0) + 1
 		self.assertEqual({(r[0], r[1], r[2]): r[3] for r in rows}, hand)
 		self.assertEqual(len(students), sum(hand.values()))
@@ -106,7 +143,16 @@ class TestSections(AisheCase):
 		if not frappe.db.exists("Admission Quota", QUOTA):
 			frappe.get_doc({"doctype": "Admission Quota", "code": QUOTA, "title": QUOTA}).insert()
 		frappe.get_doc(
-			{"doctype": "Seat Matrix", "company": demo.ENGINEERING, "program": "B.E. CSE", "academic_year": YEAR, "rows": [{"quota": QUOTA, "category": "OC", "sanctioned": 12}, {"quota": QUOTA, "category": "BC", "sanctioned": 8}]}
+			{
+				"doctype": "Seat Matrix",
+				"company": demo.ENGINEERING,
+				"program": "B.E. CSE",
+				"academic_year": YEAR,
+				"rows": [
+					{"quota": QUOTA, "category": "OC", "sanctioned": 12},
+					{"quota": QUOTA, "category": "BC", "sanctioned": 8},
+				],
+			}
 		).insert()
 		rows = {r[0]: r for r in self.rows("Programmes")}
 		self.assertEqual(rows["B.E. CSE"][2], 20)  # 12 + 8 sanctioned
@@ -155,7 +201,9 @@ class TestWorkbook(AisheCase):
 		for cell in cells:
 			self.assertNotEqual(cell.data_type, "f", cell.coordinate)
 			if isinstance(cell.value, str):
-				self.assertNotIn(cell.value.lstrip(" ")[:1], ("=", "+", "-", "@", "\t", "\r"), cell.coordinate)
+				self.assertNotIn(
+					cell.value.lstrip(" ")[:1], ("=", "+", "-", "@", "\t", "\r"), cell.coordinate
+				)
 		self.assertTrue(any(isinstance(c.value, str) and c.value.startswith("'+cmd") for c in cells))
 		self.assertTrue(any(isinstance(c.value, str) and c.value.startswith("'=HYPERLINK") for c in cells))
 
@@ -163,8 +211,14 @@ class TestWorkbook(AisheCase):
 class TestOverlap(AisheCase):
 	def test_two_sections_whose_tables_overlap_are_refused_at_export(self):
 		layout = frappe.get_doc(
-			{"doctype": "AISHE Layout", "layout_name": "Overlap Layout", "sections": [
-				{"section": "Institution", "sheet": "One", "first_cell": "A1"}, {"section": "Programmes", "sheet": "One", "first_cell": "A2"}]}
+			{
+				"doctype": "AISHE Layout",
+				"layout_name": "Overlap Layout",
+				"sections": [
+					{"section": "Institution", "sheet": "One", "first_cell": "A1"},
+					{"section": "Programmes", "sheet": "One", "first_cell": "A2"},
+				],
+			}
 		).insert()
 		with self.assertRaises(frappe.ValidationError):
 			self.workbook(layout.name)
@@ -173,9 +227,13 @@ class TestOverlap(AisheCase):
 class TestScope(AisheCase):
 	def test_the_export_is_for_iqac_staff_of_the_company_only(self):
 		frappe.set_user(COORDINATOR)
-		_name, content = aishe.export_dataset(demo.ENGINEERING, YEAR)  # a coordinator without HR User still gets every teacher
+		_name, content = aishe.export_dataset(
+			demo.ENGINEERING, YEAR
+		)  # a coordinator without HR User still gets every teacher
 		sheet = load_workbook(io.BytesIO(content))["Faculty"]
-		self.assertEqual(sum(row[3].value for row in sheet.iter_rows(min_row=4) if isinstance(row[3].value, int)), 4)
+		self.assertEqual(
+			sum(row[3].value for row in sheet.iter_rows(min_row=4) if isinstance(row[3].value, int)), 4
+		)
 		frappe.set_user(OUTSIDER)  # an IQAC Coordinator of another college
 		with self.assertRaises(frappe.PermissionError):
 			aishe.export_dataset(demo.ENGINEERING, YEAR)
@@ -185,7 +243,10 @@ class TestScope(AisheCase):
 
 	def test_another_colleges_records_are_not_in_the_numbers(self):
 		other = aishe.build(demo.ARTS, YEAR)
-		self.assertEqual(sum(r[3] for r in other["Enrolment"]["rows"]), registry.data_point("total_students", demo.ARTS, YEAR)["value"])
+		self.assertEqual(
+			sum(r[3] for r in other["Enrolment"]["rows"]),
+			registry.data_point("total_students", demo.ARTS, YEAR)["value"],
+		)
 		self.assertEqual(sum(r[3] for r in self.rows("Enrolment")), point("total_students")["value"])
 
 
@@ -194,11 +255,16 @@ class TestExaminationResults(IqacFixture):
 		self.make_results()
 		year = year_name("2022")
 		filters = frappe._dict(company=COLLEGE, academic_year=year, final_year_only=1, exam_session=None)
-		report = [(r["group"], r["appeared"], r["passed"], r["pass_pct"]) for r in result_analysis.data(filters, "Program")]
+		report = [
+			(r["group"], r["appeared"], r["passed"], r["pass_pct"])
+			for r in result_analysis.data(filters, "Program")
+		]
 		section = aishe.build(COLLEGE, year)["Examination Results"]
 		self.assertEqual([tuple(r) for r in section["rows"]], report)
 		total = section["rows"][-1]
-		self.assertEqual((total[1], total[2]), (3, 2))  # hand count of the fixture: s22, s26, s_ab appeared; s22, s26 passed
+		self.assertEqual(
+			(total[1], total[2]), (3, 2)
+		)  # hand count of the fixture: s22, s26, s_ab appeared; s22, s26 passed
 		self.assertEqual(total[1], registry.data_point("final_year_appeared", COLLEGE, year)["value"])
 		self.assertEqual(total[2], registry.data_point("final_year_passed", COLLEGE, year)["value"])
 		self.assertEqual(total[3], registry.data_point("pass_percentage", COLLEGE, year)["value"])
@@ -219,7 +285,22 @@ class TestScholarships(ScholarshipFixture):
 		rows = aishe.build(SCHOLARSHIP_COLLEGE, scholarship_year.YEAR)["Scholarships"]["rows"]
 		by_type = {kind: sum(r[3] for r in rows if r[0] == kind) for kind in ("Government", "Institutional")}
 		self.assertEqual(by_type, {"Government": 2, "Institutional": 1})
-		self.assertEqual(by_type["Government"], registry.data_point("scholarship_govt_students", SCHOLARSHIP_COLLEGE, scholarship_year.YEAR)["value"])
-		self.assertEqual(by_type["Institutional"], registry.data_point("scholarship_inst_students", SCHOLARSHIP_COLLEGE, scholarship_year.YEAR)["value"])
-		summary = {s["label"]: s["value"] for s in beneficiaries_report.execute({"company": SCHOLARSHIP_COLLEGE, "academic_year": scholarship_year.YEAR})[4]}
+		self.assertEqual(
+			by_type["Government"],
+			registry.data_point("scholarship_govt_students", SCHOLARSHIP_COLLEGE, scholarship_year.YEAR)[
+				"value"
+			],
+		)
+		self.assertEqual(
+			by_type["Institutional"],
+			registry.data_point("scholarship_inst_students", SCHOLARSHIP_COLLEGE, scholarship_year.YEAR)[
+				"value"
+			],
+		)
+		summary = {
+			s["label"]: s["value"]
+			for s in beneficiaries_report.execute(
+				{"company": SCHOLARSHIP_COLLEGE, "academic_year": scholarship_year.YEAR}
+			)[4]
+		}
 		self.assertEqual(sorted(summary.values()), [1, 2])

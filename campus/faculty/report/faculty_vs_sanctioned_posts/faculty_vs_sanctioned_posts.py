@@ -10,7 +10,9 @@ def execute(filters=None):
 	filters = report_filters(filters)
 	if not filters:
 		return columns(), []
-	return columns(), staffing.faculty_vs_sanctioned(filters.company, filters.academic_year, filters.department)
+	return columns(), staffing.faculty_vs_sanctioned(
+		filters.company, filters.academic_year, filters.department
+	)
 
 
 def columns():

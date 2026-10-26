@@ -1,9 +1,9 @@
 """P1-T14 tests (M04-01, M04-02, M04-04): Verhoeff, masking, eligibility per category, Aadhaar at rest."""
 
-import frappe
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import frappe
 from frappe.database import get_db
 from frappe.tests import UnitTestCase
 
@@ -34,7 +34,9 @@ def log_rows(reference_name=None):
 	connection = own_connection()
 	try:
 		where, values = ("where reference_name = %s", (reference_name,)) if reference_name else ("", ())
-		return connection.sql(f"select * from `tabAadhaar Access Log` {where} order by creation", values, as_dict=True)
+		return connection.sql(
+			f"select * from `tabAadhaar Access Log` {where} order by creation", values, as_dict=True
+		)
 	finally:
 		connection.close()
 
@@ -86,7 +88,9 @@ class TestEligibilityUnit(UnitTestCase):
 		return [("Mathematics", 100, m), ("physics", 100, p), ("Chemistry", 100, c)]
 
 	def check(self, marks, category, required=None):
-		return elig.check_eligibility(self.REQUIRED if required is None else required, self.MINIMUMS, marks, category, "HSC")
+		return elig.check_eligibility(
+			self.REQUIRED if required is None else required, self.MINIMUMS, marks, category, "HSC"
+		)
 
 	def test_passes_at_exact_minimum(self):
 		self.assertEqual(self.check(self.marks(50, 50, 50), "OC"), [])
@@ -191,11 +195,16 @@ class TestAdmissionsIntegration(CampusTestCase):
 			doc.name,
 		)[0][0]
 		self.assertNotIn(VALID, stored)  # ciphertext
-		self.assertEqual(frappe.db.get_value("Student Applicant", doc.name, "oc_aadhaar_masked"), f"XXXX-XXXX-{VALID[-4:]}")
+		self.assertEqual(
+			frappe.db.get_value("Student Applicant", doc.name, "oc_aadhaar_masked"), f"XXXX-XXXX-{VALID[-4:]}"
+		)
 		reloaded = frappe.get_doc("Student Applicant", doc.name)
 		self.assertNotIn(VALID, frappe.as_json(reloaded.as_dict()))
 		self.assertNotIn(VALID, frappe.as_json(frappe.client.get("Student Applicant", doc.name)))
-		self.assertNotIn(VALID, frappe.as_json(frappe.get_list("Student Applicant", fields=["oc_aadhaar", "oc_aadhaar_masked"])))
+		self.assertNotIn(
+			VALID,
+			frappe.as_json(frappe.get_list("Student Applicant", fields=["oc_aadhaar", "oc_aadhaar_masked"])),
+		)
 		html = frappe.get_print("Student Applicant", doc.name)
 		self.assertNotIn(VALID, html)
 		self.assertNotIn(VALID[:8], html)
@@ -228,7 +237,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		doc = self.applicant(VALID)
 		frappe.set_user(PLAIN)  # System Manager but not Aadhaar Viewer
 		# the dotted path the request handler would run for frappe.client.get_password
-		method = frappe.get_attr(frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1])
+		method = frappe.get_attr(
+			frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1]
+		)
 		with self.assertRaises(frappe.PermissionError):
 			method("Student Applicant", doc.name, "oc_aadhaar")
 
@@ -237,23 +248,31 @@ class TestAdmissionsIntegration(CampusTestCase):
 		frappe.set_user(VIEWER)
 		self.assertEqual(reveal_aadhaar("Student Applicant", doc.name), VALID)
 		log = log_rows(doc.name)
-		self.assertEqual([(r.user, r.reference_doctype, r.reason) for r in log], [(VIEWER, "Student Applicant", "reveal")])
+		self.assertEqual(
+			[(r.user, r.reference_doctype, r.reason) for r in log], [(VIEWER, "Student Applicant", "reveal")]
+		)
 		self.assertTrue(log[0].accessed_on)
 
 	# eligibility
 	def test_eligibility_stored_on_applicant(self):
 		ok = self.applicant(marks=(60, 60, 60))
 		self.assertEqual(evaluate_eligibility(ok.name), {"eligible": True, "reasons": []})
-		self.assertEqual(frappe.db.get_value("Student Applicant", ok.name, "oc_eligibility_status"), "Eligible")
+		self.assertEqual(
+			frappe.db.get_value("Student Applicant", ok.name, "oc_eligibility_status"), "Eligible"
+		)
 
 	def test_ineligible_with_reasons_per_category(self):
 		low_oc = self.applicant(category="OC", marks=(46, 46, 46))
 		result = evaluate_eligibility(low_oc.name)
 		self.assertFalse(result["eligible"])
 		self.assertIn("50", result["reasons"][0])
-		self.assertEqual(frappe.db.get_value("Student Applicant", low_oc.name, "oc_eligibility_status"), "Ineligible")
+		self.assertEqual(
+			frappe.db.get_value("Student Applicant", low_oc.name, "oc_eligibility_status"), "Ineligible"
+		)
 		self.assertIn("50", frappe.db.get_value("Student Applicant", low_oc.name, "oc_eligibility_reasons"))
-		self.assertTrue(evaluate_eligibility(self.applicant(category="BC", marks=(46, 46, 46)).name)["eligible"])
+		self.assertTrue(
+			evaluate_eligibility(self.applicant(category="BC", marks=(46, 46, 46)).name)["eligible"]
+		)
 
 	def test_no_rule_for_program_is_not_eligible(self):
 		frappe.db.set_value("Eligibility Rule", {"program": PROGRAM}, "enabled", 0)
@@ -289,7 +308,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 	def test_reveal_endpoints_are_post_only(self):
 		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[reveal_aadhaar], ["POST"])
 		doc = self.applicant(VALID)
-		method = frappe.get_attr(frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1])
+		method = frappe.get_attr(
+			frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1]
+		)
 		frappe.set_user(VIEWER)
 		with patch.object(frappe.local, "request", SimpleNamespace(method="GET"), create=True):
 			with self.assertRaises(frappe.PermissionError):
@@ -315,7 +336,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		with self.assertRaises(frappe.PermissionError):
 			frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)})
 		frappe.set_user(VIEWER)
-		self.assertEqual(frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)}), VALID)
+		self.assertEqual(
+			frappe.render_template(template, {"doc": frappe.get_doc("Student Applicant", doc.name)}), VALID
+		)
 		self.assertEqual(len(log_rows(doc.name)), 1)
 
 	def test_other_password_fields_still_readable_by_system_manager(self):
@@ -327,7 +350,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 			 "scopes": [{"scope": "read"}]}
 		).insert()  # fmt: skip
 		frappe.set_user(PLAIN)
-		method = frappe.get_attr(frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1])
+		method = frappe.get_attr(
+			frappe.get_hooks("override_whitelisted_methods")["frappe.client.get_password"][-1]
+		)
 		self.assertEqual(method("Connected App", app.name, "client_secret"), "s3cret")
 
 	def test_viewer_of_another_company_is_denied(self):
@@ -350,10 +375,17 @@ class TestAdmissionsIntegration(CampusTestCase):
 	def test_rule_with_matching_regulation_wins_and_duplicates_rejected(self):
 		blank = frappe.db.get_value("Eligibility Rule", {"program": PROGRAM, "enabled": 1})
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC"}).insert()
+			frappe.get_doc(
+				{"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC"}
+			).insert()
 		self.assertEqual(elig.find_rule(PROGRAM, "No Such Regulation").name, blank)  # falls back to blank
 		specific = frappe.get_doc(
-			{"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": self.regulation}
+			{
+				"doctype": "Eligibility Rule",
+				"program": PROGRAM,
+				"qualifying_exam": "HSC",
+				"regulation": self.regulation,
+			}
 		).insert()
 		self.assertEqual(elig.find_rule(PROGRAM, self.regulation).name, specific.name)
 		self.assertEqual(elig.find_rule(PROGRAM).name, blank)
@@ -371,7 +403,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		doc = self.applicant(VALID)
 		frappe.set_user(VIEWER)
 		with patch("campus.admissions.aadhaar.write_on_own_connection", side_effect=RuntimeError("db down")):
-			with patch("frappe.log_error", side_effect=RuntimeError("log_error down")):  # must not mask the failure
+			with patch(
+				"frappe.log_error", side_effect=RuntimeError("log_error down")
+			):  # must not mask the failure
 				with self.assertRaises(frappe.ValidationError) as ctx:
 					reveal_aadhaar("Student Applicant", doc.name)
 		self.assertNotIn(VALID, str(ctx.exception))
@@ -393,7 +427,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		self.assertIn("db down", error)
 		for secret in (frappe.conf.db_password, frappe.conf.encryption_key):
 			self.assertTrue(secret)
-			self.assertFalse(secret in error, "Error Log holds a site secret")  # never echo the secret on failure
+			self.assertFalse(
+				secret in error, "Error Log holds a site secret"
+			)  # never echo the secret on failure
 		self.assertFalse(VALID in error, "Error Log holds the Aadhaar number")
 		self.assertEqual(log_rows(doc.name), [])
 
@@ -436,7 +472,9 @@ class TestAdmissionsIntegration(CampusTestCase):
 		self.assertEqual((field.fieldtype, field.options), ("Dynamic Link", "reference_doctype"))
 
 	def test_enabled_rule_check_takes_a_lock_and_rejects_clash(self):
-		rule = frappe.get_doc({"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": None})
+		rule = frappe.get_doc(
+			{"doctype": "Eligibility Rule", "program": PROGRAM, "qualifying_exam": "HSC", "regulation": None}
+		)
 		with patch.object(frappe.db, "get_value", wraps=frappe.db.get_value) as get_value:
 			with self.assertRaises(frappe.ValidationError):
 				rule.insert()

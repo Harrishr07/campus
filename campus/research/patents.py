@@ -36,7 +36,13 @@ def patent_register(company, status=None, academic_year=None):
 
 def employee_patents(employee):
 	"""The Patents of disclosures that name `employee` as an inventor."""
-	disclosures = frappe.get_all("IPR Inventor", {"employee": employee, "parenttype": "Invention Disclosure"}, pluck="parent")
+	disclosures = frappe.get_all(
+		"IPR Inventor", {"employee": employee, "parenttype": "Invention Disclosure"}, pluck="parent"
+	)
 	return frappe.get_list(
-		"Patent", {"invention_disclosure": ["in", disclosures or [""]]}, FIELDS, order_by="filed_date desc, name", limit_page_length=0
+		"Patent",
+		{"invention_disclosure": ["in", disclosures or [""]]},
+		FIELDS,
+		order_by="filed_date desc, name",
+		limit_page_length=0,
 	)

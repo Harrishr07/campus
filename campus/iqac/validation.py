@@ -17,7 +17,19 @@ from campus.iqac.access import ROLES
 OPERATORS = {
 	"<=": lambda a, b: a <= b, "<": lambda a, b: a < b, ">=": lambda a, b: a >= b, ">": lambda a, b: a > b, "=": lambda a, b: a == b,
 }  # fmt: skip
-RULE_FIELDS = ["name", "rule_type", "severity", "node", "slot_name", "compare_node", "operator", "limit", "minimum", "maximum", "message"]
+RULE_FIELDS = [
+	"name",
+	"rule_type",
+	"severity",
+	"node",
+	"slot_name",
+	"compare_node",
+	"operator",
+	"limit",
+	"minimum",
+	"maximum",
+	"message",
+]
 SHOWN = 8
 
 
@@ -52,7 +64,10 @@ class Context:
 		self.cycle = cycle
 		self.values = defaultdict(list)
 		for row in frappe.get_all(
-			"Metric Value", {"cycle": cycle}, ["node", "department", "value", "answered", "word_count"], order_by="name"
+			"Metric Value",
+			{"cycle": cycle},
+			["node", "department", "value", "answered", "word_count"],
+			order_by="name",
 		):
 			self.values[row.node].append(row)
 		self.nodes = {}
@@ -86,8 +101,18 @@ def check_required_evidence(rule, ctx):
 	slots = ctx.slot_rows(rule.node)
 	wanted = [s for s in slots if (s.slot_name == rule.slot_name if rule.slot_name else s.required)]
 	if rule.slot_name and not wanted:
-		return [failure(rule, _("{0} has no evidence slot {1}.").format(rule.node, rule.slot_name), slot_name=rule.slot_name)]
-	return [failure(rule, _("No evidence for {0}.").format(s.slot_name), slot_name=s.slot_name) for s in wanted if not s.filled]
+		return [
+			failure(
+				rule,
+				_("{0} has no evidence slot {1}.").format(rule.node, rule.slot_name),
+				slot_name=rule.slot_name,
+			)
+		]
+	return [
+		failure(rule, _("No evidence for {0}.").format(s.slot_name), slot_name=s.slot_name)
+		for s in wanted
+		if not s.filled
+	]
 
 
 def check_word_limit(rule, ctx):
@@ -105,7 +130,9 @@ def check_comparison(rule, ctx):
 	left, right = ctx.total(rule.node), ctx.total(rule.compare_node)
 	if holds(left, rule.operator, right):
 		return []
-	return [failure(rule, _("{0} is not {1} {2} ({3}).").format(left, rule.operator, right, rule.compare_node))]
+	return [
+		failure(rule, _("{0} is not {1} {2} ({3}).").format(left, rule.operator, right, rule.compare_node))
+	]
 
 
 def check_range(rule, ctx):
@@ -128,7 +155,9 @@ CHECKS = {
 def evaluate(cycle):
 	"""Failures of the enabled rules of the cycle's framework, as dicts (rule, rule_type, severity, node, department, message, detail)."""
 	framework = frappe.db.get_value("Accreditation Cycle", cycle, "framework")
-	rules = frappe.get_all("Validation Rule", {"framework": framework, "enabled": 1}, RULE_FIELDS, order_by="name")
+	rules = frappe.get_all(
+		"Validation Rule", {"framework": framework, "enabled": 1}, RULE_FIELDS, order_by="name"
+	)
 	ctx = Context(cycle)
 	return [found for rule in rules for found in CHECKS[rule.rule_type](rule, ctx)]
 
@@ -169,17 +198,24 @@ def gate(cycle, comment=None):
 	warnings = [f for f in failures if f.severity == "Warning"]
 	if blocking:
 		frappe.throw(
-			_("{0} has {1} blocking validation failure(s): {2}").format(frappe.bold(cycle.name), len(blocking), listing(blocking)),
+			_("{0} has {1} blocking validation failure(s): {2}").format(
+				frappe.bold(cycle.name), len(blocking), listing(blocking)
+			),
 			title=_("Validation Failed"),
 		)
 	if not warnings:
 		return
 	if not (comment or "").strip():
 		frappe.throw(
-			_("{0} has {1} validation warning(s): {2}. Add a comment to move on.").format(frappe.bold(cycle.name), len(warnings), listing(warnings)),
+			_("{0} has {1} validation warning(s): {2}. Add a comment to move on.").format(
+				frappe.bold(cycle.name), len(warnings), listing(warnings)
+			),
 			title=_("Comment Required"),
 		)
-	cycle.add_comment("Comment", _("Moved to IQAC Review with {0} validation warning(s): {1}").format(len(warnings), comment.strip()))
+	cycle.add_comment(
+		"Comment",
+		_("Moved to IQAC Review with {0} validation warning(s): {1}").format(len(warnings), comment.strip()),
+	)
 
 
 def listing(failures):

@@ -36,7 +36,9 @@ class BreakofStudy(ApprovableDocument, Document):
 	def before_submit(self):
 		super().before_submit()
 		student_records.require_policy(self)
-		status = frappe.db.get_value("Student", self.student, "oc_academic_status", for_update=True)  # one at a time
+		status = frappe.db.get_value(
+			"Student", self.student, "oc_academic_status", for_update=True
+		)  # one at a time
 		if status == ON_BREAK:
 			self.throw_on_break()
 		self.check_others(self.other_breaks(lock=True))
@@ -53,7 +55,10 @@ class BreakofStudy(ApprovableDocument, Document):
 	def set_context(self):
 		student = frappe.get_doc("Student", self.student)
 		if not has_user_permission(student):  # Company User Permissions
-			frappe.throw(_("You are not permitted to act for {0}.").format(frappe.bold(self.student)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to act for {0}.").format(frappe.bold(self.student)),
+				frappe.PermissionError,
+			)
 		if self.docstatus == 0 and student.oc_academic_status == ON_BREAK:
 			self.throw_on_break()
 		self.company = student.oc_company
@@ -64,23 +69,29 @@ class BreakofStudy(ApprovableDocument, Document):
 
 	def check_others(self, others):
 		for other in others:
-			if withdrawal_rules.ranges_overlap(getdate(self.from_date), getdate(self.to_date), other.from_date, other.to_date):
+			if withdrawal_rules.ranges_overlap(
+				getdate(self.from_date), getdate(self.to_date), other.from_date, other.to_date
+			):
 				frappe.throw(_("This break overlaps the approved break {0}.").format(frappe.bold(other.name)))
 		self.check_limit(sum(cint(other.break_days) for other in others))
 
 	def check_limit(self, used_days):
 		rule = student_records.rule_values(self.student)
 		refusal = withdrawal_rules.break_refusal(
-			used_days, self.break_days, rule.break_max_years, rule.break_exceptional_years, cint(self.exceptional)
+			used_days,
+			self.break_days,
+			rule.break_max_years,
+			rule.break_exceptional_years,
+			cint(self.exceptional),
 		)
 		if refusal == withdrawal_rules.BAD_DATES:
 			frappe.throw(_("A break of study cannot end before it starts."))
 		if refusal:
 			years = rule.break_max_years + (rule.break_exceptional_years if self.exceptional else 0)
 			frappe.throw(
-				_("The breaks of study of {0} may total at most {1} year(s); with this one they come to {2} days.").format(
-					frappe.bold(self.student), years, used_days + self.break_days
-				)
+				_(
+					"The breaks of study of {0} may total at most {1} year(s); with this one they come to {2} days."
+				).format(frappe.bold(self.student), years, used_days + self.break_days)
 			)
 
 	def other_breaks(self, lock=False):
@@ -89,9 +100,15 @@ class BreakofStudy(ApprovableDocument, Document):
 		query = (
 			frappe.qb.from_(other)
 			.select(other.name, other.from_date, other.to_date, other.break_days)
-			.where((other.student == self.student) & (other.docstatus == 1) & (other.name != (self.name or "")))
+			.where(
+				(other.student == self.student) & (other.docstatus == 1) & (other.name != (self.name or ""))
+			)
 		)
 		return (query.for_update() if lock else query).run(as_dict=True)
 
 	def throw_on_break(self):
-		frappe.throw(_("{0} is already on a break of study; record the rejoin first.").format(frappe.bold(self.student)))
+		frappe.throw(
+			_("{0} is already on a break of study; record the rejoin first.").format(
+				frappe.bold(self.student)
+			)
+		)

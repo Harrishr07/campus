@@ -72,8 +72,14 @@ class Curriculum(Document):
 		if old in LOCKED or self.status == old:
 			return
 		if self.status not in TRANSITIONS.get(old, ()):
-			frappe.throw(_("A curriculum cannot move from {0} to {1}.").format(_(old or "New"), _(self.status)))
-		if self.status == "Effective" and DEAN_ROLE not in frappe.get_roles() and not self.flags.via_academic_proposal:
+			frappe.throw(
+				_("A curriculum cannot move from {0} to {1}.").format(_(old or "New"), _(self.status))
+			)
+		if (
+			self.status == "Effective"
+			and DEAN_ROLE not in frappe.get_roles()
+			and not self.flags.via_academic_proposal
+		):
 			frappe.throw(_("Only the {0} can make a curriculum Effective.").format(DEAN_ROLE))
 
 	def validate_lock(self):
@@ -138,9 +144,7 @@ class Curriculum(Document):
 					_(
 						"Course {0} appears more than once (rows {1}). "
 						"Mark every occurrence Repeatable to allow this."
-					).format(
-						frappe.bold(course), ", ".join(str(row.idx) for row in rows)
-					),
+					).format(frappe.bold(course), ", ".join(str(row.idx) for row in rows)),
 					title=_("Duplicate Course"),
 				)
 
@@ -174,16 +178,22 @@ class Curriculum(Document):
 			if code == row.course:
 				frappe.throw(_("Row {0}: a course cannot be its own prerequisite.").format(row.idx))
 			if not frappe.db.exists("Course", code):
-				frappe.throw(_("Row {0}: prerequisite {1} is not a Course.").format(row.idx, frappe.bold(code)))
+				frappe.throw(
+					_("Row {0}: prerequisite {1} is not a Course.").format(row.idx, frappe.bold(code))
+				)
 
 	def derive_credits(self, rule):
 		for row in self.courses:
 			if rule and not row.credits_override:
-				row.credits = derive_credits(row.lecture_periods, row.tutorial_periods, row.practical_periods, rule)
+				row.credits = derive_credits(
+					row.lecture_periods, row.tutorial_periods, row.practical_periods, rule
+				)
 
 	def compute_totals(self, rule):
 		"""Set total and per-category actuals; return the list of rule violations."""
-		categories = [row.category for row in self.courses] + [row.category for row in self.category_requirements]
+		categories = [row.category for row in self.courses] + [
+			row.category for row in self.category_requirements
+		]
 		counts = {
 			c.name: c.counts_toward_credits
 			for c in frappe.get_all(
@@ -196,7 +206,9 @@ class Curriculum(Document):
 		minimums = {}
 		for row in self.category_requirements:
 			if row.category in minimums:
-				frappe.throw(_("Row {0}: category {1} is listed twice.").format(row.idx, frappe.bold(row.category)))
+				frappe.throw(
+					_("Row {0}: category {1} is listed twice.").format(row.idx, frappe.bold(row.category))
+				)
 			minimums[row.category] = flt(row.min_credits)
 			row.actual_credits = totals.get(row.category, 0)
 		return self.rule_problems(rule, totals, minimums)
@@ -208,7 +220,9 @@ class Curriculum(Document):
 			problems += [problem] if problem else []
 			problems += self.too_many_courses(rule)
 		for category, actual, required in credit_shortfalls(totals, minimums):
-			problems.append(_("Category {0} has {1} credits; the minimum is {2}.").format(category, actual, required))
+			problems.append(
+				_("Category {0} has {1} credits; the minimum is {2}.").format(category, actual, required)
+			)
 		return problems
 
 	def too_many_courses(self, rule):
@@ -218,7 +232,9 @@ class Curriculum(Document):
 		for row in self.courses:
 			per_semester[row.semester] = per_semester.get(row.semester, 0) + 1
 		return [
-			_("Semester {0} has {1} courses; the maximum is {2}.").format(sem, n, rule.max_courses_per_semester)
+			_("Semester {0} has {1} courses; the maximum is {2}.").format(
+				sem, n, rule.max_courses_per_semester
+			)
 			for sem, n in sorted(per_semester.items())
 			if n > rule.max_courses_per_semester
 		]
@@ -227,9 +243,9 @@ class Curriculum(Document):
 		"""Draft shows warnings; Approved and Effective curricula must satisfy the rules."""
 		if not rule and self.status != "Draft":
 			frappe.throw(
-				_("Regulation {0} has no Curriculum Rule. Define one before approving this curriculum.").format(
-					frappe.bold(self.regulation)
-				),
+				_(
+					"Regulation {0} has no Curriculum Rule. Define one before approving this curriculum."
+				).format(frappe.bold(self.regulation)),
 				title=_("Curriculum Rules Not Met"),
 			)
 		if not rule:
@@ -237,9 +253,7 @@ class Curriculum(Document):
 				_(
 					"Regulation {0} has no Curriculum Rule: credits are not derived "
 					"and the total is not range-checked."
-				).format(
-					frappe.bold(self.regulation)
-				),
+				).format(frappe.bold(self.regulation)),
 				indicator="orange",
 				alert=True,
 			)
@@ -280,9 +294,15 @@ class Curriculum(Document):
 		if self.status != "Effective":
 			return
 		for sibling in self.lock_siblings():
-			if sibling.status == "Effective" and sibling.version > cint(self.version) and batches_overlap(sibling.batches, self.own_batches()):
+			if (
+				sibling.status == "Effective"
+				and sibling.version > cint(self.version)
+				and batches_overlap(sibling.batches, self.own_batches())
+			):
 				frappe.throw(
-					_("A newer version of this curriculum ({0}) is already Effective for the same batches.").format(sibling.name)
+					_(
+						"A newer version of this curriculum ({0}) is already Effective for the same batches."
+					).format(sibling.name)
 				)
 
 	def supersede_previous(self):

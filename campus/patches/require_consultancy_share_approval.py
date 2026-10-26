@@ -14,7 +14,10 @@ def execute():
 	if not frappe.db.exists("DocType", DOCTYPE) or not uses_approval_engine(DOCTYPE):
 		return
 	seed_share_policy()
-	if frappe.db.exists(ROW_DOCTYPE, {"parenttype": "Campus Settings", "parentfield": SETTINGS_FIELD, "document_type": DOCTYPE}):
+	if frappe.db.exists(
+		ROW_DOCTYPE,
+		{"parenttype": "Campus Settings", "parentfield": SETTINGS_FIELD, "document_type": DOCTYPE},
+	):
 		return
 	settings = frappe.get_doc("Campus Settings")
 	settings.append(SETTINGS_FIELD, {"document_type": DOCTYPE})

@@ -17,7 +17,10 @@ FAIL_LETTER = "U"
 EPSILON = 1e-9
 PASS, FAIL, ABSENT = "Pass", "Fail", "AB"
 WITHDRAWAL_CODES = ("W", "WD", "WC")
-NOT_SAT = (*WITHDRAWAL_CODES, "Pending")  # outcomes that are not an appearance (Pending: no mark sheet row yet)
+NOT_SAT = (
+	*WITHDRAWAL_CODES,
+	"Pending",
+)  # outcomes that are not an appearance (Pending: no mark sheet row yet)
 ALWAYS_ABSOLUTE = ("Lab", "Project")
 ABSOLUTE, RELATIVE, ONLINE = "Absolute", "Relative Box-Cox", "Online Table"
 REGULAR, LATERAL = "Regular", "Lateral"
@@ -146,7 +149,9 @@ def grading_method(course_type, method, passed_count, min_cohort, totals=None):
 	method row (`method` None) is absolute."""
 	if course_type in ALWAYS_ABSOLUTE or not method:
 		return ABSOLUTE
-	if method == RELATIVE and (passed_count <= min_cohort or (totals is not None and degenerate_cohort(totals))):
+	if method == RELATIVE and (
+		passed_count <= min_cohort or (totals is not None and degenerate_cohort(totals))
+	):
 		return ABSOLUTE
 	return method
 
@@ -260,7 +265,13 @@ def passed_at_first_appearance(results_by_course):
 
 
 def classify(
-	cgpa_value, classes, variant=REGULAR, first_appearance=True, years_taken=0, break_years=0, entry_type=REGULAR
+	cgpa_value,
+	classes,
+	variant=REGULAR,
+	first_appearance=True,
+	years_taken=0,
+	break_years=0,
+	entry_type=REGULAR,
 ):
 	"""(class name, variant) of the first Classification Rule row the student meets, or None.
 

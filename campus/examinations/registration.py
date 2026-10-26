@@ -32,7 +32,12 @@ from campus.examinations.arrears import REAPPEAR, reappearance_courses
 from campus.examinations.courses import offering_course
 from campus.examinations.doctype.exam_registration.exam_registration import registration_name
 from campus.examinations.registration_rules import ARREAR, ATTENDED_KINDS, BRIDGE, CURRENT, DROPPED
-from campus.student_services.api import attendance_snapshot, on_break, pending_bridge_courses, student_offerings
+from campus.student_services.api import (
+	attendance_snapshot,
+	on_break,
+	pending_bridge_courses,
+	student_offerings,
+)
 
 DOCTYPE, SESSION = "Exam Registration", "Exam Session"
 RUN_TYPE = "Exam Registration"
@@ -50,11 +55,17 @@ def start(exam_session, program=None):
 	if not session.registration_closes:
 		frappe.throw(_("Set the registration closing date of {0} first.").format(frappe.bold(exam_session)))
 	if program and frappe.db.get_value("Program", program, "oc_company") != session.company:
-		frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(program), frappe.bold(session.company)))
+		frappe.throw(
+			_("Program {0} does not belong to {1}.").format(
+				frappe.bold(program), frappe.bold(session.company)
+			)
+		)
 	frappe.db.get_value(SESSION, exam_session, "name", for_update=True)  # one start of a session at a time
 	running = live_run(RUN_TYPE, exam_session=exam_session)
 	if running:
-		frappe.throw(_("Exam registration run {0} of this session is still running.").format(frappe.bold(running)))
+		frappe.throw(
+			_("Exam registration run {0} of this session is still running.").format(frappe.bold(running))
+		)
 	students = candidate_students(session, program)
 	return run_bulk(RUN_TYPE, students, HANDLER, parameters={"exam_session": exam_session})
 
@@ -71,7 +82,9 @@ def candidate_students(session, program=None):
 		.where((group.oc_company == session.company) & (group.academic_term == session.academic_term))
 		.where((group.group_based_on == "Course") & (member.active == 1))
 	)
-	result, course_row, published = (frappe.qb.DocType(n) for n in ("Student Result", "Student Result Course", SESSION))
+	result, course_row, published = (
+		frappe.qb.DocType(n) for n in ("Student Result", "Student Result Course", SESSION)
+	)
 	arrears = (
 		frappe.qb.from_(result)
 		.join(course_row)
@@ -96,13 +109,19 @@ def register_student(student, run):
 def register(student, exam_session):
 	"""Create the student's Exam Registration in the session, or add its missing courses; returns its name or None."""
 	session = frappe.db.get_value(
-		SESSION, exam_session, ["company", "academic_term", "status", "examination_mode"], as_dict=True, for_update=True
+		SESSION,
+		exam_session,
+		["company", "academic_term", "status", "examination_mode"],
+		as_dict=True,
+		for_update=True,
 	)
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session takes no registrations."))
 	if on_break(student):
 		return None
-	if examination_mode(student) != (session.examination_mode or AUTONOMOUS):  # M06-10: the other mode's session
+	if examination_mode(student) != (
+		session.examination_mode or AUTONOMOUS
+	):  # M06-10: the other mode's session
 		return None
 	courses = registrable_courses(student, session.academic_term)
 	if not courses:
@@ -144,7 +163,11 @@ def registrable_courses(student, academic_term):
 			)
 		if not course["course_type"]:  # Internal Only: no end-semester exam
 			continue
-		kind = BRIDGE if offering.course in bridge else REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
+		kind = (
+			BRIDGE
+			if offering.course in bridge
+			else REGISTRATION_KINDS.get(kinds.get(offering.course), CURRENT)
+		)
 		rows.append({"course": offering.course, "course_offering": offering.name, "kind": kind})
 	taken = {row["course"] for row in rows}
 	return rows + [{"course": c, "kind": ARREAR} for c in reappearance_courses(student) if c not in taken]
@@ -152,7 +175,10 @@ def registrable_courses(student, academic_term):
 
 def registered_kinds(student, academic_term):
 	"""{course: registration type} from the student's submitted Course Registrations of the term."""
-	registration, item = frappe.qb.DocType("Course Registration"), frappe.qb.DocType("Course Registration Item")
+	registration, item = (
+		frappe.qb.DocType("Course Registration"),
+		frappe.qb.DocType("Course Registration Item"),
+	)
 	return dict(
 		frappe.qb.from_(registration)
 		.join(item)
@@ -171,9 +197,9 @@ def attendance_status(student, session, courses):
 	status = attendance_snapshot(student, session.academic_term, session.company)
 	if not status:
 		frappe.throw(
-			_("No locked attendance eligibility run holds {0} for {1}; lock the run of the term first.").format(
-				frappe.bold(student), frappe.bold(session.academic_term)
-			)
+			_(
+				"No locked attendance eligibility run holds {0} for {1}; lock the run of the term first."
+			).format(frappe.bold(student), frappe.bold(session.academic_term))
 		)
 	return status
 
@@ -189,12 +215,17 @@ def confirm(name):
 	if doc.confirmed:
 		frappe.throw(_("This exam registration is already confirmed."))
 	session = frappe.db.get_value(
-		SESSION, doc.exam_session, ["status", "registration_opens", "registration_closes", "exam_start"], as_dict=True
+		SESSION,
+		doc.exam_session,
+		["status", "registration_opens", "registration_closes", "exam_start"],
+		as_dict=True,
 	)
 	if session.status == "Published":
 		frappe.throw(_("A published Exam Session takes no registrations."))
 	if session.registration_opens and getdate(today()) < getdate(session.registration_opens):
-		frappe.throw(_("Registration opens on {0}.").format(frappe.format(session.registration_opens, "Date")))
+		frappe.throw(
+			_("Registration opens on {0}.").format(frappe.format(session.registration_opens, "Date"))
+		)
 	if session.exam_start and getdate(today()) >= getdate(session.exam_start):
 		frappe.throw(_("The examinations of this session have started; registration is closed."))
 	eligible = doc.eligible_courses()
@@ -202,7 +233,9 @@ def confirm(name):
 		frappe.throw(_("No course of this registration is eligible for the examination."))
 	fee = exam_fee.registration_fee(doc.company, doc.program, len(eligible), session.registration_closes)
 	if fee["fee_total"] > 0:
-		exam_fee.check_invoiceable(doc.student, doc.company)  # refuse now rather than confirm a fee never invoiced
+		exam_fee.check_invoiceable(
+			doc.student, doc.company
+		)  # refuse now rather than confirm a fee never invoiced
 	doc.update(fee)
 	doc.confirmed, doc.confirmed_on = 1, now_datetime()
 	doc.flags.ignore_permissions = True  # the student confirms; every value is server-side

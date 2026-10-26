@@ -50,15 +50,21 @@ class TestResearchMasters(CampusTestCase):
 
 	def make_item_group(self, name):
 		if not frappe.db.exists("Item Group", name):
-			parent = frappe.db.get_value("Item Group", {"is_group": 1}, "name")  # the bare test site may lack "All Item Groups"
-			frappe.get_doc({"doctype": "Item Group", "item_group_name": name, "parent_item_group": parent}).insert()
+			parent = frappe.db.get_value(
+				"Item Group", {"is_group": 1}, "name"
+			)  # the bare test site may lack "All Item Groups"
+			frappe.get_doc(
+				{"doctype": "Item Group", "item_group_name": name, "parent_item_group": parent}
+			).insert()
 		return name
 
 	def make_head(self, name, accounts=(), is_capital=0, item_groups=()):
 		return (
 			frappe.get_doc(
 				{
-					"doctype": "Grant Budget Head", "head_name": name, "is_capital": is_capital,
+					"doctype": "Grant Budget Head",
+					"head_name": name,
+					"is_capital": is_capital,
 					"accounts": [{"company": company, "account": account} for company, account in accounts],
 					"item_groups": [{"item_group": group} for group in item_groups],
 				}  # fmt: skip
@@ -70,7 +76,9 @@ class TestResearchMasters(CampusTestCase):
 	def make_scheme(self, name, heads, instalments=()):
 		return frappe.get_doc(
 			{
-				"doctype": "Funding Scheme", "scheme_name": name, "funding_agency": self.agency,
+				"doctype": "Funding Scheme",
+				"scheme_name": name,
+				"funding_agency": self.agency,
 				"heads": [{"budget_head": head} for head in heads],
 				"instalments": [{"instalment": label, "percent": pct} for label, pct in instalments],
 			}  # fmt: skip
@@ -79,7 +87,8 @@ class TestResearchMasters(CampusTestCase):
 	def make_settings(self, company=COLLEGE, abbr=ABBR, **values):
 		return frappe.get_doc(
 			{
-				"doctype": "Research Settings", "company": company,
+				"doctype": "Research Settings",
+				"company": company,
 				"grant_liability_parent": f"Current Liabilities - {abbr}",
 				"grant_income_account": make_account(company, abbr, "Grant Income", "Indirect Income"),
 				"deferred_capital_grant_account": make_account(
@@ -91,7 +100,9 @@ class TestResearchMasters(CampusTestCase):
 
 	# acceptance 1: a scheme can't be used while a head lacks an account mapping for the company
 	def test_scheme_usable_when_every_head_maps_for_company(self):
-		consumables = self.make_head("RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)])
+		consumables = self.make_head(
+			"RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)]
+		)
 		equipment = self.make_head("RST Equipment", [(COLLEGE, self.equipment)], is_capital=1)
 		scheme = self.make_scheme("RST Core Research Grant", [consumables, equipment])
 		self.make_settings()
@@ -100,7 +111,9 @@ class TestResearchMasters(CampusTestCase):
 		api.validate_scheme_usable(scheme.name, COLLEGE)  # does not raise
 
 	def test_scheme_unusable_when_a_head_lacks_mapping_for_company(self):
-		consumables = self.make_head("RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)])
+		consumables = self.make_head(
+			"RST Consumables", [(COLLEGE, self.consumables), (OTHER, self.other_consumables)]
+		)
 		equipment = self.make_head("RST Equipment", [(COLLEGE, self.equipment)], is_capital=1)
 		scheme = self.make_scheme("RST Core Research Grant", [consumables, equipment])
 		self.make_settings(OTHER, OTHER_ABBR)
@@ -182,8 +195,13 @@ class TestResearchMasters(CampusTestCase):
 
 	def test_revenue_head_refuses_depreciation_stock_adjustment_and_round_off(self):
 		for account_type in ("Depreciation", "Stock Adjustment", "Round Off"):
-			account = make_account(COLLEGE, ABBR, f"RST {account_type}", "Indirect Expenses", account_type=account_type)
-			with self.subTest(account_type=account_type), self.assertRaisesRegex(frappe.ValidationError, account_type):
+			account = make_account(
+				COLLEGE, ABBR, f"RST {account_type}", "Indirect Expenses", account_type=account_type
+			)
+			with (
+				self.subTest(account_type=account_type),
+				self.assertRaisesRegex(frappe.ValidationError, account_type),
+			):
 				self.make_head(f"RST Revenue On {account_type}", [(COLLEGE, account)])
 
 	def test_disabled_or_frozen_accounts_refused(self):
@@ -243,7 +261,9 @@ class TestResearchMasters(CampusTestCase):
 			with self.subTest(field=field), self.assertRaisesRegex(frappe.ValidationError, message):
 				self.make_settings(**{field: account})
 		with self.assertRaisesRegex(frappe.ValidationError, COLLEGE):
-			self.make_settings(grant_income_account=make_account(OTHER, OTHER_ABBR, "Grant Income", "Indirect Income"))
+			self.make_settings(
+				grant_income_account=make_account(OTHER, OTHER_ABBR, "Grant Income", "Indirect Income")
+			)
 
 	def test_settings_required_before_use(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Research Settings"):
@@ -253,17 +273,28 @@ class TestResearchMasters(CampusTestCase):
 	# Indexed Journal
 	def test_journal_issn_normalised_and_unique(self):
 		journal = frappe.get_doc(
-			{"doctype": "Indexed Journal", "journal_title": "RST Hearing Research", "issn": "03785955", "scopus": 1}
+			{
+				"doctype": "Indexed Journal",
+				"journal_title": "RST Hearing Research",
+				"issn": "03785955",
+				"scopus": 1,
+			}
 		).insert()
 		self.assertEqual(journal.issn, "0378-5955")
 		with self.assertRaises(frappe.UniqueValidationError):
-			frappe.get_doc({"doctype": "Indexed Journal", "journal_title": "RST Copy", "issn": "0378-5955"}).insert()
+			frappe.get_doc(
+				{"doctype": "Indexed Journal", "journal_title": "RST Copy", "issn": "0378-5955"}
+			).insert()
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Indexed Journal", "journal_title": "RST Bad", "issn": "0378-5954"}).insert()
+			frappe.get_doc(
+				{"doctype": "Indexed Journal", "journal_title": "RST Bad", "issn": "0378-5954"}
+			).insert()
 
 	def test_journals_with_only_an_e_issn_share_a_blank_issn(self):
 		for title, e_issn in (("RST Online One", "2434-561X"), ("RST Online Two", "0378-5955")):
-			journal = frappe.get_doc({"doctype": "Indexed Journal", "journal_title": title, "e_issn": e_issn}).insert()
+			journal = frappe.get_doc(
+				{"doctype": "Indexed Journal", "journal_title": title, "e_issn": e_issn}
+			).insert()
 			self.assertIsNone(journal.issn)
 		with self.assertRaisesRegex(frappe.ValidationError, "ISSN or e-ISSN"):
 			frappe.get_doc({"doctype": "Indexed Journal", "journal_title": "RST No ISSN"}).insert()

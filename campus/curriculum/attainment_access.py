@@ -47,8 +47,10 @@ def co_run_query(user=None):
 	user = user or frappe.session.user
 	if has_any_role(user, READ_ALL_ROLES):
 		return ""
-	return "(`tabCO Attainment Run`.program in ({0}) or `tabCO Attainment Run`.course_offering in ({1}))".format(
-		in_list(managed_programs(user)), in_list(taught_offerings(user))
+	return (
+		"(`tabCO Attainment Run`.program in ({0}) or `tabCO Attainment Run`.course_offering in ({1}))".format(
+			in_list(managed_programs(user)), in_list(taught_offerings(user))
+		)
 	)
 
 
@@ -56,7 +58,9 @@ def co_run_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if has_any_role(user, MANAGE_ALL_ROLES) or (ptype in READ_TYPES and has_any_role(user, READ_ALL_ROLES)):
 		return True
-	program = doc.get("program") or frappe.db.get_value("Student Group", doc.get("course_offering"), "program")
+	program = doc.get("program") or frappe.db.get_value(
+		"Student Group", doc.get("course_offering"), "program"
+	)
 	if program and program in managed_programs(user):
 		return True
 	return ptype in READ_TYPES and doc.get("course_offering") in taught_offerings(user)

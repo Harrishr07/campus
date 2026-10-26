@@ -33,7 +33,9 @@ def blueprint_issues(questions, blueprint, total_marks, sets_with_files=()):
 	by_set = defaultdict(list)
 	for question in questions:
 		by_set[question["paper_set"]].append(question)
-	issues += [_("Set {0} has a paper file but no questions.").format(s) for s in sets_with_files if s not in by_set]
+	issues += [
+		_("Set {0} has a paper file but no questions.").format(s) for s in sets_with_files if s not in by_set
+	]
 	for paper_set in sorted(by_set):
 		prefix = _("Set {0}").format(paper_set) + ": "
 		issues += [prefix + issue for issue in set_issues(by_set[paper_set], blueprint, flt(total_marks))]
@@ -72,7 +74,9 @@ def criterion_issues(questions, rows, field, marks):
 	for row in rows:
 		share, low, high = flt(shares.get(row["value"]), 2), flt(row["min_percent"]), flt(row["max_percent"])
 		if not share and low:
-			issues.append(_("{0} is not covered (the pattern needs at least {1}%).").format(row["value"], fmt(low)))
+			issues.append(
+				_("{0} is not covered (the pattern needs at least {1}%).").format(row["value"], fmt(low))
+			)
 		elif not low <= share <= high:
 			issues.append(_("{0} carries {1}% of the marks, the pattern allows {2}% to {3}%.").format(
 				row["value"], fmt(share), fmt(low), fmt(high)))  # fmt: skip

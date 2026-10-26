@@ -40,7 +40,9 @@ def make_login(email, roles, company=COLLEGE):
 		frappe.get_doc({"doctype": "User", "email": email, "first_name": email.split("@")[0], "send_welcome_email": 0,
 			"roles": [{"role": r} for r in roles]}).insert()  # fmt: skip
 	if not frappe.db.exists("User Permission", {"user": email, "allow": "Company", "for_value": company}):
-		frappe.get_doc({"doctype": "User Permission", "user": email, "allow": "Company", "for_value": company}).insert()
+		frappe.get_doc(
+			{"doctype": "User Permission", "user": email, "allow": "Company", "for_value": company}
+		).insert()
 
 
 def pdf_bytes(title):
@@ -82,13 +84,21 @@ class QuestionPaperFixture(CampusTestCase):
 
 	@staticmethod
 	def room(name, company=COLLEGE, room_type=EXAM_HALL):
-		return frappe.get_doc({"doctype": "Room", "room_name": name, "oc_company": company, "oc_room_type": room_type}).insert().name
+		return (
+			frappe.get_doc(
+				{"doctype": "Room", "room_name": name, "oc_company": company, "oc_room_type": room_type}
+			)
+			.insert()
+			.name
+		)
 
 	def setUp(self):
 		frappe.db.savepoint("qp_test")
 		frappe.db.set_single_value(SETTINGS, {"download_lead_minutes": 30, "slot_minutes": 180,
 			"forenoon_starts_at": "10:00:00", "afternoon_starts_at": "14:00:00"})  # fmt: skip
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": QP})
 		question_paper_setup.seed_approval_policy()
 		self.session = self.exam_session(self.term)
@@ -119,7 +129,11 @@ class QuestionPaperFixture(CampusTestCase):
 	def slot_in(self, session, minutes):
 		"""Put the course's AN slot of `session` `minutes` from now (release_at is always the slot start)."""
 		start = add_to_date(now_datetime(), minutes=minutes).replace(microsecond=0)
-		frappe.db.set_value("Exam Schedule", {"parent": session.name, "course": COURSE}, {"exam_date": start.date(), "slot": "AN"})
+		frappe.db.set_value(
+			"Exam Schedule",
+			{"parent": session.name, "course": COURSE},
+			{"exam_date": start.date(), "slot": "AN"},
+		)
 		frappe.db.set_single_value(SETTINGS, "afternoon_starts_at", start.strftime("%H:%M:%S"))
 		return start
 
@@ -199,14 +213,21 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 		doc = self.draft()
 		self.assertTrue(doc.set_a_file.endswith(".enc"), doc.set_a_file)
 		sealed = frappe.get_doc("File", {"file_url": doc.set_a_file})
-		self.assertEqual((sealed.is_private, sealed.attached_to_name, sealed.attached_to_field), (1, doc.name, "set_a_file"))
+		self.assertEqual(
+			(sealed.is_private, sealed.attached_to_name, sealed.attached_to_field),
+			(1, doc.name, "set_a_file"),
+		)
 		with open(sealed.get_full_path(), "rb") as f:
 			self.assertNotIn(b"%PDF", f.read())
 		self.assertTrue(frappe.conf.get(question_paper_files.KEY_CONFIG))
-		self.assertNotEqual(frappe.conf.get(question_paper_files.KEY_CONFIG), frappe.conf.get("encryption_key"))
+		self.assertNotEqual(
+			frappe.conf.get(question_paper_files.KEY_CONFIG), frappe.conf.get("encryption_key")
+		)
 
 	def test_the_plain_upload_is_removed_once_the_save_commits(self):
-		doc = frappe.get_doc({"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}).insert()
+		doc = frappe.get_doc(
+			{"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}
+		).insert()
 		url = self.attach(doc, "set_a_file")
 		doc.set_a_file = url
 		doc.save()
@@ -230,7 +251,10 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 			frappe.set_user("Administrator")
 		denied = self.logs(paper, result="Denied", action="Download")
 		self.assertEqual({row.user for row in denied}, {EC_USER, SM_EC_USER, SM_USER})
-		self.assertTrue({row.user for row in self.logs(paper, result="Denied", action="View")} >= {EC_USER, SM_EC_USER, SM_USER})
+		self.assertTrue(
+			{row.user for row in self.logs(paper, result="Denied", action="View")}
+			>= {EC_USER, SM_EC_USER, SM_USER}
+		)
 		self.assertFalse(self.logs(paper, result="Allowed", action="Download"))
 
 	def test_inside_the_window_exam_confidential_downloads_a_watermarked_paper(self):
@@ -244,7 +268,9 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 		self.assertIn(f"{paper} Set A", text)
 		frappe.set_user("Administrator")
 		(log,) = self.logs(paper, action="Download")
-		self.assertEqual((log.user, log.result, log.ip_address, log.paper_set), (SM_EC_USER, "Allowed", "10.1.2.3", "A"))
+		self.assertEqual(
+			(log.user, log.result, log.ip_address, log.paper_set), (SM_EC_USER, "Allowed", "10.1.2.3", "A")
+		)
 
 	def test_a_system_manager_without_the_role_is_denied_inside_the_window(self):
 		paper = self.paper(release_in_minutes=10).name
@@ -280,7 +306,9 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 
 	def test_the_download_endpoint_is_post_only_answers_403_and_is_never_cached(self):
 		paper = self.paper(release_in_minutes=120).name
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[question_papers.download_paper], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[question_papers.download_paper], ["POST"]
+		)
 		frappe.set_user(EC_USER)
 		frappe.local.response = frappe._dict()
 		question_papers.download_paper(paper, "A")
@@ -292,12 +320,16 @@ class TestReleaseWindowAccess(QuestionPaperFixture):
 		frappe.set_user(EC_USER)
 		frappe.local.response = frappe._dict()
 		question_papers.download_paper(paper, "A")
-		self.assertEqual((frappe.local.response.type, frappe.local.response.filename), ("download", f"{paper}-set-a.pdf"))
+		self.assertEqual(
+			(frappe.local.response.type, frappe.local.response.filename), ("download", f"{paper}-set-a.pdf")
+		)
 		self.assertIn(EC_USER, pdf_text(frappe.local.response.filecontent))
 		self.assertEqual(frappe.local.response_headers.get("Cache-Control"), "no-store")
 
 	def test_release_at_defaults_to_the_slot_start_of_the_schedule(self):
-		doc = frappe.get_doc({"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}).insert()
+		doc = frappe.get_doc(
+			{"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}
+		).insert()
 		self.assertEqual(get_datetime(doc.release_at), get_datetime(f"{add_days(today(), 10)} 14:00:00"))
 		self.assertEqual(doc.company, COLLEGE)
 
@@ -370,7 +402,9 @@ class TestForeignSealedFile(QuestionPaperFixture):
 		elsewhere = frappe.get_doc({"doctype": "File", "file_name": "elsewhere.pdf", "is_private": 1, "content": content,
 			"attached_to_doctype": "Exam Session", "attached_to_name": self.session.name}).insert()  # fmt: skip
 		self.addCleanup(remove_file, elsewhere.file_url)
-		doc = frappe.get_doc({"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}).insert()
+		doc = frappe.get_doc(
+			{"doctype": QP, "exam_session": self.session.name, "course": COURSE, "total_marks": 100}
+		).insert()
 		doc.set_a_file = self.attach(doc, "set_a_file", content=content)
 		with self.assertRaises(frappe.ValidationError):
 			doc.save()
@@ -399,7 +433,9 @@ class TestSettingsAndVersions(QuestionPaperFixture):
 		question_paper_setup.seed_settings()
 		values = frappe.db.get_singles_dict(SETTINGS)
 		self.assertEqual((int(values.download_lead_minutes), int(values.slot_minutes)), (30, 180))
-		self.assertEqual((str(values.forenoon_starts_at), str(values.afternoon_starts_at)), ("10:00:00", "14:00:00"))
+		self.assertEqual(
+			(str(values.forenoon_starts_at), str(values.afternoon_starts_at)), ("10:00:00", "14:00:00")
+		)
 
 	def test_confidential_doctypes_keep_no_version_history(self):
 		"""Critical 3: versions would copy questions and paper fields to a System Manager readable table."""
@@ -415,7 +451,9 @@ class TestSettingsAndVersions(QuestionPaperFixture):
 			self.assertFalse(frappe.db.exists("Version", {"ref_doctype": doctype}), doctype)
 
 	def test_existing_versions_are_removed(self):
-		frappe.get_doc({"doctype": "Version", "ref_doctype": QP, "docname": "QP-LEAK", "data": "{}"}).db_insert()
+		frappe.get_doc(
+			{"doctype": "Version", "ref_doctype": QP, "docname": "QP-LEAK", "data": "{}"}
+		).db_insert()
 		question_paper_setup.drop_confidential_versions()
 		self.assertFalse(frappe.db.exists("Version", {"ref_doctype": QP}))
 
@@ -434,7 +472,10 @@ class TestAccessLog(QuestionPaperFixture):
 		with patch.object(frappe.db, "commit") as commit:
 			frappe.db.after_rollback.run()
 		commit.assert_called_once_with()
-		self.assertEqual(sorted((r.paper_set, r.result) for r in self.logs(paper, action="Download")), [("A", "Denied"), ("B", "Denied")])
+		self.assertEqual(
+			sorted((r.paper_set, r.result) for r in self.logs(paper, action="Download")),
+			[("A", "Denied"), ("B", "Denied")],
+		)
 
 	def test_a_committed_request_is_not_logged_twice(self):
 		paper = self.paper(release_in_minutes=120).name
@@ -471,7 +512,9 @@ class TestAccessLog(QuestionPaperFixture):
 		doc = frappe.get_doc(QP, paper)
 		doc.run_method("onload")
 		self.assertEqual(doc.questions, [])
-		self.assertEqual([r.result for r in self.logs(paper, action="View", user="Administrator")], ["Allowed"])
+		self.assertEqual(
+			[r.result for r in self.logs(paper, action="View", user="Administrator")], ["Allowed"]
+		)
 
 
 class TestRoleRestriction(QuestionPaperFixture):
@@ -483,10 +526,20 @@ class TestRoleRestriction(QuestionPaperFixture):
 		question_papers.open_paper(paper, "A")
 		frappe.set_user("Administrator")
 		log = frappe.get_all(LOG, {"question_paper": paper}, pluck="name", limit=1)[0]
-		for doctype, name in (("Question Bank Item", self.items[0]), ("QP Setter Nomination", nomination), (LOG, log)):
-			self.assertTrue(frappe.has_permission(doctype, "read", doc=frappe.get_doc(doctype, name), user=EC_USER), doctype)
+		for doctype, name in (
+			("Question Bank Item", self.items[0]),
+			("QP Setter Nomination", nomination),
+			(LOG, log),
+		):
+			self.assertTrue(
+				frappe.has_permission(doctype, "read", doc=frappe.get_doc(doctype, name), user=EC_USER),
+				doctype,
+			)
 			for user in (SM_USER, FACULTY):
-				self.assertFalse(frappe.has_permission(doctype, "read", doc=frappe.get_doc(doctype, name), user=user), (doctype, user))
+				self.assertFalse(
+					frappe.has_permission(doctype, "read", doc=frappe.get_doc(doctype, name), user=user),
+					(doctype, user),
+				)
 				frappe.set_user(user)
 				with self.assertRaises(frappe.PermissionError):
 					frappe.get_list(doctype, pluck="name")
@@ -508,14 +561,25 @@ class TestRoleRestriction(QuestionPaperFixture):
 		paper = self.paper(release_in_minutes=120).name
 		frappe.set_user(EC_USER)
 		self.assertEqual(frappe.get_list("Question Bank Item", {"course": COURSE}, pluck="name"), [])
-		self.assertEqual(frappe.db.count("Question Bank Item", {"course": COURSE}), len(before))  # raw count, unscoped
+		self.assertEqual(
+			frappe.db.count("Question Bank Item", {"course": COURSE}), len(before)
+		)  # raw count, unscoped
 		self.assertEqual(frappe.client.get_count("Question Bank Item", {"course": COURSE}), 0)
 		from frappe.desk.search import search_link
+
 		self.assertEqual(search_link("Question Bank Item", "QBI"), [])
 		frappe.set_user("Administrator")
 		for name in (self.items[0], spare):  # a used and an unused item answer alike
 			for ptype in ("read", "write"):
-				self.assertFalse(frappe.has_permission("Question Bank Item", ptype, doc=frappe.get_doc("Question Bank Item", name), user=EC_USER), (name, ptype))
+				self.assertFalse(
+					frappe.has_permission(
+						"Question Bank Item",
+						ptype,
+						doc=frappe.get_doc("Question Bank Item", name),
+						user=EC_USER,
+					),
+					(name, ptype),
+				)
 		new_item = frappe.get_doc({"doctype": "Question Bank Item", "company": COLLEGE, "course": COURSE, "course_outcome": "CO1",
 			"bloom_level": "Apply", "marks": 5, "question": "New"})  # fmt: skip
 		self.assertFalse(frappe.has_permission("Question Bank Item", "create", doc=new_item, user=EC_USER))
@@ -529,7 +593,9 @@ class TestRoleRestriction(QuestionPaperFixture):
 		paper = self.paper(approve=False).name
 		for doctype, name in ((QP, paper), ("Question Bank Item", self.items[0])):
 			with self.assertRaises(frappe.ValidationError):
-				frappe.share.add_docshare(doctype, name, SM_USER, read=1, flags={"ignore_share_permission": True})
+				frappe.share.add_docshare(
+					doctype, name, SM_USER, read=1, flags={"ignore_share_permission": True}
+				)
 
 	def test_the_paper_file_record_is_not_readable(self):
 		doc = self.paper(release_in_minutes=10)
@@ -558,13 +624,17 @@ class TestApproval(QuestionPaperFixture):
 		frappe.set_user(SM_EC_USER)
 		approvals.approve(request)
 		frappe.set_user("Administrator")
-		self.assertEqual(frappe.db.get_value(QP, doc.name, ["docstatus", "moderation_status"]), (1, "Approved"))
+		self.assertEqual(
+			frappe.db.get_value(QP, doc.name, ["docstatus", "moderation_status"]), (1, "Approved")
+		)
 
 	def test_a_paper_is_not_sealed_without_the_approval_engine(self):
 		doc = self.draft()
 		with self.assertRaises(frappe.ValidationError):
 			doc.submit()
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": QP})
 		with self.assertRaises(frappe.ValidationError):
 			approvals.request_approval(QP, doc.name)  # no policy: refused, never submitted directly
@@ -590,9 +660,15 @@ class TestApproval(QuestionPaperFixture):
 
 	def test_a_paper_on_its_blueprint_is_approved_with_its_window_snapshotted(self):
 		doc = self.paper(release_in_minutes=120)
-		self.assertEqual((doc.docstatus, doc.moderation_status, doc.blueprint_issues or ""), (1, "Approved", ""))
-		self.assertEqual(get_datetime(doc.download_opens_at), add_to_date(get_datetime(doc.release_at), minutes=-30))
-		self.assertEqual(get_datetime(doc.download_closes_at), add_to_date(get_datetime(doc.release_at), minutes=180))
+		self.assertEqual(
+			(doc.docstatus, doc.moderation_status, doc.blueprint_issues or ""), (1, "Approved", "")
+		)
+		self.assertEqual(
+			get_datetime(doc.download_opens_at), add_to_date(get_datetime(doc.release_at), minutes=-30)
+		)
+		self.assertEqual(
+			get_datetime(doc.download_closes_at), add_to_date(get_datetime(doc.release_at), minutes=180)
+		)
 
 	def test_a_withdrawn_paper_is_never_downloadable(self):
 		paper = self.paper(release_in_minutes=10).name
@@ -625,12 +701,16 @@ class TestApproval(QuestionPaperFixture):
 		self.assertEqual(frappe.db.get_value(QP, paper, ["docstatus", "withdrawal_reason"]), (2, "Leaked"))
 
 	def test_the_approval_policy_is_seeded(self):
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]})
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": QP})
 		question_paper_setup.seed_approval_policy()
 		(policy,) = frappe.get_all("Approval Policy", {"document_type": QP}, pluck="name")
 		(level,) = frappe.get_doc("Approval Policy", policy).levels
-		self.assertEqual((level.approver_type, level.approver, level.limit_to_company), ("Role", EXAM_CONFIDENTIAL, 1))
+		self.assertEqual(
+			(level.approver_type, level.approver, level.limit_to_company), ("Role", EXAM_CONFIDENTIAL, 1)
+		)
 
 
 class TestBlueprintCheck(QuestionPaperFixture):
@@ -683,8 +763,12 @@ class TestPrintLog(QuestionPaperFixture):
 		paper = self.paper(release_in_minutes=10).name
 		frappe.set_user(EC_USER)
 		question_papers.print_copies(paper, "A", self.rooms[0], 30)
-		_columns, mismatch = print_log({"company": COLLEGE, "exam_session": self.session_2.name, "question_paper": paper})
-		_columns, match = print_log({"company": COLLEGE, "exam_session": self.session.name, "question_paper": paper})
+		_columns, mismatch = print_log(
+			{"company": COLLEGE, "exam_session": self.session_2.name, "question_paper": paper}
+		)
+		_columns, match = print_log(
+			{"company": COLLEGE, "exam_session": self.session.name, "question_paper": paper}
+		)
 		frappe.set_user("Administrator")
 		self.assertEqual((mismatch, [r["copies"] for r in match]), ([], [30]))
 
@@ -785,7 +869,9 @@ class TestRound2(QuestionPaperFixture):
 	def test_no_version_notification_or_webhook_on_confidential_doctypes(self):
 		"""O-1 guards"""
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc({"doctype": "Version", "ref_doctype": QP, "docname": "QP-X", "data": "{}"}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Version", "ref_doctype": QP, "docname": "QP-X", "data": "{}"}).insert(
+				ignore_permissions=True
+			)
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc({"doctype": "Notification", "name": "QPT Leak", "subject": "x", "document_type": "Question Bank Item",
 				"event": "New", "channel": "System Notification", "message": "{{ doc.question }}"}).insert(ignore_permissions=True)  # fmt: skip
@@ -837,7 +923,9 @@ class TestRound3(QuestionPaperFixture):
 		doc = frappe.get_doc(QP, doc.name)
 		doc.editors = "someone@example.com"
 		doc.save()
-		self.assertEqual(set(frappe.db.get_value(QP, doc.name, "editors").split()), {"Administrator", EC_USER})
+		self.assertEqual(
+			set(frappe.db.get_value(QP, doc.name, "editors").split()), {"Administrator", EC_USER}
+		)
 
 	def test_an_editor_of_a_bank_question_on_the_paper_cannot_approve(self):
 		"""I-D bypass 2: editing the question text of the paper's items is editing the paper."""
@@ -860,7 +948,10 @@ class TestRound3(QuestionPaperFixture):
 		paper = self.paper(release_in_minutes=120).name
 		self.withdraw(paper)
 		for item in self.items:
-			self.assertEqual(frappe.db.get_value("Question Bank Item", item, ["disabled", "retired_by_withdrawal"]), (1, paper))
+			self.assertEqual(
+				frappe.db.get_value("Question Bank Item", item, ["disabled", "retired_by_withdrawal"]),
+				(1, paper),
+			)
 		with self.assertRaises(frappe.ValidationError):
 			self.draft(session=self.session_2)  # a replacement paper cannot reuse the leaked questions
 		item = frappe.get_doc("Question Bank Item", self.items[0])
@@ -877,7 +968,9 @@ class TestRound3(QuestionPaperFixture):
 		self.assertEqual(question_papers.withdraw_course_paper(self.session.name, COURSE, "Leaked"), [paper])
 		frappe.set_user("Administrator")
 		self.assertEqual(frappe.db.get_value(QP, paper, ["docstatus", "withdrawal_reason"]), (2, "Leaked"))
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[question_papers.withdraw_course_paper], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[question_papers.withdraw_course_paper], ["POST"]
+		)
 
 	def test_a_paper_whose_window_is_opening_cannot_be_approved(self):
 		doc = self.draft(release_in_minutes=20)  # the 30-minute lead has already begun

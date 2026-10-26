@@ -49,7 +49,11 @@ def reopen(name):
 	metric = frappe.get_doc("Metric Value", name, for_update=True)
 	metric.check_permission("write")
 	if metric.status != "Verified":
-		frappe.throw(_("{0} is {1}; only a Verified value can be reopened.").format(frappe.bold(name), _(metric.status)))
+		frappe.throw(
+			_("{0} is {1}; only a Verified value can be reopened.").format(
+				frappe.bold(name), _(metric.status)
+			)
+		)
 	set_status(metric, "Draft")
 	metric.update({"verified_by": None, "verified_on": None})
 	metric.flags.engine_write = True
@@ -67,11 +71,16 @@ def note_source_change(metric, value, inputs):
 		json.loads(metric.snapshot or "{}").get("inputs", {})
 	)
 	frappe.db.set_value(
-		"Metric Value", metric.name, {"source_changed": int(changed), "recomputed_value": value if changed else None}
+		"Metric Value",
+		metric.name,
+		{"source_changed": int(changed), "recomputed_value": value if changed else None},
 	)
 
 
 def signature(inputs):
 	"""Values and record names of snapshot inputs, comparable after a JSON round trip."""
 	inputs = json.loads(json.dumps(inputs))
-	return {key: (point["value"], sorted(record["name"] for record in point["records"])) for key, point in inputs.items()}
+	return {
+		key: (point["value"], sorted(record["name"] for record in point["records"]))
+		for key, point in inputs.items()
+	}

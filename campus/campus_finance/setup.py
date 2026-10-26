@@ -49,7 +49,9 @@ def grant_guardian_invoice_read():
 		"Custom DocPerm", {"parent": "Sales Invoice", "role": GUARDIAN_ROLE, "permlevel": 0}
 	):
 		return
-	name = add_permission("Sales Invoice", GUARDIAN_ROLE, 0)  # copies the standard DocPerms first, so none is lost
+	name = add_permission(
+		"Sales Invoice", GUARDIAN_ROLE, 0
+	)  # copies the standard DocPerms first, so none is lost
 	update_custom_docperm(name, {flag: int(flag == "read") for flag in GUARDIAN_INVOICE_FLAGS})
 
 
@@ -63,7 +65,11 @@ STUDENT_INVOICE_KEY = "campus_student_invoice_narrowed"
 def narrow_student_invoice_rights():
 	if frappe.db.get_global(STUDENT_INVOICE_KEY):
 		return
-	rule = frappe.db.get_value("Custom DocPerm", {"parent": "Sales Invoice", "role": STUDENT_ROLE, "permlevel": 0, "if_owner": 0}, "name")
+	rule = frappe.db.get_value(
+		"Custom DocPerm",
+		{"parent": "Sales Invoice", "role": STUDENT_ROLE, "permlevel": 0, "if_owner": 0},
+		"name",
+	)
 	if not rule:  # Education not set up for students here: nothing to narrow, nothing recorded
 		return
 	frappe.db.set_value("Custom DocPerm", rule, {"write": 0, "export": 0, "email": 0, "share": 0})
@@ -73,12 +79,24 @@ def narrow_student_invoice_rights():
 
 def seed_concession_policy():
 	"""A single Principal level for Fee Concessions, unless the college has its own policy for them."""
-	if frappe.db.exists("Approval Policy", {"document_type": "Fee Concession"}) or not frappe.db.exists("Position", "PRINCIPAL"):
+	if frappe.db.exists("Approval Policy", {"document_type": "Fee Concession"}) or not frappe.db.exists(
+		"Position", "PRINCIPAL"
+	):
 		return
 	frappe.get_doc(
 		{
-			"doctype": "Approval Policy", "policy_name": CONCESSION_POLICY, "document_type": "Fee Concession",
-			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "sla_hours": 72}],
+			"doctype": "Approval Policy",
+			"policy_name": CONCESSION_POLICY,
+			"document_type": "Fee Concession",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"sla_hours": 72,
+				}
+			],
 		}
 	).insert(ignore_permissions=True)
 
@@ -86,12 +104,24 @@ def seed_concession_policy():
 def seed_scholarship_policy():
 	"""A single Principal level for sanctioning Scholarship Applications (on the mandatory approval list), unless the
 	college has its own policy for them; upgraded sites thus keep sanctioning with separation of duties."""
-	if frappe.db.exists("Approval Policy", {"document_type": "Scholarship Application"}) or not frappe.db.exists("Position", "PRINCIPAL"):
+	if frappe.db.exists(
+		"Approval Policy", {"document_type": "Scholarship Application"}
+	) or not frappe.db.exists("Position", "PRINCIPAL"):
 		return
 	frappe.get_doc(
 		{
-			"doctype": "Approval Policy", "policy_name": SCHOLARSHIP_POLICY, "document_type": "Scholarship Application",
-			"levels": [{"approver_type": "Position", "approver": "PRINCIPAL", "scope_field": "company", "title": "Principal", "sla_hours": 72}],
+			"doctype": "Approval Policy",
+			"policy_name": SCHOLARSHIP_POLICY,
+			"document_type": "Scholarship Application",
+			"levels": [
+				{
+					"approver_type": "Position",
+					"approver": "PRINCIPAL",
+					"scope_field": "company",
+					"title": "Principal",
+					"sla_hours": 72,
+				}
+			],
 		}
 	).insert(ignore_permissions=True)
 
@@ -102,8 +132,18 @@ def seed_refund_policy():
 		return
 	frappe.get_doc(
 		{
-			"doctype": "Approval Policy", "policy_name": REFUND_POLICY, "document_type": "Fee Refund",
-			"levels": [{"approver_type": "Role", "approver": "Accounts Manager", "limit_to_company": 1, "title": "Accounts", "sla_hours": 72}],
+			"doctype": "Approval Policy",
+			"policy_name": REFUND_POLICY,
+			"document_type": "Fee Refund",
+			"levels": [
+				{
+					"approver_type": "Role",
+					"approver": "Accounts Manager",
+					"limit_to_company": 1,
+					"title": "Accounts",
+					"sla_hours": 72,
+				}
+			],
 		}
 	).insert(ignore_permissions=True)
 
@@ -114,33 +154,84 @@ def setup_finance_fields():
 	create_custom_fields(
 		{
 			"Fee Category": [
-				field("oc_fee_head_type", "Select", "Fee Head Type", "category_name", options=head_types,
-					in_list_view=1, in_standard_filter=1),
+				field(
+					"oc_fee_head_type",
+					"Select",
+					"Fee Head Type",
+					"category_name",
+					options=head_types,
+					in_list_view=1,
+					in_standard_filter=1,
+				),
 				field("oc_refundable", "Check", "Refundable", "oc_fee_head_type"),
 				field("oc_gst_applicable", "Check", "GST Applicable", "oc_refundable"),
-				field("oc_concession_allowed", "Check", "Concession Allowed", "oc_gst_applicable",
-					description="Fee Concessions may discount this category."),
+				field(
+					"oc_concession_allowed",
+					"Check",
+					"Concession Allowed",
+					"oc_gst_applicable",
+					description="Fee Concessions may discount this category.",
+				),
 			],
 			"Fee Structure": [
-				field("oc_admission_quota", "Link", "Admission Quota", "student_category", options="Admission Quota",
-					in_standard_filter=1),
+				field(
+					"oc_admission_quota",
+					"Link",
+					"Admission Quota",
+					"student_category",
+					options="Admission Quota",
+					in_standard_filter=1,
+				),
 			],
 			"Sales Invoice": [
-				field("oc_challan_no", "Data", "Challan No", "fee_schedule", unique=1, read_only=1, no_copy=1,
-					search_index=1, description="Bank challan number; used to match bank collections."),
+				field(
+					"oc_challan_no",
+					"Data",
+					"Challan No",
+					"fee_schedule",
+					unique=1,
+					read_only=1,
+					no_copy=1,
+					search_index=1,
+					description="Bank challan number; used to match bank collections.",
+				),
 			],
 			"Sales Invoice Item": [
-				field("oc_fee_concession", "Link", "Fee Concession", "description", options="Fee Concession", read_only=1,
-					no_copy=1, description="Set on the discount line a Fee Concession adds."),
+				field(
+					"oc_fee_concession",
+					"Link",
+					"Fee Concession",
+					"description",
+					options="Fee Concession",
+					read_only=1,
+					no_copy=1,
+					description="Set on the discount line a Fee Concession adds.",
+				),
 			],
 			"Company": [
-				field("oc_damages_income_account", "Link", "Damages Income Account", "default_receivable_account", options="Account",
-					description="Income account that damages kept from a caution deposit are moved to."),
+				field(
+					"oc_damages_income_account",
+					"Link",
+					"Damages Income Account",
+					"default_receivable_account",
+					options="Account",
+					description="Income account that damages kept from a caution deposit are moved to.",
+				),
 			],
 			"Payment Entry": [
-				field("oc_student", "Link", "Student", "party_name", options="Student", read_only=1, no_copy=1,
-					search_index=1),
-				field("oc_receipt_no", "Data", "Fee Receipt No", "oc_student", unique=1, read_only=1, no_copy=1),
+				field(
+					"oc_student",
+					"Link",
+					"Student",
+					"party_name",
+					options="Student",
+					read_only=1,
+					no_copy=1,
+					search_index=1,
+				),
+				field(
+					"oc_receipt_no", "Data", "Fee Receipt No", "oc_student", unique=1, read_only=1, no_copy=1
+				),
 			],
 		},
 		update=True,

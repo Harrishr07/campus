@@ -43,7 +43,11 @@ def render_prefix(pattern, company, program, academic_year):
 	if "{program_code}" in head:
 		code = frappe.get_cached_value("Program", program, "program_abbreviation")
 		if not code:
-			frappe.throw(_("Program {0} has no abbreviation for the {1} placeholder.").format(program, "{program_code}"))
+			frappe.throw(
+				_("Program {0} has no abbreviation for the {1} placeholder.").format(
+					program, "{program_code}"
+				)
+			)
 		values["program_code"] = code
 	return head.format(**values)
 
@@ -56,4 +60,7 @@ def next_number(pattern, company, program, academic_year):
 
 
 def ensure_series(prefix):
-	frappe.db.sql("INSERT INTO `tabSeries` (`name`, `current`) VALUES (%s, 0) ON DUPLICATE KEY UPDATE `name` = `name`", (prefix,))
+	frappe.db.sql(
+		"INSERT INTO `tabSeries` (`name`, `current`) VALUES (%s, 0) ON DUPLICATE KEY UPDATE `name` = `name`",
+		(prefix,),
+	)

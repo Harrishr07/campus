@@ -63,7 +63,8 @@ def report_row(student, program, summary):
 		"overall_pct": summary["overall_pct"],
 		"status": _(summary["status"]),
 		"short_courses": ", ".join(
-			f"{row['course']} ({row['pct']}%)" for row in summary["offerings"] if row["pct"] < summary["per_course_min_pct"]
+			f"{row['course']} ({row['pct']}%)"
+			for row in summary["offerings"]
+			if row["pct"] < summary["per_course_min_pct"]
 		),
 	}
-

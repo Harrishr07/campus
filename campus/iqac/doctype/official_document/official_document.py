@@ -23,7 +23,9 @@ class OfficialDocument(Document):
 
 	def check_program(self):
 		if self.program and frappe.db.get_value("Program", self.program, "oc_company") != self.company:
-			frappe.throw(_("{0} is not a program of {1}.").format(frappe.bold(self.program), frappe.bold(self.company)))
+			frappe.throw(
+				_("{0} is not a program of {1}.").format(frappe.bold(self.program), frappe.bold(self.company))
+			)
 
 	def check_file(self):
 		if self.file and not posixpath.normpath(self.file).startswith("/private/files/"):

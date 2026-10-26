@@ -10,7 +10,12 @@ from frappe import _
 
 from campus.campus_platform.company_scope import permitted_companies
 
-GROUPS = (("Quota", "oc_admission_quota"), ("Category", "student_category"), ("Gender", "gender"), ("State", "state"))
+GROUPS = (
+	("Quota", "oc_admission_quota"),
+	("Category", "student_category"),
+	("Gender", "gender"),
+	("State", "state"),
+)
 
 
 def execute(filters=None):
@@ -23,7 +28,12 @@ def columns():
 		{"fieldname": "grouping", "label": _("Grouping"), "fieldtype": "Data", "width": 110},
 		{"fieldname": "value", "label": _("Value"), "fieldtype": "Data", "width": 200},
 		{"fieldname": "admitted", "label": _("Students Admitted"), "fieldtype": "Int", "width": 130},
-		{"fieldname": "sanctioned", "label": _("Seats Sanctioned (Seat Matrix)"), "fieldtype": "Int", "width": 190},
+		{
+			"fieldname": "sanctioned",
+			"label": _("Seats Sanctioned (Seat Matrix)"),
+			"fieldtype": "Int",
+			"width": 190,
+		},
 	]
 
 
@@ -47,7 +57,9 @@ def sanctioned_by_category(filters):
 		if filters.get(field):
 			matrix[field] = filters[field]
 	names = frappe.get_all("Seat Matrix", matrix, pluck="name", limit=0)
-	rows = frappe.get_all("Seat Matrix Row", {"parent": ("in", names or [""])}, ["category", "sanctioned"], limit=0)
+	rows = frappe.get_all(
+		"Seat Matrix Row", {"parent": ("in", names or [""])}, ["category", "sanctioned"], limit=0
+	)
 	totals = {}
 	for row in rows:
 		totals[row.category] = totals.get(row.category, 0) + (row.sanctioned or 0)
@@ -60,7 +72,14 @@ def data(filters):
 		return []
 	students = admitted_students(filters)
 	sanctioned = sanctioned_by_category(filters)
-	rows = [{"grouping": _("Total"), "value": "", "admitted": len(students), "sanctioned": sum(sanctioned.values())}]
+	rows = [
+		{
+			"grouping": _("Total"),
+			"value": "",
+			"admitted": len(students),
+			"sanctioned": sum(sanctioned.values()),
+		}
+	]
 	for label, field in GROUPS:
 		counts = {}
 		for student in students:

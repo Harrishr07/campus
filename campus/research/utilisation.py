@@ -38,7 +38,15 @@ FIGURE_FIELDS = (
 	"opening_unspent", "grants_received", "interest_earned", "other_adjustments", "total_available",
 	"total_expenditure", "closing_unspent", "unreconciled_amount",
 )  # fmt: skip
-HEAD_FIELDS = ("budget_head", "is_capital", "sanctioned_amount", "spent_before", "spent_in_period", "spent_to_date", "balance")
+HEAD_FIELDS = (
+	"budget_head",
+	"is_capital",
+	"sanctioned_amount",
+	"spent_before",
+	"spent_in_period",
+	"spent_to_date",
+	"balance",
+)
 
 
 # figures
@@ -67,7 +75,9 @@ def liability_inflows(sanction, from_date, to_date, lock=False):
 	the Grant Income Recognition entries."""
 	kinds = {}
 	for doctype, kind in (("Grant Receipt", "receipt"), ("Grant Interest", "interest")):
-		for entry in frappe.get_all(doctype, {"sanction": sanction.name, "journal_entry": ["is", "set"]}, pluck="journal_entry"):
+		for entry in frappe.get_all(
+			doctype, {"sanction": sanction.name, "journal_entry": ["is", "set"]}, pluck="journal_entry"
+		):
 			kinds[entry] = kind
 	recognitions = recognition_entries(sanction.name)
 	gl = frappe.qb.DocType("GL Entry")
@@ -77,7 +87,10 @@ def liability_inflows(sanction, from_date, to_date, lock=False):
 		.where((gl.account == sanction.liability_account) & (gl.is_cancelled == 0) & (gl.posting_date <= to_date))
 		.groupby(gl.voucher_no, gl.posting_date)
 	)  # fmt: skip
-	before, during = dict.fromkeys(("receipt", "interest", "other"), 0), dict.fromkeys(("receipt", "interest", "other"), 0)
+	before, during = (
+		dict.fromkeys(("receipt", "interest", "other"), 0),
+		dict.fromkeys(("receipt", "interest", "other"), 0),
+	)
 	for voucher, posting_date, amount in (query.for_update() if lock else query).run():
 		if voucher in recognitions:
 			continue
@@ -88,7 +101,10 @@ def liability_inflows(sanction, from_date, to_date, lock=False):
 
 def recognition_entries(sanction):
 	"""Journal Entries of the Grant Income Recognitions that included `sanction`."""
-	row, doc = frappe.qb.DocType("Grant Income Recognition Sanction"), frappe.qb.DocType("Grant Income Recognition")
+	row, doc = (
+		frappe.qb.DocType("Grant Income Recognition Sanction"),
+		frappe.qb.DocType("Grant Income Recognition"),
+	)
 	return set(
 		frappe.qb.from_(doc).join(row).on(row.parent == doc.name)
 		.select(doc.journal_entry)
@@ -102,7 +118,10 @@ def sanction_heads(sanction):
 	not be split between them)."""
 	heads = {}
 	for row in frappe.get_all(
-		"Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, ["budget_head", "is_capital", "amount"], order_by="idx"
+		"Sanction Head",
+		{"parent": sanction.name, "parenttype": "Sanction"},
+		["budget_head", "is_capital", "amount"],
+		order_by="idx",
 	):
 		head = heads.setdefault(row.budget_head, frappe._dict(is_capital=row.is_capital, amount=0))
 		head.amount += flt(row.amount)
@@ -112,9 +131,9 @@ def sanction_heads(sanction):
 		for account in heads[head].accounts:
 			if account in owner:
 				frappe.throw(
-					_("Budget heads {0} and {1} of Sanction {2} share account {3}: the ledger can't be split between them.").format(
-						owner[account], head, sanction.name, account
-					)
+					_(
+						"Budget heads {0} and {1} of Sanction {2} share account {3}: the ledger can't be split between them."
+					).format(owner[account], head, sanction.name, account)
 				)
 			owner[account] = head
 	return heads
@@ -127,9 +146,13 @@ def head_figures(sanction, heads, before, to_date, lock=False):
 		spent_to_date = posted(sanction.cost_center, values.accounts, to_date, lock)
 		rows.append(
 			frappe._dict(
-				budget_head=head, is_capital=values.is_capital, sanctioned_amount=flt(values.amount, 2),
-				spent_before=flt(spent_before, 2), spent_in_period=flt(spent_to_date - spent_before, 2),
-				spent_to_date=flt(spent_to_date, 2), balance=flt(values.amount - spent_to_date, 2),
+				budget_head=head,
+				is_capital=values.is_capital,
+				sanctioned_amount=flt(values.amount, 2),
+				spent_before=flt(spent_before, 2),
+				spent_in_period=flt(spent_to_date - spent_before, 2),
+				spent_to_date=flt(spent_to_date, 2),
+				balance=flt(values.amount - spent_to_date, 2),
 			)  # fmt: skip
 		)
 	return rows
@@ -149,7 +172,10 @@ def unreconciled_entries(sanction, heads, to_date, lock=False):
 	off_heads = ~gl.account.isin(list(accounts)) if accounts else gl.account.isnotnull()
 	locked = unreconciled_query(sanction, to_date, on_cost_center & off_heads)
 	elsewhere = unreconciled_query(
-		sanction, to_date, (gl.project == sanction.project) & (gl.cost_center.isnull() | (gl.cost_center != sanction.cost_center))
+		sanction,
+		to_date,
+		(gl.project == sanction.project)
+		& (gl.cost_center.isnull() | (gl.cost_center != sanction.cost_center)),
 	)
 	totals = {}
 	for row in (locked.for_update() if lock else locked).run(as_dict=True) + elsewhere.run(as_dict=True):
@@ -165,7 +191,8 @@ def unreconciled_entries(sanction, heads, to_date, lock=False):
 def unreconciled_query(sanction, to_date, condition):
 	gl, account = frappe.qb.DocType("GL Entry"), frappe.qb.DocType("Account")
 	spending = (account.account_type == "Fixed Asset") | (
-		(account.root_type == "Expense") & Coalesce(account.account_type, "").notin(NON_SPENDING_EXPENSE_TYPES)
+		(account.root_type == "Expense")
+		& Coalesce(account.account_type, "").notin(NON_SPENDING_EXPENSE_TYPES)
 	)
 	return (
 		frappe.qb.from_(gl).join(account).on(account.name == gl.account)
@@ -194,7 +221,9 @@ def signature(figures):
 
 
 def snapshot(figures):
-	return json.dumps({**signature(figures), "computed_at": str(now_datetime()), "engine_version": ENGINE_VERSION}, indent=1)
+	return json.dumps(
+		{**signature(figures), "computed_at": str(now_datetime()), "engine_version": ENGINE_VERSION}, indent=1
+	)
 
 
 def source_moved(uc, lock=False):
@@ -278,7 +307,10 @@ def mark_source(uc, changed=None):
 	if changed is None:
 		changed = source_moved(uc)
 	if bool(changed) != bool(uc.source_changed):
-		uc.db_set({"source_changed": int(changed), "source_changed_on": now_datetime() if changed else None}, notify=True)
+		uc.db_set(
+			{"source_changed": int(changed), "source_changed_on": now_datetime() if changed else None},
+			notify=True,
+		)
 	return bool(changed)
 
 

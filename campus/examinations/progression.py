@@ -31,7 +31,9 @@ def start(run_doc):
 	from campus.campus_platform.bulk import run_bulk
 
 	frappe.only_for((COE_ROLE, "System Manager"))
-	return run_bulk(RUN_TYPE, active_students(run_doc), HANDLER, chunk=50, parameters={"progression_run": run_doc.name})
+	return run_bulk(
+		RUN_TYPE, active_students(run_doc), HANDLER, chunk=50, parameters={"progression_run": run_doc.name}
+	)
 
 
 def rerun(progression_run):
@@ -47,11 +49,19 @@ def rerun(progression_run):
 
 def active_students(run_doc):
 	"""The run's students: Active ones, plus those this run detained (a re-run after a revaluation can promote them)."""
-	students = program_students(frappe._dict(academic_term=run_doc.academic_term, company=run_doc.company), run_doc.program)
-	rows = frappe.get_all("Student", {"name": ["in", students or [""]]}, ["name", "oc_academic_status", "oc_detained"])
+	students = program_students(
+		frappe._dict(academic_term=run_doc.academic_term, company=run_doc.company), run_doc.program
+	)
+	rows = frappe.get_all(
+		"Student", {"name": ["in", students or [""]]}, ["name", "oc_academic_status", "oc_detained"]
+	)
 	standing = {row.name: row for row in rows}
 	detained_here = set(
-		frappe.get_all(ROW, {"parent": run_doc.name, "parenttype": RUN_TYPE, "outcome": graduation_rules.DETAIN}, pluck="student")
+		frappe.get_all(
+			ROW,
+			{"parent": run_doc.name, "parenttype": RUN_TYPE, "outcome": graduation_rules.DETAIN},
+			pluck="student",
+		)
 	)
 	return [
 		s for s in students
@@ -67,8 +77,17 @@ def progress_student(student, run):
 	outcome = graduation_rules.progression_outcome(
 		len(record.arrears), record.cgpa, cint(rule.max_arrears), rule.probation_below_cgpa
 	)
-	existing = frappe.db.get_value(ROW, {"parent": run_name, "parenttype": RUN_TYPE, "student": student}, ["name", "from_semester"], as_dict=True)
-	from_semester = existing.from_semester if existing else cint(frappe.db.get_value("Student", student, "oc_current_semester"))
+	existing = frappe.db.get_value(
+		ROW,
+		{"parent": run_name, "parenttype": RUN_TYPE, "student": student},
+		["name", "from_semester"],
+		as_dict=True,
+	)
+	from_semester = (
+		existing.from_semester
+		if existing
+		else cint(frappe.db.get_value("Student", student, "oc_current_semester"))
+	)
 	values = {
 		"student_name": record.student_name, "from_semester": from_semester, "cgpa": record.cgpa,
 		"arrear_count": len(record.arrears), "outcome": outcome,

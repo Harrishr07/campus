@@ -42,12 +42,16 @@ def validate_project_update(doc, method=None):
 	if not sanction:
 		return
 	if doc.oc_report_type not in REPORT_TYPES:
-		frappe.throw(_("Select the report type of this update of Sanction {0}'s project.").format(sanction.name))
+		frappe.throw(
+			_("Select the report type of this update of Sanction {0}'s project.").format(sanction.name)
+		)
 	if not doc.oc_from_date or not doc.oc_to_date:
 		frappe.throw(_("Enter the period the report covers."))
 	if getdate(doc.oc_from_date) > getdate(doc.oc_to_date):
 		frappe.throw(_("The period can't end before it starts."))
-	if getdate(doc.oc_from_date) < getdate(sanction.start_date) or getdate(doc.oc_to_date) > getdate(sanction.end_date):
+	if getdate(doc.oc_from_date) < getdate(sanction.start_date) or getdate(doc.oc_to_date) > getdate(
+		sanction.end_date
+	):
 		frappe.throw(
 			_("The period must be inside the sanction period ({0} to {1}).").format(
 				frappe.format(sanction.start_date, "Date"), frappe.format(sanction.end_date, "Date")
@@ -59,8 +63,15 @@ def validate_project_update(doc, method=None):
 def milestone_summary(project):
 	lines = []
 	for task in frappe.get_all(
-		"Task", {"project": project, "is_milestone": 1}, ["subject", "status", "exp_end_date"], order_by="exp_end_date, creation"
+		"Task",
+		{"project": project, "is_milestone": 1},
+		["subject", "status", "exp_end_date"],
+		order_by="exp_end_date, creation",
 	):
-		due = _(" (due {0})").format(frappe.format(getdate(task.exp_end_date), "Date")) if task.exp_end_date else ""
+		due = (
+			_(" (due {0})").format(frappe.format(getdate(task.exp_end_date), "Date"))
+			if task.exp_end_date
+			else ""
+		)
 		lines.append(f"{task.subject}: {_(task.status)}{due}")
 	return "\n".join(lines)

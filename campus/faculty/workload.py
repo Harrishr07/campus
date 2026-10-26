@@ -49,7 +49,11 @@ def submitted_hours(academic_term, company, exclude=None, lock=False):
 		.join(allocation)
 		.on(row.parent == allocation.name)
 		.select(row.faculty, row.lecture_hours, row.tutorial_hours, row.practical_hours)
-		.where((allocation.academic_term == academic_term) & (allocation.company == company) & (allocation.docstatus == 1))
+		.where(
+			(allocation.academic_term == academic_term)
+			& (allocation.company == company)
+			& (allocation.docstatus == 1)
+		)
 	)
 	if exclude:
 		query = query.where(allocation.name != exclude)
@@ -61,7 +65,12 @@ def term_offerings(department, academic_term):
 	programs = frappe.get_all("Program", filters={"department": department}, pluck="name") or [""]
 	return frappe.get_all(
 		"Student Group",
-		filters={"group_based_on": "Course", "academic_term": academic_term, "program": ["in", programs], "disabled": 0},
+		filters={
+			"group_based_on": "Course",
+			"academic_term": academic_term,
+			"program": ["in", programs],
+			"disabled": 0,
+		},
 		pluck="name",
 		order_by="name",
 	)

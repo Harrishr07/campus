@@ -19,8 +19,13 @@ def execute():
 		if company:
 			frappe.db.set_value("Message Log", log.name, "company", company, update_modified=False)
 	for consent in frappe.get_all(
-		"Communication Consent", filters={"company": ["in", ["", None]]}, fields=["name", "party_type", "party"], limit=0
+		"Communication Consent",
+		filters={"company": ["in", ["", None]]},
+		fields=["name", "party_type", "party"],
+		limit=0,
 	):
 		company = company_of(consent.party_type, consent.party)
 		if company:
-			frappe.db.set_value("Communication Consent", consent.name, "company", company, update_modified=False)
+			frappe.db.set_value(
+				"Communication Consent", consent.name, "company", company, update_modified=False
+			)

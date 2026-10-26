@@ -2,9 +2,9 @@
 (R2022 theory and lab, R2026 theory with attendance marks), the lock at the deadline, approved unlocks,
 permissions and the two CIA reports. Expected values are hand-computed in the comments (AC1-AC4)."""
 
-import frappe
 from unittest.mock import patch
 
+import frappe
 from frappe.utils import add_days, add_to_date, now_datetime
 
 from campus.campus_platform.approvals import approve, request_approval
@@ -15,7 +15,15 @@ from campus.examinations.report.cia_status_by_offering.cia_status_by_offering im
 from campus.tests.approval_fixtures import level, make_department
 from campus.tests.test_grievances import hold
 from campus.tests.test_regulation import make_program
-from campus.tests.test_results import COE_USER, COLLEGE, FACULTY, OTHER_FACULTY, PROGRAM, ExamFixture, make_login
+from campus.tests.test_results import (
+	COE_USER,
+	COLLEGE,
+	FACULTY,
+	OTHER_FACULTY,
+	PROGRAM,
+	ExamFixture,
+	make_login,
+)
 
 HOD_USER = "cia-hod@example.com"
 POLICY = "CIA Test Unlock Policy"
@@ -56,8 +64,12 @@ class CIAFixture(ExamFixture):
 
 	def setUp(self):
 		super().setUp()
-		self.addCleanup(frappe.set_user, "Administrator")  # helpers switch users; a failing assert must not leak one
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]})
+		self.addCleanup(
+			frappe.set_user, "Administrator"
+		)  # helpers switch users; a failing assert must not leak one
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]}
+		)
 		frappe.db.delete("Approval Policy", {"document_type": "CIA Unlock Request"})
 		frappe.get_doc(
 			{"doctype": "Approval Policy", "policy_name": POLICY, "document_type": "CIA Unlock Request",
@@ -68,7 +80,9 @@ class CIAFixture(ExamFixture):
 		return frappe.db.get_value("Student", student.name, "oc_regulation")
 
 	def unlock_policies(self):
-		return frappe.get_all("Approval Policy", {"document_type": "CIA Unlock Request"}, pluck="name") or [""]
+		return frappe.get_all("Approval Policy", {"document_type": "CIA Unlock Request"}, pluck="name") or [
+			""
+		]
 
 	def schedule(self, offering, pattern, deadline_days=1):
 		return frappe.get_doc(
@@ -90,7 +104,9 @@ class CIAFixture(ExamFixture):
 		"""Save the sheet once, as `user`, with question marks in pattern order per student."""
 		frappe.set_user(user)
 		sheet = self.sheet(offering)
-		for student in set(marks_by_student) - {row.student for row in sheet.marks}:  # ExamFixture left SA students out
+		for student in set(marks_by_student) - {
+			row.student for row in sheet.marks
+		}:  # ExamFixture left SA students out
 			sheet.append("marks", {"student": student})
 		sheet.save()  # picks up the schedule's question rows
 		rows = {(r.student, r.component, r.question): r for r in sheet.cia_marks}
@@ -107,7 +123,9 @@ class CIAFixture(ExamFixture):
 		return {row.student: (row.cia, row.cia_attendance) for row in sheet.marks}
 
 	def pass_deadline(self, schedule):
-		frappe.db.set_value("CIA Schedule", schedule.name, "entry_deadline", add_to_date(now_datetime(), hours=-1))
+		frappe.db.set_value(
+			"CIA Schedule", schedule.name, "entry_deadline", add_to_date(now_datetime(), hours=-1)
+		)
 
 
 def mark_attendance(student, offering, day, status):
@@ -124,13 +142,20 @@ class TestCIAConsolidation(CIAFixture):
 	def test_r2022_theory_two_assessments_convert_to_40(self):  # AC1
 		offering = self.offerings22["EXM TH"]
 		schedule = self.schedule(offering, THEORY_PATTERN)
-		self.assertEqual(schedule.template, frappe.db.get_value("CIA Component Template", {"regulation": self.regulation(self.s22), "course_type": "Theory"}))
+		self.assertEqual(
+			schedule.template,
+			frappe.db.get_value(
+				"CIA Component Template", {"regulation": self.regulation(self.s22), "course_type": "Theory"}
+			),
+		)
 		sheet = self.enter(offering, THEORY_PATTERN, {
 			self.s22.name: THEORY_163,  # 163 / 200 x 40 = 32.6 -> 33
 			self.s_ab.name: [30, 12, 28, 34, "AB", "AB"],  # absent from Test 2: 104 / 200 x 40 = 20.8 -> 21
 			self.s_sa.name: [30, 14.5, 28, 40, 20, 30],  # 162.5 / 200 x 40 = 32.5 -> 33 (half up)
 		})  # fmt: skip
-		self.assertEqual(self.cia_of(sheet), {self.s22.name: (33, 0), self.s_ab.name: (21, 0), self.s_sa.name: (33, 0)})
+		self.assertEqual(
+			self.cia_of(sheet), {self.s22.name: (33, 0), self.s_ab.name: (21, 0), self.s_sa.name: (33, 0)}
+		)
 		self.assertEqual(sheet.cia_schedule, schedule.name)
 
 	def test_r2022_lab_75_plus_25_converts_to_60(self):  # AC2
@@ -141,13 +166,17 @@ class TestCIAConsolidation(CIAFixture):
 			self.s_ab.name: [60, 10, 15],  # 85 / 100 x 60 = 51
 			self.s_sa.name: [75, 10, 15],  # 60
 		})  # fmt: skip
-		self.assertEqual(self.cia_of(sheet), {self.s22.name: (52, 0), self.s_ab.name: (51, 0), self.s_sa.name: (60, 0)})
+		self.assertEqual(
+			self.cia_of(sheet), {self.s22.name: (52, 0), self.s_ab.name: (51, 0), self.s_sa.name: (60, 0)}
+		)
 
 	def test_r2026_theory_adds_attendance_marks_per_band(self):  # AC2
 		offering = self.offerings26["EXM TH"]
 		self.schedule(offering, THEORY_PATTERN)
 		sheet = self.enter(offering, THEORY_PATTERN, {self.s26.name: THEORY_163})
-		self.assertEqual(self.cia_of(sheet), {self.s26.name: (32, 3)})  # 163 / 200 x 35 = 28.525 -> 29, + 3 (90%)
+		self.assertEqual(
+			self.cia_of(sheet), {self.s26.name: (32, 3)}
+		)  # 163 / 200 x 35 = 28.525 -> 29, + 3 (90%)
 
 	def test_co_tagged_question_marks_are_stored(self):  # AC4
 		offering = self.offerings22["EXM TH"]
@@ -163,8 +192,12 @@ class TestCIAConsolidation(CIAFixture):
 			by_co[row.course_outcome][0] += row.marks
 			by_co[row.course_outcome][1] += row.max_marks
 		self.assertEqual(by_co, {"CO1": [47, 60], "CO2": [30, 40], "CO3": [54, 60], "CO4": [32, 40]})
-		self.assertEqual(sorted({r.bloom_level for r in rows}), ["Analyse", "Apply", "Remember", "Understand"])
-		self.assertEqual(len(sheet.cia_marks), len(sheet.marks) * len(THEORY_PATTERN))  # one row per student and question
+		self.assertEqual(
+			sorted({r.bloom_level for r in rows}), ["Analyse", "Apply", "Remember", "Understand"]
+		)
+		self.assertEqual(
+			len(sheet.cia_marks), len(sheet.marks) * len(THEORY_PATTERN)
+		)  # one row per student and question
 
 	def test_question_marks_above_the_maximum_are_refused(self):
 		offering = self.offerings22["EXM TH"]
@@ -185,7 +218,9 @@ class TestCIAConsolidation(CIAFixture):
 
 class TestCIATemplatesAndSchedules(CIAFixture):
 	def template(self, student):
-		return frappe.get_doc("CIA Component Template", {"regulation": self.regulation(student), "course_type": "Theory"})
+		return frappe.get_doc(
+			"CIA Component Template", {"regulation": self.regulation(student), "course_type": "Theory"}
+		)
 
 	def test_seeded_templates_match_the_regulations(self):
 		r22, r26 = self.template(self.s22), self.template(self.s26)
@@ -196,7 +231,9 @@ class TestCIATemplatesAndSchedules(CIAFixture):
 		self.assertEqual(sum(c.weight for c in r26.components), 35)
 
 	def test_weights_must_add_up_to_the_converted_maximum(self):
-		frappe.db.set_value("Regulation", self.regulation(self.s22), "status", "Draft")  # the seed is locked otherwise
+		frappe.db.set_value(
+			"Regulation", self.regulation(self.s22), "status", "Draft"
+		)  # the seed is locked otherwise
 		doc = self.template(self.s22)
 		doc.components[0].weight = 9
 		with self.assertRaises(frappe.ValidationError):
@@ -216,7 +253,10 @@ class TestCIATemplatesAndSchedules(CIAFixture):
 			doc.save()
 
 	def test_questions_must_add_up_to_each_component(self):
-		pattern = [row if row[:2] != ("Test 2", "Q2") else ("Test 2", "Q2", 30, "CO4", "Analyse") for row in THEORY_PATTERN]
+		pattern = [
+			row if row[:2] != ("Test 2", "Q2") else ("Test 2", "Q2", 30, "CO4", "Analyse")
+			for row in THEORY_PATTERN
+		]
 		with self.assertRaises(frappe.ValidationError):
 			self.schedule(self.offerings22["EXM TH"], pattern)
 		with self.assertRaises(frappe.ValidationError):
@@ -268,7 +308,9 @@ class TestCIALock(CIAFixture):
 		self.assertEqual(cia.lock_state(schedule.name), cia.UNLOCKED)
 		sheet = self.edit_first_question(20)  # 151 / 200 x 40 = 30.2 -> 30
 		self.assertEqual(self.cia_of(sheet)[self.s22.name], (30, 0))
-		frappe.db.set_value("CIA Unlock Request", request.name, "unlock_until", add_to_date(now_datetime(), hours=-1))
+		frappe.db.set_value(
+			"CIA Unlock Request", request.name, "unlock_until", add_to_date(now_datetime(), hours=-1)
+		)
 		self.assertEqual(cia.lock_state(schedule.name), cia.LOCKED)  # the window has closed
 		with self.assertRaises(frappe.ValidationError):
 			self.edit_first_question(25)
@@ -304,7 +346,11 @@ class TestCIALock(CIAFixture):
 		offering = self.offerings26["EXM TH"]
 		schedule = self.schedule(offering, THEORY_PATTERN)
 		sheet = self.enter(offering, THEORY_PATTERN, {self.s26.name: THEORY_163})
-		frappe.db.set_value("Mark Sheet Entry Row", {"parent": sheet.name, "student": self.s26.name}, {"cia": 0, "cia_attendance": 0})
+		frappe.db.set_value(
+			"Mark Sheet Entry Row",
+			{"parent": sheet.name, "student": self.s26.name},
+			{"cia": 0, "cia_attendance": 0},
+		)
 		self.pass_deadline(schedule)
 		cia.lock_schedule(schedule.name)
 		self.assertTrue(frappe.db.get_value("CIA Schedule", schedule.name, "locked_on"))
@@ -326,7 +372,6 @@ class TestCIALock(CIAFixture):
 		self.assertTrue(all(r["user"] for r in rows))
 		self.assertEqual(audit_report({"company": "Some Other College"})[1], [])
 
-
 	def test_a_passed_deadline_cannot_be_moved_to_reopen(self):  # fix 1
 		schedule, _sheet = self.locked_sheet()
 		frappe.set_user(COE_USER)
@@ -347,12 +392,19 @@ class TestCIALock(CIAFixture):
 		moves = [r for r in rows if r["event"] == "Deadline changed"]
 		self.assertEqual([(r["document"], r["user"]) for r in moves], [(schedule.name, COE_USER)])
 		# the Version keeps whole seconds
-		self.assertEqual(frappe.utils.get_datetime(moves[0]["old_value"]), frappe.utils.get_datetime(old).replace(microsecond=0))
+		self.assertEqual(
+			frappe.utils.get_datetime(moves[0]["old_value"]),
+			frappe.utils.get_datetime(old).replace(microsecond=0),
+		)
 
 	def test_no_unlock_without_a_completed_approval(self):  # fix 2
 		schedule, _sheet = self.locked_sheet()
-		frappe.db.delete("Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]})
-		frappe.db.delete("Approval Policy", {"document_type": "CIA Unlock Request"})  # no policy: the engine would submit directly
+		frappe.db.delete(
+			"Approval Level", {"parenttype": "Approval Policy", "parent": ["in", self.unlock_policies()]}
+		)
+		frappe.db.delete(
+			"Approval Policy", {"document_type": "CIA Unlock Request"}
+		)  # no policy: the engine would submit directly
 		frappe.set_user(FACULTY)
 		request = frappe.get_doc(
 			{"doctype": "CIA Unlock Request", "cia_schedule": schedule.name, "reason": "x",
@@ -379,7 +431,10 @@ class TestCIALock(CIAFixture):
 		self.enter(self.offerings22["EXM TH"], THEORY_PATTERN, {self.s22.name: THEORY_163})
 		later = self.schedule(self.offerings22["EXM LB"], LAB_PATTERN)
 		self.pass_deadline(due)
-		with patch.object(frappe.db, "commit"), patch.object(frappe.db, "rollback"):  # the job commits per schedule
+		with (
+			patch.object(frappe.db, "commit"),
+			patch.object(frappe.db, "rollback"),
+		):  # the job commits per schedule
 			cia.lock_due_schedules()
 			stamped = frappe.db.get_value("CIA Schedule", due.name, "locked_on")
 			sheet_modified = frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": due.name}, "modified")
@@ -389,7 +444,9 @@ class TestCIALock(CIAFixture):
 			cia.lock_schedule(due.name)  # nor does a direct call on a stamped schedule
 			cia.lock_schedule(later.name)  # or on one whose deadline is ahead
 		self.assertEqual(frappe.db.get_value("CIA Schedule", due.name, "locked_on"), stamped)
-		self.assertEqual(frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": due.name}, "modified"), sheet_modified)
+		self.assertEqual(
+			frappe.db.get_value("Mark Sheet Entry", {"cia_schedule": due.name}, "modified"), sheet_modified
+		)
 		self.assertFalse(frappe.db.get_value("CIA Schedule", later.name, "locked_on"))
 
 
@@ -402,9 +459,18 @@ class TestCIAPermissions(CIAFixture):
 		schedule = self.schedule(self.offerings22["EXM TH"], THEORY_PATTERN)
 		sheet = self.sheet(self.offerings22["EXM TH"])
 		for doc in (sheet, schedule):
-			for user, read, write in ((FACULTY, True, True), (OTHER_FACULTY, False, False), (HOD_USER, True, False), (COE_USER, True, True)):
-				self.assertEqual(frappe.has_permission(doc.doctype, "read", doc, user=user), read, (doc.doctype, user))
-				self.assertEqual(frappe.has_permission(doc.doctype, "write", doc, user=user), write, (doc.doctype, user))
+			for user, read, write in (
+				(FACULTY, True, True),
+				(OTHER_FACULTY, False, False),
+				(HOD_USER, True, False),
+				(COE_USER, True, True),
+			):
+				self.assertEqual(
+					frappe.has_permission(doc.doctype, "read", doc, user=user), read, (doc.doctype, user)
+				)
+				self.assertEqual(
+					frappe.has_permission(doc.doctype, "write", doc, user=user), write, (doc.doctype, user)
+				)
 		frappe.set_user(HOD_USER)
 		self.assertIn(sheet.name, frappe.get_list("Mark Sheet Entry", pluck="name"))
 		self.assertEqual(frappe.get_list("CIA Schedule", pluck="name"), [schedule.name])
@@ -413,18 +479,26 @@ class TestCIAPermissions(CIAFixture):
 
 	def test_hod_does_not_read_another_departments_offering(self):
 		make_program("CIA Other BE", COLLEGE)
-		frappe.db.set_value("Program", "CIA Other BE", "department", make_department("CIA Other Department", COLLEGE))
+		frappe.db.set_value(
+			"Program", "CIA Other BE", "department", make_department("CIA Other Department", COLLEGE)
+		)
 		offering = self.offerings26["EXM LB"]
 		frappe.db.set_value("Student Group", offering, "program", "CIA Other BE")
 		sheet = self.sheet(offering)
 		self.assertFalse(frappe.has_permission("Mark Sheet Entry", "read", sheet, user=HOD_USER))
-		self.assertTrue(frappe.has_permission("Mark Sheet Entry", "read", self.sheet(self.offerings26["EXM TH"]), user=HOD_USER))
+		self.assertTrue(
+			frappe.has_permission(
+				"Mark Sheet Entry", "read", self.sheet(self.offerings26["EXM TH"]), user=HOD_USER
+			)
+		)
 		frappe.set_user(HOD_USER)
 		self.assertNotIn(sheet.name, frappe.get_list("Mark Sheet Entry", pluck="name"))
 
 	def test_dean_academics_reads_schedules_but_the_coe_owns_deadlines(self):  # minor
 		self.assertNotIn("Dean Academics", DEADLINE_ROLES)
-		perms = frappe.get_all("DocPerm", {"parent": "CIA Schedule", "role": "Dean Academics"}, ["read", "write", "create"])
+		perms = frappe.get_all(
+			"DocPerm", {"parent": "CIA Schedule", "role": "Dean Academics"}, ["read", "write", "create"]
+		)
 		self.assertEqual([(p.read, p.write, p.create) for p in perms], [(1, 0, 0)])
 
 	def test_only_the_coe_sets_the_deadline(self):
@@ -444,9 +518,15 @@ class TestCIAPermissions(CIAFixture):
 		self.pass_deadline(locked)
 		self.schedule(self.offerings22["EXM LB"], LAB_PATTERN)
 		frappe.set_user(COE_USER)
-		rows = {r["course_offering"]: r for r in status_report({"company": COLLEGE, "academic_term": self.term})[1]}
+		rows = {
+			r["course_offering"]: r
+			for r in status_report({"company": COLLEGE, "academic_term": self.term})[1]
+		}
 		theory, lab = rows[self.offerings22["EXM TH"]], rows[self.offerings22["EXM LB"]]
-		self.assertEqual((theory["status"], theory["students"], theory["absent_students"], theory["cia_max"]), ("Locked", 3, 1, 40))
+		self.assertEqual(
+			(theory["status"], theory["students"], theory["absent_students"], theory["cia_max"]),
+			("Locked", 3, 1, 40),
+		)
 		self.assertEqual(theory["average_cia"], 29)  # (33 + 21 + 33) / 3
 		self.assertEqual((lab["status"], lab["cia_max"]), ("Open", 60))
 		frappe.set_user(OTHER_FACULTY)

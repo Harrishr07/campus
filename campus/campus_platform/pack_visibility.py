@@ -79,7 +79,9 @@ def filter_sidebars(sidebars, hidden):
 			del sidebars[shell]
 			continue
 		sidebar["items"] = [
-			i for i in sidebar["items"] if not (i.get("link_type") == "Workspace" and i.get("link_to") in hidden)
+			i
+			for i in sidebar["items"]
+			if not (i.get("link_type") == "Workspace" and i.get("link_to") in hidden)
 		]
 	return dropped
 

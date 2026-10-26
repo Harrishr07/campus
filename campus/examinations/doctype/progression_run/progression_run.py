@@ -9,7 +9,11 @@ from frappe.model.document import Document
 class ProgressionRun(Document):
 	def validate(self):
 		if frappe.db.get_value("Program", self.program, "oc_company") != self.company:
-			frappe.throw(_("Program {0} does not belong to {1}.").format(frappe.bold(self.program), frappe.bold(self.company)))
+			frappe.throw(
+				_("Program {0} does not belong to {1}.").format(
+					frappe.bold(self.program), frappe.bold(self.company)
+				)
+			)
 
 	def on_submit(self):
 		from campus.examinations import progression

@@ -11,20 +11,24 @@ from unittest.mock import patch
 
 import frappe
 
+from campus.examinations import results
 from campus.examinations.report.arrear_list.arrear_list import execute as arrear_report
 from campus.examinations.report.days_exam_end_to_result.days_exam_end_to_result import execute as days_report
 from campus.examinations.report.evaluation_grievances_vs_appeared.evaluation_grievances_vs_appeared import (
 	execute as grievance_report,
 )
 from campus.examinations.report.exam_absentee_list.exam_absentee_list import execute as absentee_report
-from campus.examinations.report.exam_eligibility_withheld.exam_eligibility_withheld import execute as withheld_report
-from campus.examinations.report.exam_registration_summary.exam_registration_summary import execute as registration_report
+from campus.examinations.report.exam_eligibility_withheld.exam_eligibility_withheld import (
+	execute as withheld_report,
+)
+from campus.examinations.report.exam_registration_summary.exam_registration_summary import (
+	execute as registration_report,
+)
 from campus.examinations.report.malpractice_register.malpractice_register import execute as malpractice_report
 from campus.examinations.report.rank_list.rank_list import execute as rank_report
 from campus.examinations.report.result_analysis.result_analysis import execute as analysis_report
 from campus.examinations.report.valuation_difference.valuation_difference import execute as difference_report
 from campus.examinations.report.valuation_progress.valuation_progress import execute as progress_report
-from campus.examinations import results
 from campus.iqac.registry import data_point
 from campus.tests.test_regulation import year_name
 from campus.tests.test_results import COE_USER, COLLEGE, PROGRAM, ExamFixture
@@ -35,7 +39,14 @@ YEAR = year_name("2022")
 def make_department(name):
 	"""A leaf Department of the test college (named `<name> - <abbr>` by ERPNext)."""
 	found = frappe.db.get_value("Department", {"department_name": name, "company": COLLEGE})
-	return found or frappe.get_doc({"doctype": "Department", "department_name": name, "company": COLLEGE}).insert().name
+	return (
+		found
+		or frappe.get_doc({"doctype": "Department", "department_name": name, "company": COLLEGE})
+		.insert()
+		.name
+	)
+
+
 EXAM_END, PUBLISHED_AT = "2023-02-20", "2023-03-12 10:00:00"
 SCOPE = "campus.examinations.coe_reports.permitted_companies"
 
@@ -52,8 +63,12 @@ def insert(values):
 class COEReportFixture(ExamFixture):
 	def setUp(self):
 		super().setUp()
-		sheets = frappe.get_all("Mark Sheet Entry", {"exam_session": self.session.name, "course": "EXM FA"}, pluck="name")
-		frappe.db.set_value("Mark Sheet Entry Row", {"parent": ["in", sheets], "student": self.s26.name}, "ese", 40)
+		sheets = frappe.get_all(
+			"Mark Sheet Entry", {"exam_session": self.session.name, "course": "EXM FA"}, pluck="name"
+		)
+		frappe.db.set_value(
+			"Mark Sheet Entry Row", {"parent": ["in", sheets], "student": self.s26.name}, "ese", 40
+		)
 		self.run_session()
 		frappe.db.set_value("Exam Session", self.session.name, {"is_final_year": 1, "exam_end": EXAM_END})
 		self.publish(PUBLISHED_AT)
@@ -66,7 +81,9 @@ class COEReportFixture(ExamFixture):
 			frappe.set_user("Administrator")
 
 	def result_name(self, student):
-		return frappe.db.get_value("Student Result", {"student": student.name, "exam_session": self.session.name, "is_latest": 1})
+		return frappe.db.get_value(
+			"Student Result", {"student": student.name, "exam_session": self.session.name, "is_latest": 1}
+		)
 
 
 class TestResultDataPoints(COEReportFixture):
@@ -84,9 +101,17 @@ class TestResultDataPoints(COEReportFixture):
 		self.assertEqual(point["value"], 33.33)
 		appeared = sorted(self.result_name(s) for s in (self.s22, self.s26, self.s_ab))
 		self.assertEqual(point["records"], [{"doctype": "Student Result", "name": n} for n in appeared])
-		rows = self.as_coe(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program", "final_year_only": 1})
-		self.assertEqual([(r["group"], r["appeared"], r["passed"], r["pass_pct"]) for r in rows[:-1]], [(PROGRAM, 3, 1, 33.33)])
-		self.assertEqual((rows[-1]["appeared"], rows[-1]["passed"], rows[-1]["pass_pct"]), (3, 1, point["value"]))
+		rows = self.as_coe(
+			analysis_report,
+			{"company": COLLEGE, "academic_year": YEAR, "group_by": "Program", "final_year_only": 1},
+		)
+		self.assertEqual(
+			[(r["group"], r["appeared"], r["passed"], r["pass_pct"]) for r in rows[:-1]],
+			[(PROGRAM, 3, 1, 33.33)],
+		)
+		self.assertEqual(
+			(rows[-1]["appeared"], rows[-1]["passed"], rows[-1]["pass_pct"]), (3, 1, point["value"])
+		)
 		self.assertEqual(data_point("final_year_passed", COLLEGE, YEAR)["value"], rows[-1]["passed"])
 		self.assertEqual(data_point("final_year_appeared", COLLEGE, YEAR)["value"], rows[-1]["appeared"])
 
@@ -109,14 +134,24 @@ class TestResultDataPoints(COEReportFixture):
 		frappe.db.set_value("Exam Session", self.session.name, "status", "Marks Entry")
 		for key in ("students_appeared", "pass_percentage", "days_exam_to_result"):
 			self.assertEqual(data_point(key, COLLEGE, YEAR)["value"], 0, key)
-		self.assertEqual(self.as_coe(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}), [])
+		self.assertEqual(
+			self.as_coe(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}),
+			[],
+		)
 
 	def test_a_result_version_awaiting_ratification_is_not_counted(self):
 		# a re-run after publication (e.g. a revaluation) gives s22 a pending V2 passing EXM FA; V1 stays the published one
-		sheets = frappe.get_all("Mark Sheet Entry", {"exam_session": self.session.name, "course": "EXM FA"}, pluck="name")
-		frappe.db.set_value("Mark Sheet Entry Row", {"parent": ["in", sheets], "student": self.s22.name}, "ese", 40)
+		sheets = frappe.get_all(
+			"Mark Sheet Entry", {"exam_session": self.session.name, "course": "EXM FA"}, pluck="name"
+		)
+		frappe.db.set_value(
+			"Mark Sheet Entry Row", {"parent": ["in", sheets], "student": self.s22.name}, "ese", 40
+		)
 		pending = results.compute_student_result(self.s22.name, self.session.name)
-		self.assertEqual(frappe.db.get_value("Student Result", pending, ["version", "pending_ratification", "is_latest"]), (2, 1, 0))
+		self.assertEqual(
+			frappe.db.get_value("Student Result", pending, ["version", "pending_ratification", "is_latest"]),
+			(2, 1, 0),
+		)
 		self.assertEqual(data_point("final_year_passed", COLLEGE, YEAR)["value"], 1)  # still s26 only
 		self.assertEqual(data_point("pass_percentage", COLLEGE, YEAR)["value"], 33.33)
 		point = data_point("students_appeared", COLLEGE, YEAR)
@@ -125,8 +160,20 @@ class TestResultDataPoints(COEReportFixture):
 		self.assertEqual(next(r for r in rows if r["group"] == "EXM FA")["passed"], 1)
 
 	def test_an_embargoed_session_counts_nowhere(self):
-		frappe.db.set_value("Exam Session", self.session.name, "publish_at", frappe.utils.add_days(frappe.utils.now_datetime(), 1))
-		for key in ("students_appeared", "pass_percentage", "days_exam_to_result", "final_year_appeared", "final_year_passed", "evaluation_grievances"):
+		frappe.db.set_value(
+			"Exam Session",
+			self.session.name,
+			"publish_at",
+			frappe.utils.add_days(frappe.utils.now_datetime(), 1),
+		)
+		for key in (
+			"students_appeared",
+			"pass_percentage",
+			"days_exam_to_result",
+			"final_year_appeared",
+			"final_year_passed",
+			"evaluation_grievances",
+		):
 			self.assertEqual(data_point(key, COLLEGE, YEAR)["value"], 0, key)
 		for report, filters in (
 			(analysis_report, {"company": COLLEGE, "academic_year": YEAR, "group_by": "Program"}),
@@ -160,14 +207,18 @@ class TestResultDataPoints(COEReportFixture):
 
 	def test_days_exam_to_result_is_the_report_average(self):
 		point = data_point("days_exam_to_result", COLLEGE, YEAR)
-		self.assertEqual(point, {"value": 20, "records": [{"doctype": "Exam Session", "name": self.session.name}]})
+		self.assertEqual(
+			point, {"value": 20, "records": [{"doctype": "Exam Session", "name": self.session.name}]}
+		)
 		rows = self.as_coe(days_report, {"company": COLLEGE, "academic_year": YEAR})
 		self.assertEqual([(r["exam_session"], r["days"]) for r in rows[:-1]], [(self.session.name, 20)])
 		self.assertEqual(rows[-1]["days"], point["value"])
 
 	def test_days_fall_back_to_the_last_scheduled_exam(self):
 		frappe.db.set_value("Exam Session", self.session.name, "exam_end", None)
-		self.assertEqual(data_point("days_exam_to_result", COLLEGE, YEAR)["value"], 0)  # no end and no schedule: skipped
+		self.assertEqual(
+			data_point("days_exam_to_result", COLLEGE, YEAR)["value"], 0
+		)  # no end and no schedule: skipped
 		insert({"doctype": "Exam Schedule", "parent": self.session.name, "parenttype": "Exam Session", "parentfield": "schedule",
 			"course": "EXM TH", "exam_date": "2023-02-27", "slot": "FN"})  # fmt: skip
 		self.assertEqual(data_point("days_exam_to_result", COLLEGE, YEAR)["value"], 13)
@@ -180,7 +231,12 @@ class TestCOEReports(COEReportFixture):
 
 	def test_rank_list_needs_a_released_session(self):
 		filters = {"company": COLLEGE, "exam_session": self.session.name}
-		frappe.db.set_value("Exam Session", self.session.name, "publish_at", frappe.utils.add_days(frappe.utils.now_datetime(), 1))
+		frappe.db.set_value(
+			"Exam Session",
+			self.session.name,
+			"publish_at",
+			frappe.utils.add_days(frappe.utils.now_datetime(), 1),
+		)
 		self.assertEqual(self.as_coe(rank_report, filters), [])  # embargoed
 		frappe.db.set_value("Exam Session", self.session.name, {"status": "Marks Entry", "publish_at": None})
 		self.assertEqual(self.as_coe(rank_report, filters), [])  # unpublished
@@ -210,13 +266,30 @@ class TestCOEReports(COEReportFixture):
 		filters = {"company": COLLEGE, "exam_session": self.session.name}
 		summary = self.as_coe(registration_report, filters)
 		self.assertEqual(
-			[(r["program"], r["registrations"], r["confirmed"], r["shortage"], r["current_courses"], r["arrear_courses"], r["not_eligible_courses"]) for r in summary],
+			[
+				(
+					r["program"],
+					r["registrations"],
+					r["confirmed"],
+					r["shortage"],
+					r["current_courses"],
+					r["arrear_courses"],
+					r["not_eligible_courses"],
+				)
+				for r in summary
+			],
 			[(PROGRAM, 1, 1, 1, 1, 1, 1)],
 		)
 		withheld = self.as_coe(withheld_report, filters)
-		self.assertEqual([(r["student"], r["withheld_reasons"], r["not_eligible_courses"]) for r in withheld], [(self.s_sa.name, "Attendance shortage", "EXM TH")])
+		self.assertEqual(
+			[(r["student"], r["withheld_reasons"], r["not_eligible_courses"]) for r in withheld],
+			[(self.s_sa.name, "Attendance shortage", "EXM TH")],
+		)
 		absent = self.as_coe(absentee_report, filters)
-		self.assertEqual([(r["student"], r["course"], r["exam_date"]) for r in absent], [(self.s_ab.name, "EXM TH", frappe.utils.getdate("2023-02-20"))])
+		self.assertEqual(
+			[(r["student"], r["course"], r["exam_date"]) for r in absent],
+			[(self.s_ab.name, "EXM TH", frappe.utils.getdate("2023-02-20"))],
+		)
 
 	def test_malpractice_register_lists_reports_with_the_decision(self):
 		insert({"doctype": "Malpractice Report", "name": "MPR-T24-1", "exam_session": self.session.name, "student": self.s22.name,
@@ -225,14 +298,21 @@ class TestCOEReports(COEReportFixture):
 		insert({"doctype": "Malpractice Report", "name": "MPR-T24-2", "exam_session": self.session.name, "student": self.s26.name,
 			"company": COLLEGE, "course": "EXM FA", "category": "Other", "docstatus": 2})  # fmt: skip
 		rows = self.as_coe(malpractice_report, {"company": COLLEGE, "exam_session": self.session.name})
-		self.assertEqual([(r["name"], r["category"], r["committee_decision"]) for r in rows], [("MPR-T24-1", "Copying", "Warning")])
+		self.assertEqual(
+			[(r["name"], r["category"], r["committee_decision"]) for r in rows],
+			[("MPR-T24-1", "Copying", "Warning")],
+		)
 
 	def test_valuation_progress_and_difference(self):
 		for name, round_, deadline in (("VA-T24-1", "1", "2023-02-01"), ("VA-T24-2", "2", "2099-01-01")):
 			insert({"doctype": "Valuation Allocation", "name": name, "exam_session": self.session.name, "company": COLLEGE,
 				"course": "EXM FA", "valuation_round": round_, "examiner_type": "Internal", "examiner": COE_USER, "deadline": deadline,
 				"status": "Allocated", "scripts": [{"dummy_number": "D1"}, {"dummy_number": "D2"}]})  # fmt: skip
-		entries = (("VE-T24-1", "VA-T24-1", "D1", "1", 30), ("VE-T24-2", "VA-T24-2", "D1", "2", 42), ("VE-T24-3", "VA-T24-2", "D2", "2", 20))
+		entries = (
+			("VE-T24-1", "VA-T24-1", "D1", "1", 30),
+			("VE-T24-2", "VA-T24-2", "D1", "2", 42),
+			("VE-T24-3", "VA-T24-2", "D2", "2", 20),
+		)
 		for name, allocation, dummy, round_, total in entries:
 			insert({"doctype": "Valuation Entry", "name": name, "allocation": allocation, "dummy_number": dummy, "docstatus": 1,
 				"valuation_round": round_, "exam_session": self.session.name, "course": "EXM FA", "total": total})  # fmt: skip
@@ -245,7 +325,8 @@ class TestCOEReports(COEReportFixture):
 		)
 		difference = self.as_coe(difference_report, filters)
 		self.assertEqual(
-			[(r["dummy_number"], r["first"], r["second"], r["difference"]) for r in difference], [("D1", 30, 42, 12)]
+			[(r["dummy_number"], r["first"], r["second"], r["difference"]) for r in difference],
+			[("D1", 30, 42, 12)],
 		)  # D2 has one valuation only
 
 	def test_every_report_is_empty_outside_the_users_companies(self):

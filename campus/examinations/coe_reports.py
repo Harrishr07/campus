@@ -76,7 +76,11 @@ def outcome_rows(results):
 		["parent", "course", "result"], order_by="parent, idx",
 	)  # fmt: skip
 	programs = {r.program for r in results if r.program}
-	departments = dict(frappe.get_all("Program", {"name": ["in", list(programs) or [""]]}, ["name", "department"], as_list=True))
+	departments = dict(
+		frappe.get_all(
+			"Program", {"name": ["in", list(programs) or [""]]}, ["name", "department"], as_list=True
+		)
+	)
 	return [
 		{"result": row.parent, "course": row.course, "outcome": row.result, "student": by_name[row.parent].student,
 		"program": by_name[row.parent].program, "department": departments.get(by_name[row.parent].program),
@@ -85,7 +89,9 @@ def outcome_rows(results):
 	]  # fmt: skip
 
 
-def year_outcomes(company, academic_year, programs=None, lister=frappe.get_all, final_year=False, exam_session=None):
+def year_outcomes(
+	company, academic_year, programs=None, lister=frappe.get_all, final_year=False, exam_session=None
+):
 	sessions = [s.name for s in year_sessions(company, academic_year, lister, final_year)]
 	if exam_session:
 		sessions = [s for s in sessions if s == exam_session]
@@ -97,14 +103,22 @@ def session_days(sessions):
 	falls back to the session's last scheduled exam."""
 	open_ended = [s.name for s in sessions if not s.exam_end]
 	last = {}
-	for row in frappe.get_all("Exam Schedule", {"parenttype": SESSION, "parent": ["in", open_ended or [""]]}, ["parent", "exam_date"]):
+	for row in frappe.get_all(
+		"Exam Schedule",
+		{"parenttype": SESSION, "parent": ["in", open_ended or [""]]},
+		["parent", "exam_date"],
+	):
 		if row.exam_date and (row.parent not in last or row.exam_date > last[row.parent]):
 			last[row.parent] = row.exam_date
 	out = []
 	for session in sessions:
 		exam_end = session.exam_end or last.get(session.name)
 		days = rules.days_to_result(exam_end, session.publish_at)
-		out.append(frappe._dict(exam_session=session.name, exam_end=exam_end, publish_at=session.publish_at, days=days))
+		out.append(
+			frappe._dict(
+				exam_session=session.name, exam_end=exam_end, publish_at=session.publish_at, days=days
+			)
+		)
 	return out
 
 
@@ -134,4 +148,7 @@ def pass_percentage(company, academic_year, programs=None):
 
 def days_exam_to_result(company, academic_year, programs=None):
 	rows = year_session_days(company, academic_year, programs)
-	return {"value": rules.average([r.days for r in rows]), "records": refs(SESSION, [r.exam_session for r in rows])}
+	return {
+		"value": rules.average([r.days for r in rows]),
+		"records": refs(SESSION, [r.exam_session for r in rows]),
+	}

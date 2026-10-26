@@ -70,7 +70,12 @@ class TestGraceNeeded(UnitTestCase):
 
 	def test_the_ese_alone_basis_can_rescue_an_otherwise_impossible_pass(self):
 		self.assertIsNone(grace_needed(0, 40, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70))
-		self.assertEqual(grace_needed(0, 40, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70, ese_alone_min_pct=70), 2)
+		self.assertEqual(
+			grace_needed(
+				0, 40, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70, ese_alone_min_pct=70
+			),
+			2,
+		)
 
 	def test_none_when_even_the_full_ese_cannot_pass(self):
 		self.assertIsNone(grace_needed(0, 10, cia_max=40, ese_max=60, ese_min_pct=45, total_min_pct=70))
@@ -125,12 +130,16 @@ class TestChangeLog(UnitTestCase):
 	def test_added_and_removed_courses(self):
 		old = self.summary(8, 8, [("TH", "A", "Pass", 75)])
 		new = self.summary(8, 8, [("LB", "A", "Pass", 75)])
-		self.assertEqual(change_log(old, new).splitlines(), ["LB: added, A (Pass)", "TH: removed, was A (Pass)"])
+		self.assertEqual(
+			change_log(old, new).splitlines(), ["LB: added, A (Pass)", "TH: removed, was A (Pass)"]
+		)
 
 	def test_arrears_and_classification_changes_are_listed(self):
 		old = self.summary(8, 8, [("TH", "A", "Pass", 75)], arrears=1)
 		new = self.summary(8, 8, [("TH", "A", "Pass", 75)], arrears=0, classification="First Class")
-		self.assertEqual(change_log(old, new).splitlines(), ["Arrears: 1 -> 0", "Classification: - -> First Class"])
+		self.assertEqual(
+			change_log(old, new).splitlines(), ["Arrears: 1 -> 0", "Classification: - -> First Class"]
+		)
 
 	def test_no_change_is_empty(self):
 		same = self.summary(8, 8, [("TH", "A", "Pass", 75)])
@@ -143,7 +152,13 @@ class TestConfigurationGaps(UnitTestCase):
 	RULES = {"R2022": {"Theory", "Lab"}, "R2026": {"Theory"}}
 
 	def course(self, exam_type="Theory", course_type="Theory", regulations=("R2022",), has_row=True):
-		return {"label": "TH (G1)", "has_row": has_row, "exam_type": exam_type, "course_type": course_type, "regulations": set(regulations)}
+		return {
+			"label": "TH (G1)",
+			"has_row": has_row,
+			"exam_type": exam_type,
+			"course_type": course_type,
+			"regulations": set(regulations),
+		}
 
 	def gaps(self, *courses):
 		return [label for label, _reason in configuration_gaps(courses, self.RULES)]
@@ -156,13 +171,18 @@ class TestConfigurationGaps(UnitTestCase):
 		self.assertEqual(self.gaps(self.course(exam_type=None, course_type="Theory")), ["TH (G1)"])
 
 	def test_an_explicit_internal_only_course_needs_no_rule(self):
-		self.assertEqual(self.gaps(self.course(exam_type="Internal Only", course_type=None, regulations=("R2030",))), [])
+		self.assertEqual(
+			self.gaps(self.course(exam_type="Internal Only", course_type=None, regulations=("R2030",))), []
+		)
 
 	def test_an_offering_without_a_curriculum_row_is_a_gap(self):
 		self.assertEqual(self.gaps(self.course(has_row=False, exam_type=None, course_type=None)), ["TH (G1)"])
 
 	def test_a_course_type_missing_from_a_students_rule_set_is_a_gap(self):
-		found = configuration_gaps([self.course(exam_type="Practical", course_type="Lab", regulations=("R2022", "R2026"))], self.RULES)
+		found = configuration_gaps(
+			[self.course(exam_type="Practical", course_type="Lab", regulations=("R2022", "R2026"))],
+			self.RULES,
+		)
 		self.assertEqual(len(found), 1)
 		self.assertIn("R2026", found[0][1])
 
@@ -174,7 +194,10 @@ class TestConfigurationGaps(UnitTestCase):
 	def test_a_student_without_a_regulation_is_a_gap_naming_the_student(self):
 		course = {**self.course(regulations=()), "unregulated": {"STU-2", "STU-1"}}
 		found = configuration_gaps([course], self.RULES)
-		self.assertEqual([reason for _label, reason in found], ["student STU-1 has no regulation", "student STU-2 has no regulation"])
+		self.assertEqual(
+			[reason for _label, reason in found],
+			["student STU-1 has no regulation", "student STU-2 has no regulation"],
+		)
 
 	def test_a_regulation_with_more_than_one_rule_set_is_a_gap(self):
 		found = configuration_gaps([self.course()], self.RULES, duplicated={"R2022"})
@@ -182,7 +205,10 @@ class TestConfigurationGaps(UnitTestCase):
 		self.assertIn("more than one Exam Rule Set", found[0][1])
 
 	def test_an_internal_only_course_needs_no_regulation(self):
-		course = {**self.course(exam_type="Internal Only", course_type=None, regulations=()), "unregulated": {"STU-1"}}
+		course = {
+			**self.course(exam_type="Internal Only", course_type=None, regulations=()),
+			"unregulated": {"STU-1"},
+		}
 		self.assertEqual(configuration_gaps([course], self.RULES), [])
 
 	def test_every_gap_of_a_course_is_listed(self):

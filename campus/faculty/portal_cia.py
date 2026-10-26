@@ -20,7 +20,10 @@ def my_mark_sheets():
 	require_faculty()
 	offerings = [o for o in instructed_offerings(frappe.session.user) if o]
 	sheets = frappe.get_all(
-		SHEET, {"course_offering": ["in", offerings or [""]]}, ["name", "exam_session", "course_offering", "course"], order_by="exam_session, course_offering"
+		SHEET,
+		{"course_offering": ["in", offerings or [""]]},
+		["name", "exam_session", "course_offering", "course"],
+		order_by="exam_session, course_offering",
 	)
 	for sheet in sheets:
 		sheet.session_status = frappe.db.get_value("Exam Session", sheet.exam_session, "status")
@@ -75,7 +78,10 @@ def cia_questions(schedule):
 	if not schedule:
 		return []
 	return frappe.get_all(
-		"CIA Schedule Question", {"parent": schedule, "parenttype": CIA_SCHEDULE}, ["component", "question", "max_marks"], order_by="idx"
+		"CIA Schedule Question",
+		{"parent": schedule, "parenttype": CIA_SCHEDULE},
+		["component", "question", "max_marks"],
+		order_by="idx",
 	)
 
 

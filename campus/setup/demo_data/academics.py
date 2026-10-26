@@ -22,7 +22,9 @@ def term_of(year, term_name):
 def curriculum_of(ctx, programme):
 	name = frappe.db.get_value("Curriculum", {"program": programme["name"], "status": "Effective"})
 	if not name:
-		frappe.throw(f"{programme['name']} has no Effective curriculum: load the 'curriculum' step before the steps that need it.")
+		frappe.throw(
+			f"{programme['name']} has no Effective curriculum: load the 'curriculum' step before the steps that need it."
+		)
 	return name
 
 
@@ -52,12 +54,18 @@ def register_students(ctx, programme, students, term, semester):
 	date = add_days(frappe.db.get_value("Academic Term", term, "term_start_date"), 7)
 	courses = [course for course, *_rest in semester_courses(programme["abbr"], semester)]
 	for student in students:
-		if frappe.db.exists("Course Registration", {"student": student, "academic_term": term, "docstatus": 1}):
+		if frappe.db.exists(
+			"Course Registration", {"student": student, "academic_term": term, "docstatus": 1}
+		):
 			continue
 		frappe.get_doc(
 			{
-				"doctype": "Course Registration", "student": student, "academic_term": term, "semester": semester,
-				"registration_date": date, "late_reason": LATE_REASON,
+				"doctype": "Course Registration",
+				"student": student,
+				"academic_term": term,
+				"semester": semester,
+				"registration_date": date,
+				"late_reason": LATE_REASON,
 				"items": [{"course": course, "registration_type": "Regular"} for course in courses],
 			}
 		).insert(ignore_permissions=True).submit()
@@ -69,9 +77,19 @@ def ensure_session(ctx, term, exam_end=None):
 	if name:
 		return name
 	ctx.out.created["Exam Session"] += 1
-	return frappe.get_doc(
-		{"doctype": "Exam Session", "company": ctx.college, "academic_term": term, "status": "Marks Entry", "exam_end": exam_end}
-	).insert(ignore_permissions=True).name
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Exam Session",
+				"company": ctx.college,
+				"academic_term": term,
+				"status": "Marks Entry",
+				"exam_end": exam_end,
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
 
 
 def enter_marks(ctx, session, offerings, students, cia_only=False):
@@ -91,9 +109,14 @@ def enter_marks(ctx, session, offerings, students, cia_only=False):
 			if not cia_only:
 				row["ese"] = round(limits["ese_max"] * share())
 			rows.append(row)
-		frappe.get_doc({"doctype": "Mark Sheet Entry", "exam_session": session, "course_offering": offering, "marks": rows}).insert(
-			ignore_permissions=True
-		)
+		frappe.get_doc(
+			{
+				"doctype": "Mark Sheet Entry",
+				"exam_session": session,
+				"course_offering": offering,
+				"marks": rows,
+			}
+		).insert(ignore_permissions=True)
 		ctx.out.created["Mark Sheet Entry"] += 1
 
 

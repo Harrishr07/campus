@@ -41,31 +41,46 @@ def check_recognition(doc):
 	doc.company = frappe.db.get_value("Student", doc.student, "oc_company")
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and doc.company not in permitted:
-		frappe.throw(_("You cannot record credit recognitions for {0}.").format(doc.company), frappe.PermissionError)
+		frappe.throw(
+			_("You cannot record credit recognitions for {0}.").format(doc.company), frappe.PermissionError
+		)
 	if doc.kind != WAIVER and flt(doc.credits) <= 0:
-		frappe.throw(_("Enter the credits granted for a {0}; only a waiver may grant none.").format(_(doc.kind)))
+		frappe.throw(
+			_("Enter the credits granted for a {0}; only a waiver may grant none.").format(_(doc.kind))
+		)
 	if not doc.evidence or not posixpath.normpath(doc.evidence).startswith("/private/files/"):
 		frappe.throw(_("Attach the evidence as a private file."))
 	if doc.course not in curriculum_courses(doc.student):
-		frappe.throw(_("{0} is not a course of the student's Effective curriculum.").format(frappe.bold(doc.course)))
+		frappe.throw(
+			_("{0} is not a course of the student's Effective curriculum.").format(frappe.bold(doc.course))
+		)
 
 
 def curriculum_courses(student):
 	"""Courses of the Effective curriculum of the student's programme (latest submitted enrollment), regulation and batch."""
 	program = frappe.db.get_value(
-		"Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc, creation desc"
+		"Program Enrollment",
+		{"student": student, "docstatus": 1},
+		"program",
+		order_by="enrollment_date desc, creation desc",
 	)
 	regulation = get_regulation(student)
 	batch = frappe.db.get_value("Student", student, "oc_batch")
 	curriculum = program and regulation and effective_curriculum(program, regulation, batch)
 	if not curriculum:
 		return set()
-	return set(frappe.get_all("Curriculum Course", {"parenttype": "Curriculum", "parent": curriculum}, pluck="course"))
+	return set(
+		frappe.get_all(
+			"Curriculum Course", {"parenttype": "Curriculum", "parent": curriculum}, pluck="course"
+		)
+	)
 
 
 def check_cancel(doc):
 	status = frappe.db.get_value("Student", doc.student, "oc_academic_status")
 	if status in COMPLETED:
 		frappe.throw(
-			_("{0} is {1}: a recognition counted in the completion can no longer be cancelled.").format(doc.student, _(status))
+			_("{0} is {1}: a recognition counted in the completion can no longer be cancelled.").format(
+				doc.student, _(status)
+			)
 		)

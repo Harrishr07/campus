@@ -30,4 +30,6 @@ class EligibilityRule(Document):
 			(self.program, self.regulation or "", self.name or ""),
 		)
 		if clash:
-			frappe.throw(_("Eligibility Rule {0} already covers this program and regulation.").format(clash[0][0]))
+			frappe.throw(
+				_("Eligibility Rule {0} already covers this program and regulation.").format(clash[0][0])
+			)

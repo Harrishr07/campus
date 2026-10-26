@@ -19,9 +19,24 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "program", "label": _("Program"), "fieldtype": "Link", "options": "Program", "width": 200},
-		{"fieldname": "batch", "label": _("Batch"), "fieldtype": "Link", "options": "Academic Year", "width": 120},
-		*({"fieldname": frappe.scrub(status), "label": _(status), "fieldtype": "Int", "width": 110} for status in STATUSES),
+		{
+			"fieldname": "program",
+			"label": _("Program"),
+			"fieldtype": "Link",
+			"options": "Program",
+			"width": 200,
+		},
+		{
+			"fieldname": "batch",
+			"label": _("Batch"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 120,
+		},
+		*(
+			{"fieldname": frappe.scrub(status), "label": _(status), "fieldtype": "Int", "width": 110}
+			for status in STATUSES
+		),
 		{"fieldname": "total", "label": _("Total"), "fieldtype": "Int", "width": 90},
 	]
 
@@ -49,7 +64,12 @@ def data(filters):
 
 
 def new_row(program, batch):
-	return {"program": program, "batch": batch, **{frappe.scrub(status): 0 for status in STATUSES}, "total": 0}
+	return {
+		"program": program,
+		"batch": batch,
+		**{frappe.scrub(status): 0 for status in STATUSES},
+		"total": 0,
+	}
 
 
 def student_programs(students):

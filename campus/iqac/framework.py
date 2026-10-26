@@ -45,14 +45,23 @@ def clone(source, new_name, version):
 			"previous_version": source, "status": "Draft",
 		}
 	).insert()  # fmt: skip
-	nodes = [frappe.get_doc("Framework Node", name) for name in frappe.get_all("Framework Node", {"framework": source}, pluck="name")]
+	nodes = [
+		frappe.get_doc("Framework Node", name)
+		for name in frappe.get_all("Framework Node", {"framework": source}, pluck="name")
+	]
 	codes = {node.name: node.code for node in nodes}
 	nodes.sort(key=lambda node: (CREATION_ORDER.index(node.node_type), node.code))
 	for node in nodes:
 		values = {field: node.get(field) for field in NODE_FIELDS}
-		values["evidence_slots"] = [{field: slot.get(field) for field in SLOT_FIELDS} for slot in node.evidence_slots]
+		values["evidence_slots"] = [
+			{field: slot.get(field) for field in SLOT_FIELDS} for slot in node.evidence_slots
+		]
 		parent = node.parent_node and f"{new_name}-{codes[node.parent_node]}"
-		copy = frappe.get_doc({"doctype": "Framework Node", "framework": new_name, "parent_node": parent, **values})
-		copy.flags.skip_node_references = True  # a formula may use a node created later; the source tree was validated
+		copy = frappe.get_doc(
+			{"doctype": "Framework Node", "framework": new_name, "parent_node": parent, **values}
+		)
+		copy.flags.skip_node_references = (
+			True  # a formula may use a node created later; the source tree was validated
+		)
 		copy.insert()
 	return new_name

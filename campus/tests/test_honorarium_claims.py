@@ -17,7 +17,11 @@ from campus.tests.utils import CampusTestCase
 
 COLLEGE, ABBR = "Honorarium Test College", "HONC"
 OTHER = "Honorarium Other College"
-APPROVER, OTHER_APPROVER, CLERK = "hon-approver@example.com", "hon-other-approver@example.com", "hon-clerk@example.com"
+APPROVER, OTHER_APPROVER, CLERK = (
+	"hon-approver@example.com",
+	"hon-other-approver@example.com",
+	"hon-clerk@example.com",
+)
 CATEGORY = "HON Test Professional Fees"
 THRESHOLD, RATE = 50000, 10
 
@@ -55,10 +59,21 @@ class TestHonorariumClaim(CampusTestCase):
 	# fixtures
 	def set_up_items(self):
 		group = frappe.db.get_value("Item Group", {"is_group": 0}, "name")
-		for setting, code in (("honorarium_item", "HON-TEST-FEE"), ("travel_item", "HON-TEST-TA"), ("daily_allowance_item", "HON-TEST-DA")):
+		for setting, code in (
+			("honorarium_item", "HON-TEST-FEE"),
+			("travel_item", "HON-TEST-TA"),
+			("daily_allowance_item", "HON-TEST-DA"),
+		):
 			if not frappe.db.exists("Item", code):
 				frappe.get_doc(
-					{"doctype": "Item", "item_code": code, "item_group": group, "stock_uom": "Nos", "is_stock_item": 0, "gst_hsn_code": ensure_sac_code()}
+					{
+						"doctype": "Item",
+						"item_code": code,
+						"item_group": group,
+						"stock_uom": "Nos",
+						"is_stock_item": 0,
+						"gst_hsn_code": ensure_sac_code(),
+					}
 				).insert()
 			frappe.db.set_single_value("Governance Settings", setting, code)
 
@@ -77,7 +92,13 @@ class TestHonorariumClaim(CampusTestCase):
 		).insert()  # fmt: skip
 
 	def external_member(self, name, supplier=True):
-		member = frappe.get_doc({"doctype": "External Member", "member_name": name, "email": f"{frappe.generate_hash(length=8)}@example.com"}).insert()
+		member = frappe.get_doc(
+			{
+				"doctype": "External Member",
+				"member_name": name,
+				"email": f"{frappe.generate_hash(length=8)}@example.com",
+			}
+		).insert()
 		if supplier:
 			member.create_supplier()
 			frappe.db.set_value("Supplier", member.supplier, "tax_withholding_category", CATEGORY)
@@ -92,20 +113,38 @@ class TestHonorariumClaim(CampusTestCase):
 		).insert().name  # fmt: skip
 		start = add_days(today(), -400)
 		members = [{"category": "Internal", "employee": employee, "from_date": start}]
-		members += [{"category": category, "external_member": m, "from_date": start} for m in (self.attendee, self.absentee)]
+		members += [
+			{"category": category, "external_member": m, "from_date": start}
+			for m in (self.attendee, self.absentee)
+		]
 		body = frappe.get_doc(
 			{"doctype": "Body", "body_name": f"Honorarium Test {body_type}", "company": COLLEGE, "body_type": body_type, "members": members}
 		).insert()  # fmt: skip
 		return self.meeting_of(body.name)
 
 	def meeting_of(self, body, days_ago=1):
-		meeting = frappe.get_doc({"doctype": "Body Meeting", "body": body, "meeting_date": add_days(today(), -days_ago), "venue": "Hall"}).insert()
+		meeting = frappe.get_doc(
+			{
+				"doctype": "Body Meeting",
+				"body": body,
+				"meeting_date": add_days(today(), -days_ago),
+				"venue": "Hall",
+			}
+		).insert()
 		for row in meeting.attendance:
 			row.present = int(row.external_member != self.absentee)
 		meeting.save()
 		return meeting.name
 
-	def claim(self, member=None, honorarium=30000, travel_allowance=2000, daily_allowance=1000, meeting=None, **values):
+	def claim(
+		self,
+		member=None,
+		honorarium=30000,
+		travel_allowance=2000,
+		daily_allowance=1000,
+		meeting=None,
+		**values,
+	):
 		return frappe.get_doc(
 			{
 				"doctype": "Honorarium Claim", "external_member": member or self.attendee, "body_meeting": meeting or self.meeting,
@@ -155,7 +194,9 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertEqual(invoice.docstatus, 0)
 		self.assertTrue(invoice.apply_tds)
 		self.assertEqual(self.withheld(invoice), 6500)  # 10% of the gross (194J)
-		self.assertEqual({row.tax_withholding_category for row in invoice.tax_withholding_entries}, {CATEGORY})
+		self.assertEqual(
+			{row.tax_withholding_category for row in invoice.tax_withholding_entries}, {CATEGORY}
+		)
 		self.assertEqual((claim.tds_amount, claim.net_payable), (6500, 58500))
 
 	def test_ta_at_actuals_with_a_bill_is_left_out_of_tds_but_da_is_not(self):
@@ -195,10 +236,16 @@ class TestHonorariumClaim(CampusTestCase):
 	def test_the_cumulative_threshold_counts_earlier_submitted_invoices(self):
 		first = self.approved(self.claim(honorarium=30000, travel_allowance=0, daily_allowance=0))
 		frappe.get_doc("Purchase Invoice", first.purchase_invoice).submit()
-		second_meeting = self.meeting_of(frappe.db.get_value("Body Meeting", self.meeting, "body"), days_ago=2)
-		second = self.approved(self.claim(honorarium=30000, travel_allowance=0, daily_allowance=0, meeting=second_meeting))
+		second_meeting = self.meeting_of(
+			frappe.db.get_value("Body Meeting", self.meeting, "body"), days_ago=2
+		)
+		second = self.approved(
+			self.claim(honorarium=30000, travel_allowance=0, daily_allowance=0, meeting=second_meeting)
+		)
 		self.assertGreater(second.tds_amount, 0)  # 60,000 in the year crosses the 50,000 cumulative threshold
-		self.assertEqual(second.tds_amount, self.withheld(frappe.get_doc("Purchase Invoice", second.purchase_invoice)))
+		self.assertEqual(
+			second.tds_amount, self.withheld(frappe.get_doc("Purchase Invoice", second.purchase_invoice))
+		)
 
 	# the claim follows its invoice
 	def test_submitting_the_invoice_refreshes_the_claim_figures(self):
@@ -211,7 +258,9 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertEqual((claim.tds_amount, claim.net_payable), (6000, 54000))
 		invoice.cancel()
 		claim.reload()
-		self.assertEqual((claim.tds_amount, claim.net_payable), (0, 0))  # nothing is payable on a cancelled invoice
+		self.assertEqual(
+			(claim.tds_amount, claim.net_payable), (0, 0)
+		)  # nothing is payable on a cancelled invoice
 
 	def test_the_voucher_shows_the_live_invoice_figures(self):
 		claim = self.approved(self.claim(honorarium=30000, travel_allowance=0, daily_allowance=0))
@@ -227,7 +276,12 @@ class TestHonorariumClaim(CampusTestCase):
 		self.assertEqual(self.claim(tds_section="Professional Fees - Company").tds_section, CATEGORY)
 
 	def test_a_supplier_without_a_tds_category_is_refused(self):
-		frappe.db.set_value("Supplier", frappe.db.get_value("External Member", self.attendee, "supplier"), "tax_withholding_category", None)
+		frappe.db.set_value(
+			"Supplier",
+			frappe.db.get_value("External Member", self.attendee, "supplier"),
+			"tax_withholding_category",
+			None,
+		)
 		with self.assertRaises(frappe.ValidationError) as caught:
 			self.claim()
 		self.assertIn("TDS category", str(caught.exception))
@@ -246,8 +300,13 @@ class TestHonorariumClaim(CampusTestCase):
 			self.claim().submit()
 
 	def test_the_seeded_policy_needs_an_accounts_manager_of_the_company(self):
-		policy = frappe.get_doc("Approval Policy", frappe.db.get_value("Approval Policy", {"document_type": "Honorarium Claim"}))
-		self.assertEqual([(l.approver_type, l.approver, l.limit_to_company) for l in policy.levels], [("Role", "Accounts Manager", 1)])
+		policy = frappe.get_doc(
+			"Approval Policy", frappe.db.get_value("Approval Policy", {"document_type": "Honorarium Claim"})
+		)
+		self.assertEqual(
+			[(l.approver_type, l.approver, l.limit_to_company) for l in policy.levels],
+			[("Role", "Accounts Manager", 1)],
+		)
 		request = request_approval("Honorarium Claim", self.claim().name)
 		frappe.set_user(OTHER_APPROVER)
 		with self.assertRaises(frappe.PermissionError):
@@ -295,11 +354,22 @@ class TestHonorariumClaim(CampusTestCase):
 	def test_a_member_without_a_supplier_is_refused(self):
 		member = self.external_member("Dr. No Supplier", supplier=False)
 		with self.assertRaises(frappe.ValidationError) as caught:
-			frappe.get_doc({"doctype": "Honorarium Claim", "external_member": member, "body_meeting": self.meeting, "honorarium": 100}).insert()
+			frappe.get_doc(
+				{
+					"doctype": "Honorarium Claim",
+					"external_member": member,
+					"body_meeting": self.meeting,
+					"honorarium": 100,
+				}
+			).insert()
 		self.assertIn("Supplier", str(caught.exception))
 
 	def test_the_company_supplier_and_currency_come_from_the_masters(self):
-		claim = self.claim(company=OTHER, supplier=frappe.db.get_value("External Member", self.absentee, "supplier"), currency="USD")
+		claim = self.claim(
+			company=OTHER,
+			supplier=frappe.db.get_value("External Member", self.absentee, "supplier"),
+			currency="USD",
+		)
 		self.assertEqual(claim.company, COLLEGE)
 		self.assertEqual(claim.supplier, frappe.db.get_value("External Member", self.attendee, "supplier"))
 		self.assertEqual(claim.currency, "INR")

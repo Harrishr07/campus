@@ -45,17 +45,28 @@ class Sanction(Document):
 		self.check_permission("submit")
 		if self.docstatus != 1:
 			frappe.throw(_("Only a submitted sanction can be extended."))
-		current, closure = frappe.db.get_value(self.doctype, self.name, ["end_date", "project_closure"], for_update=True)
+		current, closure = frappe.db.get_value(
+			self.doctype, self.name, ["end_date", "project_closure"], for_update=True
+		)
 		check_sanction_open(self.name, closure)
 		current = getdate(current)
 		revised = getdate(revised_end_date)
 		if revised <= current:
-			frappe.throw(_("The revised end date must be after the current end date {0}.").format(frappe.format(current, "Date")))
+			frappe.throw(
+				_("The revised end date must be after the current end date {0}.").format(
+					frappe.format(current, "Date")
+				)
+			)
 		if not order_no or not order_date:
 			frappe.throw(_("Enter the extension order number and date."))
 		row = self.append(
 			"extensions",
-			{"order_no": order_no, "order_date": getdate(order_date), "previous_end_date": current, "revised_end_date": revised},
+			{
+				"order_no": order_no,
+				"order_date": getdate(order_date),
+				"previous_end_date": current,
+				"revised_end_date": revised,
+			},
 		)
 		row.db_insert()
 		self.db_set("end_date", revised)
@@ -69,7 +80,9 @@ class Sanction(Document):
 		agency = frappe.db.get_value("Funding Scheme", self.funding_scheme, "funding_agency")
 		if agency != self.funding_agency:
 			frappe.throw(
-				_("Funding Scheme {0} belongs to {1}, not {2}.").format(self.funding_scheme, agency, self.funding_agency)
+				_("Funding Scheme {0} belongs to {1}, not {2}.").format(
+					self.funding_scheme, agency, self.funding_agency
+				)
 			)
 
 	def check_period(self):
@@ -83,26 +96,36 @@ class Sanction(Document):
 		if len(set(co_pis)) != len(co_pis):
 			frappe.throw(_("A co-investigator is listed more than once."))
 		everyone = [self.principal_investigator, *co_pis]
-		companies = dict(frappe.get_all("Employee", {"name": ["in", everyone]}, ["name", "company"], as_list=True))
+		companies = dict(
+			frappe.get_all("Employee", {"name": ["in", everyone]}, ["name", "company"], as_list=True)
+		)
 		outside = [e for e in everyone if companies.get(e) != self.company]
 		if outside:
-			frappe.throw(_("Investigators {0} are not employees of {1}.").format(", ".join(outside), self.company))
+			frappe.throw(
+				_("Investigators {0} are not employees of {1}.").format(", ".join(outside), self.company)
+			)
 
 	def check_heads(self):
 		scheme_heads = set(
 			frappe.get_all(
-				"Funding Scheme Head", {"parent": self.funding_scheme, "parenttype": "Funding Scheme"}, pluck="budget_head"
+				"Funding Scheme Head",
+				{"parent": self.funding_scheme, "parenttype": "Funding Scheme"},
+				pluck="budget_head",
 			)
 		)
 		seen = set()
 		for row in self.heads:
 			if row.budget_head not in scheme_heads:
 				frappe.throw(
-					_("Row {0}: {1} is not a budget head of Funding Scheme {2}.").format(row.idx, row.budget_head, self.funding_scheme)
+					_("Row {0}: {1} is not a budget head of Funding Scheme {2}.").format(
+						row.idx, row.budget_head, self.funding_scheme
+					)
 				)
 			if (row.budget_head, row.fiscal_year) in seen:
 				frappe.throw(
-					_("Row {0}: {1} is listed more than once for {2}.").format(row.idx, row.budget_head, row.fiscal_year)
+					_("Row {0}: {1} is listed more than once for {2}.").format(
+						row.idx, row.budget_head, row.fiscal_year
+					)
 				)
 			seen.add((row.budget_head, row.fiscal_year))
 			if flt(row.amount) <= 0:
@@ -112,14 +135,24 @@ class Sanction(Document):
 		self.check_revenue_head_accounts()
 
 	def check_fiscal_year(self, row):
-		year = frappe.db.get_value("Fiscal Year", row.fiscal_year, ["year_start_date", "year_end_date"], as_dict=True)
+		year = frappe.db.get_value(
+			"Fiscal Year", row.fiscal_year, ["year_start_date", "year_end_date"], as_dict=True
+		)
 		if not year:
 			frappe.throw(_("Row {0}: fiscal year {1} does not exist.").format(row.idx, row.fiscal_year))
-		if getdate(year.year_start_date) > getdate(self.end_date) or getdate(year.year_end_date) < getdate(self.start_date):
-			frappe.throw(_("Row {0}: fiscal year {1} is outside the sanction period.").format(row.idx, row.fiscal_year))
+		if getdate(year.year_start_date) > getdate(self.end_date) or getdate(year.year_end_date) < getdate(
+			self.start_date
+		):
+			frappe.throw(
+				_("Row {0}: fiscal year {1} is outside the sanction period.").format(row.idx, row.fiscal_year)
+			)
 		companies = frappe.get_all("Fiscal Year Company", {"parent": row.fiscal_year}, pluck="company")
 		if companies and self.company not in companies:
-			frappe.throw(_("Row {0}: fiscal year {1} is not available for {2}.").format(row.idx, row.fiscal_year, self.company))
+			frappe.throw(
+				_("Row {0}: fiscal year {1} is not available for {2}.").format(
+					row.idx, row.fiscal_year, self.company
+				)
+			)
 
 	def check_revenue_head_accounts(self):
 		"""ERPNext Budget is per account: each revenue head needs its own single account so the Budget is the head's."""
@@ -128,13 +161,15 @@ class Sanction(Document):
 			accounts = head_accounts(head, self.company)
 			if len(accounts) != 1:
 				frappe.throw(
-					_("Revenue head {0} must map to one account of {1} for its budget; it maps to {2}.").format(
-						head, self.company, len(accounts)
-					)
+					_(
+						"Revenue head {0} must map to one account of {1} for its budget; it maps to {2}."
+					).format(head, self.company, len(accounts))
 				)
 			if accounts[0] in owner:
 				frappe.throw(
-					_("Revenue heads {0} and {1} map to the same account {2}.").format(owner[accounts[0]], head, accounts[0])
+					_("Revenue heads {0} and {1} map to the same account {2}.").format(
+						owner[accounts[0]], head, accounts[0]
+					)
 				)
 			owner[accounts[0]] = head
 
@@ -144,7 +179,9 @@ class Sanction(Document):
 			frappe.throw(_("An instalment is listed more than once."))
 		for row in self.instalments:
 			if flt(row.amount) <= 0:
-				frappe.throw(_("Row {0}: enter an amount for instalment {1}.").format(row.idx, row.instalment))
+				frappe.throw(
+					_("Row {0}: enter an amount for instalment {1}.").format(row.idx, row.instalment)
+				)
 		total = sum(flt(row.amount) for row in self.instalments)
 		if flt(total, 2) != flt(self.total_sanctioned, 2):
 			frappe.throw(
@@ -160,11 +197,17 @@ class Sanction(Document):
 			as_dict=True, for_update=lock,
 		)  # fmt: skip
 		if proposal.docstatus != 1 or proposal.status != "Sanctioned":
-			frappe.throw(_("Research Proposal {0} is not sanctioned by the agency.").format(self.research_proposal))
+			frappe.throw(
+				_("Research Proposal {0} is not sanctioned by the agency.").format(self.research_proposal)
+			)
 		if (proposal.company, proposal.funding_scheme) != (self.company, self.funding_scheme):
 			frappe.throw(
 				_("Research Proposal {0} is for {1} of {2}, not {3} of {4}.").format(
-					self.research_proposal, proposal.funding_scheme, proposal.company, self.funding_scheme, self.company
+					self.research_proposal,
+					proposal.funding_scheme,
+					proposal.company,
+					self.funding_scheme,
+					self.company,
 				)
 			)
 		existing = frappe.db.get_value(
@@ -172,4 +215,6 @@ class Sanction(Document):
 			"name", for_update=lock,
 		)  # fmt: skip
 		if existing:
-			frappe.throw(_("Research Proposal {0} already has Sanction {1}.").format(self.research_proposal, existing))
+			frappe.throw(
+				_("Research Proposal {0} already has Sanction {1}.").format(self.research_proposal, existing)
+			)

@@ -68,9 +68,7 @@ def get_rule(student, rule_doctype, **filters):
 		frappe.throw(_("{0} is not a regulation rule set.").format(_(rule_doctype)))
 	names = frappe.get_all(rule_doctype, filters={**filters, "regulation": regulation}, pluck="name", limit=2)
 	if not names:
-		frappe.throw(
-			_("No {0} defined for regulation {1}.").format(_(rule_doctype), frappe.bold(regulation))
-		)
+		frappe.throw(_("No {0} defined for regulation {1}.").format(_(rule_doctype), frappe.bold(regulation)))
 	if len(names) > 1:
 		frappe.throw(
 			_("More than one {0} for regulation {1}; pass filters to pick one.").format(

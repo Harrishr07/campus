@@ -11,7 +11,15 @@ from frappe.utils import flt
 
 from campus.research.api import check_sanction_open, interest_treatment
 
-SANCTION_FIELDS = ["docstatus", "company", "funding_agency", "liability_account", "cost_center", "project", "project_closure"]
+SANCTION_FIELDS = [
+	"docstatus",
+	"company",
+	"funding_agency",
+	"liability_account",
+	"cost_center",
+	"project",
+	"project_closure",
+]
 
 
 class GrantInterest(Document):
@@ -38,7 +46,9 @@ class GrantInterest(Document):
 			entry.cancel()
 
 	def get_sanction(self, for_update=False):
-		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
+		sanction = frappe.db.get_value(
+			"Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update
+		)
 		if not sanction or sanction.docstatus != 1:
 			frappe.throw(_("Sanction {0} must be submitted to record interest on it.").format(self.sanction))
 		if self.docstatus != 2:
@@ -48,28 +58,50 @@ class GrantInterest(Document):
 	def set_credited_to(self, sanction):
 		self.interest_treatment = interest_treatment(sanction.company, sanction.funding_agency)
 		if self.interest_treatment == "Interest Income":
-			self.credited_to = frappe.db.get_value("Research Settings", sanction.company, "interest_income_account")
+			self.credited_to = frappe.db.get_value(
+				"Research Settings", sanction.company, "interest_income_account"
+			)
 		else:
 			self.credited_to = sanction.liability_account
 
 	def check_received_in(self):
-		account = frappe.db.get_value("Account", self.received_in, ["company", "is_group", "account_type"], as_dict=True)
-		if not account or account.company != self.company or account.is_group or account.account_type not in ("Bank", "Cash"):
+		account = frappe.db.get_value(
+			"Account", self.received_in, ["company", "is_group", "account_type"], as_dict=True
+		)
+		if (
+			not account
+			or account.company != self.company
+			or account.is_group
+			or account.account_type not in ("Bank", "Cash")
+		):
 			frappe.throw(_("Credited In must be a bank or cash ledger of {0}.").format(self.company))
 
 	def make_journal_entry(self, sanction):
-		voucher_type = "Bank Entry" if frappe.db.get_value("Account", self.received_in, "account_type") == "Bank" else "Cash Entry"
+		voucher_type = (
+			"Bank Entry"
+			if frappe.db.get_value("Account", self.received_in, "account_type") == "Bank"
+			else "Cash Entry"
+		)
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "voucher_type": voucher_type, "company": self.company,
-				"posting_date": self.posting_date, "cheque_no": self.reference_no,
+				"doctype": "Journal Entry",
+				"voucher_type": voucher_type,
+				"company": self.company,
+				"posting_date": self.posting_date,
+				"cheque_no": self.reference_no,
 				"cheque_date": self.posting_date if self.reference_no else None,
 				"user_remark": _("Grant Interest {0} on Sanction {1}").format(self.name, self.sanction),
 				"accounts": [
-					{"account": self.received_in, "debit_in_account_currency": self.amount, "cost_center": sanction.cost_center},
 					{
-						"account": self.credited_to, "credit_in_account_currency": self.amount,
-						"cost_center": sanction.cost_center, "project": sanction.project,
+						"account": self.received_in,
+						"debit_in_account_currency": self.amount,
+						"cost_center": sanction.cost_center,
+					},
+					{
+						"account": self.credited_to,
+						"credit_in_account_currency": self.amount,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
 					},
 				],
 			}  # fmt: skip

@@ -8,7 +8,10 @@ from frappe.utils import flt, getdate
 
 from campus.setup.demo_data import intake
 
-PAID_IN_FULL, PAID_IN_PART = (1, 2, 3, 4), (5,)  # applicant ordinals (see intake.ORDINALS); joiners 6 and 7 stay outstanding
+PAID_IN_FULL, PAID_IN_PART = (
+	(1, 2, 3, 4),
+	(5,),
+)  # applicant ordinals (see intake.ORDINALS); joiners 6 and 7 stay outstanding
 
 
 def load(ctx):
@@ -32,7 +35,9 @@ def pay(ctx, invoice, amount):
 	"""A submitted Payment Entry of `amount` against the invoice, unless it has been paid (the outstanding is below the amount)."""
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
-	if flt(invoice.outstanding_amount) < flt(amount) or frappe.db.exists("Payment Entry Reference", {"reference_name": invoice.name, "docstatus": 1}):
+	if flt(invoice.outstanding_amount) < flt(amount) or frappe.db.exists(
+		"Payment Entry Reference", {"reference_name": invoice.name, "docstatus": 1}
+	):
 		return
 	payment = get_payment_entry("Sales Invoice", invoice.name, party_amount=amount)
 	payment.reference_no, payment.reference_date = f"DEMO-UTR-{invoice.student}", getdate()

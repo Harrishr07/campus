@@ -52,7 +52,9 @@ class QuestionPaper(ApprovableDocument, Document):
 		if self.moderation_status == WITHDRAWN:
 			frappe.throw(_("A withdrawn paper cannot be sent for approval."))
 		if not find_policy(self):
-			frappe.throw(_("Set up an Approval Policy for Question Paper first: a paper is sealed only by moderation."))
+			frappe.throw(
+				_("Set up an Approval Policy for Question Paper first: a paper is sealed only by moderation.")
+			)
 		self.validate_sealable()
 		self.db_set("moderation_status", UNDER_MODERATION)
 
@@ -78,9 +80,15 @@ class QuestionPaper(ApprovableDocument, Document):
 	def approval_excluded_users(self):
 		"""Users who never approve this paper (with the engine's requester and owner): its editors and the nominated
 		setters of the course in the session."""
-		nominations = frappe.get_all("QP Setter Nomination", {"exam_session": self.exam_session, "course": self.course}, pluck="name")
-		employees = frappe.get_all("QP Nomination Setter", {"parent": ["in", nominations or [""]]}, pluck="employee")
-		setters = frappe.get_all("Employee", {"name": ["in", employees or [""]], "user_id": ["is", "set"]}, pluck="user_id")
+		nominations = frappe.get_all(
+			"QP Setter Nomination", {"exam_session": self.exam_session, "course": self.course}, pluck="name"
+		)
+		employees = frappe.get_all(
+			"QP Nomination Setter", {"parent": ["in", nominations or [""]]}, pluck="employee"
+		)
+		setters = frappe.get_all(
+			"Employee", {"name": ["in", employees or [""]], "user_id": ["is", "set"]}, pluck="user_id"
+		)
 		items = [q.question_item for q in self.questions] or [""]
 		item_editors = frappe.get_all("Question Bank Item", {"name": ["in", items]}, pluck="editors")
 		return {*setters, *(self.editors or "").split(), *" ".join(e or "" for e in item_editors).split()}
@@ -89,7 +97,9 @@ class QuestionPaper(ApprovableDocument, Document):
 		"""Server-owned: the saved editors, plus the session user when the content changed; a client value is ignored."""
 		before = self.get_doc_before_save()
 		editors = (before.editors or "").split() if before else []
-		if (not before or content_signature(before) != content_signature(self)) and frappe.session.user not in editors:
+		if (
+			not before or content_signature(before) != content_signature(self)
+		) and frappe.session.user not in editors:
 			editors.append(frappe.session.user)
 		self.editors = "\n".join(editors) or None
 
@@ -102,29 +112,45 @@ class QuestionPaper(ApprovableDocument, Document):
 		seen = set()
 		for row in self.questions:
 			course, company, disabled, retired = frappe.db.get_value(
-				"Question Bank Item", row.question_item, ["course", "company", "disabled", "retired_by_withdrawal"]
+				"Question Bank Item",
+				row.question_item,
+				["course", "company", "disabled", "retired_by_withdrawal"],
 			)
 			if retired:
-				frappe.throw(_("Row {0}: {1} was on withdrawn paper {2} and is retired.").format(row.idx, row.question_item, retired))
+				frappe.throw(
+					_("Row {0}: {1} was on withdrawn paper {2} and is retired.").format(
+						row.idx, row.question_item, retired
+					)
+				)
 			if course != self.course or company != self.company:
-				frappe.throw(_("Row {0}: {1} is not a question of {2} in {3}.").format(row.idx, row.question_item, self.course, self.company))
+				frappe.throw(
+					_("Row {0}: {1} is not a question of {2} in {3}.").format(
+						row.idx, row.question_item, self.course, self.company
+					)
+				)
 			if disabled:
 				frappe.throw(_("Row {0}: {1} is disabled.").format(row.idx, row.question_item))
 			if (row.paper_set, row.question_item) in seen:
-				frappe.throw(_("Row {0}: {1} is already in Set {2}.").format(row.idx, row.question_item, row.paper_set))
+				frappe.throw(
+					_("Row {0}: {1} is already in Set {2}.").format(row.idx, row.question_item, row.paper_set)
+				)
 			seen.add((row.paper_set, row.question_item))
 
 	def check_blueprint(self):
 		questions = [{"paper_set": q.paper_set, "course_outcome": q.course_outcome, "bloom_level": q.bloom_level,
 			"marks": q.marks} for q in self.questions]  # fmt: skip
 		with_files = [s for s, field in PAPER_FILE_FIELDS.items() if self.get(field)]
-		return blueprint_issues(questions, [r.as_dict() for r in self.blueprint], self.total_marks, with_files)
+		return blueprint_issues(
+			questions, [r.as_dict() for r in self.blueprint], self.total_marks, with_files
+		)
 
 	def validate_sealable(self):
 		if not self.release_at:
 			frappe.throw(_("Set Release At before approving the paper."))
 		if now_datetime() >= window_for(self.release_at)[0]:
-			frappe.throw(_("The download window of this paper has already opened; it is too late to seal it."))
+			frappe.throw(
+				_("The download window of this paper has already opened; it is too late to seal it.")
+			)
 		if not self.set_a_file:
 			frappe.throw(_("Attach the Set A paper before approving."))
 		for field in PAPER_FILE_FIELDS.values():
@@ -135,14 +161,18 @@ class QuestionPaper(ApprovableDocument, Document):
 			frappe.throw(_("The paper does not match its blueprint:") + "<br>" + issues.replace("\n", "<br>"))
 
 	def refuse_second_approved_paper(self):
-		frappe.db.get_value("Exam Session", self.exam_session, "name", for_update=True)  # one approval at a time
+		frappe.db.get_value(
+			"Exam Session", self.exam_session, "name", for_update=True
+		)  # one approval at a time
 		other = frappe.db.get_value(
 			"Question Paper",
 			{"exam_session": self.exam_session, "course": self.course, "docstatus": 1, "name": ["!=", self.name]},
 			"name", for_update=True,
 		)  # fmt: skip
 		if other:
-			frappe.throw(_("{0} is already the approved paper of {1} in this session.").format(other, self.course))
+			frappe.throw(
+				_("{0} is already the approved paper of {1} in this session.").format(other, self.course)
+			)
 
 
 def content_signature(doc):

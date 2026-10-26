@@ -26,7 +26,9 @@ def execute():
 
 def key_joining_enrollments():
 	keyed = set(frappe.get_all(ENROLLMENT, {"oc_joining_key": ("is", "set")}, pluck="oc_joining_key"))
-	for student in frappe.get_all("Student", {"student_applicant": ("is", "set")}, ["name", "student_applicant"]):
+	for student in frappe.get_all(
+		"Student", {"student_applicant": ("is", "set")}, ["name", "student_applicant"]
+	):
 		if student.student_applicant in keyed:
 			continue
 		first = frappe.db.get_value(
@@ -34,7 +36,9 @@ def key_joining_enrollments():
 			order_by="enrollment_date asc, creation asc",
 		)  # fmt: skip
 		if first and not first.oc_joining_key:
-			frappe.db.set_value(ENROLLMENT, first.name, "oc_joining_key", student.student_applicant, update_modified=False)
+			frappe.db.set_value(
+				ENROLLMENT, first.name, "oc_joining_key", student.student_applicant, update_modified=False
+			)
 			keyed.add(student.student_applicant)
 
 
@@ -47,7 +51,9 @@ def mark_admitted_students_joined():
 		if not enrollment:
 			continue
 		last = last_change_date(student)
-		effective = max(getdate(enrollment.enrollment_date), getdate(last)) if last else enrollment.enrollment_date
+		effective = (
+			max(getdate(enrollment.enrollment_date), getdate(last)) if last else enrollment.enrollment_date
+		)
 		for status in (JOINED, ACTIVE):
 			transition(
 				student, status, effective, "Enrolled before the joining confirmation existed", (ENROLLMENT, enrollment.name),

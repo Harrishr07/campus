@@ -30,8 +30,14 @@ class NoDuesClearance(Document):
 		if pending:
 			frappe.throw(_("Sign-off pending from: {0}").format(", ".join(pending)))
 		if self.dues_total > 0:
-			currency = frappe.get_cached_value("Company", self.company, "default_currency") if self.company else None
-			frappe.throw(_("The student has dues of {0}; they must be paid first.").format(fmt_money(self.dues_total, currency=currency)))
+			currency = (
+				frappe.get_cached_value("Company", self.company, "default_currency") if self.company else None
+			)
+			frappe.throw(
+				_("The student has dues of {0}; they must be paid first.").format(
+					fmt_money(self.dues_total, currency=currency)
+				)
+			)
 
 	def on_submit(self):
 		self.db_set("verification_code", verification.issue(self, CERTIFICATE_FORMAT).code)

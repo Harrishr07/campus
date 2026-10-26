@@ -24,11 +24,13 @@ class InventionDisclosure(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
-		if not is_approved(self):  # the engine lets a type with no policy through, a disclosure never submits unreviewed
+		if not is_approved(
+			self
+		):  # the engine lets a type with no policy through, a disclosure never submits unreviewed
 			frappe.throw(
-				_("{0} needs committee approval: set up an Approval Policy for Invention Disclosure and request approval.").format(
-					self.name
-				)
+				_(
+					"{0} needs committee approval: set up an Approval Policy for Invention Disclosure and request approval."
+				).format(self.name)
 			)
 
 	def approval_excluded_users(self):

@@ -37,7 +37,9 @@ class TestMandatoryApproval(ApprovalTestCase):
 		self.addCleanup(frappe.db.delete, mandatory_approval.ROW_DOCTYPE, {"name": row.name})
 
 	def unlist(self, doctype):
-		frappe.db.delete(mandatory_approval.ROW_DOCTYPE, {"parenttype": "Campus Settings", "document_type": doctype})
+		frappe.db.delete(
+			mandatory_approval.ROW_DOCTYPE, {"parenttype": "Campus Settings", "document_type": doctype}
+		)
 
 	def test_a_listed_doctype_without_a_matching_policy_is_refused(self):
 		self.require(fx.DOCTYPE)
@@ -136,11 +138,21 @@ class TestFlaggedForConfiguration(ApprovalTestCase):
 		return commit
 
 	def flags(self, doctype=None):
-		title = f"Approval policy missing for {doctype}" if doctype else ["like", "Approval policy missing for %"]
-		return frappe.get_all("Error Log", filters={"method": title}, fields=["method", "error", "reference_doctype", "reference_name"])
+		title = (
+			f"Approval policy missing for {doctype}" if doctype else ["like", "Approval policy missing for %"]
+		)
+		return frappe.get_all(
+			"Error Log",
+			filters={"method": title},
+			fields=["method", "error", "reference_doctype", "reference_name"],
+		)
 
 	def alerts(self):
-		return frappe.get_all("Notification Log", filters={"for_user": SYSTEM_MANAGER}, fields=["subject", "document_type", "document_name"])
+		return frappe.get_all(
+			"Notification Log",
+			filters={"for_user": SYSTEM_MANAGER},
+			fields=["subject", "document_type", "document_name"],
+		)
 
 	def test_a_refusal_is_flagged_after_its_rollback_with_doctype_and_user(self):
 		self.refuse(fx.DOCTYPE)
@@ -170,14 +182,21 @@ class TestFlaggedForConfiguration(ApprovalTestCase):
 		self.refuse(fx.DOCTYPE)
 		later = []
 		frappe.db.after_rollback.add(lambda: later.append(True))
-		with patch.object(mandatory_approval, "enqueue_create_notification", side_effect=RuntimeError("redis down")):
+		with patch.object(
+			mandatory_approval, "enqueue_create_notification", side_effect=RuntimeError("redis down")
+		):
 			self.run_after_rollback()  # must not raise
 		self.assertEqual(later, [True])
 
 	def test_yesterdays_flag_does_not_silence_today(self):
 		self.refuse(fx.DOCTYPE)
 		self.run_after_rollback()
-		frappe.db.set_value("Error Log", {"method": f"Approval policy missing for {fx.DOCTYPE}"}, "creation", add_days(now_datetime(), -1))
+		frappe.db.set_value(
+			"Error Log",
+			{"method": f"Approval policy missing for {fx.DOCTYPE}"},
+			"creation",
+			add_days(now_datetime(), -1),
+		)
 		self.refuse(fx.DOCTYPE)
 		self.run_after_rollback().assert_called_once_with()
 		self.assertEqual(len(self.flags(fx.DOCTYPE)), 2)
@@ -205,7 +224,10 @@ class TestSeedList(ApprovalTestCase):
 		]  # fmt: skip
 		self.assertEqual(list(mandatory_approval.MANDATORY_APPROVAL_DOCTYPES), expected)
 		self.assertEqual(mandatory_approval.missing_doctypes(set()), expected)
-		self.assertEqual(mandatory_approval.missing_doctypes({"Fee Refund", "Fee Concession"}), [d for d in expected if not d.startswith("Fee")])
+		self.assertEqual(
+			mandatory_approval.missing_doctypes({"Fee Refund", "Fee Concession"}),
+			[d for d in expected if not d.startswith("Fee")],
+		)
 		for doctype in expected:
 			self.assertTrue(mandatory_approval.uses_approval_engine(doctype), doctype)
 
@@ -213,7 +235,11 @@ class TestSeedList(ApprovalTestCase):
 		self.assertNotIn("Certificate Request", mandatory_approval.MANDATORY_APPROVAL_DOCTYPES)
 
 	def test_the_migrated_site_lists_the_seed(self):
-		listed = set(frappe.get_all(mandatory_approval.ROW_DOCTYPE, {"parenttype": "Campus Settings"}, pluck="document_type"))
+		listed = set(
+			frappe.get_all(
+				mandatory_approval.ROW_DOCTYPE, {"parenttype": "Campus Settings"}, pluck="document_type"
+			)
+		)
 		self.assertLessEqual(set(mandatory_approval.MANDATORY_APPROVAL_DOCTYPES), listed)
 
 	def test_a_doctype_outside_the_engine_is_not_seeded(self):

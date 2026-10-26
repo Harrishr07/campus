@@ -239,8 +239,12 @@ class TestRelativeGrading(UnitTestCase):
 	def test_a_degenerate_cohort_falls_back_to_absolute(self):
 		relative = ("Theory", "Relative Box-Cox", 35, 30)
 		self.assertEqual(grading_method(*relative, totals=[70] * 35), "Absolute")  # identical marks
-		self.assertEqual(grading_method(*relative, totals=[60, 80] * 17 + [60]), "Absolute")  # two distinct values
-		self.assertEqual(grading_method(*relative, totals=[99.9] * 32 + [99.8, 50, 51]), "Absolute")  # lambda 5.0, the bound
+		self.assertEqual(
+			grading_method(*relative, totals=[60, 80] * 17 + [60]), "Absolute"
+		)  # two distinct values
+		self.assertEqual(
+			grading_method(*relative, totals=[99.9] * 32 + [99.8, 50, 51]), "Absolute"
+		)  # lambda 5.0, the bound
 		self.assertEqual(grading_method(*relative, totals=[50.1] * 33 + [99, 98]), "Absolute")  # lambda -5.0
 		self.assertEqual(grading_method(*relative, totals=cohort(7, 35)), "Relative Box-Cox")
 		self.assertEqual(grading_method(*relative), "Relative Box-Cox")  # no marks given: cohort size only
@@ -348,14 +352,19 @@ class TestClassification(UnitTestCase):
 
 	def test_lateral_entry_has_four_years_for_distinction_in_r2022(self):
 		self.assertEqual(
-			classify(8.7, CLASSES["R2022"], years_taken=4, entry_type="Lateral")[0], "First Class with Distinction"
-		)
-		self.assertEqual(classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Lateral")[0], "First Class")
-		self.assertEqual(
-			classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Regular")[0], "First Class with Distinction"
+			classify(8.7, CLASSES["R2022"], years_taken=4, entry_type="Lateral")[0],
+			"First Class with Distinction",
 		)
 		self.assertEqual(
-			classify(8.7, CLASSES["R2022"], "Honours", years_taken=5, entry_type="Lateral"), ("First Class", "Honours")
+			classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Lateral")[0], "First Class"
+		)
+		self.assertEqual(
+			classify(8.7, CLASSES["R2022"], years_taken=5, entry_type="Regular")[0],
+			"First Class with Distinction",
+		)
+		self.assertEqual(
+			classify(8.7, CLASSES["R2022"], "Honours", years_taken=5, entry_type="Lateral"),
+			("First Class", "Honours"),
 		)
 
 	def test_no_matching_row_is_none(self):

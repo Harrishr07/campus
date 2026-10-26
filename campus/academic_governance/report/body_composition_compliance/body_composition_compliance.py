@@ -12,7 +12,9 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	if not filters.company:
 		return columns(), []
-	return columns(), violations(filters.company, filters.get("as_on_date") or today(), filters.get("body_type"))
+	return columns(), violations(
+		filters.company, filters.get("as_on_date") or today(), filters.get("body_type")
+	)
 
 
 def violations(company, on_date, body_type=None):
@@ -40,8 +42,20 @@ def violations(company, on_date, body_type=None):
 def columns():
 	return [
 		{"fieldname": "body", "label": _("Body"), "fieldtype": "Link", "options": "Body", "width": 260},
-		{"fieldname": "body_type", "label": _("Body Type"), "fieldtype": "Link", "options": "Body Type", "width": 170},
-		{"fieldname": "department", "label": _("Department"), "fieldtype": "Link", "options": "Department", "width": 200},
+		{
+			"fieldname": "body_type",
+			"label": _("Body Type"),
+			"fieldtype": "Link",
+			"options": "Body Type",
+			"width": 170,
+		},
+		{
+			"fieldname": "department",
+			"label": _("Department"),
+			"fieldtype": "Link",
+			"options": "Department",
+			"width": 200,
+		},
 		{"fieldname": "category", "label": _("Member Category"), "fieldtype": "Data", "width": 150},
 		{"fieldname": "rule", "label": _("Rule"), "fieldtype": "Data", "width": 220},
 		{"fieldname": "in_office", "label": _("In Office"), "fieldtype": "Int", "width": 90},

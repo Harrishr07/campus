@@ -53,15 +53,21 @@ def load(ctx):
 
 
 def ensure_curriculum(ctx, programme, regulation):
-	existing = frappe.db.get_value("Curriculum", {"program": programme["name"], "regulation": regulation, "version": 1})
+	existing = frappe.db.get_value(
+		"Curriculum", {"program": programme["name"], "regulation": regulation, "version": 1}
+	)
 	if existing:
 		return existing
 	rows = []
 	for semester in range(1, 9):
-		for title, category, lecture, tutorial, practical, exam_type in semester_courses(programme["abbr"], semester):
+		for title, category, lecture, tutorial, practical, exam_type in semester_courses(
+			programme["abbr"], semester
+		):
 			name = title
 			if not frappe.db.exists("Course", name):
-				frappe.get_doc({"doctype": "Course", "course_name": name, "oc_company": ctx.college}).insert(ignore_permissions=True)
+				frappe.get_doc({"doctype": "Course", "course_name": name, "oc_company": ctx.college}).insert(
+					ignore_permissions=True
+				)
 				ctx.out.created["Course"] += 1
 			row = {
 				"semester": semester, "course": name, "category": category, "lecture_periods": lecture,

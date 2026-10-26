@@ -62,5 +62,12 @@ def can_pay_online(company):
 	"""Whether `company` has a default Payment Gateway Account with a supported gateway (never throws)."""
 	if not frappe.db.table_exists("Payment Gateway Account"):  # the payments app is not installed
 		return False
-	account = frappe.db.get_value("Payment Gateway Account", {"company": company, "is_default": 1}, ["payment_gateway", "payment_channel"], as_dict=True)
-	return bool(account and account.payment_channel != "Phone" and account.payment_gateway in gateways.ADAPTERS)
+	account = frappe.db.get_value(
+		"Payment Gateway Account",
+		{"company": company, "is_default": 1},
+		["payment_gateway", "payment_channel"],
+		as_dict=True,
+	)
+	return bool(
+		account and account.payment_channel != "Phone" and account.payment_gateway in gateways.ADAPTERS
+	)

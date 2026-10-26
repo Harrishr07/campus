@@ -12,7 +12,14 @@ DISTINCTION, FIRST, SECOND = "First Class with Distinction", "First Class", "Sec
 
 
 def attempt(course, grade_point, result="Pass", credits=3, in_gpa=1):
-	return {"course": course, "credits": credits, "grade": "X", "grade_point": grade_point, "result": result, "in_gpa": in_gpa}
+	return {
+		"course": course,
+		"credits": credits,
+		"grade": "X",
+		"grade_point": grade_point,
+		"result": result,
+		"in_gpa": in_gpa,
+	}
 
 
 # four 3-credit core courses: (9 + 9 + 8 + 9) / 4 = 8.75
@@ -23,7 +30,16 @@ CLEARED = [attempt("C1", 9), attempt("C2", 9), attempt("C3", 0, "Fail"), attempt
 WEAK = [attempt("C1", 6), attempt("C2", 6), attempt("C3", 7), attempt("C4", 6)]
 
 
-def classify(attempts, classes, kinds=None, years=4, break_years=0, entry_type="Regular", credits_needed=18, count_additional=1):
+def classify(
+	attempts,
+	classes,
+	kinds=None,
+	years=4,
+	break_years=0,
+	entry_type="Regular",
+	credits_needed=18,
+	count_additional=1,
+):
 	record = g.consolidate(attempts, kinds or {}, credits_needed, count_additional)
 	return g.classification(record, classes, years, break_years, entry_type)
 
@@ -39,7 +55,9 @@ class TestClassification(UnitTestCase):
 		record = g.consolidate(CLEARED, {}, 18, 1)
 		self.assertEqual((record["cgpa"], record["percentage"], record["arrears"]), (8.75, 87.5, []))
 		self.assertFalse(record["first_appearance"])
-		self.assertEqual([c["grade_point"] for c in record["core_courses"]], [9, 9, 8, 9])  # the pass of C3 is listed
+		self.assertEqual(
+			[c["grade_point"] for c in record["core_courses"]], [9, 9, 8, 9]
+		)  # the pass of C3 is listed
 
 	def test_an_outstanding_arrear_is_listed_and_gets_no_class(self):
 		record = g.consolidate([*STRONG[:3], attempt("C4", 0, "Fail")], {}, 18, 1)
@@ -48,7 +66,9 @@ class TestClassification(UnitTestCase):
 
 	def test_r2022_counts_the_break_of_study_in_its_five_years_r2026_has_no_limit(self):
 		self.assertEqual(classify(STRONG, R2022, years=5, break_years=1), (DISTINCTION, "Regular"))
-		self.assertEqual(classify(STRONG, R2022, years=6, break_years=1), (SECOND, "Regular"))  # break included
+		self.assertEqual(
+			classify(STRONG, R2022, years=6, break_years=1), (SECOND, "Regular")
+		)  # break included
 		self.assertEqual(classify(STRONG, R2026, years=6, break_years=1), (DISTINCTION, "Regular"))
 
 	def test_r2022_lateral_entry_has_four_years_for_distinction(self):
@@ -65,7 +85,12 @@ HONOURS = {"H1": "Honours", "H2": "Honours", "A1": "Additional"}
 
 def honours(points=(10, 10), credits=9):
 	"""STRONG plus two Honours courses of `credits` each and one additional course at grade point 10."""
-	return [*STRONG, attempt("H1", points[0], credits=credits), attempt("H2", points[1], credits=credits), attempt("A1", 10)]
+	return [
+		*STRONG,
+		attempt("H1", points[0], credits=credits),
+		attempt("H2", points[1], credits=credits),
+		attempt("A1", 10),
+	]
 
 
 class TestAdditionalAndHonours(UnitTestCase):
@@ -89,7 +114,9 @@ class TestAdditionalAndHonours(UnitTestCase):
 		self.assertEqual((record["variant"], record["cgpa"]), ("Honours", 8.75))
 
 	def test_a_failed_honours_course_is_no_arrear_and_no_credit(self):
-		record = g.consolidate([*STRONG, attempt("H1", 10, credits=9), attempt("H2", 0, "Fail", credits=9)], HONOURS, 18, 1)
+		record = g.consolidate(
+			[*STRONG, attempt("H1", 10, credits=9), attempt("H2", 0, "Fail", credits=9)], HONOURS, 18, 1
+		)
 		self.assertEqual((record["variant"], record["arrears"], record["cgpa"]), ("Regular", [], 8.75))
 
 	def test_minor_and_no_specialisation_rule(self):
@@ -108,7 +135,9 @@ class TestProgression(UnitTestCase):
 		self.assertEqual(g.progression_outcome(3, 8.0, max_arrears=2, probation_below_cgpa=6), g.DETAIN)
 		self.assertEqual(g.progression_outcome(2, 5.9, max_arrears=2, probation_below_cgpa=6), g.PROBATION)
 		self.assertEqual(g.progression_outcome(2, 6.0, max_arrears=2, probation_below_cgpa=6), g.PROMOTE)
-		self.assertEqual(g.progression_outcome(0, 3.0, max_arrears=0, probation_below_cgpa=0), g.PROMOTE)  # no probation
+		self.assertEqual(
+			g.progression_outcome(0, 3.0, max_arrears=0, probation_below_cgpa=0), g.PROMOTE
+		)  # no probation
 		self.assertEqual(g.progression_outcome(1, 9.0, max_arrears=0, probation_below_cgpa=0), g.DETAIN)
 
 	def test_no_cgpa_yet_is_no_probation(self):
@@ -138,7 +167,9 @@ class TestFixRound1(UnitTestCase):
 		self.assertEqual((cleared["arrears"], cleared["first_appearance"]), ([], True))
 
 	def test_m2_core_credits_earned(self):
-		record = g.consolidate([*STRONG[:3], attempt("C4", 0, "Fail"), attempt("H1", 10, credits=9)], HONOURS, 18, 1)
+		record = g.consolidate(
+			[*STRONG[:3], attempt("C4", 0, "Fail"), attempt("H1", 10, credits=9)], HONOURS, 18, 1
+		)
 		self.assertEqual(record["core_credits"], 9)
 		self.assertTrue(g.credits_complete(record, 9))
 		self.assertFalse(g.credits_complete(record, 12))

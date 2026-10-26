@@ -48,7 +48,11 @@ class MarkSheetEntry(Document):
 		self.validate_offering(session)
 		course = offering_course(self.course_offering)
 		if not course["configured"]:  # blank: refused, never a guessed Theory (R-08)
-			frappe.throw(_("Course {0} has no exam type; set it on the curriculum first.").format(frappe.bold(escape_html(course["course"]))))
+			frappe.throw(
+				_("Course {0} has no exam type; set it on the curriculum first.").format(
+					frappe.bold(escape_html(course["course"]))
+				)
+			)
 		if not course["course_type"]:
 			frappe.throw(_("Internal Only courses are not graded by the Result Run."))
 		if session.status != MARKS_ENTRY:
@@ -59,8 +63,15 @@ class MarkSheetEntry(Document):
 		self.check_result_lock()
 
 	def on_trash(self):
-		if frappe.db.exists("Student Result", {"exam_session": self.exam_session, "student": ["in", [r.student for r in self.marks] or [""]]}):
-			frappe.throw(_("Students of this Mark Sheet Entry have a Student Result in the session; it cannot be deleted."))
+		if frappe.db.exists(
+			"Student Result",
+			{"exam_session": self.exam_session, "student": ["in", [r.student for r in self.marks] or [""]]},
+		):
+			frappe.throw(
+				_(
+					"Students of this Mark Sheet Entry have a Student Result in the session; it cannot be deleted."
+				)
+			)
 
 	def check_result_lock(self):
 		"""Once a student has a Student Result in the session, only the COE (or System Manager) changes the student's
@@ -71,7 +82,14 @@ class MarkSheetEntry(Document):
 		if has_any_role(frappe.session.user, MARKS_ROLES):
 			return
 		resulted = set(
-			frappe.get_all("Student Result", {"exam_session": self.exam_session, "student": ["in", [r.student for r in self.marks] or [""]]}, pluck="student")
+			frappe.get_all(
+				"Student Result",
+				{
+					"exam_session": self.exam_session,
+					"student": ["in", [r.student for r in self.marks] or [""]],
+				},
+				pluck="student",
+			)
 		)
 		if not resulted:
 			return
@@ -81,20 +99,31 @@ class MarkSheetEntry(Document):
 		for student in resulted & (set(before) | set(now)):
 			if marks(now.get(student)) != marks(before.get(student)):
 				frappe.throw(
-					_("{0} has a Student Result in this session: only the COE changes the marks, and the results are then run again.").format(
-						frappe.bold(student)
-					)
+					_(
+						"{0} has a Student Result in this session: only the COE changes the marks, and the results are then run again."
+					).format(frappe.bold(student))
 				)
 
 	def validate_offering(self, session):
 		group = frappe.db.get_value(
-			"Student Group", self.course_offering, ["group_based_on", "oc_company", "academic_term"], as_dict=True
+			"Student Group",
+			self.course_offering,
+			["group_based_on", "oc_company", "academic_term"],
+			as_dict=True,
 		)
-		if group.group_based_on != "Course" or group.oc_company != session.company or group.academic_term != session.academic_term:
+		if (
+			group.group_based_on != "Course"
+			or group.oc_company != session.company
+			or group.academic_term != session.academic_term
+		):
 			frappe.throw(_("The offering must be a course of the session's company and academic term."))
 		if frappe.db.exists(
 			"Mark Sheet Entry",
-			{"exam_session": self.exam_session, "course_offering": self.course_offering, "name": ["!=", self.name]},
+			{
+				"exam_session": self.exam_session,
+				"course_offering": self.course_offering,
+				"name": ["!=", self.name],
+			},
 		):
 			frappe.throw(_("A Mark Sheet Entry already exists for this session and offering."))
 
@@ -114,9 +143,9 @@ class MarkSheetEntry(Document):
 			row.ese_from_valuation = old.ese_from_valuation if old else 0
 			if row.ese_from_valuation and (flt(row.ese), row.absent or 0) != (flt(old.ese), old.absent or 0):
 				frappe.throw(
-					_("Row {0}: the ESE of {1} is the final mark of its valuations and cannot be edited.").format(
-						row.idx, row.student
-					)
+					_(
+						"Row {0}: the ESE of {1} is the final mark of its valuations and cannot be edited."
+					).format(row.idx, row.student)
 				)
 
 	def apply_cia(self):
@@ -129,18 +158,24 @@ class MarkSheetEntry(Document):
 			cia.SheetCIA(self, self.cia_schedule).refresh()
 		elif cia.cia_snapshot(self) != cia.cia_snapshot(before):
 			frappe.throw(
-				_("CIA marks of {0} locked at the entry deadline. Edits need an approved CIA Unlock Request.").format(
-					frappe.bold(self.course_offering)
-				),
+				_(
+					"CIA marks of {0} locked at the entry deadline. Edits need an approved CIA Unlock Request."
+				).format(frappe.bold(self.course_offering)),
 				title=_("CIA Locked"),
 			)
 
 	def validate_marks(self, course):
-		members = set(student_group_students(self.course_offering)) | arrear_writers(self.exam_session, course["course"])
+		members = set(student_group_students(self.course_offering)) | arrear_writers(
+			self.exam_session, course["course"]
+		)
 		seen = set()
 		for row in self.marks:
 			if row.student not in members or row.student in seen:
-				frappe.throw(_("Row {0}: {1} is not a member of the offering, or is listed twice.").format(row.idx, row.student))
+				frappe.throw(
+					_("Row {0}: {1} is not a member of the offering, or is listed twice.").format(
+						row.idx, row.student
+					)
+				)
 			seen.add(row.student)
 			if row.absent:  # absent from the ESE; consolidated CIA is kept (carried forward under R2022)
 				row.ese = 0

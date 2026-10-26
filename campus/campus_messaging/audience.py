@@ -61,9 +61,9 @@ def _rule(rule):
 
 def _unavailable(rule_type):
 	frappe.throw(
-		_("Audience rules based on {0} are not available until Phase 4, when hostel and transport data arrive.").format(
-			_(rule_type)
-		),
+		_(
+			"Audience rules based on {0} are not available until Phase 4, when hostel and transport data arrive."
+		).format(_(rule_type)),
 		title=_("Not Available Yet"),
 	)
 
@@ -130,9 +130,7 @@ def _users_with_role(rule):
 	holders = frappe.get_all(
 		"Has Role", filters={"role": rule.role, "parenttype": "User"}, pluck="parent", distinct=True
 	)
-	enabled = frappe.get_all(
-		"User", filters={"name": ["in", holders or [""]], "enabled": 1}, pluck="name"
-	)
+	enabled = frappe.get_all("User", filters={"name": ["in", holders or [""]], "enabled": 1}, pluck="name")
 	permitted = _users_permitted_for(rule.company, enabled)
 	return _prefixed("User", sorted(u for u in permitted if u not in NON_PEOPLE_USERS))
 
@@ -140,7 +138,9 @@ def _users_with_role(rule):
 def _users_permitted_for(company, users):
 	"""Users with no Company restriction, or restricted to include `company`."""
 	rows = frappe.get_all(
-		"User Permission", filters={"allow": "Company", "user": ["in", users or [""]]}, fields=["user", "for_value"]
+		"User Permission",
+		filters={"allow": "Company", "user": ["in", users or [""]]},
+		fields=["user", "for_value"],
 	)
 	restricted = {r.user for r in rows}
 	allowed = {r.user for r in rows if r.for_value == company}
@@ -151,7 +151,9 @@ def keys_for_user(user):
 	"""Every recipient key a user answers to: themself and the Student/Guardian/Employee records linked to them."""
 	keys = {f"User:{user}"}
 	for doctype, field in (("Student", "user"), ("Guardian", "user"), ("Employee", "user_id")):
-		keys.update(f"{doctype}:{name}" for name in frappe.get_all(doctype, filters={field: user}, pluck="name"))
+		keys.update(
+			f"{doctype}:{name}" for name in frappe.get_all(doctype, filters={field: user}, pluck="name")
+		)
 	return keys
 
 
@@ -171,6 +173,8 @@ def users_of(keys):
 	result = {}
 	for doctype, names in by_doctype.items():
 		_emails, _mobiles, user_field, _language, name_field = SOURCES[doctype]
-		for row in frappe.get_all(doctype, filters={"name": ["in", names]}, fields=["name", user_field, name_field]):
+		for row in frappe.get_all(
+			doctype, filters={"name": ["in", names]}, fields=["name", user_field, name_field]
+		):
 			result[f"{doctype}:{row.name}"] = (row[user_field], row[name_field] or row.name)
 	return result

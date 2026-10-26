@@ -61,7 +61,7 @@ def seed_reminder_template():
 				{
 					"language": "en",
 					"subject": "Proposal due: {{ doc.title }}",
-					"body": "Your proposal \"{{ doc.title }}\" ({{ doc.name }}) for {{ doc.funding_agency }} is due on "
+					"body": 'Your proposal "{{ doc.title }}" ({{ doc.name }}) for {{ doc.funding_agency }} is due on '
 					"{{ frappe.format(context.deadline, {'fieldtype': 'Date'}) }}. It is {{ doc.status }} and not yet "
 					"submitted to the agency.",
 				}
@@ -138,15 +138,22 @@ def seed_project_staff():
 	"""Project staff are Employees of this Employment Type, paid a fellowship through payroll. The college maps the
 	Fellowship component to its Manpower head's account and builds the fellowship Salary Structure."""
 	if not frappe.db.exists("Employment Type", PROJECT_STAFF):
-		frappe.get_doc({"doctype": "Employment Type", "employee_type_name": PROJECT_STAFF}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Employment Type", "employee_type_name": PROJECT_STAFF}).insert(
+			ignore_permissions=True
+		)
 	for designation in PROJECT_STAFF_DESIGNATIONS:
 		if not frappe.db.exists("Designation", designation):
-			frappe.get_doc({"doctype": "Designation", "designation_name": designation}).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Designation", "designation_name": designation}).insert(
+				ignore_permissions=True
+			)
 	if not frappe.db.exists("Salary Component", FELLOWSHIP_COMPONENT):
 		frappe.get_doc(
 			{
-				"doctype": "Salary Component", "salary_component": FELLOWSHIP_COMPONENT, "salary_component_abbr": "FEL",
-				"type": "Earning", "depends_on_payment_days": 1,
+				"doctype": "Salary Component",
+				"salary_component": FELLOWSHIP_COMPONENT,
+				"salary_component_abbr": "FEL",
+				"type": "Earning",
+				"depends_on_payment_days": 1,
 				"description": "Fellowship of project staff (JRF / SRF / Project Assistant), paid from the sanction's Manpower head.",
 			}  # fmt: skip
 		).insert(ignore_permissions=True)

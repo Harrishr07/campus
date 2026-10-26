@@ -14,7 +14,15 @@ from frappe.utils import getdate, today
 OFFERING_AUDIENCES = ("Course Offering Students", "Parents", "Teachers")
 EXTERNAL_AUDIENCES = ("Alumni", "Employers")
 AUDIENCE_FIELDS = ("audience", "audience_rule", "course_offering", "company")
-LOCKED_ONCE_ANSWERED = ("form", "audience", "course_offering", "instructor", "audience_rule", "company", "is_anonymous")
+LOCKED_ONCE_ANSWERED = (
+	"form",
+	"audience",
+	"course_offering",
+	"instructor",
+	"audience_rule",
+	"company",
+	"is_anonymous",
+)
 
 
 class FeedbackCampaign(Document):
@@ -30,27 +38,56 @@ class FeedbackCampaign(Document):
 		if not self.is_new() and not any(self.has_value_changed(f) for f in AUDIENCE_FIELDS):
 			return
 		if self.audience in EXTERNAL_AUDIENCES or self.audience == OFFERING_AUDIENCES[0]:
-			self.audience_rule = None  # offering students are the offering's own members (their CO scores count)
+			self.audience_rule = (
+				None  # offering students are the offering's own members (their CO scores count)
+			)
 		if self.audience not in EXTERNAL_AUDIENCES and not (self.audience_rule or self.course_offering):
-			frappe.throw(_("Audience {0} needs a course offering or an Audience Rule.").format(_(self.audience)))
-		if self.course_offering and frappe.db.get_value("Student Group", self.course_offering, "oc_company") != self.company:
-			frappe.throw(_("{0} is not a course offering of {1}.").format(frappe.bold(self.course_offering), frappe.bold(self.company)))
-		if self.audience_rule and frappe.db.get_value("Audience Rule", self.audience_rule, "company") != self.company:
-			frappe.throw(_("Audience Rule {0} is not of {1}.").format(frappe.bold(self.audience_rule), frappe.bold(self.company)))
+			frappe.throw(
+				_("Audience {0} needs a course offering or an Audience Rule.").format(_(self.audience))
+			)
+		if (
+			self.course_offering
+			and frappe.db.get_value("Student Group", self.course_offering, "oc_company") != self.company
+		):
+			frappe.throw(
+				_("{0} is not a course offering of {1}.").format(
+					frappe.bold(self.course_offering), frappe.bold(self.company)
+				)
+			)
+		if (
+			self.audience_rule
+			and frappe.db.get_value("Audience Rule", self.audience_rule, "company") != self.company
+		):
+			frappe.throw(
+				_("Audience Rule {0} is not of {1}.").format(
+					frappe.bold(self.audience_rule), frappe.bold(self.company)
+				)
+			)
 
 	def offering_instructor(self):
 		if not self.course_offering:
 			return None
 		return frappe.db.get_value(
-			"Student Group Instructor", {"parent": self.course_offering, "parenttype": "Student Group"}, "instructor", order_by="idx"
+			"Student Group Instructor",
+			{"parent": self.course_offering, "parenttype": "Student Group"},
+			"instructor",
+			order_by="idx",
 		)
 
 	def validate_locked(self):
 		if self.is_new() or not frappe.db.exists("Feedback Response", {"campaign": self.name}):
 			return
-		changed = [self.meta.get_label(field) for field in LOCKED_ONCE_ANSWERED if self.has_value_changed(field)]
+		changed = [
+			self.meta.get_label(field) for field in LOCKED_ONCE_ANSWERED if self.has_value_changed(field)
+		]
 		if changed:
-			frappe.throw(_("The campaign has responses; {0} can no longer change.").format(", ".join(changed)))
+			frappe.throw(
+				_("The campaign has responses; {0} can no longer change.").format(", ".join(changed))
+			)
 		closed_on = frappe.db.get_value("Feedback Campaign", self.name, "end_date")
 		if getdate(closed_on) < getdate(today()) and getdate(self.end_date) >= getdate(today()):
-			frappe.throw(_("A closed campaign with responses cannot reopen: answers added later would show by difference."))
+			frappe.throw(
+				_(
+					"A closed campaign with responses cannot reopen: answers added later would show by difference."
+				)
+			)

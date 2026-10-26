@@ -47,7 +47,11 @@ def validate_rule(rule):
 	for slab in rows:
 		if slab.from_day < 1 or (slab.to_day and slab.to_day < slab.from_day):
 			frappe.throw(_("Row {0}: the day range is not valid.").format(slab.idx))
-		if bool(flt(slab.amount)) == bool(flt(slab.percent)) or flt(slab.amount) < 0 or not 0 <= flt(slab.percent) <= 100:
+		if (
+			bool(flt(slab.amount)) == bool(flt(slab.percent))
+			or flt(slab.amount) < 0
+			or not 0 <= flt(slab.percent) <= 100
+		):
 			frappe.throw(_("Row {0}: enter either an amount or a percent (0-100).").format(slab.idx))
 		if slab.per_day and not slab.to_day:
 			frappe.throw(_("Row {0}: a per-day slab needs a To Day.").format(slab.idx))
@@ -56,7 +60,12 @@ def validate_rule(rule):
 			frappe.throw(_("Row {0}: the day range overlaps the previous slab.").format(after.idx))
 	if rule.enabled and frappe.db.exists(
 		"Fine Rule",
-		{"company": rule.company, "fee_category": rule.fee_category or ("is", "not set"), "enabled": 1, "name": ("!=", rule.name)},
+		{
+			"company": rule.company,
+			"fee_category": rule.fee_category or ("is", "not set"),
+			"enabled": 1,
+			"name": ("!=", rule.name),
+		},
 	):
 		frappe.throw(_("An enabled Fine Rule already exists for this company and fee."))
 
@@ -91,17 +100,31 @@ def fine_items(as_of):
 		return []
 	invoices = overdue_invoices(as_of, {r.company for r in rules})
 	done = set(
-		frappe.get_all("Fine Applied", {"sales_invoice": ("in", [i.name for i in invoices] or [""])}, pluck="name", limit=0)
+		frappe.get_all(
+			"Fine Applied",
+			{"sales_invoice": ("in", [i.name for i in invoices] or [""])},
+			pluck="name",
+			limit=0,
+		)
 	)
 	items = []
 	for invoice in invoices:
 		rule = rule_for(invoice, [r for r in rules if r.company == invoice.company])
 		if not rule:
 			continue
-		slabs = frappe.get_all("Fine Rule Slab", {"parent": rule.name}, ["from_day", "to_day", "amount", "percent", "per_day"])
+		slabs = frappe.get_all(
+			"Fine Rule Slab", {"parent": rule.name}, ["from_day", "to_day", "amount", "percent", "per_day"]
+		)
 		for slab in slabs_crossed(late_days(invoice.due_date, as_of, rule.grace_days), slabs):
 			if applied_key(invoice.name, slab_key(rule.name, slab)) not in done:
-				items.append({"invoice": invoice.name, "slab": slab_key(rule.name, slab), "rule": rule.name, "from_day": slab.from_day})
+				items.append(
+					{
+						"invoice": invoice.name,
+						"slab": slab_key(rule.name, slab),
+						"rule": rule.name,
+						"from_day": slab.from_day,
+					}
+				)
 	return items
 
 
@@ -114,14 +137,22 @@ def overdue_invoices(as_of, companies):
 		.on(applied.fine_invoice == invoice.name)
 		.select(invoice.name, invoice.company, invoice.due_date)
 		.where(
-			(invoice.docstatus == 1) & (invoice.student.isnotnull()) & (invoice.student != "")
-			& (invoice.outstanding_amount > 0) & (invoice.due_date < as_of) & (invoice.is_return == 0)
-			& invoice.company.isin(list(companies)) & applied.name.isnull()
+			(invoice.docstatus == 1)
+			& (invoice.student.isnotnull())
+			& (invoice.student != "")
+			& (invoice.outstanding_amount > 0)
+			& (invoice.due_date < as_of)
+			& (invoice.is_return == 0)
+			& invoice.company.isin(list(companies))
+			& applied.name.isnull()
 		)
 		.run(as_dict=True)
 	)
 	items = frappe.get_all(
-		"Sales Invoice Item", {"parent": ("in", [i.name for i in invoices] or [""])}, ["parent", "item_code"], limit=0
+		"Sales Invoice Item",
+		{"parent": ("in", [i.name for i in invoices] or [""])},
+		["parent", "item_code"],
+		limit=0,
 	)
 	for row in invoices:
 		row.item_codes = {i.item_code for i in items if i.parent == row.name}
@@ -141,7 +172,10 @@ def apply_fine(item, run):
 	if docstatus != 1 or not flt(outstanding):
 		return  # settled since the run was queued
 	slab = frappe.db.get_value(
-		"Fine Rule Slab", {"parent": item["rule"], "from_day": item["from_day"]}, ["from_day", "to_day", "amount", "percent", "per_day"], as_dict=True
+		"Fine Rule Slab",
+		{"parent": item["rule"], "from_day": item["from_day"]},
+		["from_day", "to_day", "amount", "percent", "per_day"],
+		as_dict=True,
 	)
 	if not slab:
 		return  # the rule was edited since the run was queued
@@ -149,12 +183,19 @@ def apply_fine(item, run):
 	amount = slab_amount(slab, outstanding)
 	applied = frappe.get_doc(
 		{
-			"doctype": "Fine Applied", "sales_invoice": invoice.name, "slab_key": item["slab"],
-			"fine_rule": item["rule"], "company": invoice.company, "amount": amount, "applied_on": as_of,
+			"doctype": "Fine Applied",
+			"sales_invoice": invoice.name,
+			"slab_key": item["slab"],
+			"fine_rule": item["rule"],
+			"company": invoice.company,
+			"amount": amount,
+			"applied_on": as_of,
 		}
 	)
 	try:
-		applied.insert(ignore_permissions=True)  # the primary key refuses a second fine for the same (invoice, slab)
+		applied.insert(
+			ignore_permissions=True
+		)  # the primary key refuses a second fine for the same (invoice, slab)
 	except frappe.DuplicateEntryError:
 		return
 	applied.db_set("fine_invoice", make_fine_invoice(invoice, amount, slab, as_of).name)
@@ -164,8 +205,13 @@ def make_fine_invoice(invoice, amount, slab, as_of):
 	category = category_for_type(FINE)
 	fine = frappe.get_doc(
 		{
-			"doctype": "Sales Invoice", "company": invoice.company, "customer": invoice.customer, "student": invoice.student,
-			"posting_date": as_of, "set_posting_time": 1, "due_date": as_of,
+			"doctype": "Sales Invoice",
+			"company": invoice.company,
+			"customer": invoice.customer,
+			"student": invoice.student,
+			"posting_date": as_of,
+			"set_posting_time": 1,
+			"due_date": as_of,
 			"remarks": _("Late fine for {0}, from day {1}").format(invoice.name, slab.from_day),
 			"items": [{"item_code": category, "qty": 1, "rate": amount}],
 		}

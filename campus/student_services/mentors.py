@@ -63,14 +63,18 @@ def resolve_mentors(mentors, company):
 		frappe.throw(_("No mentors: no active employee of {0} holds the Mentor position.").format(company))
 	for employee in chosen:
 		if employee not in holders:
-			frappe.throw(_("Employee {0} does not hold the Mentor position in {1}.").format(employee, company))
+			frappe.throw(
+				_("Employee {0} does not hold the Mentor position in {1}.").format(employee, company)
+			)
 	return chosen
 
 
 def cohort(student_group, program, batch):
 	"""Students to allocate, locked for update, in a fixed order (register no, then id)."""
 	if student_group:
-		names = frappe.get_all("Student Group Student", filters={"parent": student_group, "active": 1}, pluck="student")
+		names = frappe.get_all(
+			"Student Group Student", filters={"parent": student_group, "active": 1}, pluck="student"
+		)
 	elif program and batch:
 		names = frappe.get_all(
 			"Program Enrollment", filters={"program": program, "docstatus": 1}, pluck="student", distinct=True
@@ -78,15 +82,19 @@ def cohort(student_group, program, batch):
 	else:
 		frappe.throw(_("Give a student group, or a program and a batch."))
 	student = frappe.qb.DocType("Student")
-	query = frappe.qb.from_(student).select(student.name, student.oc_register_no, student.oc_company, student.oc_batch)
-	students = query.where(student.name.isin(names or [""])).for_update().run(as_dict=True)  # locked: facts below are current
+	query = frappe.qb.from_(student).select(
+		student.name, student.oc_register_no, student.oc_company, student.oc_batch
+	)
+	students = (
+		query.where(student.name.isin(names or [""])).for_update().run(as_dict=True)
+	)  # locked: facts below are current
 	if not student_group:
 		students = [s for s in students if s.oc_batch == batch]
 		if len(students) > MAX_PROGRAM_COHORT:
 			frappe.throw(
-				_("{0} students is too many to allocate at once (limit {1}); allocate per Student Group.").format(
-					len(students), MAX_PROGRAM_COHORT
-				)
+				_(
+					"{0} students is too many to allocate at once (limit {1}); allocate per Student Group."
+				).format(len(students), MAX_PROGRAM_COHORT)
 			)
 	if not students:
 		frappe.throw(_("No students found to allocate."))
@@ -96,7 +104,9 @@ def cohort(student_group, program, batch):
 def check_company_access(students):
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and any(s.oc_company not in permitted for s in students):
-		frappe.throw(_("You are not permitted to allocate mentors for these students."), frappe.PermissionError)
+		frappe.throw(
+			_("You are not permitted to allocate mentors for these students."), frappe.PermissionError
+		)
 
 
 def check_capacity(student_count, mentor_count, per_mentor):
@@ -113,7 +123,9 @@ def set_class_advisor(doc, method=None):
 	"""Student validate: the CLASS-ADVISOR of the first of the student's groups that has one (Position Holder)."""
 	groups = (
 		frappe.get_all(
-			"Student Group Student", filters={"student": doc.name, "parenttype": "Student Group", "active": 1}, pluck="parent"
+			"Student Group Student",
+			filters={"student": doc.name, "parenttype": "Student Group", "active": 1},
+			pluck="parent",
 		)
 		if doc.name
 		else []

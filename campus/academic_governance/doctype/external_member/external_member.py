@@ -10,7 +10,9 @@ from frappe.model.document import Document
 
 class ExternalMember(Document):
 	def validate(self):
-		if self.supplier and frappe.db.exists("External Member", {"supplier": self.supplier, "name": ["!=", self.name]}):
+		if self.supplier and frappe.db.exists(
+			"External Member", {"supplier": self.supplier, "name": ["!=", self.name]}
+		):
 			frappe.throw(_("Supplier {0} is already linked to another External Member").format(self.supplier))
 
 	@property
@@ -20,7 +22,10 @@ class ExternalMember(Document):
 	@property
 	def bank_account(self):
 		return self.supplier and frappe.db.get_value(
-			"Bank Account", {"party_type": "Supplier", "party": self.supplier}, "name", order_by="is_default desc, creation"
+			"Bank Account",
+			{"party_type": "Supplier", "party": self.supplier},
+			"name",
+			order_by="is_default desc, creation",
 		)
 
 	@frappe.whitelist()
@@ -39,8 +44,8 @@ def new_supplier(member_name, ignore_permissions=False):
 	supplier = frappe.new_doc("Supplier")
 	supplier.supplier_name = member_name
 	supplier.supplier_type = "Individual"
-	supplier.supplier_group = frappe.db.get_single_value("Buying Settings", "supplier_group") or frappe.db.get_value(
-		"Supplier Group", {"is_group": 0}
-	)
+	supplier.supplier_group = frappe.db.get_single_value(
+		"Buying Settings", "supplier_group"
+	) or frappe.db.get_value("Supplier Group", {"is_group": 0})
 	supplier.insert(ignore_permissions=ignore_permissions)
 	return supplier.name

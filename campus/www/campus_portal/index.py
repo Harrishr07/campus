@@ -16,7 +16,9 @@ def get_context(context):
 	context.fees = portal.get_fees(student)
 	try:
 		context.attendance = portal.get_attendance(student)
-	except frappe.ValidationError:  # e.g. the student's regulation has no Attendance Rule yet: the tile shows a dash
+	except (
+		frappe.ValidationError
+	):  # e.g. the student's regulation has no Attendance Rule yet: the tile shows a dash
 		context.attendance = {"academic_term": None, "summary": None}
 	results = portal.get_results(student)["results"]
 	context.latest_result = results[0] if results else None

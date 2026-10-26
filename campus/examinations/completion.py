@@ -42,7 +42,11 @@ from campus.student_services.api import (
 )
 
 CHECK, CATEGORY_ROW = "Completion Check", "Completion Check Category"
-AUTHORITY, SETTINGS, OFFICIAL_DOCUMENT = "Degree Awarding Authority", "Completion Settings", "Official Document"
+AUTHORITY, SETTINGS, OFFICIAL_DOCUMENT = (
+	"Degree Awarding Authority",
+	"Completion Settings",
+	"Official Document",
+)
 RUN_TYPE = "Completion Check"
 RUN_ROLES = (COE_ROLE, DEAN_ROLE, "System Manager")
 CHECKED_STATUSES = (ACTIVE, STUDY_COMPLETED, AWARD_ELIGIBLE)  # the students a bulk run checks
@@ -60,11 +64,23 @@ def run_check(student, bulk_run=None):
 	frappe.db.get_value("Student", student, "name", for_update=True)
 	facts = check_facts(student)
 	outcome = rules.evaluate(
-		facts.rows, facts.minimums, facts.counting, facts.total, facts.passed, facts.recognised, facts.specialisations
+		facts.rows,
+		facts.minimums,
+		facts.counting,
+		facts.total,
+		facts.passed,
+		facts.recognised,
+		facts.specialisations,
 	)
-	digest = rules.fingerprint(facts.curriculum, outcome)  # before the (translated) reasons: language-independent
+	digest = rules.fingerprint(
+		facts.curriculum, outcome
+	)  # before the (translated) reasons: language-independent
 	if not facts.curriculum:
-		outcome["reasons"] = [_("No Effective curriculum for {0} under {1}.").format(facts.program or "-", facts.regulation or "-")]
+		outcome["reasons"] = [
+			_("No Effective curriculum for {0} under {1}.").format(
+				facts.program or "-", facts.regulation or "-"
+			)
+		]
 	else:
 		outcome["reasons"] = reasons(outcome)
 	latest = latest_check(student)
@@ -81,10 +97,22 @@ def check_facts(student):
 	curriculum = effective_curriculum(program, regulation, info.oc_batch) if program and regulation else None
 	rows = curriculum_rows(curriculum)
 	minimums = dict(
-		frappe.get_all("Category Credit Requirement", {"parenttype": "Curriculum", "parent": curriculum or ""}, ["category", "min_credits"], as_list=True)
+		frappe.get_all(
+			"Category Credit Requirement",
+			{"parenttype": "Curriculum", "parent": curriculum or ""},
+			["category", "min_credits"],
+			as_list=True,
+		)
 	)
 	categories = {row["category"] for row in rows} | set(minimums)
-	counting = dict(frappe.get_all("Course Category", {"name": ["in", list(categories) or [""]]}, ["name", "counts_toward_credits"], as_list=True))
+	counting = dict(
+		frappe.get_all(
+			"Course Category",
+			{"name": ["in", list(categories) or [""]]},
+			["name", "counts_toward_credits"],
+			as_list=True,
+		)
+	)
 	attempts = graduation.published_attempts(student)
 	types = graduation.registration_types(student)
 	return frappe._dict(
@@ -98,7 +126,10 @@ def check_facts(student):
 def student_program(student):
 	"""The programme of the student's latest submitted Program Enrollment."""
 	return frappe.db.get_value(
-		"Program Enrollment", {"student": student, "docstatus": 1}, "program", order_by="enrollment_date desc, creation desc"
+		"Program Enrollment",
+		{"student": student, "docstatus": 1},
+		"program",
+		order_by="enrollment_date desc, creation desc",
 	)
 
 
@@ -116,12 +147,17 @@ def passed_courses(attempts, types):
 	return {
 		row.course: row.credits
 		for row in attempts
-		if row.result == graduation_rules.PASS and types.get(row.course) not in graduation_rules.ADDITIONAL_TYPES
+		if row.result == graduation_rules.PASS
+		and types.get(row.course) not in graduation_rules.ADDITIONAL_TYPES
 	}
 
 
 def recognised_courses(student):
-	return dict(frappe.get_all("Credit Recognition", {"student": student, "docstatus": 1}, ["course", "credits"], as_list=True))
+	return dict(
+		frappe.get_all(
+			"Credit Recognition", {"student": student, "docstatus": 1}, ["course", "credits"], as_list=True
+		)
+	)
 
 
 def specialisations(attempts, types, regulation):
@@ -132,7 +168,11 @@ def specialisations(attempts, types, regulation):
 	found = []
 	for variant in (graduation_rules.HONOURS, graduation_rules.MINOR):
 		if variant in types.values():
-			passed = {a.course: a.credits for a in attempts if a.result == graduation_rules.PASS and types.get(a.course) == variant}
+			passed = {
+				a.course: a.credits
+				for a in attempts
+				if a.result == graduation_rules.PASS and types.get(a.course) == variant
+			}
 			found.append((variant, needed, sum(passed.values())))
 	return found
 
@@ -149,7 +189,9 @@ def reasons(outcome):
 
 
 def latest_check(student):
-	name = frappe.db.get_value(CHECK, {"student": student}, "name", order_by="creation desc, name desc", for_update=True)
+	name = frappe.db.get_value(
+		CHECK, {"student": student}, "name", order_by="creation desc, name desc", for_update=True
+	)
 	return frappe.get_doc(CHECK, name) if name else None
 
 
@@ -179,7 +221,11 @@ def award_refusal(student, award_date, program=None):
 	found = []
 	dues = has_dues(student)
 	if dues.blocking > 0:
-		owed = ", ".join(f"{company}: {fmt_money(amount, currency='INR')}" for company, amount in dues.by_company.items() if amount > 0)
+		owed = ", ".join(
+			f"{company}: {fmt_money(amount, currency='INR')}"
+			for company, amount in dues.by_company.items()
+			if amount > 0
+		)
 		found.append(_("Dues outstanding ({0}).").format(owed))
 	company = frappe.db.get_value("Student", student, "oc_company")
 	problem = authority_refusal(company, program or student_program(student), getdate(award_date))
@@ -190,16 +236,21 @@ def award_refusal(student, award_date, program=None):
 
 def authority_refusal(company, program, on_date):
 	"""Why the degree of `program` at `company` cannot be awarded on `on_date` by its authority, or None."""
-	setting = frappe.db.get_value(AUTHORITY, {"company": company, "program": program}, ["authority_name", "document_type", "document_authority"], as_dict=True)
+	setting = frappe.db.get_value(
+		AUTHORITY,
+		{"company": company, "program": program},
+		["authority_name", "document_type", "document_authority"],
+		as_dict=True,
+	)
 	if not setting:
 		return _("No Degree Awarding Authority is set for {0} of {1}.").format(program or "-", company)
 	documents = authority_documents(company, program, setting)
 	if rules.covering_document(documents, on_date):
 		return None
 	if not documents:
-		return _("No {0} document of {1} for {2} is on the Official Document register (degree awarded by {3}).").format(
-			_(setting.document_type), setting.document_authority, program, setting.authority_name
-		)
+		return _(
+			"No {0} document of {1} for {2} is on the Official Document register (degree awarded by {3})."
+		).format(_(setting.document_type), setting.document_authority, program, setting.authority_name)
 	latest = documents[0]
 	return _("The {0} document {1} of {2} for {3} is not in force on {4}: valid {5} to {6}, {7}.").format(
 		_(setting.document_type), latest.reference_no or latest.name, setting.document_authority, program,
@@ -237,13 +288,21 @@ def move_graduates_to_alumni(on_date=None):
 	on_convocation = frappe.db.get_single_value(SETTINGS, "alumni_move") == ON_CONVOCATION
 	days = 0 if on_convocation else frappe.db.get_single_value(SETTINGS, "alumni_after_days") or 0
 	on_date, moved = getdate(on_date or today()), 0
-	for student in frappe.get_all("Student", {"oc_academic_status": GRADUATED}, pluck="name", order_by="name asc"):
+	for student in frappe.get_all(
+		"Student", {"oc_academic_status": GRADUATED}, pluck="name", order_by="name asc"
+	):
 		graduated_on = last_change_date(student)
 		if not graduated_on or not rules.alumni_due(getdate(graduated_on), days, on_date):
 			continue
 		frappe.db.savepoint(ALUMNI_SAVEPOINT)
 		try:
-			transition(student, ALUMNI, rules.alumni_date(getdate(graduated_on), days), _("Alumni {0} days after graduation").format(days), (SETTINGS, SETTINGS))
+			transition(
+				student,
+				ALUMNI,
+				rules.alumni_date(getdate(graduated_on), days),
+				_("Alumni {0} days after graduation").format(days),
+				(SETTINGS, SETTINGS),
+			)
 			moved += 1
 		except frappe.ValidationError as error:
 			frappe.db.rollback(save_point=ALUMNI_SAVEPOINT)
@@ -259,7 +318,9 @@ def check_runner(company):
 	frappe.only_for(RUN_ROLES)
 	permitted = permitted_companies(frappe.session.user)
 	if not company or (permitted is not None and company not in permitted):
-		frappe.throw(_("You cannot run completion checks for {0}.").format(company or "-"), frappe.PermissionError)
+		frappe.throw(
+			_("You cannot run completion checks for {0}.").format(company or "-"), frappe.PermissionError
+		)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -285,7 +346,9 @@ def run_completion_checks(company, program, batch=None):
 	students = batch_students(company, program, batch)
 	if not students:
 		frappe.throw(_("No student of {0} in {1} to check.").format(company, program))
-	return run_bulk(RUN_TYPE, students, "campus.examinations.completion.check_item", chunk=20, parameters=parameters)
+	return run_bulk(
+		RUN_TYPE, students, "campus.examinations.completion.check_item", chunk=20, parameters=parameters
+	)
 
 
 def batch_students(company, program, batch=None):
@@ -297,7 +360,9 @@ def batch_students(company, program, batch=None):
 		.on(student.name == enrollment.student)
 		.select(student.name)
 		.distinct()
-		.where((enrollment.docstatus == 1) & (enrollment.program == program) & (student.oc_company == company))
+		.where(
+			(enrollment.docstatus == 1) & (enrollment.program == program) & (student.oc_company == company)
+		)
 		.where(student.oc_academic_status.isin(CHECKED_STATUSES))
 		.orderby(student.name)
 	)

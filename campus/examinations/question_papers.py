@@ -72,7 +72,9 @@ def slot_start(exam_session, course):
 		["exam_date", "slot"], as_dict=True)  # fmt: skip
 	if not row or not row.exam_date:
 		return None
-	starts_at = frappe.db.get_single_value(SETTINGS, "forenoon_starts_at" if row.slot == "FN" else "afternoon_starts_at")
+	starts_at = frappe.db.get_single_value(
+		SETTINGS, "forenoon_starts_at" if row.slot == "FN" else "afternoon_starts_at"
+	)
 	return get_datetime(f"{row.exam_date} {starts_at}") if starts_at else None
 
 
@@ -98,10 +100,14 @@ def download_access(doc, user, paper_set):
 	if not is_confidential_user(user):
 		return False, _("Only Exam Confidential may download question papers.")
 	if doc.docstatus != 1:
-		return False, _("Only an approved paper can be downloaded; this one is {0}.").format(_(doc.moderation_status))
+		return False, _("Only an approved paper can be downloaded; this one is {0}.").format(
+			_(doc.moderation_status)
+		)
 	opens, closes = get_datetime(doc.download_opens_at), get_datetime(doc.download_closes_at)
 	if not in_window(now_datetime(), opens, closes):
-		return False, _("Downloads are open only from {0} to {1}.").format(format_datetime(opens), format_datetime(closes))
+		return False, _("Downloads are open only from {0} to {1}.").format(
+			format_datetime(opens), format_datetime(closes)
+		)
 	if not doc.get(PAPER_FILE_FIELDS.get(paper_set, "")):
 		return False, _("Set {0} has no paper attached.").format(paper_set)
 	return True, ""
@@ -299,7 +305,9 @@ def open_paper(question_paper, paper_set="A"):
 	log_access(doc, "Download", allowed, reason, user, paper_set=paper_set)
 	if not allowed:
 		raise QPAccessDenied(reason)
-	stamp = _("{0} | {1} | {2} Set {3}").format(user, now_datetime().strftime("%Y-%m-%d %H:%M:%S"), doc.name, paper_set)
+	stamp = _("{0} | {1} | {2} Set {3}").format(
+		user, now_datetime().strftime("%Y-%m-%d %H:%M:%S"), doc.name, paper_set
+	)
 	return watermark(content, stamp)
 
 
@@ -317,7 +325,13 @@ def print_copies(question_paper, paper_set, room, copies):
 	log_access(doc, "Print", allowed, reason, user, paper_set=paper_set, room=room, copies=copies)
 	if not allowed:
 		raise QPAccessDenied(reason)
-	filters = {"question_paper": doc.name, "paper_set": paper_set, "room": room, "action": "Print", "result": "Allowed"}
+	filters = {
+		"question_paper": doc.name,
+		"paper_set": paper_set,
+		"room": room,
+		"action": "Print",
+		"result": "Allowed",
+	}
 	return sum(frappe.get_all(LOG, filters, pluck="copies"))
 
 
@@ -331,7 +345,11 @@ def download_paper(question_paper, paper_set="A"):
 		deny(denied)
 		return
 	frappe.local.response.update(
-		{"type": "download", "filename": f"{question_paper}-set-{paper_set.lower()}.pdf", "filecontent": content}
+		{
+			"type": "download",
+			"filename": f"{question_paper}-set-{paper_set.lower()}.pdf",
+			"filecontent": content,
+		}
 	)
 
 
@@ -360,7 +378,9 @@ def withdraw_course_paper(exam_session, course, reason):
 	session's college, with a reason); returns their names."""
 	company = frappe.db.get_value("Exam Session", exam_session, "company")
 	if not may_withdraw(frappe.session.user, company):
-		raise frappe.PermissionError(_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(company))
+		raise frappe.PermissionError(
+			_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(company)
+		)
 	names = frappe.get_all(QUESTION_PAPER, {"exam_session": exam_session, "course": course, "docstatus": ["<", 2],
 		"moderation_status": ["!=", WITHDRAWN]}, pluck="name", order_by="name")  # fmt: skip
 	for name in names:
@@ -371,7 +391,9 @@ def withdraw_course_paper(exam_session, course, reason):
 def withdraw_doc(doc, reason):
 	reason = (reason or "").strip()
 	if not may_withdraw(frappe.session.user, doc.company):
-		raise frappe.PermissionError(_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(doc.company))
+		raise frappe.PermissionError(
+			_("Only the COE or a System Manager of {0} may withdraw its question papers.").format(doc.company)
+		)
 	if not reason:
 		frappe.throw(_("Give the reason for withdrawing the paper."))
 	if doc.docstatus == 2 or doc.moderation_status == WITHDRAWN:

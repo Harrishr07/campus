@@ -30,7 +30,9 @@ class ConsultancyRevenueShare(ApprovableDocument, Document):
 
 	def before_submit(self):
 		super().before_submit()
-		consultancy.shareable_invoice(self.sales_invoice, self.consultancy_project, self.name, for_update=True)
+		consultancy.shareable_invoice(
+			self.sales_invoice, self.consultancy_project, self.name, for_update=True
+		)
 
 	def on_submit(self):
 		consultancy.post_additional_salaries(self)
@@ -40,7 +42,9 @@ class ConsultancyRevenueShare(ApprovableDocument, Document):
 
 	def approval_excluded_users(self):
 		employees = [m.employee for m in self.members]
-		return [u for u in frappe.get_all("Employee", {"name": ["in", employees or [""]]}, pluck="user_id") if u]
+		return [
+			u for u in frappe.get_all("Employee", {"name": ["in", employees or [""]]}, pluck="user_id") if u
+		]
 
 	def set_split(self, project, invoice):
 		self.company, self.client = project.company, project.client
@@ -53,9 +57,14 @@ class ConsultancyRevenueShare(ApprovableDocument, Document):
 		)
 		team = [row.as_dict() for row in project.team]
 		amounts = member_amounts(team, {"Faculty": self.faculty_amount, "Staff": self.staff_amount})
-		members = [{**{f: row.get(f) for f in MEMBER_FIELDS[:-1]}, "amount": amount} for row, amount in zip(team, amounts, strict=True)]
+		members = [
+			{**{f: row.get(f) for f in MEMBER_FIELDS[:-1]}, "amount": amount}
+			for row, amount in zip(team, amounts, strict=True)
+		]
 		current = [{f: m.get(f) for f in MEMBER_FIELDS} for m in self.members]
-		if [self.member_key(m) for m in current] != [self.member_key(m) for m in members]:  # rows kept when unchanged (approval lock)
+		if [self.member_key(m) for m in current] != [
+			self.member_key(m) for m in members
+		]:  # rows kept when unchanged (approval lock)
 			self.set("members", members)
 
 	@staticmethod

@@ -7,12 +7,24 @@ import frappe
 from campus.campus_platform.approvals import approve, request_approval
 from campus.campus_platform.doctype.regulation.regulation import regulation_name
 from campus.student_services import condonation_fee, eligibility_run
-from campus.student_services.api import attendance_marks, attendance_summary, eligibility_status, summarise, term_window
+from campus.student_services.api import (
+	attendance_marks,
+	attendance_summary,
+	eligibility_status,
+	summarise,
+	term_window,
+)
 from campus.tests.approval_fixtures import level
 from campus.tests.broadcast_fixtures import make_guardian
 from campus.tests.factories import make_company, make_user
 from campus.tests.finance_factories import make_finance_company
-from campus.tests.test_attendance_eligibility import approved_leave, make_offering, make_term, mark, mark_pattern
+from campus.tests.test_attendance_eligibility import (
+	approved_leave,
+	make_offering,
+	make_term,
+	mark,
+	mark_pattern,
+)
 from campus.tests.test_regulation import enroll, make_program, make_regulation, make_student, make_year
 from campus.tests.utils import CampusTestCase
 
@@ -75,23 +87,36 @@ class TestAttendanceCondonation(CampusTestCase):
 		cls.term = make_term()
 		students = {
 			name: make_student(name, COLLEGE, batch)
-			for name, batch in (("Cndband", "2026"), ("Cndshort", "2026"), ("Cndok", "2026"), ("Cndod", "2026"), ("Cnd22", "2022"))
+			for name, batch in (
+				("Cndband", "2026"),
+				("Cndshort", "2026"),
+				("Cndok", "2026"),
+				("Cndod", "2026"),
+				("Cnd22", "2022"),
+			)
 		}
 		for student in students.values():
 			enroll(student, PROGRAM, "2022", submit=True)
-		cls.band, cls.short, cls.ok, cls.od, cls.s22 = (students[n].name for n in ("Cndband", "Cndshort", "Cndok", "Cndod", "Cnd22"))
+		cls.band, cls.short, cls.ok, cls.od, cls.s22 = (
+			students[n].name for n in ("Cndband", "Cndshort", "Cndok", "Cndod", "Cnd22")
+		)
 		cls.groups = [make_offering(c, PROGRAM, COLLEGE, list(students.values()), cls.term) for c in COURSES]
 		leave = approved_leave(cls.band, "Medical")
 		od_leave = approved_leave(cls.od, "On Duty")
 		pattern = {  # student: ([course X present, absent, leave], [course Y present, absent])
-			cls.band: ((7, 2, 1, leave), (8, 2)),  # raw 70 / 80; medical leave lifts X to 80: medical band under R2026
+			cls.band: (
+				(7, 2, 1, leave),
+				(8, 2),
+			),  # raw 70 / 80; medical leave lifts X to 80: medical band under R2026
 			cls.short: ((5, 5, 0, None), (5, 5)),  # 50%: detained
 			cls.ok: ((9, 1, 0, None), (9, 1)),  # 90%: eligible
 			cls.od: ((7, 2, 1, od_leave), (8, 2)),  # the leave is On Duty: counts as attended
 			cls.s22: ((9, 1, 0, None), (9, 1)),
 		}
 		for student, (x, y) in pattern.items():
-			mark_pattern(student, cls.groups[0], present=x[0], absent=x[1], leave=x[2], leave_application=x[3])
+			mark_pattern(
+				student, cls.groups[0], present=x[0], absent=x[1], leave=x[2], leave_application=x[3]
+			)
 			mark_pattern(student, cls.groups[1], present=y[0], absent=y[1])
 		login(STAFF, "Academics User")
 		login(DEAN, "Dean Academics")
@@ -126,7 +151,9 @@ class TestAttendanceCondonation(CampusTestCase):
 	def test_attendance_marks_come_from_the_regulation_bands(self):
 		self.assertEqual(attendance_marks(self.ok, self.groups[0])["marks"], 3)  # 90% under the R2026 bands
 		result = attendance_marks(self.band, self.groups[0])
-		self.assertEqual((result["pct"], result["marks"], result["conducted"], result["attended"]), (70.0, 0, 10, 7))
+		self.assertEqual(
+			(result["pct"], result["marks"], result["conducted"], result["attended"]), (70.0, 0, 10, 7)
+		)
 		self.assertEqual(attendance_marks(self.s22, self.groups[0])["marks"], 0)  # R2022 has no bands
 
 	def test_marks_follow_a_changed_band(self):
@@ -167,13 +194,18 @@ class TestAttendanceCondonation(CampusTestCase):
 		doc = condonation(self.band, self.term).insert()
 		self.assertEqual(eligibility_status(self.band, self.term), "Medical band")  # a draft changes nothing
 		request = request_approval("Condonation Request", doc.name)
-		self.assertEqual(eligibility_status(self.band, self.term), "Medical band")  # nor does a pending approval
+		self.assertEqual(
+			eligibility_status(self.band, self.term), "Medical band"
+		)  # nor does a pending approval
 		frappe.set_user(APPROVER)
 		self.assertEqual(approve(request, None), "Approved")
 		frappe.set_user("Administrator")
 		self.assertEqual(frappe.db.get_value("Condonation Request", doc.name, "docstatus"), 1)
 		summary = summarise(self.band, self.term, term_window(self.term), {})
-		self.assertEqual((summary["status"], summary["band_status"], summary["condoned"]), ("Eligible", "Medical band", True))
+		self.assertEqual(
+			(summary["status"], summary["band_status"], summary["condoned"]),
+			("Eligible", "Medical band", True),
+		)
 		self.assertEqual(eligibility_status(self.s22, self.term), "Eligible")
 
 	def test_condonation_is_for_that_term_only(self):
@@ -218,30 +250,42 @@ class TestAttendanceCondonation(CampusTestCase):
 
 	def test_fee_invoice_is_raised_under_the_condonation_fee_category(self):
 		frappe.db.set_value("Attendance Rule", self.rule26.name, "condonation_fee", 500)
-		customer = frappe.get_doc({"doctype": "Customer", "customer_name": "Cndband Customer", "customer_type": "Individual"}).insert()
+		customer = frappe.get_doc(
+			{"doctype": "Customer", "customer_name": "Cndband Customer", "customer_type": "Individual"}
+		).insert()
 		frappe.db.set_value("Student", self.band, "customer", customer.name)
 		doc = condonation(self.band, self.term).insert()
 		request = request_approval("Condonation Request", doc.name)
-		frappe.set_user(APPROVER)  # the approver has no Accounts rights, so the invoice is not made in his session
+		frappe.set_user(
+			APPROVER
+		)  # the approver has no Accounts rights, so the invoice is not made in his session
 		session = (frappe.session.user, frappe.session.sid, dict(frappe.local.form_dict))
-		with patch("frappe.set_user", side_effect=AssertionError("set_user in a request path")), patch(
-			"frappe.enqueue"
-		) as enqueue:
+		with (
+			patch("frappe.set_user", side_effect=AssertionError("set_user in a request path")),
+			patch("frappe.enqueue") as enqueue,
+		):
 			approve(request, None)
 		self.assertEqual((frappe.session.user, frappe.session.sid, dict(frappe.local.form_dict)), session)
 		queued = [c for c in enqueue.call_args_list if c.args and c.args[0] == condonation_fee.JOB]
 		self.assertEqual([c.kwargs["request"] for c in queued], [doc.name])
 		self.assertTrue(queued[0].kwargs["enqueue_after_commit"])
 		frappe.set_user("Administrator")
-		self.assertFalse(frappe.db.get_value("Condonation Request", doc.name, "fee_invoice"))  # not yet: the worker makes it
+		self.assertFalse(
+			frappe.db.get_value("Condonation Request", doc.name, "fee_invoice")
+		)  # not yet: the worker makes it
 		condonation_fee.raise_fee(doc.name)
 		condonation_fee.raise_fee(doc.name)  # idempotent
 		self.assertEqual(frappe.session.user, "Administrator")
 		doc.reload()
 		self.assertEqual(doc.fee_amount, 500)
 		invoice = frappe.get_doc("Sales Invoice", doc.fee_invoice)
-		self.assertEqual((invoice.docstatus, invoice.grand_total, invoice.items[0].item_code, invoice.student), (1, 500, "Condonation", self.band))
-		self.assertEqual(frappe.db.count("Sales Invoice", {"student": self.band, "remarks": ["like", "Condonation%"]}), 1)
+		self.assertEqual(
+			(invoice.docstatus, invoice.grand_total, invoice.items[0].item_code, invoice.student),
+			(1, 500, "Condonation", self.band),
+		)
+		self.assertEqual(
+			frappe.db.count("Sales Invoice", {"student": self.band, "remarks": ["like", "Condonation%"]}), 1
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "fee invoice"):
 			doc.cancel()
 
@@ -252,7 +296,13 @@ class TestAttendanceCondonation(CampusTestCase):
 
 	def make_run(self, **values):
 		return frappe.get_doc(
-			{"doctype": "Attendance Eligibility Run", "company": COLLEGE, "academic_term": self.term, "send_guardian_alerts": 0, **values}
+			{
+				"doctype": "Attendance Eligibility Run",
+				"company": COLLEGE,
+				"academic_term": self.term,
+				"send_guardian_alerts": 0,
+				**values,
+			}
 		).insert()
 
 	def rows(self, run):
@@ -265,9 +315,16 @@ class TestAttendanceCondonation(CampusTestCase):
 			first = self.rows(run)
 			run.start_run()
 		rows = self.rows(run)
-		self.assertEqual({s: r.status for s, r in rows.items()}, {
-			self.band: "Condonation", self.short: "Detained (SA)", self.ok: "Eligible", self.od: "Eligible", self.s22: "Eligible",
-		})
+		self.assertEqual(
+			{s: r.status for s, r in rows.items()},
+			{
+				self.band: "Condonation",
+				self.short: "Detained (SA)",
+				self.ok: "Eligible",
+				self.od: "Eligible",
+				self.s22: "Eligible",
+			},
+		)
 		self.assertEqual(set(first), set(rows))
 		self.assertEqual(len(frappe.get_doc("Attendance Eligibility Run", run.name).rows), 5)
 		run.reload()
@@ -305,7 +362,9 @@ class TestAttendanceCondonation(CampusTestCase):
 			self.assertEqual((run.locked, run.locked_by), (1, DEAN))
 			with self.assertRaisesRegex(frappe.ValidationError, "locked"):
 				run.start_run()
-			with self.assertRaisesRegex(frappe.ValidationError, "locked"):  # a queued item arriving after the lock
+			with self.assertRaisesRegex(
+				frappe.ValidationError, "locked"
+			):  # a queued item arriving after the lock
 				eligibility_run.run_student(self.band, frappe._dict(get_parameters=lambda: {"run": run.name}))
 			with self.assertRaisesRegex(frappe.ValidationError, "locked"):
 				run.save()
@@ -328,7 +387,10 @@ class TestAttendanceCondonation(CampusTestCase):
 		for student in (self.band, self.short, self.ok):
 			make_guardian(f"Cndguardian {student}", [student])
 		run = self.make_run(send_guardian_alerts=1)
-		with patch.object(eligibility_run, "run_bulk", inline_bulk), patch("campus.campus_messaging.api.send") as send:
+		with (
+			patch.object(eligibility_run, "run_bulk", inline_bulk),
+			patch("campus.campus_messaging.api.send") as send,
+		):
 			run.start_run()
 		alerted = {call.args[1].name: call.args[2] for call in send.call_args_list}
 		self.assertEqual(set(alerted), {self.band, self.short})  # not the eligible student with a guardian
@@ -344,7 +406,9 @@ class TestAttendanceCondonation(CampusTestCase):
 		with patch.object(eligibility_run, "run_bulk", inline_bulk):
 			run.start_run()
 		logs = frappe.get_all(
-			"Message Log", {"recipient": f"Guardian:{guardian}", "reference_name": self.short}, ["event_key", "message"]
+			"Message Log",
+			{"recipient": f"Guardian:{guardian}", "reference_name": self.short},
+			["event_key", "message"],
 		)
 		self.assertTrue(logs)
 		self.assertEqual({log.event_key for log in logs}, {"attendance.shortage"})

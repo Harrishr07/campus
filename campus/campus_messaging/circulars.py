@@ -63,9 +63,9 @@ def check_author_audience(rule, user=None):
 		return
 	if rule.rule_type != "Department" or user not in resolve_position(HOD_ROLE, scope=rule.department or ""):
 		frappe.throw(
-			_("As Head of Department you can send a circular only to a Department audience of your own department, not {0}.").format(
-				frappe.bold(rule.name)
-			),
+			_(
+				"As Head of Department you can send a circular only to a Department audience of your own department, not {0}."
+			).format(frappe.bold(rule.name)),
 			frappe.PermissionError,
 		)
 

@@ -23,7 +23,11 @@ def below_target(filters, doctype, result_doctype, level, fields):
 	code_field, scope_field, has_level = fields
 	if not frappe.has_permission(doctype, "read"):
 		return []
-	conditions = {"docstatus": 1, "company": filters.company, **{f: filters[f] for f in ("program", "academic_year") if filters.get(f)}}
+	conditions = {
+		"docstatus": 1,
+		"company": filters.company,
+		**{f: filters[f] for f in ("program", "academic_year") if filters.get(f)},
+	}
 	fields = ["name", scope_field, "batch"] + (["course_offering"] if doctype == CO_RUN else [])
 	runs = {r.name: r for r in frappe.get_list(doctype, filters=conditions, fields=fields, order_by="name")}
 	results = frappe.get_all(
@@ -41,11 +45,23 @@ def columns():
 	return [
 		{"fieldname": "level", "label": _("Level"), "fieldtype": "Data", "width": 60},
 		{"fieldname": "scope", "label": _("Offering / Program"), "fieldtype": "Data", "width": 200},
-		{"fieldname": "batch", "label": _("Batch"), "fieldtype": "Link", "options": "Academic Year", "width": 100},
+		{
+			"fieldname": "batch",
+			"label": _("Batch"),
+			"fieldtype": "Link",
+			"options": "Academic Year",
+			"width": 100,
+		},
 		{"fieldname": "outcome_code", "label": _("Outcome"), "fieldtype": "Data", "width": 80},
 		{"fieldname": "final_level", "label": _("Final"), "fieldtype": "Float", "width": 80},
 		{"fieldname": "target_level", "label": _("Target"), "fieldtype": "Float", "width": 80},
 		{"fieldname": "gap", "label": _("Gap"), "fieldtype": "Float", "width": 80},
 		{"fieldname": "run_type", "label": _("Run Type"), "fieldtype": "Data", "hidden": 1},
-		{"fieldname": "run", "label": _("Run"), "fieldtype": "Dynamic Link", "options": "run_type", "width": 120},
+		{
+			"fieldname": "run",
+			"label": _("Run"),
+			"fieldtype": "Dynamic Link",
+			"options": "run_type",
+			"width": 120,
+		},
 	]

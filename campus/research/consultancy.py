@@ -53,7 +53,11 @@ def make_sales_invoice(project, amount, description=None):
 def draft_sales_invoice(project, amount, description=None):
 	"""Runs with ignore_permissions: client, college, item and amount come from the project and the checked amount."""
 	if project.status not in INVOICEABLE:
-		frappe.throw(_("Consultancy Project {0} is {1}: invoice it once the agreement is signed.").format(project.name, _(project.status)))
+		frappe.throw(
+			_("Consultancy Project {0} is {1}: invoice it once the agreement is signed.").format(
+				project.name, _(project.status)
+			)
+		)
 	remaining = flt(project.agreement_value) - invoiced_value(project.name)
 	if amount <= 0 or flt(amount, 2) > flt(remaining, 2):
 		frappe.throw(
@@ -73,7 +77,11 @@ def draft_sales_invoice(project, amount, description=None):
 	invoice.flags.ignore_permissions = True
 	invoice.set_missing_values()  # party details: india_compliance's place of supply and GST template, with its taxes
 	if invoice.currency != project.currency:
-		frappe.throw(_("Client {0} is billed in {1}: consultancy invoices are in {2}.").format(project.client, invoice.currency, project.currency))
+		frappe.throw(
+			_("Client {0} is billed in {1}: consultancy invoices are in {2}.").format(
+				project.client, invoice.currency, project.currency
+			)
+		)
 	invoice.insert()
 	return invoice
 
@@ -83,7 +91,9 @@ def invoiced_value(project, exclude=None, for_update=False):
 	filters = {"oc_consultancy_project": project, "docstatus": 1}
 	if exclude:
 		filters["name"] = ["!=", exclude]
-	values = frappe.db.get_values("Sales Invoice", filters, "base_net_total", for_update=for_update, pluck=True)
+	values = frappe.db.get_values(
+		"Sales Invoice", filters, "base_net_total", for_update=for_update, pluck=True
+	)
 	return flt(sum(flt(v) for v in values), 2)
 
 
@@ -93,22 +103,38 @@ def check_invoice(invoice, method=None):
 	if not invoice.oc_consultancy_project:
 		return
 	project = frappe.db.get_value(
-		PROJECT, invoice.oc_consultancy_project, ["name", "status", "company", "client", "agreement_value"], as_dict=True, for_update=True
+		PROJECT,
+		invoice.oc_consultancy_project,
+		["name", "status", "company", "client", "agreement_value"],
+		as_dict=True,
+		for_update=True,
 	)
 	if not project or (invoice.company, invoice.customer) != (project.company, project.client):
-		frappe.throw(_("Sales Invoice {0} must bill Consultancy Project {1}'s client for its college.").format(invoice.name, invoice.oc_consultancy_project))
+		frappe.throw(
+			_("Sales Invoice {0} must bill Consultancy Project {1}'s client for its college.").format(
+				invoice.name, invoice.oc_consultancy_project
+			)
+		)
 	if invoice.is_return:
 		share = invoice.return_against and locked_shares([invoice.return_against])
 		if share:
-			frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share before crediting it.").format(invoice.return_against, share[0].name))
+			frappe.throw(
+				_("Sales Invoice {0} is shared by {1}: cancel the revenue share before crediting it.").format(
+					invoice.return_against, share[0].name
+				)
+			)
 		return
 	if project.status not in INVOICEABLE:
-		frappe.throw(_("Consultancy Project {0} is {1}: it can't be invoiced.").format(project.name, _(project.status)))
+		frappe.throw(
+			_("Consultancy Project {0} is {1}: it can't be invoiced.").format(project.name, _(project.status))
+		)
 	total = invoiced_value(project.name, exclude=invoice.name, for_update=True) + flt(invoice.base_net_total)
 	if flt(total, 2) > flt(project.agreement_value, 2):
 		frappe.throw(
 			_("Consultancy Project {0} would be invoiced {1}, above its agreement value of {2}.").format(
-				project.name, fmt_money(total, currency=invoice.currency), fmt_money(project.agreement_value, currency=invoice.currency)
+				project.name,
+				fmt_money(total, currency=invoice.currency),
+				fmt_money(project.agreement_value, currency=invoice.currency),
 			)
 		)
 
@@ -117,7 +143,11 @@ def refuse_invoice_cancel(invoice, method=None):
 	"""Sales Invoice before_cancel: a shared invoice stays until its revenue share is cancelled."""
 	share = invoice.oc_consultancy_project and locked_shares([invoice.name])
 	if share:
-		frappe.throw(_("Sales Invoice {0} is shared by {1}: cancel the revenue share first.").format(invoice.name, share[0].name))
+		frappe.throw(
+			_("Sales Invoice {0} is shared by {1}: cancel the revenue share first.").format(
+				invoice.name, share[0].name
+			)
+		)
 
 
 def refuse_payment_cancel(voucher, method=None):
@@ -133,7 +163,9 @@ def refuse_payment_cancel(voucher, method=None):
 def refuse_unreconcile(unreconcile, method=None):
 	"""Unreconcile Payment before_submit: a payment is not taken off a shared consultancy invoice."""
 	invoices = {r.reference_name for r in unreconcile.allocations if r.reference_doctype == "Sales Invoice"}
-	refuse_if_shared(invoices, _("Unreconciling {0} {1}").format(_(unreconcile.voucher_type), unreconcile.voucher_no))
+	refuse_if_shared(
+		invoices, _("Unreconciling {0} {1}").format(_(unreconcile.voucher_type), unreconcile.voucher_no)
+	)
 
 
 def refuse_if_shared(invoices, what):
@@ -150,9 +182,16 @@ def locked_shares(invoices):
 	"""Submitted shares of `invoices`, read after locking the invoice rows (in name order): the lock order of every share
 	check, so a share submit and a cancel, credit note or unreconcile of its invoice queue instead of racing."""
 	invoices = sorted(set(invoices))
-	frappe.db.get_values("Sales Invoice", {"name": ["in", invoices]}, "name", order_by="name", for_update=True)
+	frappe.db.get_values(
+		"Sales Invoice", {"name": ["in", invoices]}, "name", order_by="name", for_update=True
+	)
 	return frappe.db.get_values(
-		SHARE, {"sales_invoice": ["in", invoices], "docstatus": 1}, ["name", "sales_invoice"], order_by="name", as_dict=True, for_update=True
+		SHARE,
+		{"sales_invoice": ["in", invoices], "docstatus": 1},
+		["name", "sales_invoice"],
+		order_by="name",
+		as_dict=True,
+		for_update=True,
 	)
 
 
@@ -176,24 +215,41 @@ def shareable_invoice(invoice, project, share=None, for_update=False):
 		"base_write_off_amount", "company", "customer", "currency"], as_dict=True, for_update=for_update,
 	)  # fmt: skip
 	if not row or row.oc_consultancy_project != project or row.docstatus != 1 or row.is_return:
-		frappe.throw(_("Sales Invoice {0} is not a submitted invoice of Consultancy Project {1}.").format(invoice, project))
+		frappe.throw(
+			_("Sales Invoice {0} is not a submitted invoice of Consultancy Project {1}.").format(
+				invoice, project
+			)
+		)
 	credit_notes = frappe.db.get_values(
-		"Sales Invoice", {"return_against": invoice, "docstatus": 1}, "name", order_by="name", for_update=for_update, pluck=True
+		"Sales Invoice",
+		{"return_against": invoice, "docstatus": 1},
+		"name",
+		order_by="name",
+		for_update=for_update,
+		pluck=True,
 	)
 	if credit_notes:
-		frappe.throw(_("Sales Invoice {0} has credit notes ({1}): it can't be shared.").format(invoice, ", ".join(credit_notes)))
+		frappe.throw(
+			_("Sales Invoice {0} has credit notes ({1}): it can't be shared.").format(
+				invoice, ", ".join(credit_notes)
+			)
+		)
 	if flt(row.outstanding_amount) > 0:
 		frappe.throw(
-			_("Sales Invoice {0} is not fully paid ({1} outstanding): revenue is shared only once it is received.").format(
-				invoice, fmt_money(row.outstanding_amount, currency=row.currency)
-			)
+			_(
+				"Sales Invoice {0} is not fully paid ({1} outstanding): revenue is shared only once it is received."
+			).format(invoice, fmt_money(row.outstanding_amount, currency=row.currency))
 		)
 	if flt(row.base_write_off_amount):
 		frappe.throw(_("Sales Invoice {0} has a write-off: only revenue received is shared.").format(invoice))
-	not_received = [f"{v.voucher_type} {v.voucher_no}" for v in settling_vouchers(invoice, for_update) if not v.received]
+	not_received = [
+		f"{v.voucher_type} {v.voucher_no}" for v in settling_vouchers(invoice, for_update) if not v.received
+	]
 	if not_received:
 		frappe.throw(
-			_("Sales Invoice {0} is settled by {1}, not a receipt: only revenue received is shared.").format(invoice, ", ".join(not_received))
+			_("Sales Invoice {0} is settled by {1}, not a receipt: only revenue received is shared.").format(
+				invoice, ", ".join(not_received)
+			)
 		)
 	other = submitted_share(invoice, exclude=share, for_update=for_update)
 	if other:
@@ -212,7 +268,9 @@ def settling_vouchers(invoice, for_update=False):
 	vouchers = {(r.voucher_type, r.voucher_no) for r in rows}
 	bank_journals = cash_journals([no for kind, no in vouchers if kind == "Journal Entry"])
 	return [
-		frappe._dict(voucher_type=kind, voucher_no=no, received=kind == "Payment Entry" or no in bank_journals)
+		frappe._dict(
+			voucher_type=kind, voucher_no=no, received=kind == "Payment Entry" or no in bank_journals
+		)
 		for kind, no in sorted(vouchers)
 	]
 
@@ -238,7 +296,9 @@ def check_members(share):
 	others = [m.employee_name or m.employee for m in share.members if m.employee not in valid]
 	if others:
 		frappe.throw(
-			_("{0} are not Active Employees of {1}: update the project's team before sharing.").format(", ".join(others), share.company)
+			_("{0} are not Active Employees of {1}: update the project's team before sharing.").format(
+				", ".join(others), share.company
+			)
 		)
 
 
@@ -267,7 +327,10 @@ def post_additional_salaries(share):
 def cancel_additional_salaries(share):
 	"""HRMS refuses while a submitted Salary Slip has paid one."""
 	for member in share.members:
-		if member.additional_salary and frappe.db.get_value("Additional Salary", member.additional_salary, "docstatus") == 1:
+		if (
+			member.additional_salary
+			and frappe.db.get_value("Additional Salary", member.additional_salary, "docstatus") == 1
+		):
 			additional = frappe.get_doc("Additional Salary", member.additional_salary)
 			additional.flags.ignore_permissions = True
 			additional.cancel()
@@ -315,7 +378,9 @@ def receipts(invoices, start=None, end=None):
 	rows = query.run(as_dict=True)
 	journals = cash_journals({r.voucher_no for r in rows if r.voucher_type == "Journal Entry"})
 	return [
-		frappe._dict(invoice=r.invoice, voucher_no=r.voucher_no, posting_date=r.posting_date, amount=-flt(r.amount))
+		frappe._dict(
+			invoice=r.invoice, voucher_no=r.voucher_no, posting_date=r.posting_date, amount=-flt(r.amount)
+		)
 		for r in rows
 		if r.voucher_type == "Payment Entry" or r.voucher_no in journals
 	]
@@ -340,7 +405,10 @@ def consultancy_received(company, academic_year, department=None):
 		"Sales Invoice", {"oc_consultancy_project": ["in", projects or [""]], "docstatus": 1, "company": company, "is_return": 0},
 		["name", "base_net_total", "base_grand_total"],
 	)  # fmt: skip
-	taxable_share = {r.name: flt(r.base_net_total) / flt(r.base_grand_total) if flt(r.base_grand_total) else 1 for r in invoices}
+	taxable_share = {
+		r.name: flt(r.base_net_total) / flt(r.base_grand_total) if flt(r.base_grand_total) else 1
+		for r in invoices
+	}
 	rows = receipts(list(taxable_share), fy_start, fy_end)
 	value = flt(sum(r.amount * taxable_share[r.invoice] for r in rows), 2)
 	return value, sorted({r.invoice for r in rows})
@@ -388,7 +456,11 @@ def revenue_by_project(company, academic_year=None, department=None):
 		row.invoice_total += flt(inv.base_grand_total)
 		row.received += received.get(inv.name, 0)
 		share = shares.get(inv.name)
-		if not share and not inv.is_return and flt(received.get(inv.name, 0), 2) >= flt(inv.base_grand_total, 2):
+		if (
+			not share
+			and not inv.is_return
+			and flt(received.get(inv.name, 0), 2) >= flt(inv.base_grand_total, 2)
+		):
 			row.paid_not_shared += 1
 		if share:
 			row.institution_share += flt(share.institution_amount)
@@ -404,7 +476,20 @@ def revenue_by_project(company, academic_year=None, department=None):
 	result = []
 	for name, row in projects.items():
 		project = details[name]
-		row.update({key: project[key] for key in ("title", "client", "department", "principal_consultant", "status", "agreement_value", "currency")})
+		row.update(
+			{
+				key: project[key]
+				for key in (
+					"title",
+					"client",
+					"department",
+					"principal_consultant",
+					"status",
+					"agreement_value",
+					"currency",
+				)
+			}
+		)
 		result.append(row)
 	return result
 

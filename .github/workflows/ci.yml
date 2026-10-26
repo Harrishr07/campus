@@ -1,0 +1,127 @@
+name: Server Tests
+
+# Tiered: a pull request runs the install, migrate and a quick set of modules; a push to develop or main and the
+# nightly run take the whole suite, split across runners.
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  push:
+    branches: [develop, main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  schedule:
+    - cron: "30 20 * * *" # 02:00 IST
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full suite
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-tests-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FULL_SUITE: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.full) }}
+  # The quick set for pull requests: install sanity, navigation, permissions and the admission path
+  QUICK_MODULES: >-
+    campus.tests.test_smoke
+    campus.tests.test_navigation
+    campus.tests.test_hardening
+    campus.tests.test_pilot_roles
+    campus.tests.test_student_portal
+    campus.tests.test_admission_flow
+
+jobs:
+  tests:
+    name: Server tests (${{ matrix.container }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pull requests use container 1 only (the quick set); the full suite is split over all of them
+        container: ${{ fromJSON(github.event_name == 'pull_request' && '[1]' || '[1,2,3,4,5,6,7,8]') }}
+
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=5
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v6
+        with:
+          # the nightly run tests develop, where work lands
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Check for valid Python and merge conflicts
+        run: |
+          python -m compileall -q -f "${GITHUB_WORKSPACE}"
+          if grep -lr --exclude-dir=node_modules "^<<<<<<< " "${GITHUB_WORKSPACE}"; then
+            echo "Found merge conflicts"
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Add to hosts
+        run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install
+        run: bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
+
+      - name: Migrate
+        run: cd ~/frappe-bench && bench --site test_site migrate
+
+      - name: Quick tests
+        if: env.FULL_SUITE != 'true'
+        run: |
+          cd ~/frappe-bench
+          failed=""
+          for module in $QUICK_MODULES; do
+            bench --site test_site run-tests --app campus --module "$module" || failed="$failed $module"
+          done
+          if [ -n "$failed" ]; then
+            echo "Failed modules:$failed"
+            exit 1
+          fi
+
+      - name: Full suite (part ${{ matrix.container }} of ${{ strategy.job-total }})
+        if: env.FULL_SUITE == 'true'
+        run: |
+          cd ~/frappe-bench
+          bench --site test_site run-parallel-tests --app campus \
+            --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
+
+      - name: Bench log on failure
+        if: failure()
+        run: tail -n 200 ~/frappe-bench/bench_start.log || true

@@ -52,7 +52,13 @@ OFFERING, SESSION, BUNDLE = "ATT-DS-2022-A", "ATT-ES-1", "ATT-BUNDLE-1"
 CO_CAMPAIGN, EXIT_CAMPAIGN, EXIT_RULE = "ATT-FBC-CO", "ATT-FBC-EXIT", "ATT-AR-CSE"
 STUDENTS = [f"ATT22-{n:02d}" for n in range(1, 13)]
 # CIA questions (component, question, max, CO) and per student marks in that order; None = absent
-CIA_QUESTIONS = (("CIA 1", "Q1", 10, "CO1"), ("CIA 1", "Q2", 10, "CO2"), ("CIA 2", "Q1", 10, "CO2"), ("CIA 2", "Q2", 10, "CO3"), ("CIA 2", "Q3", 5, ""))
+CIA_QUESTIONS = (
+	("CIA 1", "Q1", 10, "CO1"),
+	("CIA 1", "Q2", 10, "CO2"),
+	("CIA 2", "Q1", 10, "CO2"),
+	("CIA 2", "Q2", 10, "CO3"),
+	("CIA 2", "Q3", 5, ""),
+)
 CIA_MARKS = {
 	1: (8, 7, 7, 8, 5), 2: (8, 7, 7, 8, 5), 3: (8, 7, 7, 8, 5), 4: (8, 7, 7, 3, 5), 5: (8, 7, 7, 3, 5),
 	6: (8, 6, 6, 3, 5), 7: (6, 5, 5, 3, 5), 8: (4, 5, 5, 3, 5), 9: (4, 5, None, 3, 5), 10: (4, 5, 5, None, 5),
@@ -73,7 +79,9 @@ def regulation(code):
 
 
 def curriculum(code="R2022"):
-	return frappe.db.get_value("Curriculum", {"program": PROGRAM, "regulation": regulation(code)}, order_by="version desc")
+	return frappe.db.get_value(
+		"Curriculum", {"program": PROGRAM, "regulation": regulation(code)}, order_by="version desc"
+	)
 
 
 def course():
@@ -91,14 +99,19 @@ def seed_outcome_demo():
 	for code in ("R2022", "R2026"):
 		seed_program_outcomes(PROGRAM, regulation(code))
 		for pso in ("PSO1", "PSO2"):
-			if not frappe.db.exists("Program Specific Outcome", {"program": PROGRAM, "regulation": regulation(code), "pso_code": pso}):
+			if not frappe.db.exists(
+				"Program Specific Outcome",
+				{"program": PROGRAM, "regulation": regulation(code), "pso_code": pso},
+			):
 				frappe.get_doc(
 					{"doctype": "Program Specific Outcome", "program": PROGRAM, "regulation": regulation(code), "pso_code": pso,
 					"statement": f"{pso} (placeholder - replace with the department's statement)"}
 				).insert()  # fmt: skip
 		seed_policy(code)
 	for n, code in enumerate(CO_CODES):
-		if not frappe.db.exists("Course Outcome", {"course": course(), "curriculum": curriculum(), "co_code": code}):
+		if not frappe.db.exists(
+			"Course Outcome", {"course": course(), "curriculum": curriculum(), "co_code": code}
+		):
 			frappe.get_doc(
 				{"doctype": "Course Outcome", "course": course(), "curriculum": curriculum(), "co_code": code,
 				"statement": f"{code} of {COURSE} (demo)", "bloom_level": ("Understand", "Apply", "Analyse")[n]}
@@ -109,13 +122,25 @@ def seed_outcome_demo():
 def seed_policy(code):
 	name = frappe.db.get_value("Attainment Policy", {"regulation": regulation(code), "disabled": 0})
 	if not name:
-		name = frappe.get_doc({"doctype": "Attainment Policy", "regulation": regulation(code), **POLICIES[code]}).insert().name
+		name = (
+			frappe.get_doc({"doctype": "Attainment Policy", "regulation": regulation(code), **POLICIES[code]})
+			.insert()
+			.name
+		)
 	return name
 
 
 def approved_matrix():
-	name = frappe.db.get_value("CO-PO Matrix", {"course": course(), "curriculum": curriculum(), "docstatus": ["<", 2]})
-	doc = frappe.get_doc("CO-PO Matrix", name) if name else frappe.get_doc({"doctype": "CO-PO Matrix", "course": course(), "curriculum": curriculum()}).insert()
+	name = frappe.db.get_value(
+		"CO-PO Matrix", {"course": course(), "curriculum": curriculum(), "docstatus": ["<", 2]}
+	)
+	doc = (
+		frappe.get_doc("CO-PO Matrix", name)
+		if name
+		else frappe.get_doc(
+			{"doctype": "CO-PO Matrix", "course": course(), "curriculum": curriculum()}
+		).insert()
+	)
 	if doc.docstatus == 1:
 		return doc.name
 	for row in doc.correlations:
@@ -146,7 +171,9 @@ def insert(values):
 
 def make_assessment():
 	term = frappe.db.get_value("Academic Term", {"academic_year": BATCH, "term_name": "Even"})
-	instructor = frappe.db.get_value("Instructor", {"employee": frappe.db.get_value("Employee", {"user_id": email("faculty_1")})})
+	instructor = frappe.db.get_value(
+		"Instructor", {"employee": frappe.db.get_value("Employee", {"user_id": email("faculty_1")})}
+	)
 	for n, student in enumerate(STUDENTS, 1):
 		insert({"doctype": "Student", "name": student, "first_name": "Attainment", "last_name": f"{n:02d}",
 			"student_name": f"Attainment {n:02d}", "student_email_id": f"{student.lower()}@attainment.example.com",
@@ -196,7 +223,9 @@ def make_scripts():
 			rounds = {1: [0] * len(marks), 2: [m + 1 for m in marks], 3: [m - 1 for m in marks]}
 		for round_, values in rounds.items():
 			valuation_entry(f"VE-ATT-{n}-{round_}", dummy, round_, values)
-	valuation_entry("VE-ATT-1-X", "ATTD0001", 1, [0] * len(ESE_QUESTIONS), docstatus=2)  # cancelled: never counted
+	valuation_entry(
+		"VE-ATT-1-X", "ATTD0001", 1, [0] * len(ESE_QUESTIONS), docstatus=2
+	)  # cancelled: never counted
 
 
 def valuation_entry(name, dummy, round_, values, docstatus=1):
@@ -208,7 +237,11 @@ def valuation_entry(name, dummy, round_, values, docstatus=1):
 def make_feedback():
 	frappe.db.set_single_value("Campus Settings", "feedback_minimum_group_size", 5)
 	co_answers = [  # (CO1, CO2, CO3 or None)
-		(4, 4, 5), (4, 3, 5), (4, 4, 5), (4, 3, None), (4, 4, None),
+		(4, 4, 5),
+		(4, 3, 5),
+		(4, 4, 5),
+		(4, 3, None),
+		(4, 4, None),
 	]
 	campaign(CO_CAMPAIGN, "Course Offering Students", OFFERING, [
 		[("q1", "CO1", a), ("q2", "CO2", b), *([("q3", "CO3", c)] if c else [])] for a, b, c in co_answers

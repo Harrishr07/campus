@@ -8,14 +8,22 @@ from campus.campus_platform.api import latest_request
 
 FIELDS = ["name", "title", "status", "principal_investigator", "pi_name", "research_call", "funding_agency",
 	"funding_scheme", "deadline", "total_budget", "currency", "submission_date", "outcome_date"]  # fmt: skip
-DRAFT_STAGES = {"Pending": "Under Internal Review", "Returned": "Returned for Changes", "Rejected": "Rejected Internally"}
+DRAFT_STAGES = {
+	"Pending": "Under Internal Review",
+	"Returned": "Returned for Changes",
+	"Rejected": "Rejected Internally",
+}
 
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	if not filters.company:
 		return columns(), []
-	query = {key: filters[key] for key in ("company", "funding_agency", "research_call", "status") if filters.get(key)}
+	query = {
+		key: filters[key]
+		for key in ("company", "funding_agency", "research_call", "status")
+		if filters.get(key)
+	}
 	rows = frappe.get_list("Research Proposal", query, FIELDS, order_by="deadline asc, creation desc")
 	return columns(), [row_of(row) for row in rows]
 
@@ -42,7 +50,13 @@ def row_of(proposal):
 
 def columns():
 	def col(fieldname, label, fieldtype="Data", width=120, options=None):
-		return {"fieldname": fieldname, "label": _(label), "fieldtype": fieldtype, "width": width, "options": options}
+		return {
+			"fieldname": fieldname,
+			"label": _(label),
+			"fieldtype": fieldtype,
+			"width": width,
+			"options": options,
+		}
 
 	return [
 		col("proposal", "Proposal", "Link", 150, "Research Proposal"),

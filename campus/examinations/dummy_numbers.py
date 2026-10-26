@@ -69,7 +69,11 @@ def refresh_allocations_of(dummy_number):
 	"""A voided (or restored) script changes whether its allocations are Completed."""
 	from campus.examinations.valuation import refresh_allocation_status
 
-	for allocation in frappe.get_all("Valuation Allocation Script", {"dummy_number": dummy_number, "parenttype": "Valuation Allocation"}, pluck="parent"):
+	for allocation in frappe.get_all(
+		"Valuation Allocation Script",
+		{"dummy_number": dummy_number, "parenttype": "Valuation Allocation"},
+		pluck="parent",
+	):
 		refresh_allocation_status(allocation)
 
 
@@ -105,4 +109,6 @@ def script(dummy_number, for_update=False):
 
 def numbers_of(exam_session, course):
 	"""The course's live (not void) dummy numbers in the session."""
-	return frappe.get_all(DUMMY_NUMBER_MAP, {"exam_session": exam_session, "course": course, "void": 0}, pluck="dummy_number")
+	return frappe.get_all(
+		DUMMY_NUMBER_MAP, {"exam_session": exam_session, "course": course, "void": 0}, pluck="dummy_number"
+	)

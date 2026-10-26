@@ -18,17 +18,35 @@ YEAR, TERM_NAME, SEMESTER = "2026-27", "Odd", 3
 CLASS_PROGRAMME = "CSE"  # the programme whose class has a timetable and attendance
 WEEKS, SESSION_DAYS = 3, (0, 2, 4)  # Monday, Wednesday and Friday, counted back from the load date
 ROOM = "Room 101"
-PERIODS = ("09:00:00", "09:50:00", "10:50:00", "11:40:00", "13:30:00", "14:20:00")  # start of each of the six courses' period
-MEDICAL_STUDENT, MEDICAL_SESSIONS = 2, (3, 4, 5)  # the third CSE student (SXCCE25CSE0003) is on medical leave in the second week
-ON_DUTY_STUDENT, ON_DUTY_SESSIONS = 4, (6, 7)  # the fifth (SXCCE25CSE0005) is away for a contest in the third week
+PERIODS = (
+	"09:00:00",
+	"09:50:00",
+	"10:50:00",
+	"11:40:00",
+	"13:30:00",
+	"14:20:00",
+)  # start of each of the six courses' period
+MEDICAL_STUDENT, MEDICAL_SESSIONS = (
+	2,
+	(3, 4, 5),
+)  # the third CSE student (SXCCE25CSE0003) is on medical leave in the second week
+ON_DUTY_STUDENT, ON_DUTY_SESSIONS = (
+	4,
+	(6, 7),
+)  # the fifth (SXCCE25CSE0005) is away for a contest in the third week
 CERTIFICATE = {"Medical": "medical-certificate.txt", "On Duty": "on-duty-letter.txt"}
 
 
 def load(ctx):
 	term = academics.term_of(YEAR, TERM_NAME)
 	upsert(
-		ctx.out, "Registration Window", {"company": ctx.college, "academic_term": term},
-		{"opens_on": frappe.db.get_value("Academic Term", term, "term_start_date"), "closes_on": "2026-06-30"},
+		ctx.out,
+		"Registration Window",
+		{"company": ctx.college, "academic_term": term},
+		{
+			"opens_on": frappe.db.get_value("Academic Term", term, "term_start_date"),
+			"closes_on": "2026-06-30",
+		},
 	)
 	session = academics.ensure_session(ctx, term)
 	cohort = ctx.cohort
@@ -43,18 +61,29 @@ def load(ctx):
 
 def session_dates(term):
 	"""Monday, Wednesday and Friday of the last WEEKS weeks up to yesterday (kept inside the term): nine dates, oldest first."""
-	start, end = (getdate(d) for d in frappe.db.get_value("Academic Term", term, ["term_start_date", "term_end_date"]))
+	start, end = (
+		getdate(d) for d in frappe.db.get_value("Academic Term", term, ["term_start_date", "term_end_date"])
+	)
 	last = max(min(add_days(getdate(today()), -1), end), add_days(start, 7 * WEEKS - 1))
 	days = (add_days(last, -offset) for offset in range(7 * WEEKS - 1, -1, -1))
 	return [day for day in days if day.weekday() in SESSION_DAYS]
 
 
 def make_timetable_and_attendance(ctx, programme, term, offerings, students):
-	pending = [offering for offering in offerings.values() if not frappe.db.count("Course Schedule", {"student_group": offering})]
+	pending = [
+		offering
+		for offering in offerings.values()
+		if not frappe.db.count("Course Schedule", {"student_group": offering})
+	]
 	if not pending:
 		return  # built on an earlier load: its dates stay as they were
 	dates = session_dates(term)
-	room = upsert(ctx.out, "Room", {"room_name": ROOM}, {"room_number": "101", "seating_capacity": "60", "oc_company": ctx.college})
+	room = upsert(
+		ctx.out,
+		"Room",
+		{"room_name": ROOM},
+		{"room_number": "101", "seating_capacity": "60", "oc_company": ctx.college},
+	)
 	leave_days = {
 		MEDICAL_STUDENT: (dates[MEDICAL_SESSIONS[0]], dates[MEDICAL_SESSIONS[-1]], "Medical"),
 		ON_DUTY_STUDENT: (dates[ON_DUTY_SESSIONS[0]], dates[ON_DUTY_SESSIONS[-1]], "On Duty"),
@@ -71,9 +100,13 @@ def make_timetable_and_attendance(ctx, programme, term, offerings, students):
 				if number in leave_days and leave_days[number][0] <= date <= leave_days[number][1]:
 					on_leave.append((number, student, offering, schedule, date))
 				else:
-					mark_attendance(ctx, student, offering, schedule, date, absent_at(number, n, course_number))
+					mark_attendance(
+						ctx, student, offering, schedule, date, absent_at(number, n, course_number)
+					)
 	class_group = class_group_name(ctx, programme)
-	leaves = {number: make_leave(ctx, students[number], class_group, *days) for number, days in leave_days.items()}
+	leaves = {
+		number: make_leave(ctx, students[number], class_group, *days) for number, days in leave_days.items()
+	}
 	for number, student, offering, schedule, date in on_leave:
 		mark_attendance(ctx, student, offering, schedule, date, "Leave", leaves[number])
 
@@ -88,8 +121,13 @@ def mark_attendance(ctx, student, offering, schedule, date, status, leave=None):
 	"""A submitted Student Attendance through Education's validation (the student must be in the group, the day not a holiday)."""
 	frappe.get_doc(
 		{
-			"doctype": "Student Attendance", "student": student, "student_group": offering, "course_schedule": schedule, "date": date,
-			"status": status, "leave_application": leave,
+			"doctype": "Student Attendance",
+			"student": student,
+			"student_group": offering,
+			"course_schedule": schedule,
+			"date": date,
+			"status": status,
+			"leave_application": leave,
 		}
 	).insert(ignore_permissions=True).submit()
 	ctx.out.created["Student Attendance"] += 1
@@ -98,12 +136,22 @@ def mark_attendance(ctx, student, offering, schedule, date, status, leave=None):
 def make_schedule(offering, instructor, room, date, course_number):
 	course = frappe.db.get_value("Student Group", offering, "course")
 	start = PERIODS[course_number]
-	return frappe.get_doc(
-		{
-			"doctype": "Course Schedule", "student_group": offering, "course": course, "instructor": instructor, "room": room,
-			"schedule_date": date, "from_time": start, "to_time": add_minutes(start, 50),
-		}
-	).insert(ignore_permissions=True).name
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Course Schedule",
+				"student_group": offering,
+				"course": course,
+				"instructor": instructor,
+				"room": room,
+				"schedule_date": date,
+				"from_time": start,
+				"to_time": add_minutes(start, 50),
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
 
 
 def add_minutes(clock, minutes):
@@ -119,14 +167,25 @@ def make_leave(ctx, student, class_group, from_date, to_date, kind):
 		return name
 	leave = frappe.get_doc(
 		{
-			"doctype": "Student Leave Application", "student": student, "from_date": from_date, "to_date": to_date, "oc_leave_kind": kind,
-			"attendance_based_on": "Student Group", "student_group": class_group, "reason": f"{kind} leave (demo data)",
+			"doctype": "Student Leave Application",
+			"student": student,
+			"from_date": from_date,
+			"to_date": to_date,
+			"oc_leave_kind": kind,
+			"attendance_based_on": "Student Group",
+			"student_group": class_group,
+			"reason": f"{kind} leave (demo data)",
 		}
 	).insert(ignore_permissions=True)
 	certificate = frappe.get_doc(
 		{
-			"doctype": "File", "file_name": CERTIFICATE[kind], "content": f"Synthetic {kind} certificate for the demo data.", "is_private": 1,
-			"attached_to_doctype": "Student Leave Application", "attached_to_name": leave.name, "attached_to_field": "oc_certificate",
+			"doctype": "File",
+			"file_name": CERTIFICATE[kind],
+			"content": f"Synthetic {kind} certificate for the demo data.",
+			"is_private": 1,
+			"attached_to_doctype": "Student Leave Application",
+			"attached_to_name": leave.name,
+			"attached_to_field": "oc_certificate",
 		}
 	).insert(ignore_permissions=True)
 	leave.reload()

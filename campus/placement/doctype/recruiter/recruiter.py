@@ -15,10 +15,15 @@ class Recruiter(Document):
 
 	def check_unique(self):
 		clash = frappe.db.exists(
-			"Recruiter", {"company": self.company, "recruiter_name": self.recruiter_name, "name": ["!=", self.name]}
+			"Recruiter",
+			{"company": self.company, "recruiter_name": self.recruiter_name, "name": ["!=", self.name]},
 		)
 		if clash:
-			frappe.throw(_("{0} already has a recruiter named {1} ({2})").format(self.company, self.recruiter_name, clash))
+			frappe.throw(
+				_("{0} already has a recruiter named {1} ({2})").format(
+					self.company, self.recruiter_name, clash
+				)
+			)
 
 	def check_mou(self):
 		if not self.mou:

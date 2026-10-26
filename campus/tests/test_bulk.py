@@ -111,8 +111,9 @@ class TestBulkRun(CampusTestCase):
 	def test_job_alive_checks_worker_registration_in_redis(self):
 		redis = MagicMock()
 		redis.exists.return_value = 1
-		with patch.object(bulk, "get_job", return_value=self._started_job("w1")), patch.object(
-			bulk, "get_redis_conn", return_value=redis
+		with (
+			patch.object(bulk, "get_job", return_value=self._started_job("w1")),
+			patch.object(bulk, "get_redis_conn", return_value=redis),
 		):
 			self.assertTrue(bulk._job_alive("BULK-1"))
 			redis.exists.assert_called_once_with("rq:worker:w1")
@@ -135,8 +136,9 @@ class TestBulkRun(CampusTestCase):
 		self.enqueue.reset_mock()
 		redis = MagicMock()
 		redis.exists.return_value = 1
-		with patch.object(bulk, "get_job", return_value=self._started_job("w1")), patch.object(
-			bulk, "get_redis_conn", return_value=redis
+		with (
+			patch.object(bulk, "get_job", return_value=self._started_job("w1")),
+			patch.object(bulk, "get_redis_conn", return_value=redis),
 		):
 			bulk.resume_bulk(name)
 		self.enqueue.assert_not_called()
@@ -147,7 +149,10 @@ class TestBulkRun(CampusTestCase):
 		job = self._started_job("gone")
 		redis = MagicMock()
 		redis.exists.return_value = 0
-		with patch.object(bulk, "get_job", return_value=job), patch.object(bulk, "get_redis_conn", return_value=redis):
+		with (
+			patch.object(bulk, "get_job", return_value=job),
+			patch.object(bulk, "get_redis_conn", return_value=redis),
+		):
 			bulk.resume_bulk(name)
 		job.delete.assert_called_once()
 		self.assertEqual(self.enqueue.call_count, 2)

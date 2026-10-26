@@ -48,7 +48,12 @@ def find_offering(curriculum, course, academic_term, section=None):
 	"""The offering to join: the student's own section when it exists, else the first one by name."""
 	offerings = frappe.get_all(
 		"Student Group",
-		filters={"oc_curriculum": curriculum, "course": course, "academic_term": academic_term, "disabled": 0},
+		filters={
+			"oc_curriculum": curriculum,
+			"course": course,
+			"academic_term": academic_term,
+			"disabled": 0,
+		},
 		fields=["name", "oc_section"],
 		order_by="name",
 	)
@@ -65,7 +70,8 @@ def enroll(student, item, program_enrollment, enrollment_date):
 		group.append("students", {"student": student, "active": 1})
 		group.save(ignore_permissions=True)
 	if not frappe.db.exists(
-		"Course Enrollment", {"student": student, "course": item.course, "program_enrollment": program_enrollment}
+		"Course Enrollment",
+		{"student": student, "course": item.course, "program_enrollment": program_enrollment},
 	):
 		frappe.get_doc(
 			{
@@ -87,6 +93,8 @@ def unenroll(student, item, program_enrollment):
 			group.remove(row)
 		group.save(ignore_permissions=True)
 	for name in frappe.get_all(
-		"Course Enrollment", {"student": student, "course": item.course, "program_enrollment": program_enrollment}, pluck="name"
+		"Course Enrollment",
+		{"student": student, "course": item.course, "program_enrollment": program_enrollment},
+		pluck="name",
 	):
 		frappe.delete_doc("Course Enrollment", name, ignore_permissions=True)

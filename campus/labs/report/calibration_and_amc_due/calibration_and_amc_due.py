@@ -4,14 +4,16 @@ limited to the companies the user may read."""
 import frappe
 from frappe import _
 
-from campus.labs.report_scope import scoped_companies
 from campus.labs.calibration import due_tasks, notice_days
+from campus.labs.report_scope import scoped_companies
 
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	within = notice_days() if filters.within_days in (None, "") else filters.within_days
-	rows = due_tasks(within, filters.as_on, filters.maintenance_type, scoped_companies(filters.company), filters.laboratory)
+	rows = due_tasks(
+		within, filters.as_on, filters.maintenance_type, scoped_companies(filters.company), filters.laboratory
+	)
 	return columns(), rows
 
 

@@ -86,10 +86,19 @@ def teachers(filters, allocated):
 	conditions = {"company": filters.company, "status": "Active", "oc_staff_type": "Teaching"}
 	if filters.department:
 		conditions["department"] = filters.department
-	found = frappe.get_all("Employee", filters=conditions, fields=["name", "employee_name", "department", "oc_cadre"], order_by="department, employee_name")
+	found = frappe.get_all(
+		"Employee",
+		filters=conditions,
+		fields=["name", "employee_name", "department", "oc_cadre"],
+		order_by="department, employee_name",
+	)
 	extra = [a for a in allocated if a not in {e.name for e in found}]
 	if extra and not filters.department:
-		found += frappe.get_all("Employee", filters={"name": ["in", extra]}, fields=["name", "employee_name", "department", "oc_cadre"])
+		found += frappe.get_all(
+			"Employee",
+			filters={"name": ["in", extra]},
+			fields=["name", "employee_name", "department", "oc_cadre"],
+		)
 	return found
 
 

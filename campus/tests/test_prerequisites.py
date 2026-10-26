@@ -25,7 +25,9 @@ HELD = r"prerequisite"
 
 
 def make_session(term, released=True):
-	session = frappe.get_doc({"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}).insert()
+	session = frappe.get_doc(
+		{"doctype": "Exam Session", "company": COLLEGE, "academic_term": term, "status": "Marks Entry"}
+	).insert()
 	publish_at = add_days(now_datetime(), -1 if released else 3)
 	frappe.db.set_value("Exam Session", session.name, {"status": "Published", "publish_at": publish_at})
 	return session.name
@@ -59,7 +61,12 @@ class PrerequisiteTestCase(RegistrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		for course, prerequisites in (("REG C", "REG E"), ("REG D", "REG E, REG S4")):
-			frappe.db.set_value("Curriculum Course", {"parent": cls.curriculum.name, "course": course}, "prerequisites", prerequisites)
+			frappe.db.set_value(
+				"Curriculum Course",
+				{"parent": cls.curriculum.name, "course": course},
+				"prerequisites",
+				prerequisites,
+			)
 		frappe.db.set_value(
 			"Registration Rule", cls.rule.name,
 			{"honours_min_cgpa": 7.5, "honours_cgpa_upto_semester": 3, "honours_no_arrears": 1, "honours_clause": "8.2"},
@@ -67,7 +74,9 @@ class PrerequisiteTestCase(RegistrationTestCase):
 		cls.released = make_session(make_term("Reg Prior", "2022-12-01", "2022-12-15"))
 		cls.unreleased = make_session(make_term("Reg Prior Late", "2022-12-16", "2022-12-31"), released=False)
 		s = [student.name for student in cls.students]
-		make_result(s[0], cls.released, [("REG E", 9, "Pass", 4), ("REG S4", 8, "Pass", 3), ("REG B", 5, "Pass", 18)])
+		make_result(
+			s[0], cls.released, [("REG E", 9, "Pass", 4), ("REG S4", 8, "Pass", 3), ("REG B", 5, "Pass", 18)]
+		)
 		make_result(s[1], cls.released, [("REG E", 0, "Fail", 4)])
 		make_result(s[3], cls.unreleased, [("REG E", 9, "Pass", 4)])
 		make_result(s[4], cls.released, [("REG E", 0, "Fail", 4)])
@@ -134,7 +143,9 @@ class TestPrerequisites(PrerequisiteTestCase):
 
 class TestHonoursEligibility(PrerequisiteTestCase):
 	def test_honours_is_refused_for_a_student_with_an_arrear(self):
-		self.assert_rejected([("REG AD1", "Honours")], r"R2022 cl\. 8\.2: .*no outstanding arrear.*REG S4", student=5)
+		self.assert_rejected(
+			[("REG AD1", "Honours")], r"R2022 cl\. 8\.2: .*no outstanding arrear.*REG S4", student=5
+		)
 
 	def test_minor_is_allowed_with_an_arrear_when_the_cgpa_is_met(self):
 		self.registration([("REG AD1", "Minor")], student=5)

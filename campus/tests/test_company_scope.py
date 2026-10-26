@@ -67,15 +67,19 @@ class TestCompanyScope(CampusTestCase):
 
 	@classmethod
 	def make_group(cls, name, program):
-		return frappe.get_doc(
-			{
-				"doctype": "Student Group",
-				"student_group_name": name,
-				"academic_year": cls.academic_year,
-				"group_based_on": "Batch",
-				"program": program,
-			}
-		).insert().name
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Student Group",
+					"student_group_name": name,
+					"academic_year": cls.academic_year,
+					"group_based_on": "Batch",
+					"program": program,
+				}
+			)
+			.insert()
+			.name
+		)
 
 	def setUp(self):
 		frappe.db.savepoint("company_scope_test")
@@ -160,9 +164,9 @@ class TestCompanyScope(CampusTestCase):
 
 	def test_course_visibility_is_scoped(self):
 		courses = [
-			frappe.get_doc(
-				{"doctype": "Course", "course_name": f"Campus Test Course {c}", "oc_company": c}
-			).insert().name
+			frappe.get_doc({"doctype": "Course", "course_name": f"Campus Test Course {c}", "oc_company": c})
+			.insert()
+			.name
 			for c in (COLLEGE_A, COLLEGE_B)
 		]
 		self.assertEqual(self.names_visible_to(USER_A, "Course", courses), {courses[0]})

@@ -55,34 +55,64 @@ class Evidence(Document):
 		frappe.has_permission(self.source_doctype, "read", self.source_name, throw=True)
 		company = registry.source_company(self.source_doctype, self.source_name)
 		if self.company != company:
-			frappe.throw(_("The company of the evidence must be the company of its source, {0}.").format(frappe.bold(company)))
+			frappe.throw(
+				_("The company of the evidence must be the company of its source, {0}.").format(
+					frappe.bold(company)
+				)
+			)
 		if self.source_field:
 			field = frappe.get_meta(self.source_doctype).get_field(self.source_field)
-			if self.source_field != listed or not (field and field.fieldtype in registry.ATTACH_TYPES and self.source_name):
-				frappe.throw(_("{0} is not the listed Attach field of {1}.").format(frappe.bold(self.source_field), frappe.bold(self.source_doctype)))
+			if self.source_field != listed or not (
+				field and field.fieldtype in registry.ATTACH_TYPES and self.source_name
+			):
+				frappe.throw(
+					_("{0} is not the listed Attach field of {1}.").format(
+						frappe.bold(self.source_field), frappe.bold(self.source_doctype)
+					)
+				)
 
 	def source_changed(self):
-		return self.is_new() or any(self.has_value_changed(f) for f in ("source_doctype", "source_name", "source_field", "company"))
+		return self.is_new() or any(
+			self.has_value_changed(f) for f in ("source_doctype", "source_name", "source_field", "company")
+		)
 
 	def check_company_permitted(self):
 		permitted = permitted_companies(frappe.session.user)
 		if permitted is not None and self.company not in permitted:
-			frappe.throw(_("You are not permitted to add evidence for {0}.").format(frappe.bold(self.company)), frappe.PermissionError)
+			frappe.throw(
+				_("You are not permitted to add evidence for {0}.").format(frappe.bold(self.company)),
+				frappe.PermissionError,
+			)
 
 	def validate_nodes(self):
 		for row in self.nodes:
 			slot = frappe.db.get_value(
-				"Framework Node Evidence Slot", {"parenttype": "Framework Node", "parent": row.node, "slot_name": row.slot_name}, "kind"
+				"Framework Node Evidence Slot",
+				{"parenttype": "Framework Node", "parent": row.node, "slot_name": row.slot_name},
+				"kind",
 			)
 			if not slot:
-				frappe.throw(_("Row {0}: {1} has no evidence slot {2}.").format(row.idx, frappe.bold(row.node), frappe.bold(row.slot_name)))
+				frappe.throw(
+					_("Row {0}: {1} has no evidence slot {2}.").format(
+						row.idx, frappe.bold(row.node), frappe.bold(row.slot_name)
+					)
+				)
 			if slot != self.kind:
-				frappe.throw(_("Row {0}: slot {1} takes a {2}, this evidence is a {3}.").format(row.idx, frappe.bold(row.slot_name), slot, self.kind))
+				frappe.throw(
+					_("Row {0}: slot {1} takes a {2}, this evidence is a {3}.").format(
+						row.idx, frappe.bold(row.slot_name), slot, self.kind
+					)
+				)
 
 	def validate_public(self):
 		"""Any save of an evidence that is public before or after the save needs IQAC publish rights (it could retarget the file)."""
 		before = self.get_doc_before_save()
 		if self.is_public or (before and before.is_public):
 			registry.check_may_publish()
-		if self.is_public and self.kind == "File" and (file := registry.current_file(self)) and not registry.is_public_file(file):
+		if (
+			self.is_public
+			and self.kind == "File"
+			and (file := registry.current_file(self))
+			and not registry.is_public_file(file)
+		):
 			frappe.throw(_("The file is private; a public evidence needs a public file."))

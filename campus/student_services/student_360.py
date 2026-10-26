@@ -27,7 +27,13 @@ def can_read(doctype):
 
 
 def listed(doctype, student, fields, order_by="creation desc", filters=None):
-	return frappe.get_list(doctype, {"student": student, **(filters or {})}, fields, order_by=order_by, limit_page_length=LIST_LIMIT)
+	return frappe.get_list(
+		doctype,
+		{"student": student, **(filters or {})},
+		fields,
+		order_by=order_by,
+		limit_page_length=LIST_LIMIT,
+	)
 
 
 @frappe.whitelist()
@@ -44,7 +50,10 @@ def desk_view(student):
 def profile(student):
 	doc = frappe.get_doc("Student", student)
 	data = {field: doc.get(field) for field in PROFILE_FIELDS}
-	data["guardians"] = [{"guardian": row.guardian, "guardian_name": row.guardian_name, "relation": row.relation} for row in doc.guardians]
+	data["guardians"] = [
+		{"guardian": row.guardian, "guardian_name": row.guardian_name, "relation": row.relation}
+		for row in doc.guardians
+	]
 	return data
 
 
@@ -60,7 +69,12 @@ def lifecycle_section(student):
 
 
 def enrollments_section(student):
-	return listed("Program Enrollment", student, ["name", "program", "academic_year", "student_batch_name", "enrollment_date"], filters={"docstatus": 1})
+	return listed(
+		"Program Enrollment",
+		student,
+		["name", "program", "academic_year", "student_batch_name", "enrollment_date"],
+		filters={"docstatus": 1},
+	)
 
 
 def attendance_section(student):
@@ -88,13 +102,24 @@ def fees_section(student):
 	scopes = [{"student": student}]
 	if customer := frappe.db.get_value("Student", student, "customer"):
 		scopes.append({"customer": customer, "student": ["in", ["", None]]})
-	rows = [row for scope in scopes for row in frappe.get_list("Sales Invoice", {**scope, "docstatus": 1}, fields, limit_page_length=0)]
+	rows = [
+		row
+		for scope in scopes
+		for row in frappe.get_list("Sales Invoice", {**scope, "docstatus": 1}, fields, limit_page_length=0)
+	]
 	rows.sort(key=lambda row: (row.posting_date, row.name), reverse=True)
-	return {"invoices": rows[:LIST_LIMIT], "total_outstanding": sum(row.outstanding_amount or 0 for row in rows)}
+	return {
+		"invoices": rows[:LIST_LIMIT],
+		"total_outstanding": sum(row.outstanding_amount or 0 for row in rows),
+	}
 
 
 def certificates_section(student):
-	return listed("Certificate Request", student, ["name", "certificate_type", "docstatus", "issued_on", "certificate_number"])
+	return listed(
+		"Certificate Request",
+		student,
+		["name", "certificate_type", "docstatus", "issued_on", "certificate_number"],
+	)
 
 
 def mentoring_section(student):
@@ -102,7 +127,13 @@ def mentoring_section(student):
 	section = {}
 	for key, doctype in (("counselling_notes", NOTE), ("parent_interactions", INTERACTION)):
 		if can_read(doctype):
-			names = [n for n in frappe.get_list(doctype, {"student": student}, pluck="name", limit_page_length=LIST_LIMIT) if reference_allows(doctype, n, "read")]
+			names = [
+				n
+				for n in frappe.get_list(
+					doctype, {"student": student}, pluck="name", limit_page_length=LIST_LIMIT
+				)
+				if reference_allows(doctype, n, "read")
+			]
 			section[key] = {"count": len(names), "names": names}
 	return section or None
 
@@ -132,10 +163,16 @@ def portal_view(student=None):
 	student = portal.resolve_student(student)
 	doc = frappe.get_doc("Student", student)
 	history = frappe.get_all(
-		lifecycle.LOG, {"student": student}, ["kind", "from_status", "to_status", "effective_date"], order_by="creation asc, name asc"
+		lifecycle.LOG,
+		{"student": student},
+		["kind", "from_status", "to_status", "effective_date"],
+		order_by="creation asc, name asc",
 	)  # ownership came from resolve_student
 	enrollments = frappe.get_all(
-		"Program Enrollment", {"student": student, "docstatus": 1}, ["program", "academic_year", "enrollment_date"], order_by="enrollment_date desc"
+		"Program Enrollment",
+		{"student": student, "docstatus": 1},
+		["program", "academic_year", "enrollment_date"],
+		order_by="enrollment_date desc",
 	)
 	try:
 		attendance = portal.get_attendance(student)
@@ -145,7 +182,10 @@ def portal_view(student=None):
 	fees = portal.get_fees(student)
 	return frappe._dict(
 		student=student,
-		profile={field: doc.get(field) for field in ("student_name", "oc_register_no", "oc_roll_no", "oc_batch", "oc_company")},
+		profile={
+			field: doc.get(field)
+			for field in ("student_name", "oc_register_no", "oc_roll_no", "oc_batch", "oc_company")
+		},
 		status=lifecycle.current_status(student),
 		history=history,
 		enrollments=enrollments,

@@ -27,7 +27,12 @@ class TestTally(UnitTestCase):
 		self.assertEqual(self.by_result([row("R1", "C1", "WD"), row("R1", "C2", "Pending")]), {})
 
 	def test_course_units_count_each_sitting_by_its_own_group(self):
-		rows = [row("R1", "C1", "Pass", "C1"), row("R1", "C2", "Fail", "C2"), row("R2", "C1", "Fail", "C1"), row("R2", "C2", "AB", "C2")]
+		rows = [
+			row("R1", "C1", "Pass", "C1"),
+			row("R1", "C2", "Fail", "C2"),
+			row("R2", "C1", "Fail", "C1"),
+			row("R2", "C2", "AB", "C2"),
+		]
 		tally = rules.tally(rows, lambda r: r["group"], lambda r: (r["result"], r["course"]))
 		self.assertEqual(tally, {"C1": {"appeared": 2, "passed": 1}, "C2": {"appeared": 1, "passed": 0}})
 

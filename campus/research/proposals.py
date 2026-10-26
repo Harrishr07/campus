@@ -36,7 +36,9 @@ def send_deadline_reminders(on_date=None):
 				context={"deadline": row.deadline, "dedupe_token": str(on_date)},
 			)
 		except Exception:
-			frappe.log_error(title=f"Research proposal deadline reminder failed for {row.name}")  # keep the rest going
+			frappe.log_error(
+				title=f"Research proposal deadline reminder failed for {row.name}"
+			)  # keep the rest going
 	return len(due)
 
 

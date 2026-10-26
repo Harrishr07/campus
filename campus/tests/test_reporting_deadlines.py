@@ -10,10 +10,14 @@ from campus.admissions import admit as admit_module
 from campus.admissions import documents, reporting
 from campus.admissions.api import grant_temporary_clearance
 from campus.admissions.report.admission_no_shows import admission_no_shows
+from campus.campus_messaging.setup import DOCUMENT_PENDING_EN
 from campus.campus_platform import bulk
 from campus.campus_platform.approvals import approve, request_approval
-from campus.campus_messaging.setup import DOCUMENT_PENDING_EN
-from campus.patches import clear_legacy_attendance_start_dates, document_reminder_due_date, repair_joining_keys
+from campus.patches import (
+	clear_legacy_attendance_start_dates,
+	document_reminder_due_date,
+	repair_joining_keys,
+)
 from campus.student_services.api import attendance_start, student_window
 from campus.tests.approval_fixtures import drop_policies
 from campus.tests.factories import make_user
@@ -76,11 +80,17 @@ class TestReportingDeadline(ReportingTestCase):
 	def test_admit_stamps_the_deadline_in_force_and_leaves_the_joining_date_to_the_joining(self):
 		self.settings(reporting_deadline=add_days(today(), 5))
 		_applicant, round_student = self.admitted()
-		self.settings(program_reporting_deadlines=[{"program": PROGRAM, "reporting_deadline": add_days(today(), 9)}])
+		self.settings(
+			program_reporting_deadlines=[{"program": PROGRAM, "reporting_deadline": add_days(today(), 9)}]
+		)
 		_applicant, program_student = self.admitted()
-		self.settings(reporting_deadline=add_days(today(), 20), program_reporting_deadlines=[])  # the next round
+		self.settings(
+			reporting_deadline=add_days(today(), 20), program_reporting_deadlines=[]
+		)  # the next round
 		stamped = lambda s: str(frappe.db.get_value("Student", s, "oc_reporting_deadline"))  # noqa: E731
-		self.assertEqual((stamped(round_student), stamped(program_student)), (add_days(today(), 5), add_days(today(), 9)))
+		self.assertEqual(
+			(stamped(round_student), stamped(program_student)), (add_days(today(), 5), add_days(today(), 9))
+		)
 		self.assertIsNone(frappe.db.get_value("Student", round_student, "joining_date"))
 
 	def test_joining_by_the_deadline_needs_no_approval(self):
@@ -103,10 +113,19 @@ class TestLateJoining(ReportingTestCase):
 		).insert()  # fmt: skip
 		self.settings(reporting_deadline=add_days(today(), -10))
 		self.applicant_name, self.student = self.admitted()  # stamped with the past deadline
-		frappe.db.set_value("Lifecycle Transition", {"student": self.student}, "effective_date", add_days(today(), -12))  # admitted then
+		frappe.db.set_value(
+			"Lifecycle Transition", {"student": self.student}, "effective_date", add_days(today(), -12)
+		)  # admitted then
 
 	def request(self, joining_date, reason="Hospitalised during the reporting week"):
-		doc = frappe.get_doc({"doctype": LATE, "applicant": self.applicant_name, "joining_date": joining_date, "reason": reason})
+		doc = frappe.get_doc(
+			{
+				"doctype": LATE,
+				"applicant": self.applicant_name,
+				"joining_date": joining_date,
+				"reason": reason,
+			}
+		)
 		return self.as_officer(doc.insert)
 
 	def approve_fully(self, doc):
@@ -131,7 +150,10 @@ class TestLateJoining(ReportingTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "is for joining on"):
 			self.join_as_officer(self.applicant_name)  # today, not the approved date
 		result = self.join_as_officer(self.applicant_name, joining_date=effective)
-		self.assertEqual(str(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "enrollment_date")), effective)
+		self.assertEqual(
+			str(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "enrollment_date")),
+			effective,
+		)
 		self.assertEqual(frappe.db.get_value("Student", self.student, "oc_academic_status"), "Active")
 
 	def test_a_request_is_only_for_a_late_date_one_at_a_time_and_needs_a_reason(self):
@@ -155,7 +177,10 @@ class TestLateJoining(ReportingTestCase):
 		self.assertTrue(listed())  # deadline -10, no grace
 		self.approve_fully(self.request(today()))
 		self.assertFalse(listed())
-		self.assertTrue(self.student in [row.student for row in reporting.no_shows(as_of=add_days(today(), 1), company=COLLEGE)])
+		self.assertTrue(
+			self.student
+			in [row.student for row in reporting.no_shows(as_of=add_days(today(), 1), company=COLLEGE)]
+		)
 
 	def test_without_a_policy_a_request_is_never_submitted(self):
 		doc = self.request(today())
@@ -169,7 +194,14 @@ class TestTemporaryClearance(ReportingTestCase):
 	def setUp(self):
 		super().setUp()
 		frappe.db.delete("Admission Document Rule")
-		frappe.get_doc({"doctype": "Admission Document Rule", "document_type": TC, "mandatory": 1, "verification_needed": 1}).insert()
+		frappe.get_doc(
+			{
+				"doctype": "Admission Document Rule",
+				"document_type": TC,
+				"mandatory": 1,
+				"verification_needed": 1,
+			}
+		).insert()
 
 	def applicant_with_mobile(self):
 		applicant = self.applicant()
@@ -193,7 +225,9 @@ class TestTemporaryClearance(ReportingTestCase):
 		run = frappe._dict(get_parameters=lambda: {"day": today()})
 		with patch.object(documents, "send") as send:
 			documents.send_reminder(item, run)
-		self.assertEqual(send.call_args.kwargs["context"], {"documents": TC, "dedupe_token": today(), "due_date": due})
+		self.assertEqual(
+			send.call_args.kwargs["context"], {"documents": TC, "dedupe_token": today(), "due_date": due}
+		)
 		frappe.db.set_value("Applicant Document", {"parent": applicant}, "status", "Verified")
 		self.assertFalse([i for i in documents.reminder_items() if i["applicant"] == applicant])
 
@@ -202,8 +236,12 @@ class TestTemporaryClearance(ReportingTestCase):
 			"Message Template Body", {"parent": documents.REMINDER_EVENT, "language": language}, "body"
 		)
 		old = document_reminder_due_date.FIRST_SEED["en"][0]
-		frappe.db.set_value("Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "en"}, "body", old)
-		frappe.db.set_value("Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "ta"}, "body", "Edited")
+		frappe.db.set_value(
+			"Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "en"}, "body", old
+		)
+		frappe.db.set_value(
+			"Message Template Body", {"parent": documents.REMINDER_EVENT, "language": "ta"}, "body", "Edited"
+		)
 		document_reminder_due_date.execute()
 		self.assertEqual((body("en"), body("ta")), (DOCUMENT_PENDING_EN, "Edited"))  # an edited body is kept
 		render = lambda context: frappe.render_template(DOCUMENT_PENDING_EN, {"context": context})  # noqa: E731
@@ -214,7 +252,9 @@ class TestTemporaryClearance(ReportingTestCase):
 		applicant = self.applicant()
 		self.clear(applicant, today())
 		self.admit_as_officer(applicant)
-		frappe.db.set_value("Applicant Document", {"parent": applicant}, "cleared_until", add_days(today(), -1))
+		frappe.db.set_value(
+			"Applicant Document", {"parent": applicant}, "cleared_until", add_days(today(), -1)
+		)
 		with self.assertRaisesRegex(frappe.ValidationError, "incomplete mandatory documents"):
 			self.join_as_officer(applicant)
 
@@ -256,17 +296,23 @@ class TestNoShows(ReportingTestCase):
 		self.settings(reporting_deadline=add_days(today(), -2))
 		_applicant, in_grace = self.admitted()  # deadline -2 + 3 grace days: not yet a no-show
 		self.settings(reporting_deadline=add_days(today(), -5))
-		frappe.db.set_value("Student", joined, "oc_academic_status", "Active")  # joined (status is all the list reads)
+		frappe.db.set_value(
+			"Student", joined, "oc_academic_status", "Active"
+		)  # joined (status is all the list reads)
 		listed = [row.student for row in reporting.no_shows(company=COLLEGE)]
 		self.assertIn(late, listed)
 		self.assertNotIn(joined, listed)
 		self.assertNotIn(in_grace, listed)
 		self.assertTrue(self.refer())
-		drafts = frappe.get_all("Admission Cancellation", {"student": late}, ["name", "docstatus", "reason", "program_enrollment"])
+		drafts = frappe.get_all(
+			"Admission Cancellation", {"student": late}, ["name", "docstatus", "reason", "program_enrollment"]
+		)
 		self.assertEqual(len(drafts), 1)
 		self.assertEqual((drafts[0].docstatus, drafts[0].program_enrollment), (0, None))
 		self.assertIn("No-show", drafts[0].reason)
-		self.assertEqual(frappe.db.get_value("Student", late, "oc_academic_status"), "Admitted")  # nothing cancelled
+		self.assertEqual(
+			frappe.db.get_value("Student", late, "oc_academic_status"), "Admitted"
+		)  # nothing cancelled
 		self.assertFalse(frappe.db.exists("Admission Cancellation", {"student": in_grace}))
 		self.refer()  # the next day: already referred
 		self.assertEqual(frappe.db.count("Admission Cancellation", {"student": late}), 1)
@@ -282,12 +328,16 @@ class TestNoShows(ReportingTestCase):
 		applicant, student = self.admitted()
 		self.refer()
 		self.assertTrue(frappe.db.exists("Admission Cancellation", {"student": student, "docstatus": 0}))
-		frappe.db.set_value("Student", student, "oc_reporting_deadline", today())  # e.g. the deadline was extended
+		frappe.db.set_value(
+			"Student", student, "oc_reporting_deadline", today()
+		)  # e.g. the deadline was extended
 		self.join_as_officer(applicant)
 		self.assertFalse(frappe.db.exists("Admission Cancellation", {"student": student}))
 
 	def test_the_daily_job_is_scheduled(self):
-		self.assertIn("campus.admissions.reporting.refer_no_shows", frappe.get_hooks("scheduler_events")["daily"])
+		self.assertIn(
+			"campus.admissions.reporting.refer_no_shows", frappe.get_hooks("scheduler_events")["daily"]
+		)
 
 
 class TestCancellationBeforeJoining(ReportingTestCase):
@@ -321,7 +371,9 @@ class TestCancellationBeforeJoining(ReportingTestCase):
 		)  # fmt: skip
 		state = frappe.db.get_value("Student", student, ["oc_academic_status", "enabled"], as_dict=True)
 		self.assertEqual((state.oc_academic_status, state.enabled), ("Cancelled", 0))
-		self.assertEqual(frappe.db.get_value("Student Applicant", applicant, "application_status"), "Rejected")
+		self.assertEqual(
+			frappe.db.get_value("Student Applicant", applicant, "application_status"), "Rejected"
+		)
 		self.assertEqual(self.counts(), counts)  # no enrollment, invoice or customer made or released
 		payment.submit()  # Accounts pays the refund once
 		self.assertEqual(frappe.db.get_value("Payment Entry", payment.name, "docstatus"), 1)
@@ -367,7 +419,9 @@ class TestCancellationBeforeJoining(ReportingTestCase):
 		self.assertEqual(copy.oc_admission_cancellation, doc.name)  # the link travels with a copy
 		draft.submit()
 		self.assertEqual(frappe.db.get_value("Payment Entry", draft.name, "docstatus"), 1)
-		with self.assertRaisesRegex(frappe.ValidationError, f"{draft.name} already refunds the advance of {doc.name}"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError, f"{draft.name} already refunds the advance of {doc.name}"
+		):
 			copy.reload().submit()
 		self.assertEqual(frappe.db.get_value("Payment Entry", copy.name, "docstatus"), 0)
 
@@ -444,7 +498,10 @@ class TestJoiningKeys(ReportingTestCase):
 			repair_joining_keys.execute()
 		self.assertIsNone(frappe.db.get_value("Program Enrollment", cancelled, "oc_joining_key"))
 		result = self.join_as_officer(applicant)
-		self.assertEqual(frappe.db.get_value("Program Enrollment", result["program_enrollment"], "oc_joining_key"), applicant)
+		self.assertEqual(
+			frappe.db.get_value("Program Enrollment", result["program_enrollment"], "oc_joining_key"),
+			applicant,
+		)
 		self.assertEqual(frappe.db.get_value("Student", student, "oc_academic_status"), "Active")
 
 	def test_a_joining_releases_a_key_left_on_a_cancelled_enrollment(self):
@@ -460,14 +517,18 @@ class TestJoiningKeys(ReportingTestCase):
 		amended = amend(original)
 		self.assertIsNone(frappe.db.get_value("Program Enrollment", original.name, "oc_joining_key"))
 		self.assertEqual(frappe.db.get_value("Program Enrollment", amended.name, "oc_joining_key"), applicant)
-		self.assertEqual(self.join_as_officer(applicant)["program_enrollment"], amended.name)  # a retry returns it
+		self.assertEqual(
+			self.join_as_officer(applicant)["program_enrollment"], amended.name
+		)  # a retry returns it
 
 	def test_the_repair_patch_moves_the_key_to_the_amendment(self):
 		applicant = self.applicant()
 		first = self.admit_and_join(applicant)
 		original = frappe.get_doc("Program Enrollment", first["program_enrollment"])
 		amended = amend(original)
-		frappe.db.set_value("Program Enrollment", amended.name, "oc_joining_key", None)  # amended before the hook existed
+		frappe.db.set_value(
+			"Program Enrollment", amended.name, "oc_joining_key", None
+		)  # amended before the hook existed
 		frappe.db.set_value("Program Enrollment", original.name, "oc_joining_key", applicant)
 		repair_joining_keys.execute()
 		self.assertEqual(frappe.db.get_value("Program Enrollment", amended.name, "oc_joining_key"), applicant)
@@ -478,7 +539,10 @@ class TestJoiningDateFloor(ReportingTestCase):
 	def test_a_joining_before_the_last_change_is_refused_before_any_seat_or_number_is_taken(self):
 		applicant, student = self.admitted()
 		frappe.db.set_value("Lifecycle Transition", {"student": student}, "effective_date", today())
-		with patch("campus.admissions.joining.seats.check_seat_available") as seat, patch("campus.admissions.joining.numbers.next_number") as number:
+		with (
+			patch("campus.admissions.joining.seats.check_seat_available") as seat,
+			patch("campus.admissions.joining.numbers.next_number") as number,
+		):
 			with self.assertRaisesRegex(frappe.ValidationError, "before the last status change"):
 				self.join_as_officer(applicant, joining_date=add_days(today(), -1))
 		seat.assert_not_called()
@@ -493,7 +557,9 @@ class TestJoiningDateFloor(ReportingTestCase):
 			from campus.admissions import joining
 
 			with patch.object(joining, "join_once", side_effect=[deadlock, deadlock]):
-				with self.assertRaisesRegex(frappe.ValidationError, "Please try confirming the joining of APP-9 again"):
+				with self.assertRaisesRegex(
+					frappe.ValidationError, "Please try confirming the joining of APP-9 again"
+				):
 					joining.confirm_joining("APP-9")
 
 
@@ -519,11 +585,17 @@ class TestAttendanceStart(ReportingTestCase):
 	def test_the_patch_clears_start_dates_filled_before_the_joining_gate_and_keeps_the_joinings(self):
 		gate_ran = frappe.db.get_value("Patch Log", {"patch": "campus.patches.joining_gate"}, "creation")
 		if not gate_ran:
-			gate_ran = frappe.get_doc({"doctype": "Patch Log", "patch": "campus.patches.joining_gate"}).insert().creation
+			gate_ran = (
+				frappe.get_doc({"doctype": "Patch Log", "patch": "campus.patches.joining_gate"})
+				.insert()
+				.creation
+			)
 		_applicant, legacy_student = self.admitted()
 		legacy = self.legacy_enrollment(legacy_student, today())
 		frappe.db.set_value(
-			"Program Enrollment", legacy.name, {"creation": add_days(gate_ran, -1), "oc_attendance_start_date": today()},
+			"Program Enrollment",
+			legacy.name,
+			{"creation": add_days(gate_ran, -1), "oc_attendance_start_date": today()},
 			update_modified=False,
 		)  # what the first joining_gate fill left on an enrollment made before it
 		applicant = self.applicant()
@@ -531,4 +603,6 @@ class TestAttendanceStart(ReportingTestCase):
 		for _run in range(2):  # idempotent
 			clear_legacy_attendance_start_dates.execute()
 		self.assertIsNone(frappe.db.get_value("Program Enrollment", legacy.name, "oc_attendance_start_date"))
-		self.assertEqual(str(frappe.db.get_value("Program Enrollment", joined, "oc_attendance_start_date")), today())
+		self.assertEqual(
+			str(frappe.db.get_value("Program Enrollment", joined, "oc_attendance_start_date")), today()
+		)

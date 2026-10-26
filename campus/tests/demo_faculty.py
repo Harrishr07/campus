@@ -8,7 +8,14 @@ Associate Professor, two Assistant Professors), 2 with a PhD, 12 years' experien
 import frappe
 
 from campus.faculty.setup import seed_course_allocation_policy
-from campus.tests.demo import CSE_DEPARTMENT, ECE_DEPARTMENT, ENGINEERING, department_name, employee_of, get_or_insert
+from campus.tests.demo import (
+	CSE_DEPARTMENT,
+	ECE_DEPARTMENT,
+	ENGINEERING,
+	department_name,
+	employee_of,
+	get_or_insert,
+)
 
 YEAR = "2026-27"
 NORM_FROM = "2022-06-01"
@@ -57,7 +64,11 @@ def make_sanctioned_posts():
 		for (cadre, *_rule), count in zip(NORM_CADRES, counts):
 			get_or_insert(
 				"Sanctioned Post",
-				{"department": department_name(department, ENGINEERING), "cadre": cadre, "academic_year": YEAR},
+				{
+					"department": department_name(department, ENGINEERING),
+					"cadre": cadre,
+					"academic_year": YEAR,
+				},
 				{"sanctioned_count": count},
 			)
 

@@ -123,7 +123,9 @@ class TestIssue(VerificationTestCase):
 
 class TestHolderAndMask(VerificationTestCase):
 	def test_holder_name_resolver(self):
-		self.assertEqual(verification.holder_name(frappe._dict(name="X1", student_name=" Asha Rao ")), "Asha Rao")
+		self.assertEqual(
+			verification.holder_name(frappe._dict(name="X1", student_name=" Asha Rao ")), "Asha Rao"
+		)
 		self.assertEqual(verification.holder_name(frappe._dict(name="X1", employee_name="E One")), "E One")
 		self.assertEqual(verification.holder_name(frappe._dict(name="X1", student_name="", title="T")), "T")
 		self.assertEqual(verification.holder_name(frappe._dict(name="X1")), "X1")
@@ -150,7 +152,9 @@ class TestVerifyAndRevoke(VerificationTestCase):
 		self.assertEqual(found.status, "Revoked")
 		self.assertEqual(found.revocation_reason, "Issued in error")
 		self.assertTrue(found.revoked_on)
-		self.assertEqual(frappe.db.get_value("Verifiable Document", record.name, "revoked_by"), "Administrator")
+		self.assertEqual(
+			frappe.db.get_value("Verifiable Document", record.name, "revoked_by"), "Administrator"
+		)
 
 	def test_verification_manager_can_revoke_clerk_cannot(self):
 		record = issue(make_certificate(), CERT_FORMAT)
@@ -252,7 +256,7 @@ class TestPublicPage(VerificationTestCase):
 
 	def test_guest_can_call_api(self):
 		record = issue(make_certificate(), CERT_FORMAT)
-		frappe.db.commit()  # noqa: nothing
+		frappe.db.commit()  # nosemgrep
 		frappe.set_user("Guest")
 		self.assertEqual(frappe.call(verification.verify_public, code=record.code).status, "Valid")
 

@@ -30,8 +30,22 @@ from campus.research.accounts import NON_SPENDING_EXPENSE_TYPES
 from campus.research.api import check_sanction_open, head_accounts
 
 BUDGET_HEAD_FIELD = "oc_budget_head"
-LINE_TABLES = {"Purchase Order": "items", "Purchase Invoice": "items", "Journal Entry": "accounts", "Expense Claim": "expenses"}
-SANCTION_FIELDS = ["name", "company", "funding_scheme", "project", "cost_center", "start_date", "end_date", "project_closure"]
+LINE_TABLES = {
+	"Purchase Order": "items",
+	"Purchase Invoice": "items",
+	"Journal Entry": "accounts",
+	"Expense Claim": "expenses",
+}
+SANCTION_FIELDS = [
+	"name",
+	"company",
+	"funding_scheme",
+	"project",
+	"cost_center",
+	"start_date",
+	"end_date",
+	"project_closure",
+]
 
 
 def budget_head_fields():
@@ -40,7 +54,15 @@ def budget_head_fields():
 		"insert_after": "project", "search_index": 1,  # the capital-limit locking reads go through it
 		"description": "Required on lines of a sanctioned research project: the sanction head the line is spent from.",
 	}  # fmt: skip
-	return {doctype: [dict(field)] for doctype in ("Purchase Order Item", "Purchase Invoice Item", "Journal Entry Account", "Expense Claim Detail")}
+	return {
+		doctype: [dict(field)]
+		for doctype in (
+			"Purchase Order Item",
+			"Purchase Invoice Item",
+			"Journal Entry Account",
+			"Expense Claim Detail",
+		)
+	}
 
 
 def setup_budget_head_fields():
@@ -50,7 +72,9 @@ def setup_budget_head_fields():
 # line validation (validate of the four doctypes)
 def validate_lines(doc, method=None):
 	sanctions = {}
-	if doc.docstatus == 1:  # submitting: lock every sanction the lines touch, in one order, before reading closures
+	if (
+		doc.docstatus == 1
+	):  # submitting: lock every sanction the lines touch, in one order, before reading closures
 		for name, closure in locked_closures(doc, sanction_rows(doc)).items():
 			sanctions[("closure", name)] = closure
 	for row in doc.get(LINE_TABLES[doc.doctype]):
@@ -69,7 +93,10 @@ def touched_sanctions(doc, rows):
 	"""Names of the submitted sanctions whose project or cost centre the rows (or the document's project) are on."""
 	names = set()
 	for row in rows:
-		for field, value in (("project", row.get("project") or doc.get("project")), ("cost_center", row.get("cost_center"))):
+		for field, value in (
+			("project", row.get("project") or doc.get("project")),
+			("cost_center", row.get("cost_center")),
+		):
 			name = value and frappe.db.get_value("Sanction", {field: value, "docstatus": 1})
 			if name:
 				names.add(name)
@@ -79,7 +106,8 @@ def touched_sanctions(doc, rows):
 def locked_closures(doc, rows):
 	"""{sanction: its Project Closure or None}, each sanction row locked, in name order (one lock order everywhere)."""
 	return {
-		name: frappe.db.get_value("Sanction", name, "project_closure", for_update=True) for name in touched_sanctions(doc, rows)
+		name: frappe.db.get_value("Sanction", name, "project_closure", for_update=True)
+		for name in touched_sanctions(doc, rows)
 	}
 
 
@@ -97,7 +125,10 @@ def validate_payment_deductions(doc, method=None):
 	if doc.docstatus == 1:
 		closures = locked_closures(doc, rows)
 	else:
-		closures = {name: frappe.db.get_value("Sanction", name, "project_closure") for name in touched_sanctions(doc, rows)}
+		closures = {
+			name: frappe.db.get_value("Sanction", name, "project_closure")
+			for name in touched_sanctions(doc, rows)
+		}
 	for name, closure in closures.items():
 		check_sanction_open(name, closure)
 
@@ -112,7 +143,11 @@ def refuse_payment_cancel_on_closed(doc, method=None):
 class Line:
 	def __init__(self, doc, row, sanctions):
 		self.doc, self.row, self.sanctions = doc, row, sanctions
-		self.account = row.get({"Journal Entry": "account", "Expense Claim": "default_account"}.get(doc.doctype, "expense_account"))
+		self.account = row.get(
+			{"Journal Entry": "account", "Expense Claim": "default_account"}.get(
+				doc.doctype, "expense_account"
+			)
+		)
 		self.label = _("Row {0}").format(row.idx)
 
 	def validate(self):
@@ -122,13 +157,21 @@ class Line:
 		sanction = self.find_sanction()
 		if not sanction:
 			if head:
-				frappe.throw(_("{0}: a Grant Budget Head goes only on lines of a sanctioned project.").format(self.label))
+				frappe.throw(
+					_("{0}: a Grant Budget Head goes only on lines of a sanctioned project.").format(
+						self.label
+					)
+				)
 			return
 		self.check_open(sanction)
 		row.project = sanction.project
 		head = head or self.item_group_head(sanction) or self.payroll_head(sanction)
 		if not head:
-			frappe.throw(_("{0}: select the Grant Budget Head; the line is spent on Sanction {1}.").format(self.label, sanction.name))
+			frappe.throw(
+				_("{0}: select the Grant Budget Head; the line is spent on Sanction {1}.").format(
+					self.label, sanction.name
+				)
+			)
 		row.set(BUDGET_HEAD_FIELD, head)
 		self.check_date(sanction)
 		self.check_head(sanction, head)
@@ -156,7 +199,9 @@ class Line:
 			return None
 		key = (field, value)
 		if key not in self.sanctions:
-			self.sanctions[key] = frappe.db.get_value("Sanction", {field: value, "docstatus": 1}, SANCTION_FIELDS, as_dict=True)
+			self.sanctions[key] = frappe.db.get_value(
+				"Sanction", {field: value, "docstatus": 1}, SANCTION_FIELDS, as_dict=True
+			)
 		return self.sanctions[key]
 
 	def check_open(self, sanction):
@@ -173,12 +218,21 @@ class Line:
 	def payroll_head(self, sanction):
 		"""A payroll accrual's salary row (P3-T19, project staff): the sanction head its account maps to; a sanction's
 		heads never share an account."""
-		if self.doc.doctype != "Journal Entry" or not any(r.reference_type == "Payroll Entry" for r in self.doc.accounts):
+		if self.doc.doctype != "Journal Entry" or not any(
+			r.reference_type == "Payroll Entry" for r in self.doc.accounts
+		):
 			return None
-		heads = frappe.get_all("Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, pluck="budget_head")
+		heads = frappe.get_all(
+			"Sanction Head", {"parent": sanction.name, "parenttype": "Sanction"}, pluck="budget_head"
+		)
 		return frappe.db.get_value(
 			"Grant Budget Head Account",
-			{"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head", "company": sanction.company, "account": self.account},
+			{
+				"parent": ["in", heads or [""]],
+				"parenttype": "Grant Budget Head",
+				"company": sanction.company,
+				"account": self.account,
+			},
 			"parent",
 		)
 
@@ -187,19 +241,33 @@ class Line:
 		return scheme_head_of_item_group(sanction.funding_scheme, group) if group else None
 
 	def check_head(self, sanction, head):
-		on_sanction = frappe.db.get_value("Sanction Head", {"parent": sanction.name, "parenttype": "Sanction", "budget_head": head}, "is_capital")
+		on_sanction = frappe.db.get_value(
+			"Sanction Head",
+			{"parent": sanction.name, "parenttype": "Sanction", "budget_head": head},
+			"is_capital",
+		)
 		if on_sanction is None:
 			frappe.throw(_("{0}: {1} is not a head of Sanction {2}.").format(self.label, head, sanction.name))
 		if not self.account:
 			frappe.throw(_("{0}: set the account the line posts to.").format(self.label))
 		if self.account not in head_accounts(head, sanction.company):
-			frappe.throw(_("{0}: account {1} is not an account of budget head {2}.").format(self.label, self.account, head))
+			frappe.throw(
+				_("{0}: account {1} is not an account of budget head {2}.").format(
+					self.label, self.account, head
+				)
+			)
 		group = self.row.get("item_group")
 		group_head = scheme_head_of_item_group(sanction.funding_scheme, group) if group else None
 		if group_head and group_head != head:
-			frappe.throw(_("{0}: item group {1} belongs to budget head {2}, not {3}.").format(self.label, group, group_head, head))
+			frappe.throw(
+				_("{0}: item group {1} belongs to budget head {2}, not {3}.").format(
+					self.label, group, group_head, head
+				)
+			)
 		if on_sanction and self.doc.doctype == "Expense Claim":
-			frappe.throw(_("{0}: {1} is a capital head; buy it through a Purchase Invoice.").format(self.label, head))
+			frappe.throw(
+				_("{0}: {1} is a capital head; buy it through a Purchase Invoice.").format(self.label, head)
+			)
 		if not on_sanction:
 			self.check_budgeted(sanction, head)
 
@@ -237,14 +305,20 @@ def is_spending_account(account):
 	if not account:
 		return False
 	root_type, account_type = frappe.get_cached_value("Account", account, ["root_type", "account_type"])
-	return account_type == "Fixed Asset" or (root_type == "Expense" and account_type not in NON_SPENDING_EXPENSE_TYPES)
+	return account_type == "Fixed Asset" or (
+		root_type == "Expense" and account_type not in NON_SPENDING_EXPENSE_TYPES
+	)
 
 
 def scheme_head_of_item_group(scheme, item_group):
 	"""The scheme's head the item group is mapped under (at most one, checked on the scheme)."""
-	heads = frappe.get_all("Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head")
+	heads = frappe.get_all(
+		"Funding Scheme Head", {"parent": scheme, "parenttype": "Funding Scheme"}, pluck="budget_head"
+	)
 	return frappe.db.get_value(
-		"Grant Budget Head Item Group", {"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head", "item_group": item_group}, "parent"
+		"Grant Budget Head Item Group",
+		{"parent": ["in", heads or [""]], "parenttype": "Grant Budget Head", "item_group": item_group},
+		"parent",
 	)
 
 
@@ -273,9 +347,9 @@ def refuse_added_rows(doc):
 	for row in doc.items:
 		if row.creation and get_datetime(row.creation) > get_datetime(last_saved):
 			frappe.throw(
-				_("Row {0}: items can't be added to an order of a sanctioned project; raise a new Purchase Order for {1}.").format(
-					row.idx, row.item_code
-				)
+				_(
+					"Row {0}: items can't be added to an order of a sanctioned project; raise a new Purchase Order for {1}."
+				).format(row.idx, row.item_code)
 			)
 
 
@@ -320,13 +394,21 @@ def current_billing(doc):
 
 
 def check_head_limit(sanction, head, lines, billing=None, exclude=None):
-	scheme = frappe.db.get_value("Sanction", sanction, "funding_scheme", for_update=True)  # one check per sanction at a time
+	scheme = frappe.db.get_value(
+		"Sanction", sanction, "funding_scheme", for_update=True
+	)  # one check per sanction at a time
 	spending = [*capital_spending(sanction, head, billing, exclude), *lines]
 	breach = first_breach(head_limits(sanction, head), spending)
 	if not breach:
 		return
-	message = _("Budget head {0} of Sanction {1}: spending up to the end of {2} would be {3} against {4} sanctioned.").format(
-		frappe.bold(head), sanction, breach.period, frappe.format(breach.spent, "Currency"), frappe.format(breach.limit, "Currency")
+	message = _(
+		"Budget head {0} of Sanction {1}: spending up to the end of {2} would be {3} against {4} sanctioned."
+	).format(
+		frappe.bold(head),
+		sanction,
+		breach.period,
+		frappe.format(breach.spent, "Currency"),
+		frappe.format(breach.limit, "Currency"),
 	)
 	if (frappe.db.get_value("Funding Scheme", scheme, "budget_action") or "Stop") == "Stop":
 		frappe.throw(message, title=_("Budget Exceeded"))
@@ -366,7 +448,11 @@ def capital_spending(sanction, head, billing=None, exclude=None):
 	the document `exclude`."""
 	project = frappe.db.get_value("Sanction", sanction, "project")
 	exclude = exclude or ""
-	return [*invoiced(project, head, exclude), *journalled(project, head, exclude), *ordered(project, head, billing or {}, exclude)]
+	return [
+		*invoiced(project, head, exclude),
+		*journalled(project, head, exclude),
+		*ordered(project, head, billing or {}, exclude),
+	]
 
 
 def invoiced(project, head, exclude=""):

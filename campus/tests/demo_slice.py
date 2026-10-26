@@ -54,7 +54,13 @@ APPLICANTS = [
 	("slice-4", "Divya", "Bharathi", "SC", GOVERNMENT),
 	("slice-5", "Sanjay", "Prakash", "OC", MANAGEMENT),
 ]
-LIVE_APPLICANT = ("slice-6", "Nithya", "Shree", "BC", GOVERNMENT)  # left Approved: the admission officer admits her live
+LIVE_APPLICANT = (
+	"slice-6",
+	"Nithya",
+	"Shree",
+	"BC",
+	GOVERNMENT,
+)  # left Approved: the admission officer admits her live
 PAID = 4  # the first four admitted students pay; the management-quota student's fee stays due
 QUALIFYING_MARKS = (("Mathematics", 100, 96), ("Physics", 100, 91), ("Chemistry", 100, 89))
 ELIGIBILITY_MINIMUMS = {"OC": 50, "BC": 45, "MBC": 45, "SC": 40, "ST": 40}
@@ -95,7 +101,10 @@ MARKS = {
 def build_slice():
 	"""Run the whole path; call after the "small" demo data exists."""
 	frappe.set_user("Administrator")
-	was_importing, frappe.flags.in_import = frappe.flags.in_import, False  # import mode would skip DocType defaults
+	was_importing, frappe.flags.in_import = (
+		frappe.flags.in_import,
+		False,
+	)  # import mode would skip DocType defaults
 	try:
 		run_path()
 	finally:
@@ -153,7 +162,9 @@ def prepare_admissions():
 	)
 	make_eligibility_rule()
 	demo.get_or_insert(
-		"Admission Document Rule", {"document_type": "Transfer Certificate"}, {"mandatory": 1, "verification_needed": 0}
+		"Admission Document Rule",
+		{"document_type": "Transfer Certificate"},
+		{"mandatory": 1, "verification_needed": 0},
 	)
 	return make_fee_structures()
 
@@ -163,9 +174,14 @@ def make_eligibility_rule():
 		return
 	frappe.get_doc(
 		{
-			"doctype": "Eligibility Rule", "program": PROGRAM, "enabled": 1, "qualifying_exam": "HSC (Class XII)",
+			"doctype": "Eligibility Rule",
+			"program": PROGRAM,
+			"enabled": 1,
+			"qualifying_exam": "HSC (Class XII)",
 			"required_subjects": "\n".join(subject for subject, *_ in QUALIFYING_MARKS),
-			"category_marks": [{"student_category": c, "min_percent": p} for c, p in ELIGIBILITY_MINIMUMS.items()],
+			"category_marks": [
+				{"student_category": c, "min_percent": p} for c, p in ELIGIBILITY_MINIMUMS.items()
+			],
 		}
 	).insert(ignore_permissions=True)
 
@@ -174,7 +190,9 @@ def make_fee_structures():
 	"""The base fee structure and a higher management-quota one; returns the finance accounts."""
 	company = demo.ENGINEERING
 	was_ignoring = frappe.flags.ignore_root_company_validation
-	frappe.flags.ignore_root_company_validation = True  # the college is a child of the trust: its accounts are made directly
+	frappe.flags.ignore_root_company_validation = (
+		True  # the college is a child of the trust: its accounts are made directly
+	)
 	try:
 		accounts = make_finance_company(company, "DCE")
 	finally:
@@ -184,7 +202,14 @@ def make_fee_structures():
 		filters = {"company": company, "program": PROGRAM, "academic_year": YEAR, "docstatus": 1}
 		filters["oc_admission_quota"] = quota or ["is", "not set"]
 		if not frappe.db.exists("Fee Structure", filters):
-			make_fee_structure(company, PROGRAM, YEAR, components, accounts, **({"oc_admission_quota": quota} if quota else {}))
+			make_fee_structure(
+				company,
+				PROGRAM,
+				YEAR,
+				components,
+				accounts,
+				**({"oc_admission_quota": quota} if quota else {}),
+			)
 	return accounts
 
 
@@ -196,12 +221,20 @@ def admit_applicants():
 	if not frappe.db.exists("Student Applicant", {"student_email_id": demo.email(live[0])}):
 		make_applicant(*live)
 	for slug, first, last, category, quota in APPLICANTS:
-		applicant = frappe.db.get_value("Student Applicant", {"student_email_id": demo.email(slug)}, ["name", "application_status"], as_dict=True)
+		applicant = frappe.db.get_value(
+			"Student Applicant",
+			{"student_email_id": demo.email(slug)},
+			["name", "application_status"],
+			as_dict=True,
+		)
 		if not applicant:
 			applicant = make_applicant(slug, first, last, category, quota)
 		if applicant.application_status != "Admitted":
 			admit(applicant.name)
-		if frappe.db.get_value("Student", {"student_applicant": applicant.name}, "oc_academic_status") in ("Admitted", "Joined"):
+		if frappe.db.get_value("Student", {"student_applicant": applicant.name}, "oc_academic_status") in (
+			"Admitted",
+			"Joined",
+		):
 			confirm_joining(applicant.name)
 	return slice_students()
 
@@ -209,11 +242,22 @@ def admit_applicants():
 def make_applicant(slug, first, last, category, quota):
 	doc = frappe.get_doc(
 		{
-			"doctype": "Student Applicant", "first_name": first, "last_name": last, "program": PROGRAM, "academic_year": YEAR,
-			"student_email_id": demo.email(slug), "oc_company": demo.ENGINEERING, "student_category": category,
-			"oc_admission_quota": quota, "application_status": "Approved", "gender": "Female" if first in ("Meena", "Divya", "Nithya") else "Male",
-			"date_of_birth": "2008-03-15", "state": "Tamil Nadu",
-			"oc_qualifying_marks": [{"subject": s, "max_marks": m, "obtained_marks": o} for s, m, o in QUALIFYING_MARKS],
+			"doctype": "Student Applicant",
+			"first_name": first,
+			"last_name": last,
+			"program": PROGRAM,
+			"academic_year": YEAR,
+			"student_email_id": demo.email(slug),
+			"oc_company": demo.ENGINEERING,
+			"student_category": category,
+			"oc_admission_quota": quota,
+			"application_status": "Approved",
+			"gender": "Female" if first in ("Meena", "Divya", "Nithya") else "Male",
+			"date_of_birth": "2008-03-15",
+			"state": "Tamil Nadu",
+			"oc_qualifying_marks": [
+				{"subject": s, "max_marks": m, "obtained_marks": o} for s, m, o in QUALIFYING_MARKS
+			],
 			"oc_documents": [{"document_type": "Transfer Certificate", "status": "Submitted"}],
 		}
 	).insert(ignore_permissions=True)
@@ -227,7 +271,11 @@ def invoice_fees(students, finance):
 	from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
 	for student in students[:PAID]:
-		for invoice in frappe.get_all("Sales Invoice", {"student": student, "docstatus": 1, "outstanding_amount": [">", 0]}, pluck="name"):
+		for invoice in frappe.get_all(
+			"Sales Invoice",
+			{"student": student, "docstatus": 1, "outstanding_amount": [">", 0]},
+			pluck="name",
+		):
 			payment = get_payment_entry("Sales Invoice", invoice)
 			payment.reference_no, payment.reference_date = f"DEMO-UTR-{student}", getdate()
 			payment.insert(ignore_permissions=True).submit()
@@ -261,7 +309,9 @@ def make_curriculum():
 			{"semester": SEMESTER, "course": name, "category": category, "lecture_periods": lecture, "tutorial_periods": tutorial,
 			"practical_periods": practical, "exam_type": exam_type}
 		)  # fmt: skip
-	doc = frappe.get_doc({"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "version": 1, "courses": rows})
+	doc = frappe.get_doc(
+		{"doctype": "Curriculum", "program": PROGRAM, "regulation": regulation, "version": 1, "courses": rows}
+	)
 	doc.insert(ignore_permissions=True)
 	for status in ("Approved", "Effective"):
 		doc.status = status
@@ -296,12 +346,18 @@ def register_courses(students, term):
 	"""A submitted Course Registration of all four courses per student (no approval policy exists in the demo)."""
 	registration_date = add_days(frappe.db.get_value("Academic Term", term, "term_start_date"), 7)
 	for student in students:
-		if frappe.db.exists("Course Registration", {"student": student, "academic_term": term, "docstatus": 1}):
+		if frappe.db.exists(
+			"Course Registration", {"student": student, "academic_term": term, "docstatus": 1}
+		):
 			continue
 		frappe.get_doc(
 			{
-				"doctype": "Course Registration", "student": student, "academic_term": term, "semester": SEMESTER,
-				"registration_date": registration_date, "late_reason": "Demo data is seeded after the window closed",
+				"doctype": "Course Registration",
+				"student": student,
+				"academic_term": term,
+				"semester": SEMESTER,
+				"registration_date": registration_date,
+				"late_reason": "Demo data is seeded after the window closed",
 				"items": [{"course": course, "registration_type": "Regular"} for course, *_rest in COURSES],
 			}
 		).insert(ignore_permissions=True).submit()
@@ -313,17 +369,25 @@ def register_courses(students, term):
 def session_dates(term):
 	"""The 24 session dates: Monday, Wednesday and Friday of the first eight weeks of the term."""
 	start = getdate(frappe.db.get_value("Academic Term", term, "term_start_date"))
-	monday = add_days(start, -start.weekday()) if start.weekday() == 0 else add_days(start, 7 - start.weekday())
+	monday = (
+		add_days(start, -start.weekday()) if start.weekday() == 0 else add_days(start, 7 - start.weekday())
+	)
 	return [add_days(monday, 7 * week + day) for week in range(WEEKS) for day in SESSION_DAYS]
 
 
 def make_attendance(students, offerings):
 	"""Course Schedules for every session and a Student Attendance row per student, following ABSENT."""
 	term = frappe.db.get_value("Student Group", offerings[0], "academic_term")
-	room = demo.get_or_insert("Room", {"room_name": ROOM}, {"room_number": "101", "seating_capacity": "60", "oc_company": demo.ENGINEERING})
+	room = demo.get_or_insert(
+		"Room",
+		{"room_name": ROOM},
+		{"room_number": "101", "seating_capacity": "60", "oc_company": demo.ENGINEERING},
+	)
 	dates = session_dates(term)
 	attend_from_term_start(students, term)
-	leave = make_medical_leave(students[MEDICAL_STUDENT], dates[MEDICAL_SESSIONS[0]], dates[MEDICAL_SESSIONS[-1]])
+	leave = make_medical_leave(
+		students[MEDICAL_STUDENT], dates[MEDICAL_SESSIONS[0]], dates[MEDICAL_SESSIONS[-1]]
+	)
 	for course_number, offering in enumerate(offerings):
 		if frappe.db.count("Course Schedule", {"student_group": offering}):
 			continue
@@ -331,7 +395,9 @@ def make_attendance(students, offerings):
 		for n, date in enumerate(dates):
 			schedule = make_schedule(offering, instructor, room, date, course_number)
 			for number, student in enumerate(students):
-				mark_attendance(student, offering, schedule, date, status_for(number, n, course_number), leave)
+				mark_attendance(
+					student, offering, schedule, date, status_for(number, n, course_number), leave
+				)
 
 
 def attend_from_term_start(students, term):
@@ -339,7 +405,9 @@ def attend_from_term_start(students, term):
 	attendance start date (M05-12) is moved back so the seeded sessions count."""
 	start = frappe.db.get_value("Academic Term", term, "term_start_date")
 	for student in students:
-		frappe.db.set_value("Program Enrollment", {"student": student, "docstatus": 1}, "oc_attendance_start_date", start)
+		frappe.db.set_value(
+			"Program Enrollment", {"student": student, "docstatus": 1}, "oc_attendance_start_date", start
+		)
 
 
 def status_for(number, session, course_number):
@@ -355,7 +423,13 @@ def make_medical_leave(student, from_date, to_date):
 	if name:
 		return name
 	doc = frappe.get_doc(
-		{"doctype": "Student Leave Application", "student": student, "from_date": from_date, "to_date": to_date, "oc_leave_kind": "Medical"}
+		{
+			"doctype": "Student Leave Application",
+			"student": student,
+			"from_date": from_date,
+			"to_date": to_date,
+			"oc_leave_kind": "Medical",
+		}
 	)
 	doc.flags.ignore_validate = True
 	doc.insert(ignore_permissions=True)
@@ -367,8 +441,14 @@ def make_schedule(offering, instructor, room, date, course_number):
 	hour = 9 + course_number
 	doc = frappe.get_doc(
 		{
-			"doctype": "Course Schedule", "student_group": offering, "course": COURSES[course_number][0], "instructor": instructor, "room": room,
-			"schedule_date": date, "from_time": f"{hour:02d}:00:00", "to_time": f"{hour:02d}:50:00",
+			"doctype": "Course Schedule",
+			"student_group": offering,
+			"course": COURSES[course_number][0],
+			"instructor": instructor,
+			"room": room,
+			"schedule_date": date,
+			"from_time": f"{hour:02d}:00:00",
+			"to_time": f"{hour:02d}:50:00",
 		}
 	)
 	doc.insert(ignore_permissions=True)
@@ -380,8 +460,13 @@ def mark_attendance(student, offering, schedule, date, status, leave):
 	holiday list); the date and group are set here because that skips Education's own validate too."""
 	doc = frappe.get_doc(
 		{
-			"doctype": "Student Attendance", "student": student, "student_group": offering, "course_schedule": schedule,
-			"date": date, "status": status, "leave_application": leave if status == "Leave" else None,
+			"doctype": "Student Attendance",
+			"student": student,
+			"student_group": offering,
+			"course_schedule": schedule,
+			"date": date,
+			"status": status,
+			"leave_application": leave if status == "Leave" else None,
 		}
 	)
 	doc.flags.ignore_validate = True
@@ -397,9 +482,19 @@ def make_exam_session(term):
 	name = frappe.db.get_value("Exam Session", {"company": demo.ENGINEERING, "academic_term": term})
 	if name:
 		return name
-	return frappe.get_doc(
-		{"doctype": "Exam Session", "company": demo.ENGINEERING, "academic_term": term, "status": "Marks Entry", "is_final_year": 1}
-	).insert(ignore_permissions=True).name
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Exam Session",
+				"company": demo.ENGINEERING,
+				"academic_term": term,
+				"status": "Marks Entry",
+				"is_final_year": 1,
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
 
 
 def enter_marks(session, students, offerings):
@@ -411,16 +506,27 @@ def enter_marks(session, students, offerings):
 		rows = []
 		for number, student in enumerate(students):
 			marks = MARKS[number][course_number]
-			rows.append({"student": student, "absent": 1} if marks == "AB" else {"student": student, "cia": marks[0], "ese": marks[1]})
+			rows.append(
+				{"student": student, "absent": 1}
+				if marks == "AB"
+				else {"student": student, "cia": marks[0], "ese": marks[1]}
+			)
 		frappe.get_doc(
-			{"doctype": "Mark Sheet Entry", "exam_session": session, "course_offering": offering, "marks": rows}
+			{
+				"doctype": "Mark Sheet Entry",
+				"exam_session": session,
+				"course_offering": offering,
+				"marks": rows,
+			}
 		).insert(ignore_permissions=True)
 
 
 def issue_grade_sheet(session, student):
 	"""One verifiable Grade Sheet (QR) for the first student."""
 	result = frappe.get_doc("Student Result", f"SR-{session}-{student}")
-	if not frappe.db.exists("Verifiable Document", {"reference_doctype": "Student Result", "reference_name": result.name}):
+	if not frappe.db.exists(
+		"Verifiable Document", {"reference_doctype": "Student Result", "reference_name": result.name}
+	):
 		issue(result, "Grade Sheet")
 
 
@@ -434,7 +540,9 @@ def link_portal_users(student):
 		frappe.db.set_value("Student", other, "user", None, update_modified=False)
 	frappe.db.set_value("Student", student, "user", user, update_modified=False)
 	guardian = frappe.db.get_value("Guardian", {"email_address": demo.email("guardian_1")})
-	frappe.db.delete("Student Guardian", {"guardian": guardian, "parenttype": "Student", "parent": ["!=", student]})
+	frappe.db.delete(
+		"Student Guardian", {"guardian": guardian, "parenttype": "Student", "parent": ["!=", student]}
+	)
 	if not frappe.db.exists("Student Guardian", {"parent": student, "guardian": guardian}):
 		doc = frappe.get_doc("Student", student)
 		doc.append("guardians", {"guardian": guardian, "guardian_name": "Guardian One", "relation": "Father"})
@@ -453,7 +561,9 @@ def set_demo_passwords():
 def compute_aqar_cycle():
 	seed_framework()
 	cycle = demo.get_or_insert(
-		"Accreditation Cycle", {"framework": FRAMEWORK, "company": demo.ENGINEERING, "academic_year": YEAR}, {}
+		"Accreditation Cycle",
+		{"framework": FRAMEWORK, "company": demo.ENGINEERING, "academic_year": YEAR},
+		{},
 	)
 	compute.compute_cycle(cycle)
 	seed_validation_problems(cycle)
@@ -471,9 +581,14 @@ VALIDATION_RULES = [  # (rule type, node code, severity, extra values)
 def seed_validation_rules(framework):
 	for rule_type, code, severity, extra in VALIDATION_RULES:
 		node = f"{framework}-{code}"
-		values = {**extra, "compare_node": extra.get("compare_node") and f"{framework}-{extra['compare_node']}"}
+		values = {
+			**extra,
+			"compare_node": extra.get("compare_node") and f"{framework}-{extra['compare_node']}",
+		}
 		demo.get_or_insert(
-			"Validation Rule", {"framework": framework, "rule_type": rule_type, "node": node}, {"severity": severity, **values}
+			"Validation Rule",
+			{"framework": framework, "rule_type": rule_type, "node": node},
+			{"severity": severity, **values},
 		)
 
 
@@ -481,6 +596,10 @@ def seed_validation_problems(cycle):
 	"""The demo's three problems: no evidence for 2.6.3, a 30-word 4.1.1 answer (limit 25), 2.1.2 = 85 above 4.1 = 40."""
 	framework = frappe.db.get_value("Accreditation Cycle", cycle, "framework")
 	seed_validation_rules(framework)
-	answers = {"2.1.2": {"manual_value": 85}, "EP-4.1": {"manual_value": 40}, "4.1.1": {"narrative": "<p>" + " ".join(["word"] * 30) + "</p>"}}
+	answers = {
+		"2.1.2": {"manual_value": 85},
+		"EP-4.1": {"manual_value": 40},
+		"4.1.1": {"narrative": "<p>" + " ".join(["word"] * 30) + "</p>"},
+	}
 	for code, values in answers.items():
 		demo.get_or_insert("Metric Value", {"cycle": cycle, "node": f"{framework}-{code}"}, values)

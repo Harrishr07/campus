@@ -7,7 +7,12 @@ Limited to the companies the user is permitted for.
 import frappe
 from frappe import _
 
-from campus.campus_finance.scholarships import AQAR_CLAUSE, GOVERNMENT, INSTITUTIONAL, scholarship_beneficiaries
+from campus.campus_finance.scholarships import (
+	AQAR_CLAUSE,
+	GOVERNMENT,
+	INSTITUTIONAL,
+	scholarship_beneficiaries,
+)
 from campus.campus_platform.company_scope import permitted_companies
 
 
@@ -34,10 +39,20 @@ def data(filters):
 	permitted = permitted_companies(frappe.session.user)
 	if permitted is not None and filters.company not in permitted:
 		return []
-	return scholarship_beneficiaries(filters.company, filters.get("academic_year"), filters.get("scheme_type"), respect_permissions=True)
+	return scholarship_beneficiaries(
+		filters.company, filters.get("academic_year"), filters.get("scheme_type"), respect_permissions=True
+	)
 
 
 def summary(rows):
-	students = {clause: {r.student for r in rows if r.aqar_clause == clause} for clause in AQAR_CLAUSE.values()}
-	labels = {AQAR_CLAUSE[GOVERNMENT]: _("5.1.1 Government (students)"), AQAR_CLAUSE[INSTITUTIONAL]: _("5.1.2 Institutional (students)")}
-	return [{"label": labels[clause], "value": len(found), "indicator": "Blue", "datatype": "Int"} for clause, found in students.items()]
+	students = {
+		clause: {r.student for r in rows if r.aqar_clause == clause} for clause in AQAR_CLAUSE.values()
+	}
+	labels = {
+		AQAR_CLAUSE[GOVERNMENT]: _("5.1.1 Government (students)"),
+		AQAR_CLAUSE[INSTITUTIONAL]: _("5.1.2 Institutional (students)"),
+	}
+	return [
+		{"label": labels[clause], "value": len(found), "indicator": "Blue", "datatype": "Int"}
+		for clause, found in students.items()
+	]

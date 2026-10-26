@@ -16,10 +16,22 @@ def execute(filters=None):
 
 def columns():
 	return [
-		{"fieldname": "employee", "label": _("Employee"), "fieldtype": "Link", "options": "Employee", "width": 130},
+		{
+			"fieldname": "employee",
+			"label": _("Employee"),
+			"fieldtype": "Link",
+			"options": "Employee",
+			"width": 130,
+		},
 		{"fieldname": "employee_name", "label": _("Name"), "fieldtype": "Data", "width": 170},
 		department_column(),
-		{"fieldname": "training_event", "label": _("FDP"), "fieldtype": "Link", "options": "Training Event", "width": 220},
+		{
+			"fieldname": "training_event",
+			"label": _("FDP"),
+			"fieldtype": "Link",
+			"options": "Training Event",
+			"width": 220,
+		},
 		{"fieldname": "start_time", "label": _("From"), "fieldtype": "Datetime", "width": 150},
 		{"fieldname": "end_time", "label": _("To"), "fieldtype": "Datetime", "width": 150},
 	]

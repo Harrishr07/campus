@@ -31,7 +31,9 @@ class COPOMatrix(ApprovableDocument, Document):
 		self.check_every_co_mapped()
 
 	def before_submit(self):
-		frappe.db.get_value("Curriculum", self.curriculum, "name", for_update=True)  # serialises submits per curriculum
+		frappe.db.get_value(
+			"Curriculum", self.curriculum, "name", for_update=True
+		)  # serialises submits per curriculum
 		self.check_one_live_matrix(locking=True)
 		self.check_every_co_mapped()
 		super().before_submit()
@@ -47,7 +49,9 @@ class COPOMatrix(ApprovableDocument, Document):
 			)  # fmt: skip
 
 	def set_scope(self):
-		curriculum = frappe.db.get_value("Curriculum", self.curriculum, ["program", "regulation"], as_dict=True)
+		curriculum = frappe.db.get_value(
+			"Curriculum", self.curriculum, ["program", "regulation"], as_dict=True
+		)
 		self.program, self.regulation = curriculum.program, curriculum.regulation
 		self.department = frappe.db.get_value("Course", self.course, "department")
 		self.company = frappe.db.get_value("Program", self.program, "oc_company")
@@ -59,7 +63,15 @@ class COPOMatrix(ApprovableDocument, Document):
 		for co in outcomes.course_outcomes(self.course, self.curriculum):
 			for outcome in outcomes.programme_outcomes(self.program, self.regulation):
 				if (co.name, outcome.name) not in present:
-					self.append("correlations", {"course_outcome": co.name, "outcome_type": outcome.doctype, "outcome": outcome.name, "correlation": 0})
+					self.append(
+						"correlations",
+						{
+							"course_outcome": co.name,
+							"outcome_type": outcome.doctype,
+							"outcome": outcome.name,
+							"correlation": 0,
+						},
+					)
 
 	def check_one_live_matrix(self, locking=False):
 		filters = {"course": self.course, "curriculum": self.curriculum, "docstatus": ["<", 2]}
@@ -75,23 +87,35 @@ class COPOMatrix(ApprovableDocument, Document):
 
 	def check_cells(self):
 		cos = {co.name: co.co_code for co in outcomes.course_outcomes(self.course, self.curriculum)}
-		targets = {(o.doctype, o.name): o.code for o in outcomes.programme_outcomes(self.program, self.regulation)}
+		targets = {
+			(o.doctype, o.name): o.code for o in outcomes.programme_outcomes(self.program, self.regulation)
+		}
 		seen = set()
 		for row in self.correlations:
 			if row.course_outcome not in cos:
 				frappe.throw(
 					_("Row {0}: {1} is not a course outcome of {2} in {3}.").format(
-						row.idx, frappe.bold(row.course_outcome), frappe.bold(self.course), frappe.bold(self.curriculum)
+						row.idx,
+						frappe.bold(row.course_outcome),
+						frappe.bold(self.course),
+						frappe.bold(self.curriculum),
 					)
 				)
 			if (row.outcome_type, row.outcome) not in targets:
 				frappe.throw(
 					_("Row {0}: {1} is not an outcome of {2} under {3}.").format(
-						row.idx, frappe.bold(row.outcome), frappe.bold(self.program), frappe.bold(self.regulation)
+						row.idx,
+						frappe.bold(row.outcome),
+						frappe.bold(self.program),
+						frappe.bold(self.regulation),
 					)
 				)
 			if (row.course_outcome, row.outcome) in seen:
-				frappe.throw(_("Row {0}: {1} against {2} appears twice.").format(row.idx, cos[row.course_outcome], targets[(row.outcome_type, row.outcome)]))
+				frappe.throw(
+					_("Row {0}: {1} against {2} appears twice.").format(
+						row.idx, cos[row.course_outcome], targets[(row.outcome_type, row.outcome)]
+					)
+				)
 			seen.add((row.course_outcome, row.outcome))
 			row.correlation = cint(row.correlation)
 			if row.correlation not in outcomes.CORRELATIONS:
@@ -101,12 +125,16 @@ class COPOMatrix(ApprovableDocument, Document):
 	def check_every_co_mapped(self):
 		cos = outcomes.course_outcomes(self.course, self.curriculum)
 		if not cos:
-			frappe.throw(_("Define the course outcomes of {0} in {1} first.").format(frappe.bold(self.course), frappe.bold(self.curriculum)))
+			frappe.throw(
+				_("Define the course outcomes of {0} in {1} first.").format(
+					frappe.bold(self.course), frappe.bold(self.curriculum)
+				)
+			)
 		mapped = {row.course_outcome for row in self.correlations if row.correlation}
 		unmapped = [co.co_code for co in cos if co.name not in mapped]
 		if unmapped:
 			frappe.throw(
-				_("These course outcomes map to nothing: {0}. Give each at least one correlation (1-3), or Fill Grid for new ones.").format(
-					", ".join(unmapped)
-				)
+				_(
+					"These course outcomes map to nothing: {0}. Give each at least one correlation (1-3), or Fill Grid for new ones."
+				).format(", ".join(unmapped))
 			)

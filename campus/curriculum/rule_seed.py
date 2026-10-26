@@ -2,7 +2,11 @@
 regulation code: one source for the demo data and the pilot setup kit (source: docs/research/anna-university-autonomous-rules.md,
 section 3; unsourced values are listed under "Pending confirmation" in docs/rulings.md)."""
 
-CREDIT_PER_PERIOD = {"lecture_credit_per_period": 1, "tutorial_credit_per_period": 1, "practical_credit_per_period": 0.5}
+CREDIT_PER_PERIOD = {
+	"lecture_credit_per_period": 1,
+	"tutorial_credit_per_period": 1,
+	"practical_credit_per_period": 0.5,
+}
 CREDIT_RANGE = {"min_total_credits": 165, "max_total_credits": 170}
 REGISTRATION = {
 	"max_credits_per_semester": 36, "excluded_types": "Arrear\nDropped", "max_drop_credits": 6, "drop_window_days": 30,

@@ -48,7 +48,9 @@ def register(drive, student=None):
 		doc.status = "Registered"
 	else:
 		doc = frappe.get_doc({"doctype": REGISTRATION, "drive": drive, "student": student})
-	doc.flags.ignore_permissions = True  # portal roles hold no right on the doctype; every value is checked server-side
+	doc.flags.ignore_permissions = (
+		True  # portal roles hold no right on the doctype; every value is checked server-side
+	)
 	doc.save() if name else doc.insert()
 	return doc.name
 

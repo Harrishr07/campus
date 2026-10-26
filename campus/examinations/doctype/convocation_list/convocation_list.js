@@ -28,7 +28,12 @@ frappe.ui.form.on("Convocation List", {
 							frappe.msgprint({
 								title: __("Not recorded"),
 								message: r.message.refused
-									.map((row) => `${frappe.utils.escape_html(row.student)}: ${frappe.utils.escape_html(row.reason)}`)
+									.map(
+										(row) =>
+											`${frappe.utils.escape_html(
+												row.student
+											)}: ${frappe.utils.escape_html(row.reason)}`
+									)
 									.join("<br>"),
 							});
 						}

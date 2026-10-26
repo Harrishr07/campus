@@ -38,11 +38,7 @@ def asset_has_permission(doc, ptype=None, user=None):
 	user = user or frappe.session.user
 	if not limited_to_lab_equipment(user):
 		return True
-	return bool(
-		frappe.db.sql(
-			f"select 1 from ({equipment_names_query()}) e where e.name = %s", doc.name
-		)
-	)
+	return bool(frappe.db.sql(f"select 1 from ({equipment_names_query()}) e where e.name = %s", doc.name))
 
 
 def maintenance_query(user=None):
@@ -58,7 +54,5 @@ def maintenance_has_permission(doc, ptype=None, user=None):
 	if not limited_to_lab_equipment(user):
 		return True
 	return bool(
-		frappe.db.sql(
-			f"select 1 from ({equipment_names_query()}) e where e.name = %s", doc.asset_name
-		)
+		frappe.db.sql(f"select 1 from ({equipment_names_query()}) e where e.name = %s", doc.asset_name)
 	)

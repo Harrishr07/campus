@@ -23,26 +23,39 @@ class GrantReceipt(Document):
 	def validate(self):
 		sanction = self.get_sanction()
 		if sanction.docstatus != 1:
-			frappe.throw(_("Sanction {0} must be submitted to receive money against it.").format(self.sanction))
+			frappe.throw(
+				_("Sanction {0} must be submitted to receive money against it.").format(self.sanction)
+			)
 		check_sanction_open(self.sanction, sanction.project_closure)
-		self.company, self.funding_agency, self.currency = sanction.company, sanction.funding_agency, sanction.currency
+		self.company, self.funding_agency, self.currency = (
+			sanction.company,
+			sanction.funding_agency,
+			sanction.currency,
+		)
 		if flt(self.amount) <= 0:
 			frappe.throw(_("Enter the amount received."))
 		if self.instalment_amount() is None:
-			frappe.throw(_("{0} is not an instalment of Sanction {1}.").format(self.instalment, self.sanction))
+			frappe.throw(
+				_("{0} is not an instalment of Sanction {1}.").format(self.instalment, self.sanction)
+			)
 		self.check_received_in()
 
 	def before_submit(self):
 		# one receipt at a time per sanction; the locking read sees a concurrent cancel that removed the set-up
 		sanction = self.get_sanction(for_update=True)
 		if sanction.docstatus != 1:
-			frappe.throw(_("Sanction {0} must be submitted to receive money against it.").format(self.sanction))
+			frappe.throw(
+				_("Sanction {0} must be submitted to receive money against it.").format(self.sanction)
+			)
 		check_sanction_open(self.sanction, sanction.project_closure)
 		balance = flt(self.instalment_amount()) - self.received_so_far()
 		if flt(self.amount, 2) > flt(balance, 2):
 			frappe.throw(
 				_("Instalment {0} of {1} has a balance of {2}; {3} can't be received.").format(
-					self.instalment, self.sanction, frappe.format(balance, "Currency"), frappe.format(self.amount, "Currency")
+					self.instalment,
+					self.sanction,
+					frappe.format(balance, "Currency"),
+					frappe.format(self.amount, "Currency"),
 				)
 			)
 		self.journal_entry = self.make_journal_entry(sanction)
@@ -62,14 +75,18 @@ class GrantReceipt(Document):
 		update_received(self.sanction)
 
 	def get_sanction(self, for_update=False):
-		sanction = frappe.db.get_value("Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update)
+		sanction = frappe.db.get_value(
+			"Sanction", self.sanction, SANCTION_FIELDS, as_dict=True, for_update=for_update
+		)
 		if not sanction:
 			frappe.throw(_("Sanction {0} does not exist.").format(self.sanction))
 		return sanction
 
 	def instalment_amount(self):
 		return frappe.db.get_value(
-			"Sanction Instalment", {"parent": self.sanction, "parenttype": "Sanction", "instalment": self.instalment}, "amount"
+			"Sanction Instalment",
+			{"parent": self.sanction, "parenttype": "Sanction", "instalment": self.instalment},
+			"amount",
 		)
 
 	def received_so_far(self):
@@ -82,22 +99,41 @@ class GrantReceipt(Document):
 		return flt(rows[0][0])
 
 	def check_received_in(self):
-		account = frappe.db.get_value("Account", self.received_in, ["company", "is_group", "account_type"], as_dict=True)
-		if not account or account.company != self.company or account.is_group or account.account_type not in ("Bank", "Cash"):
+		account = frappe.db.get_value(
+			"Account", self.received_in, ["company", "is_group", "account_type"], as_dict=True
+		)
+		if (
+			not account
+			or account.company != self.company
+			or account.is_group
+			or account.account_type not in ("Bank", "Cash")
+		):
 			frappe.throw(_("Received In must be a bank or cash ledger of {0}.").format(self.company))
 		self.voucher_type = "Bank Entry" if account.account_type == "Bank" else "Cash Entry"
 
 	def make_journal_entry(self, sanction):
 		entry = frappe.get_doc(
 			{
-				"doctype": "Journal Entry", "voucher_type": self.voucher_type, "company": self.company,
-				"posting_date": self.posting_date, "cheque_no": self.reference_no, "cheque_date": self.reference_date,
-				"user_remark": _("Grant Receipt {0}: instalment {1} of Sanction {2}").format(self.name, self.instalment, self.sanction),
+				"doctype": "Journal Entry",
+				"voucher_type": self.voucher_type,
+				"company": self.company,
+				"posting_date": self.posting_date,
+				"cheque_no": self.reference_no,
+				"cheque_date": self.reference_date,
+				"user_remark": _("Grant Receipt {0}: instalment {1} of Sanction {2}").format(
+					self.name, self.instalment, self.sanction
+				),
 				"accounts": [
-					{"account": self.received_in, "debit_in_account_currency": self.amount, "cost_center": sanction.cost_center},
 					{
-						"account": sanction.liability_account, "credit_in_account_currency": self.amount,
-						"cost_center": sanction.cost_center, "project": sanction.project,
+						"account": self.received_in,
+						"debit_in_account_currency": self.amount,
+						"cost_center": sanction.cost_center,
+					},
+					{
+						"account": sanction.liability_account,
+						"credit_in_account_currency": self.amount,
+						"cost_center": sanction.cost_center,
+						"project": sanction.project,
 					},
 				],
 			}  # fmt: skip
@@ -118,6 +154,10 @@ def update_received(sanction):
 		.groupby(receipt.instalment)
 		.run()
 	)
-	for row in frappe.get_all("Sanction Instalment", {"parent": sanction, "parenttype": "Sanction"}, ["name", "instalment"]):
-		frappe.db.set_value("Sanction Instalment", row.name, "received_amount", flt(received.get(row.instalment)))
+	for row in frappe.get_all(
+		"Sanction Instalment", {"parent": sanction, "parenttype": "Sanction"}, ["name", "instalment"]
+	):
+		frappe.db.set_value(
+			"Sanction Instalment", row.name, "received_amount", flt(received.get(row.instalment))
+		)
 	frappe.db.set_value("Sanction", sanction, "total_received", sum(flt(v) for v in received.values()))

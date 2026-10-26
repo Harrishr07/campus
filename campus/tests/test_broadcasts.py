@@ -68,11 +68,18 @@ class TestAudienceRules(BroadcastTestCase):
 			self.assertEqual(audience.resolve(rule), self.keys("Student", "bala"))
 
 	def test_guardians_of_a_program_are_distinct(self):
-		rule = fx.make_rule("T11 Guardians CSE", "Guardians of", guardians_of="Program and Semester", program=fx.CSE)
+		rule = fx.make_rule(
+			"T11 Guardians CSE", "Guardians of", guardians_of="Program and Semester", program=fx.CSE
+		)
 		self.assertEqual(sorted(audience.resolve(rule)), self.keys("Guardian", "g_asha", "g_chitra"))
 
 	def test_guardians_of_a_group(self):
-		rule = fx.make_rule("T11 Guardians Group", "Guardians of", guardians_of="Student Group", student_group=self.world["group"])
+		rule = fx.make_rule(
+			"T11 Guardians Group",
+			"Guardians of",
+			guardians_of="Student Group",
+			student_group=self.world["group"],
+		)
 		self.assertEqual(audience.resolve(rule), self.keys("Guardian", "g_asha"))
 
 	def test_department_lists_active_employees_of_that_department(self):
@@ -108,7 +115,9 @@ class TestAudienceRules(BroadcastTestCase):
 			).insert()  # fmt: skip
 
 	def test_preview_count_matches_resolution(self):
-		rule = fx.make_rule("T11 Guardians CSE", "Guardians of", guardians_of="Program and Semester", program=fx.CSE)
+		rule = fx.make_rule(
+			"T11 Guardians CSE", "Guardians of", guardians_of="Program and Semester", program=fx.CSE
+		)
 		self.assertEqual(preview_count(rule.name), 2)
 
 
@@ -119,7 +128,10 @@ class TestMessageCompany(BroadcastTestCase):
 		self.assertEqual(scope.company_of("Guardian", self.world["g_asha"]), fx.COLLEGE)
 		self.assertIsNone(scope.company_of("User", fx.STAFF_USER))
 		# deterministic: the earliest-linked student decides for a guardian spanning colleges
-		self.assertEqual(scope.company_of("Guardian", self.world["g_asha"]), scope.company_of("Student", self.world["asha"]))
+		self.assertEqual(
+			scope.company_of("Guardian", self.world["g_asha"]),
+			scope.company_of("Student", self.world["asha"]),
+		)
 		self.assertIsNone(scope.company_of("Guardian", "no-such-guardian"))  # None, not an empty list
 		self.assertIsNone(scope.company_of("phone", "+919800000000"))
 		self.assertIsNone(scope.company_of("Student", "no-such-student"))
@@ -144,7 +156,9 @@ class TestMessagingCompanyBackfill(BroadcastTestCase):
 		frappe.db.set_value("Message Log", log.name, "company", None)
 		for _ in range(2):
 			backfill_messaging_company.execute()
-			self.assertEqual(frappe.db.get_value("Communication Consent", consent.name, "company"), fx.COLLEGE)
+			self.assertEqual(
+				frappe.db.get_value("Communication Consent", consent.name, "company"), fx.COLLEGE
+			)
 			self.assertEqual(frappe.db.get_value("Message Log", log.name, "company"), fx.COLLEGE)
 
 
@@ -206,7 +220,9 @@ class TestBroadcasts(BroadcastTestCase):
 			{"doctype": "Communication Consent", "party_type": "Guardian", "party": self.world["g_asha"],
 			 "channel": "email", "purpose": "promotional", "status": "Opted In"}
 		).insert()  # fmt: skip
-		self.addCleanup(frappe.delete_doc, "Communication Consent", f"Guardian-{self.world['g_asha']}-email-promotional")
+		self.addCleanup(
+			frappe.delete_doc, "Communication Consent", f"Guardian-{self.world['g_asha']}-email-promotional"
+		)
 		broadcast = self.broadcast(PROMO)
 		broadcast.submit()
 		self.run_of(broadcast)
@@ -239,13 +255,17 @@ class TestBroadcasts(BroadcastTestCase):
 		request = request_approval("Broadcast", broadcast.name)
 		broadcast.reload()
 		self.assertEqual((broadcast.status, broadcast.docstatus), ("Pending Approval", 0))
-		self.assertEqual(frappe.db.count("Message Log", {"reference_name": broadcast.name, "event_key": NOTICE}), 0)
+		self.assertEqual(
+			frappe.db.count("Message Log", {"reference_name": broadcast.name, "event_key": NOTICE}), 0
+		)
 
 		frappe.set_user(fx.STAFF_USER)
 		approve(request)
 		frappe.set_user("Administrator")
 		broadcast.reload()
-		self.assertEqual((broadcast.docstatus, broadcast.status, broadcast.recipients_count), (1, "Sending", 2))
+		self.assertEqual(
+			(broadcast.docstatus, broadcast.status, broadcast.recipients_count), (1, "Sending", 2)
+		)
 		self.assertTrue(broadcast.bulk_run)
 
 	def test_returned_broadcast_goes_back_to_draft(self):
@@ -267,7 +287,9 @@ class TestBroadcasts(BroadcastTestCase):
 		broadcast.reload()
 		self.assertEqual(broadcast.status, "Scheduled")
 
-		frappe.db.set_value("Broadcast", broadcast.name, "schedule_at", add_to_date(now_datetime(), minutes=-1))
+		frappe.db.set_value(
+			"Broadcast", broadcast.name, "schedule_at", add_to_date(now_datetime(), minutes=-1)
+		)
 		broadcasting.release_due()
 		broadcast.reload()
 		self.assertEqual((broadcast.status, broadcast.recipients_count), ("Sending", 2))
@@ -290,7 +312,9 @@ class TestBroadcasts(BroadcastTestCase):
 	def test_scheduler_marks_an_unreleasable_broadcast_failed_and_goes_on(self):
 		broadcast = self.broadcast(schedule_at=add_to_date(now_datetime(), hours=1))
 		broadcast.submit()
-		frappe.db.set_value("Broadcast", broadcast.name, "schedule_at", add_to_date(now_datetime(), minutes=-1))
+		frappe.db.set_value(
+			"Broadcast", broadcast.name, "schedule_at", add_to_date(now_datetime(), minutes=-1)
+		)
 		frappe.db.commit()
 		with patch.object(audience, "resolve", side_effect=frappe.ValidationError("boom")):
 			broadcasting.release_due()
@@ -303,7 +327,9 @@ class TestBroadcasts(BroadcastTestCase):
 		broadcast = self.broadcast()
 		broadcast.submit()
 		broadcast.reload()
-		self.assertEqual((broadcast.status, broadcast.recipients_count, broadcast.bulk_run), ("Sent", 0, None))
+		self.assertEqual(
+			(broadcast.status, broadcast.recipients_count, broadcast.bulk_run), ("Sent", 0, None)
+		)
 
 	def test_validation(self):
 		other_rule = frappe.get_doc(

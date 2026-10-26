@@ -40,7 +40,10 @@ def data(filters):
 	if filters.exam_session:
 		conditions["exam_session"] = filters.exam_session
 	results = {
-		r.name: r for r in frappe.get_list("Student Result", filters=conditions, fields=["name", "student", "student_name", "exam_session"])
+		r.name: r
+		for r in frappe.get_list(
+			"Student Result", filters=conditions, fields=["name", "student", "student_name", "exam_session"]
+		)
 	}
 	rows = frappe.get_all(
 		"Student Result Course",

@@ -25,7 +25,11 @@ class MessageTemplate(Document):
 	def validate_jinja(self):
 		sources = [(_("Body ({0})").format(r.language), r.body) for r in self.bodies]
 		sources += [(_("Subject ({0})").format(r.language), r.subject) for r in self.bodies if r.subject]
-		sources += [(_("Variable"), "{{ " + v.strip() + " }}") for v in (self.variables or "").splitlines() if v.strip()]
+		sources += [
+			(_("Variable"), "{{ " + v.strip() + " }}")
+			for v in (self.variables or "").splitlines()
+			if v.strip()
+		]
 		env = Environment()
 		for label, source in sources:
 			try:

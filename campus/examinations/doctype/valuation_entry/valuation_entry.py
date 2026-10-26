@@ -18,19 +18,36 @@ class ValuationEntry(Document):
 		alloc = frappe.get_doc(valuation.ALLOCATION, self.allocation)
 		if not alloc.examiner or alloc.examiner != frappe.session.user:
 			raise frappe.PermissionError(_("Only the allocated examiner enters these marks."))
-		self.update({f: alloc.get(f) for f in ("valuation_round", "exam_session", "course", "bundle", "examiner")})
+		self.update(
+			{f: alloc.get(f) for f in ("valuation_round", "exam_session", "course", "bundle", "examiner")}
+		)
 		alloc.check_course_teacher()  # the rule or the teaching may have changed since the allocation
 		if self.dummy_number not in {s.dummy_number for s in alloc.scripts}:
 			frappe.throw(_("Script {0} is not in this allocation.").format(self.dummy_number))
-		script = valuation.lock_script(self)  # the round and result-lock checks below run one at a time per script
+		script = valuation.lock_script(
+			self
+		)  # the round and result-lock checks below run one at a time per script
 		self.check_once_per_round()
 		self.validate_marks()
 		valuation.check_script(self, script)
 
 	def check_once_per_round(self):
-		filters = {"dummy_number": self.dummy_number, "valuation_round": self.valuation_round, "docstatus": ["<", 2]}
-		if any(n != self.name for n in frappe.qb.get_query(self.doctype, filters=filters, fields=["name"], for_update=True).run(pluck=True)):
-			frappe.throw(_("Script {0} is already valued in round {1}.").format(self.dummy_number, self.valuation_round))
+		filters = {
+			"dummy_number": self.dummy_number,
+			"valuation_round": self.valuation_round,
+			"docstatus": ["<", 2],
+		}
+		if any(
+			n != self.name
+			for n in frappe.qb.get_query(self.doctype, filters=filters, fields=["name"], for_update=True).run(
+				pluck=True
+			)
+		):
+			frappe.throw(
+				_("Script {0} is already valued in round {1}.").format(
+					self.dummy_number, self.valuation_round
+				)
+			)
 
 	def validate_marks(self):
 		pattern = {q.question: flt(q.max_marks) for q in valuation.bundle_questions(self.bundle)}

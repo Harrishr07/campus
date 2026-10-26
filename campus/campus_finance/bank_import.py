@@ -44,20 +44,29 @@ KEY = "campus.campus_finance.bank_import.row_key"
 COLUMNS = ("challan_no", "amount", "date", "reference")
 SAVEPOINT = "bank_collection_row"
 ROW_SAVEPOINT = "bank_collection_item"
-COUNTER = {"Matched": "matched_rows", "Unmatched": "unmatched_rows", "Duplicate": "duplicate_rows", "Invalid": "invalid_rows"}
+COUNTER = {
+	"Matched": "matched_rows",
+	"Unmatched": "unmatched_rows",
+	"Duplicate": "duplicate_rows",
+	"Invalid": "invalid_rows",
+}
 
 
 @frappe.whitelist()
 def start_import(name):
 	"""Parse the attached CSV and queue the bulk run that matches its rows; returns the Bulk Run name."""
 	frappe.has_permission("Bank Collection Import", "write", name, throw=True)
-	status = frappe.db.get_value("Bank Collection Import", name, "status", for_update=True)  # a double click waits here
+	status = frappe.db.get_value(
+		"Bank Collection Import", name, "status", for_update=True
+	)  # a double click waits here
 	if status != "Draft":
 		frappe.throw(_("This import has already been started."))
 	doc = frappe.get_doc("Bank Collection Import", name)
 	rows = parse_rows(read_file(doc.collection_file))
 	doc.db_set({"total_rows": len(rows), "status": "Processing"})
-	items = [{"import": name, "company": doc.company, "row_no": no, **row} for no, row in enumerate(rows, start=1)]
+	items = [
+		{"import": name, "company": doc.company, "row_no": no, **row} for no, row in enumerate(rows, start=1)
+	]
 	items.sort(key=lambda i: (i["challan_no"], i["row_no"]))  # consistent invoice lock order across imports
 	run = run_bulk("Bank Collection Import", items, HANDLER, chunk=1, key=KEY, parameters={"import": name})
 	doc.db_set("bulk_run", run)
@@ -119,13 +128,18 @@ def process_row(item, run):
 
 
 def match_row(item, invoice):
-	if frappe.db.get_value("Bank Collection Row", {"reference_key": reference_key(item)}, "name", for_update=True):
+	if frappe.db.get_value(
+		"Bank Collection Row", {"reference_key": reference_key(item)}, "name", for_update=True
+	):
 		return record(item, "Duplicate", _("Bank reference already collected."))
 	problem = unmatched_reason(invoice, item)
 	if problem:
 		return record(item, "Unmatched", problem)
 	if frappe.db.get_value(
-		"Payment Entry", {"company": item["company"], "reference_no": item["reference"], "docstatus": ("<", 2)}, "name", for_update=True
+		"Payment Entry",
+		{"company": item["company"], "reference_no": item["reference"], "docstatus": ("<", 2)},
+		"name",
+		for_update=True,
 	):
 		return record(item, "Duplicate", _("Bank reference already has a Payment Entry."), invoice.name)
 	post_collection(item, invoice)
@@ -180,7 +194,9 @@ def make_payment_entry(item, invoice):
 	account = frappe.db.get_value("Challan Format", item["company"], "receiving_account")
 	if not account:
 		frappe.throw(_("{0} has no Challan Format with a receiving account.").format(item["company"]))
-	payment = get_payment_entry("Sales Invoice", invoice.name, party_amount=flt(item["amount"]), bank_account=None)
+	payment = get_payment_entry(
+		"Sales Invoice", invoice.name, party_amount=flt(item["amount"]), bank_account=None
+	)
 	payment.paid_to = account
 	payment.paid_to_account_currency = frappe.get_cached_value("Account", account, "account_currency")
 	payment.reference_no = item["reference"]
@@ -200,10 +216,18 @@ def record(item, status, message, invoice=None):
 def insert_row(item, status, message, invoice=None, **extra):
 	return frappe.get_doc(
 		{
-			"doctype": "Bank Collection Row", "bank_collection_import": item["import"], "row_no": item["row_no"],
-			"challan_no": item["challan_no"], "amount": flt(item["amount"]) if _is_number(item["amount"]) else 0,
+			"doctype": "Bank Collection Row",
+			"bank_collection_import": item["import"],
+			"row_no": item["row_no"],
+			"challan_no": item["challan_no"],
+			"amount": flt(item["amount"]) if _is_number(item["amount"]) else 0,
 			"collection_date": getdate(item["date"]) if _is_date(item["date"]) else None,
-			"bank_reference": item["reference"], "company": item["company"], "status": status, "message": message, "sales_invoice": invoice, **extra,
+			"bank_reference": item["reference"],
+			"company": item["company"],
+			"status": status,
+			"message": message,
+			"sales_invoice": invoice,
+			**extra,
 		}
 	).insert(ignore_permissions=True)
 
@@ -211,12 +235,19 @@ def insert_row(item, status, message, invoice=None, **extra):
 def bump(import_name, status):
 	"""Count one more row with `status`; the import is Completed once every file row has an outcome."""
 	column = COUNTER[status]
-	frappe.db.sql(f"update `tabBank Collection Import` set `{column}` = `{column}` + 1 where name = %s", import_name)
-	counts = frappe.db.get_value("Bank Collection Import", import_name, ["total_rows", *COUNTER.values()], as_dict=True)
+	frappe.db.sql(
+		f"update `tabBank Collection Import` set `{column}` = `{column}` + 1 where name = %s", import_name
+	)
+	counts = frappe.db.get_value(
+		"Bank Collection Import", import_name, ["total_rows", *COUNTER.values()], as_dict=True
+	)
 	if sum(counts[c] or 0 for c in COUNTER.values()) >= counts.total_rows:
 		with_errors = counts.invalid_rows or counts.unmatched_rows
 		frappe.db.set_value(
-			"Bank Collection Import", import_name, "status", "Completed with errors" if with_errors else "Completed"
+			"Bank Collection Import",
+			import_name,
+			"status",
+			"Completed with errors" if with_errors else "Completed",
 		)
 
 

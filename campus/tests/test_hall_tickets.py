@@ -10,10 +10,16 @@ from campus.campus_platform import bulk, verification
 from campus.examinations import api, exam_fee, hall_tickets, registration
 from campus.student_services import portal
 from campus.tests.test_attendance_condonation import inline_bulk
-from campus.tests.test_verification import request_as
 from campus.tests.test_exam_registration import (
-	COE_USER, DROP_USER, FACULTY, GUARDIAN_USER, OK_USER, SA_USER, ExamRegistrationFixture,
+	COE_USER,
+	DROP_USER,
+	FACULTY,
+	GUARDIAN_USER,
+	OK_USER,
+	SA_USER,
+	ExamRegistrationFixture,
 )  # fmt: skip
+from campus.tests.test_verification import request_as
 
 VD = "Verifiable Document"
 
@@ -42,13 +48,18 @@ class HallTicketFixture(ExamRegistrationFixture):
 		return frappe.get_doc("Hall Ticket", hall_tickets.ticket_name(self.session.name, student))
 
 	def documents(self, student, status=None):
-		filters = {"reference_doctype": "Hall Ticket", "reference_name": hall_tickets.ticket_name(self.session.name, student)}
+		filters = {
+			"reference_doctype": "Hall Ticket",
+			"reference_name": hall_tickets.ticket_name(self.session.name, student),
+		}
 		if status:
 			filters["status"] = status
 		return frappe.get_all(VD, filters, ["code", "status", "revocation_reason"], order_by="creation asc")
 
 	def release(self, days=-1):
-		frappe.db.set_value("Exam Session", self.session.name, "hall_ticket_release_on", add_days(now_datetime(), days))
+		frappe.db.set_value(
+			"Exam Session", self.session.name, "hall_ticket_release_on", add_days(now_datetime(), days)
+		)
 
 
 class TestBulkGeneration(HallTicketFixture):
@@ -63,7 +74,9 @@ class TestBulkGeneration(HallTicketFixture):
 		run = frappe.get_doc("Bulk Run", name)
 		names = sorted(frappe.get_all("Exam Registration", {"exam_session": self.session.name}, pluck="name"))
 		self.assertEqual((frappe.parse_json(run.items), run.handler), (names, hall_tickets.HANDLER))
-		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[api.generate_hall_tickets], ["POST"])
+		self.assertEqual(
+			frappe.allowed_http_methods_for_whitelisted_func[api.generate_hall_tickets], ["POST"]
+		)
 		frappe.db.set_value("Bulk Run", name, "status", "Completed")  # the queued run has finished
 		self.generate()  # the handler runs as the COE who queued it
 		self.assertEqual((self.ticket(self.ok).status, len(self.documents(self.ok, "Valid"))), ("Issued", 1))
@@ -71,7 +84,9 @@ class TestBulkGeneration(HallTicketFixture):
 	def test_a_ticket_carries_photo_courses_dates_and_a_valid_qr(self):
 		self.generate()
 		ticket = self.ticket(self.ok)
-		self.assertEqual((ticket.status, ticket.photo, ticket.withheld_reasons), ("Issued", "/files/exr-ok.png", None))
+		self.assertEqual(
+			(ticket.status, ticket.photo, ticket.withheld_reasons), ("Issued", "/files/exr-ok.png", None)
+		)
 		self.assertEqual(
 			[(r.course, str(r.exam_date), r.slot) for r in ticket.courses],
 			[("EXR A", add_days(today(), 20), "FN"), ("EXR B", add_days(today(), 22), "AN")],
@@ -79,7 +94,13 @@ class TestBulkGeneration(HallTicketFixture):
 		(document,) = self.documents(self.ok)
 		self.assertEqual(document.status, "Valid")
 		html = frappe.get_print("Hall Ticket", ticket.name, hall_tickets.PRINT_FORMAT)
-		for text in ("/files/exr-ok.png", "EXR A", "EXR B", document.code, frappe.utils.formatdate(add_days(today(), 20))):
+		for text in (
+			"/files/exr-ok.png",
+			"EXR A",
+			"EXR B",
+			document.code,
+			frappe.utils.formatdate(add_days(today(), 20)),
+		):
 			self.assertIn(text, html)
 
 	def test_the_sa_student_sits_the_eligible_arrear_only(self):
@@ -93,7 +114,9 @@ class TestBulkGeneration(HallTicketFixture):
 			hall_tickets.generate(self.reg(self.ok).name)
 
 	def test_a_published_session_is_refused(self):
-		frappe.db.set_value("Exam Session", self.session.name, {"status": "Published", "publish_at": now_datetime()})
+		frappe.db.set_value(
+			"Exam Session", self.session.name, {"status": "Published", "publish_at": now_datetime()}
+		)
 		with self.assertRaises(frappe.ValidationError):
 			hall_tickets.start(self.session.name)
 
@@ -119,7 +142,9 @@ class TestWithheld(HallTicketFixture):
 			self.assertEqual((ticket.status, ticket.withheld_reasons), ("Withheld", reason), student)
 			self.assertEqual(ticket.courses, [])
 			self.assertEqual(self.documents(student), [], student)  # no QR, nothing to verify
-		withheld = frappe.get_all("Hall Ticket", {"exam_session": self.session.name, "status": "Withheld"}, pluck="student")
+		withheld = frappe.get_all(
+			"Hall Ticket", {"exam_session": self.session.name, "status": "Withheld"}, pluck="student"
+		)
 		self.assertEqual(sorted(withheld), sorted(expected))
 
 	def test_detention_after_issue_revokes_the_ticket(self):
@@ -129,10 +154,14 @@ class TestWithheld(HallTicketFixture):
 		doc.save()
 		self.generate()
 		ticket = self.ticket(self.ok)
-		self.assertEqual((ticket.status, ticket.withheld_reasons), ("Withheld", "Detained: Disciplinary committee order"))
+		self.assertEqual(
+			(ticket.status, ticket.withheld_reasons), ("Withheld", "Detained: Disciplinary committee order")
+		)
 		(document,) = self.documents(self.ok)
 		self.assertEqual(document.status, "Revoked")
-		self.assertEqual(document.revocation_reason, "Hall ticket withdrawn")  # the public record never says why
+		self.assertEqual(
+			document.revocation_reason, "Hall ticket withdrawn"
+		)  # the public record never says why
 
 	def test_a_photo_outside_the_files_folders_is_dropped(self):
 		frappe.db.set_value("Student", self.ok, "image", "https://evil.example/x.png")
@@ -148,7 +177,9 @@ class TestLocking(HallTicketFixture):
 		before = self.documents(self.ok)
 		real_exists = frappe.db.exists
 
-		def stale_exists(doctype, *args, **kwargs):  # what a plain read of a snapshot older than the rows sees
+		def stale_exists(
+			doctype, *args, **kwargs
+		):  # what a plain read of a snapshot older than the rows sees
 			return None if doctype in ("Hall Ticket", VD) else real_exists(doctype, *args, **kwargs)
 
 		with patch.object(frappe.db, "exists", side_effect=stale_exists):
@@ -175,7 +206,12 @@ class TestRegeneration(HallTicketFixture):
 	def test_a_changed_date_revokes_and_reissues(self):
 		self.generate()
 		(old,) = self.documents(self.ok)
-		frappe.db.set_value("Exam Schedule", {"parent": self.session.name, "course": "EXR B"}, "exam_date", add_days(today(), 23))
+		frappe.db.set_value(
+			"Exam Schedule",
+			{"parent": self.session.name, "course": "EXR B"},
+			"exam_date",
+			add_days(today(), 23),
+		)
 		self.generate()
 		first, second = self.documents(self.ok)
 		self.assertEqual((first.code, first.status), (old.code, "Revoked"))
@@ -187,7 +223,11 @@ class TestRegeneration(HallTicketFixture):
 
 		self.generate()
 		self.assertEqual(self.ticket(self.dues).status, "Withheld")
-		for invoice in frappe.get_all("Sales Invoice", {"student": self.dues, "docstatus": 1, "outstanding_amount": [">", 0]}, pluck="name"):
+		for invoice in frappe.get_all(
+			"Sales Invoice",
+			{"student": self.dues, "docstatus": 1, "outstanding_amount": [">", 0]},
+			pluck="name",
+		):
 			payment = get_payment_entry("Sales Invoice", invoice)
 			payment.reference_no, payment.reference_date = f"HT-{invoice}", today()
 			payment.insert().submit()
@@ -256,7 +296,12 @@ class TestVerification(HallTicketFixture):
 		self.assertIn("&lt;script&gt;alert(9)&lt;/script&gt;", body)
 
 	def test_a_document_without_details_shows_none(self):
-		self.assertEqual(verification.reference_details(frappe._dict(reference_doctype="Exam Session", reference_name=self.session.name)), [])
+		self.assertEqual(
+			verification.reference_details(
+				frappe._dict(reference_doctype="Exam Session", reference_name=self.session.name)
+			),
+			[],
+		)
 
 
 class TestPortal(HallTicketFixture):
@@ -281,16 +326,23 @@ class TestPortal(HallTicketFixture):
 		self.release()
 		for user in (DROP_USER, GUARDIAN_USER):
 			row = self.hall_ticket_row(user, self.drop)
-			self.assertEqual((row["status"], row["reasons"], row["download_url"]), ("Withheld", "Exam registration not confirmed", None))
+			self.assertEqual(
+				(row["status"], row["reasons"], row["download_url"]),
+				("Withheld", "Exam registration not confirmed", None),
+			)
 		frappe.set_user("Administrator")
-		self.assertFalse(frappe.has_permission("Hall Ticket", "print", self.ticket(self.drop), user=DROP_USER))
+		self.assertFalse(
+			frappe.has_permission("Hall Ticket", "print", self.ticket(self.drop), user=DROP_USER)
+		)
 
 	def test_ownership_is_checked(self):
 		self.generate()
 		self.release()
 		ticket = self.ticket(self.ok)
 		self.assertFalse(frappe.has_permission("Hall Ticket", "print", ticket, user=SA_USER))
-		self.assertFalse(frappe.has_permission("Hall Ticket", "print", ticket, user=GUARDIAN_USER))  # guards drop only
+		self.assertFalse(
+			frappe.has_permission("Hall Ticket", "print", ticket, user=GUARDIAN_USER)
+		)  # guards drop only
 		self.assertTrue(frappe.has_permission("Hall Ticket", "print", ticket, user=COE_USER))
 		frappe.set_user(SA_USER)
 		self.assertEqual(frappe.get_list("Hall Ticket", pluck="student"), [self.sa])
